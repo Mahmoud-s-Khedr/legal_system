@@ -332,7 +332,7 @@ bash scripts/package-desktop-linux.sh
 
 ## verify-desktop-resources.sh
 
-**What it does:** Fails fast if the desktop package still points at placeholder Node.js or PostgreSQL resources.
+**What it does:** Thin shell wrapper around `node scripts/verify-desktop-resources.mjs`, which validates the cross-platform desktop resource contract before packaging.
 
 **When to use:** Before desktop packaging, especially in CI and release workflows.
 

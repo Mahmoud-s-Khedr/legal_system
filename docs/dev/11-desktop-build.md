@@ -72,16 +72,17 @@ The desktop build (`ELMS_BUILD_TARGET=desktop`) bundles **all** JavaScript depen
 
 After `tsup` runs, `scripts/desktop-bundle-extras.mjs` copies these packages and the generated `.prisma/client` into `packages/backend/dist/desktop/node_modules/`. The resulting desktop runtime is isolated under `packages/backend/dist/desktop/`.
 
-The Tauri `bundle.resources` section in `tauri.conf.json` points only at the desktop output:
+The base Tauri `bundle.resources` section in `tauri.conf.json` points at the desktop runtime output:
 
 ```json
 "resources": {
   "../../../packages/backend/dist/desktop": "packages/backend/dist/desktop/",
-  "../.env.desktop": ".env.desktop",
   "../resources/postgres": "postgres/",
   "../resources/node": "node/"
 }
 ```
+
+Packaged builds then merge a small override config in `apps/desktop/scripts/tauri-wrapper.mjs` so the bundle still contains `.env.desktop`, sourcing it from `apps/desktop/.env.desktop` when present and otherwise from `apps/desktop/.env.desktop.example`.
 
 ---
 
@@ -166,6 +167,9 @@ pnpm prisma:generate
 
 # 3. Build Tauri installers with resource verification and log capture
 pnpm --filter @elms/desktop package:linux
+
+# 4. Smoke-test the packaged AppImage, deb, and rpm artifacts
+bash scripts/verify-linux-packages.sh
 ```
 
 `bundle-linux-deps.sh` now performs a PostgreSQL smoke test after copying resources: it runs the bundled `postgres` binary and initializes a temporary data directory with the bundled `initdb` binary before writing the bundle sentinel.
@@ -206,21 +210,26 @@ Artifact: `apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/n
 **Prerequisites:** Rust stable with targets `aarch64-apple-darwin` and `x86_64-apple-darwin`, Xcode command-line tools.
 
 ```bash
-# 1. Bundle embedded PostgreSQL and the macOS Node.js runtime
-PG_VERSION=16 NODE_VERSION=22.14.0 bash scripts/bundle-macos-deps.sh
-
-# 2. Install JS dependencies
+# 1. Install JS dependencies
 pnpm install --frozen-lockfile
 pnpm prisma:generate
 
-# 3. Verify resources and build (arm64 only; for universal binary, build both targets and use lipo)
-bash scripts/verify-desktop-resources.sh
+# 2. Build an Apple Silicon dmg
+PG_VERSION=16 NODE_VERSION=22.14.0 NODE_ARCH=arm64 bash scripts/bundle-macos-deps.sh
+node scripts/verify-desktop-resources.mjs
 pnpm --filter @elms/desktop tauri build --target aarch64-apple-darwin --bundles dmg
+
+# 3. Build an Intel dmg
+PG_VERSION=16 NODE_VERSION=22.14.0 NODE_ARCH=x64 bash scripts/bundle-macos-deps.sh
+node scripts/verify-desktop-resources.mjs
+pnpm --filter @elms/desktop tauri build --target x86_64-apple-darwin --bundles dmg
 ```
 
-Artifact: `apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg`
+Artifacts:
+- `apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg`
+- `apps/desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg`
 
-The macOS bundler writes the Node runtime to `apps/desktop/resources/node/node`, matching the Tauri sidecar lookup on non-Windows platforms. It also preserves PostgreSQL's `bindir`, `sharedir`, and `pkglibdir` layout under `apps/desktop/resources/postgres` and writes `apps/desktop/resources/postgres/.layout.env`, the same manifest contract used by Linux builds.
+The macOS bundler writes the Node runtime to `apps/desktop/resources/node/node`, matching the Tauri sidecar lookup on non-Windows platforms. It also preserves PostgreSQL's `bindir`, `sharedir`, and `pkglibdir` layout under `apps/desktop/resources/postgres` and writes `apps/desktop/resources/postgres/.layout.env`, the same manifest contract used by Linux and Windows builds.
 
 For Apple notarization, configure the secrets listed in the macOS CI workflow (see next section).
 
@@ -234,15 +243,17 @@ Platform builds are defined in `.github/workflows/`. They are **not** part of th
 |--------------|--------|---------------|---------|
 | `build-linux.yml` | `ubuntu-latest` | AppImage, deb, rpm | `workflow_run` on `ci` success, or manual |
 | `build-windows.yml` | `windows-latest` | NSIS exe | `workflow_run` on `ci` success, or manual |
-| `build-macos.yml` | `macos-latest` | dmg | `workflow_run` on `ci` success, or manual |
+| `build-macos.yml` | `macos-15` + `macos-15-intel` | arm64 dmg, x64 dmg | `workflow_run` on `ci` success, or manual |
 
 **Common steps across all workflows:**
 1. Checkout → pnpm 10.27.0 → Node.js 22 → Rust stable
 2. Cache Rust build artifacts (Swatinem/rust-cache, workspace: `apps/desktop/src-tauri`)
 3. `pnpm install --frozen-lockfile` + `pnpm prisma:generate`
-4. Bundle platform-native dependencies (Linux uses `bundle-linux-deps.sh`; Windows uses `bundle-windows-deps.ps1`; macOS uses `bundle-macos-deps.sh`)
-5. Build installer artifacts only; OTA manifest generation is not part of the release flow
-6. Upload artifacts with `actions/upload-artifact@v4`, retained for 30 days
+4. Resolve the packaged source SHA (`workflow_run.head_sha` for downstream builds, `github.sha` for manual runs) and check out that exact commit
+5. Bundle platform-native dependencies (Linux uses `bundle-linux-deps.sh`; Windows uses `bundle-windows-deps.ps1`; macOS uses `bundle-macos-deps.sh`)
+6. Build installer artifacts only; OTA manifest generation is not part of the release flow
+7. Validate packaged resources (`verify-linux-packages.sh` for Linux; cross-platform `verify-desktop-resources.mjs` for prebuild resource checks)
+8. Upload artifacts with `actions/upload-artifact@v4`, retained for 30 days
 
 **Manual dispatch inputs:**
 

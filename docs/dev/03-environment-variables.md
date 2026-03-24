@@ -111,7 +111,7 @@ All SMTP variables are optional. When omitted, email notifications are silently 
 
 ## Desktop
 
-These variables configure the communication between the Tauri shell, the embedded backend, and the embedded PostgreSQL instance. They are set automatically in `apps/desktop/.env.desktop` and rarely need manual adjustment.
+These variables configure the communication between the Tauri shell, the embedded backend, and the embedded PostgreSQL instance. Local development typically uses `apps/desktop/.env.desktop`; when that file is absent, desktop tooling falls back to the checked-in `apps/desktop/.env.desktop.example`.
 
 | Variable | Type | Default | Required | Description |
 |---|---|---|---|---|

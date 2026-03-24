@@ -14,7 +14,7 @@
 #           Homebrew cellar paths
 #         - writes .layout.env so the verifier and desktop runtime resolve the
 #           packaged paths consistently
-#   - Node.js <NODE_VERSION> darwin-arm64 tarball → apps/desktop/resources/node/
+#   - Node.js <NODE_VERSION> darwin-<arch> tarball → apps/desktop/resources/node/
 #       node   — single executable consumed by the desktop sidecar runtime
 #
 #   Both downloads/copies are skipped when the target directory already contains
@@ -24,6 +24,7 @@ set -euo pipefail
 
 PG_VERSION="${PG_VERSION:-16}"
 NODE_VERSION="${NODE_VERSION:-22.14.0}"
+NODE_ARCH="${NODE_ARCH:-arm64}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -446,18 +447,23 @@ fi
 
 NODE_SENTINEL="$NODE_DEST/.bundle-complete"
 NODE_BIN="$NODE_DEST/node"
+case "$NODE_ARCH" in
+  arm64) NODE_DIST_TAG="darwin-arm64" ;;
+  x64) NODE_DIST_TAG="darwin-x64" ;;
+  *) die "Unsupported NODE_ARCH '$NODE_ARCH'. Expected 'arm64' or 'x64'." ;;
+esac
 
-if [[ -f "$NODE_SENTINEL" ]] && [[ -x "$NODE_BIN" ]]; then
-  echo "[Node] Node.js $NODE_VERSION already bundled — skipping."
+if [[ -f "$NODE_SENTINEL" ]] && [[ -x "$NODE_BIN" ]] && grep -Fq "$NODE_DIST_TAG" "$NODE_SENTINEL"; then
+  echo "[Node] Node.js $NODE_VERSION ($NODE_DIST_TAG) already bundled — skipping."
 else
   if [[ -d "$NODE_DEST" ]]; then
-    echo "[Node] Existing Node.js bundle is missing the expected binary — rebuilding."
+    echo "[Node] Existing Node.js bundle does not match the requested architecture — rebuilding."
     rm -rf "$NODE_DEST"
   fi
 
-  echo "[Node] Bundling Node.js $NODE_VERSION ..."
+  echo "[Node] Bundling Node.js $NODE_VERSION ($NODE_DIST_TAG) ..."
 
-  NODE_TARBALL="node-v${NODE_VERSION}-darwin-arm64.tar.gz"
+  NODE_TARBALL="node-v${NODE_VERSION}-${NODE_DIST_TAG}.tar.gz"
   NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TARBALL}"
   NODE_EXTRACT_DIR="$TMP_DIR/node-extract"
 
@@ -469,14 +475,14 @@ else
   echo "[Node] Extracting ..."
   tar -xzf "$TMP_DIR/$NODE_TARBALL" -C "$NODE_EXTRACT_DIR"
 
-  NODE_SOURCE="$NODE_EXTRACT_DIR/node-v${NODE_VERSION}-darwin-arm64"
-  [[ -d "$NODE_SOURCE" ]] || die "Unexpected Node.js tarball layout — 'node-v${NODE_VERSION}-darwin-arm64' not found."
+  NODE_SOURCE="$NODE_EXTRACT_DIR/node-v${NODE_VERSION}-${NODE_DIST_TAG}"
+  [[ -d "$NODE_SOURCE" ]] || die "Unexpected Node.js tarball layout — 'node-v${NODE_VERSION}-${NODE_DIST_TAG}' not found."
 
   echo "[Node] Copying node binary ..."
   cp "$NODE_SOURCE/bin/node" "$NODE_BIN"
   chmod +x "$NODE_BIN"
 
-  echo "Node.js $NODE_VERSION bundled on $(date +%Y-%m-%d)" > "$NODE_SENTINEL"
+  echo "Node.js $NODE_VERSION ${NODE_DIST_TAG} bundled on $(date +%Y-%m-%d)" > "$NODE_SENTINEL"
 
   echo "[Node] Done."
 fi

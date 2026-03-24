@@ -24,9 +24,17 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
     steps:
+      - name: Log packaged source SHA
+        run: |
+          echo "Packaging source SHA: $SOURCE_SHA"
+
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -78,52 +86,13 @@ jobs:
           NO_STRIP: "1"
         run: pnpm --filter @elms/desktop package:linux
 
-      - name: Verify RPM payload contains desktop runtime resources
-        run: |
-          set -euo pipefail
-          rpm_file="$(ls apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm | head -n 1)"
-          echo "Inspecting RPM payload: ${rpm_file}"
-          rpm -qlp "${rpm_file}" > rpm-contents.txt
-
-          required=(
-            "packages/frontend/dist/index.html"
-            "packages/backend/dist/desktop/server.js"
-            "packages/backend/prisma/schema.prisma"
-            "packages/backend/dist/desktop/node_modules/.prisma/client/package.json"
-            "packages/backend/dist/desktop/node_modules/@prisma/engines/package.json"
-            "node/node"
-            "postgres/bin/postgres"
-            ".env.desktop"
-          )
-
-          for entry in "${required[@]}"; do
-            if ! grep -F "${entry}" rpm-contents.txt > /dev/null; then
-              echo "Missing required RPM resource: ${entry}" >&2
-              exit 1
-            fi
-          done
-
-          if ! grep -E "packages/backend/dist/desktop/node_modules/@prisma/engines/schema-engine" rpm-contents.txt > /dev/null; then
-            echo "Missing required RPM Prisma schema-engine binary" >&2
-            exit 1
-          fi
-
-          if ! grep -E "packages/backend/dist/desktop/node_modules/@prisma/engines/(libquery_engine|query_engine)" rpm-contents.txt > /dev/null; then
-            echo "Missing required RPM Prisma query-engine library" >&2
-            exit 1
-          fi
-
-          if ! grep -E "packages/backend/prisma/migrations/.+/migration.sql" rpm-contents.txt > /dev/null; then
-            echo "Missing required RPM Prisma migrations" >&2
-            exit 1
-          fi
-
-          echo "RPM payload contains required desktop runtime resources."
+      - name: Validate Linux package artifacts
+        run: bash scripts/verify-linux-packages.sh
 
       - name: Upload Linux installers
         uses: actions/upload-artifact@v4
         with:
-          name: elms-linux-installer-${{ github.sha }}
+          name: elms-linux-installer-${{ env.SOURCE_SHA }}
           path: |
             apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
             apps/desktop/src-tauri/target/release/bundle/deb/*.deb

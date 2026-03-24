@@ -41,6 +41,7 @@ $TmpDir      = Join-Path ([System.IO.Path]::GetTempPath()) "elms-bundle-$PID"
 
 $PgDestDir   = Join-Path $ResourceDir "postgres"
 $NodeDestDir = Join-Path $ResourceDir "node"
+$PgLayoutFile = Join-Path $PgDestDir ".layout.env"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 function Download-File {
@@ -56,11 +57,85 @@ function Expand-ZipTo {
     Expand-Archive -Path $ZipFile -DestinationPath $DestDir -Force
 }
 
+function Test-BundledPostgresLayout {
+    param([string]$BundleRoot, [string]$LayoutFile)
+
+    if (-not (Test-Path $LayoutFile)) {
+        return $false
+    }
+
+    $manifest = @{}
+    foreach ($line in Get-Content $LayoutFile) {
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.TrimStart().StartsWith("#")) {
+            continue
+        }
+
+        $parts = $line -split "=", 2
+        if ($parts.Count -ne 2) {
+            continue
+        }
+
+        $manifest[$parts[0].Trim()] = $parts[1].Trim().Trim("'").Trim('"')
+    }
+
+    foreach ($key in @("POSTGRES_BIN_DIR", "POSTGRES_SHARE_DIR", "POSTGRES_PKGLIB_DIR", "POSTGRES_RUNTIME_LIB_DIR")) {
+        $relative = $manifest[$key]
+        if ([string]::IsNullOrWhiteSpace($relative)) {
+            return $false
+        }
+
+        $resolved = Join-Path $BundleRoot $relative
+        if (-not (Test-Path $resolved)) {
+            return $false
+        }
+    }
+
+    return $true
+}
+
+function Assert-BundledPostgresResources {
+    param([string]$BundleRoot)
+
+    $binDir = Join-Path $BundleRoot "bin"
+    $shareDir = Join-Path $BundleRoot "share"
+    $libDir = Join-Path $BundleRoot "lib"
+
+    foreach ($exe in @("postgres.exe", "pg_ctl.exe", "initdb.exe", "createdb.exe", "pg_isready.exe")) {
+        if (-not (Test-Path (Join-Path $binDir $exe))) {
+            throw "Bundled PostgreSQL executable missing: $exe"
+        }
+    }
+
+    if (-not (Test-Path (Join-Path $shareDir "timezonesets"))) {
+        throw "Bundled PostgreSQL timezone data missing under $shareDir"
+    }
+
+    $dlls = Get-ChildItem -Path $libDir -Filter "*.dll" -File -ErrorAction SilentlyContinue
+    if (-not $dlls -or $dlls.Count -eq 0) {
+        throw "Bundled PostgreSQL runtime libraries are missing from $libDir"
+    }
+}
+
 # ── PostgreSQL ─────────────────────────────────────────────────────────────────
 $PgSentinel = Join-Path $PgDestDir ".bundle-complete"
-if (Test-Path $PgSentinel) {
+$PgBundleReady = $false
+if ((Test-Path $PgSentinel) -and (Test-BundledPostgresLayout -BundleRoot $PgDestDir -LayoutFile $PgLayoutFile)) {
+    try {
+        Assert-BundledPostgresResources -BundleRoot $PgDestDir
+        $PgBundleReady = $true
+    } catch {
+        $PgBundleReady = $false
+    }
+}
+
+if ($PgBundleReady) {
     Write-Host "[PG] PostgreSQL $PgVersion already bundled — skipping."
 } else {
+    if (Test-Path $PgDestDir) {
+        Write-Host "[PG] Existing PostgreSQL bundle is missing the layout manifest or required resources — rebuilding."
+        Remove-Item -Recurse -Force $PgDestDir
+    }
+
     Write-Host "[PG] Bundling PostgreSQL $PgVersion ..."
 
     $PgZipName = "postgresql-$PgVersion-1-windows-x64-binaries.zip"
@@ -96,6 +171,15 @@ if (Test-Path $PgSentinel) {
         }
     }
 
+    @"
+POSTGRES_BIN_DIR=bin
+POSTGRES_SHARE_DIR=share
+POSTGRES_PKGLIB_DIR=lib
+POSTGRES_RUNTIME_LIB_DIR=lib
+"@ | Set-Content $PgLayoutFile -Encoding UTF8
+
+    Assert-BundledPostgresResources -BundleRoot $PgDestDir
+
     # Write sentinel so subsequent runs skip the download.
     "PostgreSQL $PgVersion bundled on $(Get-Date -Format 'yyyy-MM-dd')" |
         Set-Content $PgSentinel -Encoding UTF8
@@ -105,9 +189,14 @@ if (Test-Path $PgSentinel) {
 
 # ── Node.js ───────────────────────────────────────────────────────────────────
 $NodeSentinel = Join-Path $NodeDestDir ".bundle-complete"
-if (Test-Path $NodeSentinel) {
+if ((Test-Path $NodeSentinel) -and (Test-Path (Join-Path $NodeDestDir "node.exe"))) {
     Write-Host "[Node] Node.js $NodeVersion already bundled — skipping."
 } else {
+    if (Test-Path $NodeDestDir) {
+        Write-Host "[Node] Existing Node.js bundle is missing the expected runtime binary — rebuilding."
+        Remove-Item -Recurse -Force $NodeDestDir
+    }
+
     Write-Host "[Node] Bundling Node.js $NodeVersion ..."
 
     $NodeZipName = "node-v$NodeVersion-win-x64.zip"
@@ -140,6 +229,10 @@ if (Test-Path $NodeSentinel) {
         Set-Content $NodeSentinel -Encoding UTF8
 
     Write-Host "[Node] Done."
+}
+
+if (-not (Test-Path (Join-Path $NodeDestDir "node.exe"))) {
+    throw "Bundled Node.js runtime missing node.exe under $NodeDestDir"
 }
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────

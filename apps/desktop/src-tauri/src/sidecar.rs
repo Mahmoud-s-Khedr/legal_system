@@ -727,7 +727,7 @@ fn desktop_env_candidates(app: &AppHandle) -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     if should_use_workspace_runtime() {
         if let Some(root) = workspace_root() {
-            candidates.push(root.join("apps/desktop/.env.desktop"));
+            candidates.extend(workspace_desktop_env_candidates(&root));
         }
         if let Ok(resource_dir) = app.path().resource_dir() {
             candidates.push(resource_dir.join(".env.desktop"));
@@ -737,10 +737,24 @@ fn desktop_env_candidates(app: &AppHandle) -> Vec<PathBuf> {
             candidates.push(resource_dir.join(".env.desktop"));
         }
         if let Some(root) = workspace_root() {
-            candidates.push(root.join("apps/desktop/.env.desktop"));
+            candidates.extend(workspace_desktop_env_candidates(&root));
         }
     }
     candidates
+}
+
+fn workspace_desktop_env_candidates(root: &Path) -> Vec<PathBuf> {
+    vec![
+        root.join("apps/desktop/.env.desktop"),
+        root.join("apps/desktop/.env.desktop.example"),
+    ]
+}
+
+fn resolve_workspace_desktop_env_file(root: &Path) -> PathBuf {
+    workspace_desktop_env_candidates(root)
+        .into_iter()
+        .find(|candidate| candidate.exists())
+        .unwrap_or_else(|| root.join("apps/desktop/.env.desktop.example"))
 }
 
 fn should_use_workspace_runtime() -> bool {
@@ -1287,7 +1301,7 @@ fn workspace_backend_launch(
         ));
     }
 
-    let env_file = root.join("apps/desktop/.env.desktop");
+    let env_file = resolve_workspace_desktop_env_file(&root);
 
     #[cfg(windows)]
     let program = PathBuf::from("node.exe");
@@ -1966,6 +1980,7 @@ fn find_file_with_prefix_recursive(
 mod tests {
     use super::workspace_backend_launch;
     use std::collections::HashMap;
+    use std::path::Path;
     use std::path::PathBuf;
 
     #[test]
@@ -1992,8 +2007,15 @@ mod tests {
             launch.args[0]
         );
         assert!(
-            launch.args[1].ends_with("apps/desktop/.env.desktop"),
+            launch.args[1].ends_with("apps/desktop/.env.desktop")
+                || launch.args[1].ends_with("apps/desktop/.env.desktop.example"),
             "expected desktop env-file path, got {}",
+            launch.args[1]
+        );
+        assert!(
+            Path::new(&launch.args[1]).exists()
+                || launch.args[1].ends_with("apps/desktop/.env.desktop.example"),
+            "expected resolved env-file path to exist or fall back to the checked-in example, got {}",
             launch.args[1]
         );
         assert!(

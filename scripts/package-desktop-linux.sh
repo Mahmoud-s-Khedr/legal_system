@@ -10,7 +10,7 @@ mkdir -p "$LOG_DIR"
 cd "$ROOT_DIR"
 
 bash ./scripts/bundle-linux-deps.sh
-bash ./scripts/verify-desktop-resources.sh
+node ./scripts/verify-desktop-resources.mjs
 
 set +e
 NO_STRIP=1 pnpm --filter @elms/desktop tauri build --bundles appimage,deb,rpm --ci 2>&1 | tee "$LOG_FILE"

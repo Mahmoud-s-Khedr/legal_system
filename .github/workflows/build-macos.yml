@@ -18,12 +18,33 @@ permissions:
 jobs:
   build:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact_suffix: arm64
+            node_arch: arm64
+            runner: macos-15
+            target: aarch64-apple-darwin
+          - artifact_suffix: x64
+            node_arch: x64
+            runner: macos-15-intel
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    env:
+      SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Log packaged source SHA
+        run: |
+          echo "Packaging source SHA: $SOURCE_SHA"
+          echo "macOS target: ${{ matrix.target }}"
+
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
 
       # ── 2. Toolchain setup ───────────────────────────────────────────────────
       - name: Setup pnpm
@@ -59,10 +80,11 @@ jobs:
         env:
           PG_VERSION: "16"
           NODE_VERSION: ${{ github.event.inputs.node_version || '22.14.0' }}
+          NODE_ARCH: ${{ matrix.node_arch }}
         run: bash scripts/bundle-macos-deps.sh
 
       - name: Verify bundled desktop resources
-        run: bash scripts/verify-desktop-resources.sh
+        run: node scripts/verify-desktop-resources.mjs
 
       # ── 5. Build Tauri macOS dmg ──────────────────────────────────────────────
       - name: Build Tauri macOS installer
@@ -81,14 +103,14 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
-          args: --target aarch64-apple-darwin --bundles dmg
+          args: --target ${{ matrix.target }} --bundles dmg
 
       # ── 6. Upload dmg as build artifact ──────────────────────────────────────
       - name: Upload macOS installer
         uses: actions/upload-artifact@v4
         with:
-          name: elms-macos-installer-${{ github.sha }}
+          name: elms-macos-${{ matrix.artifact_suffix }}-installer-${{ env.SOURCE_SHA }}
           path: |
-            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
           retention-days: 30
           if-no-files-found: error

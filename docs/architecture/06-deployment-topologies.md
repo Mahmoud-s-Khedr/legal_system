@@ -264,7 +264,7 @@ ELMS uses GitHub Actions with three platform-specific build workflows for deskto
 |---|---|---|
 | `build-linux.yml` | Ubuntu (GitHub-hosted) | AppImage, `.deb`, `.rpm` |
 | `build-windows.yml` | Windows (GitHub-hosted) | NSIS installer (`.exe`) |
-| `build-macos.yml` | macOS (GitHub-hosted) | Universal binary (arm64 + x86_64), `.dmg` |
+| `build-macos.yml` | macOS (GitHub-hosted) | Native arm64 `.dmg` and native x86_64 `.dmg` |
 
 Each workflow:
 1. Installs Rust toolchain (with target triples for cross-compilation on macOS)

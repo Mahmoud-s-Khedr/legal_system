@@ -37,7 +37,6 @@
       "../../../packages/backend/dist/desktop": "packages/backend/dist/desktop/",
       "../../../packages/backend/prisma/schema.prisma": "packages/backend/prisma/schema.prisma",
       "../../../packages/backend/prisma/migrations": "packages/backend/prisma/migrations/",
-      "../.env.desktop": ".env.desktop",
       "../resources/postgres": "postgres/",
       "../resources/node": "node/"
     },

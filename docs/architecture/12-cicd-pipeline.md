@@ -129,15 +129,15 @@ Runs on `ubuntu-latest`, timeout 90 minutes.
 
 ### Steps
 
-1. **Checkout** — `actions/checkout@v4`
+1. **Resolve packaged source SHA** — uses `workflow_run.head_sha` for downstream builds or `github.sha` for manual dispatches, then checks out that exact commit with `actions/checkout@v4`
 2. **Toolchain setup** — pnpm 10.27.0, Node 22, Rust stable
 3. **Rust cache** — `Swatinem/rust-cache@v2` targeting `apps/desktop/src-tauri`
 4. **Linux system dependencies** — apt-get installs: `libwebkit2gtk-4.1-dev`, `libssl-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `patchelf`, `rpm`, `fakeroot`, `build-essential`
 5. **Install JS dependencies** — `pnpm install --frozen-lockfile`
 6. **Prisma generate** — required before TypeScript compilation
-7. **Bundle native dependencies** — `bash scripts/bundle-linux-deps.sh` downloads PostgreSQL 16 and Node.js 22 Linux binaries and patches RPATH for portability within the AppImage
-8. **Tauri build** — `tauri-apps/tauri-action@v0` with `--bundles appimage,deb,rpm`. The `tauri-action` runner executes `beforeBuildCommand` from `tauri.conf.json`, which builds the backend sidecar and frontend — no separate `pnpm build` step is needed.
-9. **Upload artifacts** — AppImage, .deb, and .rpm files uploaded as `elms-linux-installer-<SHA>`, retained 30 days.
+7. **Build installers** — `pnpm --filter @elms/desktop package:linux`, which bundles native dependencies, verifies local desktop resources, and runs `tauri build --bundles appimage,deb,rpm`
+8. **Validate package artifacts** — `bash scripts/verify-linux-packages.sh` extracts the AppImage and `.deb`, installs the `.rpm` in a Fedora container root, and verifies the same packaged resource contract across all three outputs
+9. **Upload artifacts** — AppImage, `.deb`, and `.rpm` files uploaded as `elms-linux-installer-<SOURCE_SHA>`, retained 30 days.
 
 **Vite environment variables set during build:**
 
@@ -157,8 +157,9 @@ Runs on `windows-latest`, timeout 90 minutes.
 **Manual inputs:** Same as Linux (`pg_version` default `16.9`, `node_version` default `22.14.0`).
 
 Key differences from Linux:
+- Checkout is pinned to the same resolved packaged source SHA pattern used by Linux/macOS
 - Rust target: `x86_64-pc-windows-msvc` (MSVC toolchain, no MinGW)
-- Native deps script: `scripts/bundle-windows-deps.ps1 -PgVersion <ver> -NodeVersion <ver>` (PowerShell, downloads EnterpriseDB zip + Node.js zip)
+- Native deps script: `scripts/bundle-windows-deps.ps1 -PgVersion <ver> -NodeVersion <ver>` (PowerShell, downloads EnterpriseDB zip + Node.js zip and writes the required PostgreSQL `.layout.env` manifest)
 - Tauri build args: `--target x86_64-pc-windows-msvc --bundles nsis`
 - Output artifact: NSIS `.exe` installer at `target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe`
 - No system library apt-get step (Windows runner has required toolchain pre-installed)
@@ -169,15 +170,17 @@ Key differences from Linux:
 
 Triggers: same as build-linux.yml.
 
-Runs on `macos-latest`, timeout 90 minutes.
+Runs as a two-job matrix:
+- `macos-15` for `aarch64-apple-darwin`
+- `macos-15-intel` for `x86_64-apple-darwin`
 
 Key differences:
-- Rust targets: `aarch64-apple-darwin,x86_64-apple-darwin` (both loaded for potential universal binary support; the actual build targets `aarch64-apple-darwin`)
-- Native deps script: `bash scripts/bundle-macos-deps.sh` downloads the darwin-arm64 Node.js runtime to `apps/desktop/resources/node/node` and bundles Homebrew `postgresql@16` into `apps/desktop/resources/postgres/`
-- PostgreSQL uses the same `.layout.env` manifest contract as Linux so the desktop runtime and verifier resolve the packaged `bindir`, `sharedir`, `pkglibdir`, and runtime library directory consistently on both platforms
-- The workflow runs `bash scripts/verify-desktop-resources.sh` before invoking Tauri so missing Node.js or PostgreSQL resources fail fast instead of surfacing later inside `beforeBuildCommand`
-- Tauri build args: `--target aarch64-apple-darwin --bundles dmg`
-- Output artifact: `.dmg` file at `target/aarch64-apple-darwin/release/bundle/dmg/*.dmg`
+- Rust targets: `aarch64-apple-darwin,x86_64-apple-darwin`
+- Native deps script: `bash scripts/bundle-macos-deps.sh` downloads the target-specific Node.js runtime (`NODE_ARCH=arm64` or `NODE_ARCH=x64`) to `apps/desktop/resources/node/node` and bundles Homebrew `postgresql@16` into `apps/desktop/resources/postgres/`
+- PostgreSQL uses the same `.layout.env` manifest contract as Linux and Windows so the desktop runtime and verifier resolve the packaged `bindir`, `sharedir`, `pkglibdir`, and runtime library directory consistently across all desktop platforms
+- The workflow runs `node scripts/verify-desktop-resources.mjs` before invoking Tauri so missing Node.js or PostgreSQL resources fail fast instead of surfacing later inside `beforeBuildCommand`
+- Tauri build args: `--target <matrix-target> --bundles dmg`
+- Output artifacts: `.dmg` files at `target/aarch64-apple-darwin/release/bundle/dmg/*.dmg` and `target/x86_64-apple-darwin/release/bundle/dmg/*.dmg`
 - **Apple notarization secrets** are consumed from GitHub secrets (required for distribution outside the Mac App Store):
 
 | Secret | Purpose |

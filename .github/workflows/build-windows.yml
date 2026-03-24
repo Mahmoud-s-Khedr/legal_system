@@ -24,10 +24,19 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 90
+    env:
+      SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Log packaged source SHA
+        shell: bash
+        run: |
+          echo "Packaging source SHA: $SOURCE_SHA"
+
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
 
       # ── 2. Toolchain setup ───────────────────────────────────────────────────
       - name: Setup pnpm
@@ -83,7 +92,7 @@ jobs:
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
         with:
-          name: elms-windows-installer-${{ github.sha }}
+          name: elms-windows-installer-${{ env.SOURCE_SHA }}
           path: |
             apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
           retention-days: 30

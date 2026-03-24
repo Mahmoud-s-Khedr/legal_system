@@ -34,7 +34,7 @@ function run(command, args, options = {}) {
 }
 
 await run(pnpmBin, ["--filter", "@elms/backend", "build:desktop"]);
-await run("bash", [resolve(repoRoot, "scripts/verify-desktop-resources.sh")]);
+await run("node", [resolve(repoRoot, "scripts/verify-desktop-resources.mjs")]);
 await run(
   pnpmBin,
   ["--filter", "@elms/frontend", "build"],
