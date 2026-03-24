@@ -3,43 +3,44 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
+    [string]$ReleaseRoot,
+
+    [Parameter(Mandatory = $false)]
     [string]$InstallerPath
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Require-Command {
-    param([string]$Name)
-
-    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
-        throw "'$Name' is required but was not found in PATH."
-    }
-}
-
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$ResolvedInstaller = (Resolve-Path $InstallerPath).Path
-$ExtractRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("elms-nsis-verify-" + [System.Guid]::NewGuid().ToString("N"))
+$ResolvedReleaseRoot = (Resolve-Path $ReleaseRoot).Path
+$NsisDir = Join-Path $ResolvedReleaseRoot "bundle\nsis"
+$ResourcesDir = Join-Path $ResolvedReleaseRoot "resources"
 
-Require-Command 7z
+if (-not $InstallerPath) {
+    $InstallerPath = Get-ChildItem -Path $NsisDir -Filter "*.exe" -File |
+        Select-Object -First 1 -ExpandProperty FullName
 
-try {
-    New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
-
-    Write-Host "Extracting NSIS installer: $ResolvedInstaller"
-    & 7z x "-o$ExtractRoot" -y $ResolvedInstaller | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "7z failed to extract $ResolvedInstaller"
-    }
-
-    & node (Join-Path $RepoRoot "scripts\verify-packaged-desktop-tree.mjs") --search-root $ExtractRoot
-    if ($LASTEXITCODE -ne 0) {
-        throw "Packaged desktop tree verification failed for extracted installer payload."
-    }
-
-    Write-Host "Windows installer payload verified."
-} finally {
-    if (Test-Path $ExtractRoot) {
-        Remove-Item -Recurse -Force $ExtractRoot -ErrorAction SilentlyContinue
+    if (-not $InstallerPath) {
+        throw "NSIS installer not found under $NsisDir"
     }
 }
+
+$ResolvedInstaller = (Resolve-Path $InstallerPath).Path
+if (-not (Test-Path $ResolvedInstaller -PathType Leaf)) {
+    throw "NSIS installer not found at $ResolvedInstaller"
+}
+
+if (-not (Test-Path $ResourcesDir -PathType Container)) {
+    throw "Staged Windows resources directory not found at $ResourcesDir"
+}
+
+Write-Host "Verifying Windows staged payload from: $ResourcesDir"
+Write-Host "Confirmed NSIS installer exists at: $ResolvedInstaller"
+
+& node (Join-Path $RepoRoot "scripts\verify-packaged-desktop-tree.mjs") $ResourcesDir
+if ($LASTEXITCODE -ne 0) {
+    throw "Packaged desktop tree verification failed for staged Windows payload."
+}
+
+Write-Host "Windows installer payload verified."
