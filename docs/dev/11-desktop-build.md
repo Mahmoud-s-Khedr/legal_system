@@ -103,6 +103,8 @@ PostgreSQL listens on port **5433** by default (not 5432) to avoid conflicts wit
 
 On Linux the executables have their RPATH patched with `patchelf` to resolve bundled shared libraries via `$ORIGIN/../lib`, making the binaries fully portable without requiring `LD_LIBRARY_PATH`.
 
+Linux bundles now include a manifest at `apps/desktop/resources/postgres/.layout.env`. The bundling step preserves PostgreSQL's distro-specific relative subtree under a synthetic bundle root, so Ubuntu layouts like `share/postgresql/16` and Fedora layouts like `share/pgsql` both remain valid inside the packaged app. The desktop runtime and resource verifier read this manifest instead of assuming a fixed `lib64/pgsql` / `share/pgsql` tree.
+
 To prepare the PostgreSQL binaries for the Linux installer:
 
 ```bash
@@ -165,6 +167,8 @@ pnpm prisma:generate
 # 3. Build Tauri installers with resource verification and log capture
 pnpm --filter @elms/desktop package:linux
 ```
+
+`bundle-linux-deps.sh` now performs a PostgreSQL smoke test after copying resources: it runs the bundled `postgres` binary and initializes a temporary data directory with the bundled `initdb` binary before writing the bundle sentinel.
 
 Artifacts are written to:
 - `apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage`

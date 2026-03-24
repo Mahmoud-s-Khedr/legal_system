@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -1478,12 +1478,63 @@ where
     ))
 }
 
+fn read_postgres_layout_entry(resource_dir: &Path, key: &str) -> Option<PathBuf> {
+    let manifest_path = resource_dir.join("postgres/.layout.env");
+    let manifest = fs::read_to_string(manifest_path).ok()?;
+
+    for line in manifest.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        let Some((entry_key, entry_value)) = trimmed.split_once('=') else {
+            continue;
+        };
+        if entry_key.trim() != key {
+            continue;
+        }
+
+        let value = entry_value.trim().trim_matches('"').trim_matches('\'');
+        if value.is_empty() {
+            return None;
+        }
+
+        let relative = Path::new(value);
+        if relative.is_absolute() {
+            return None;
+        }
+
+        if relative.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        }) {
+            return None;
+        }
+
+        return Some(resource_dir.join("postgres").join(relative));
+    }
+
+    None
+}
+
 fn resolve_postgres_binary(app: &AppHandle, executable: &str) -> PathBuf {
     // On Windows all PostgreSQL tools carry a .exe extension.
     #[cfg(windows)]
     let executable = format!("{executable}.exe");
     #[cfg(not(windows))]
     let executable = executable.to_string();
+
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        if let Some(bin_dir) = read_postgres_layout_entry(&resource_dir, "POSTGRES_BIN_DIR") {
+            let candidate = bin_dir.join(&executable);
+            if candidate.exists() {
+                return candidate;
+            }
+        }
+    }
 
     if let Ok(bin_dir) = std::env::var("ELMS_POSTGRES_BIN_DIR") {
         let candidate = PathBuf::from(bin_dir).join(&executable);

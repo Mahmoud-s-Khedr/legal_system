@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.elms.desktop",
   "build": {
-    "beforeDevCommand": "node ../scripts/frontend-desktop-dev.mjs",
-    "beforeBuildCommand": "node ../scripts/prepare-desktop-build.mjs",
+    "beforeDevCommand": "node ./scripts/frontend-desktop-dev.mjs",
+    "beforeBuildCommand": "node ./scripts/prepare-desktop-build.mjs",
     "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../../../packages/frontend/dist"
   },
