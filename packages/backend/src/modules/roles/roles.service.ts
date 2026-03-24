@@ -1,0 +1,229 @@
+import type {
+  CreateRoleDto,
+  RoleDto,
+  RoleListResponseDto,
+  SessionUser,
+  SetRolePermissionsDto,
+  UpdateRoleDto
+} from "@elms/shared";
+import { prisma } from "../../db/prisma.js";
+import { withTenant } from "../../db/tenant.js";
+import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
+
+function mapRole(role: {
+  id: string;
+  firmId: string | null;
+  key: string;
+  name: string;
+  scope: string;
+  permissions: Array<{ permission: { key: string } }>;
+}): RoleDto {
+  return {
+    id: role.id,
+    firmId: role.firmId,
+    key: role.key,
+    name: role.name,
+    scope: role.scope,
+    permissions: role.permissions.map((item) => item.permission.key)
+  };
+}
+
+const ROLE_INCLUDE = {
+  permissions: {
+    include: { permission: true }
+  }
+} as const;
+
+export async function listRoles(
+  actor: SessionUser,
+  pagination: { page: number; limit: number } = { page: 1, limit: 50 }
+): Promise<RoleListResponseDto> {
+  const { page, limit } = pagination;
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const where = { OR: [{ firmId: null }, { firmId: actor.firmId }] };
+
+    const [total, roles] = await Promise.all([
+      tx.role.count({ where }),
+      tx.role.findMany({
+        where,
+        include: ROLE_INCLUDE,
+        orderBy: [{ scope: "asc" }, { name: "asc" }],
+        skip: (page - 1) * limit,
+        take: limit
+      })
+    ]);
+
+    return { items: roles.map(mapRole), total, page, pageSize: limit };
+  });
+}
+
+export async function getRole(actor: SessionUser, roleId: string): Promise<RoleDto> {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const role = await tx.role.findFirstOrThrow({
+      where: { id: roleId, OR: [{ firmId: null }, { firmId: actor.firmId }] },
+      include: ROLE_INCLUDE
+    });
+
+    return mapRole(role);
+  });
+}
+
+export async function createRole(
+  actor: SessionUser,
+  payload: CreateRoleDto,
+  audit: AuditContext
+): Promise<RoleDto> {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.role.findFirst({
+      where: { firmId: actor.firmId, key: payload.key }
+    });
+    if (existing) {
+      const err = new Error(`A role with key "${payload.key}" already exists for this firm`) as Error & { statusCode: number };
+      err.statusCode = 409;
+      throw err;
+    }
+
+    const role = await tx.role.create({
+      data: {
+        firmId: actor.firmId,
+        key: payload.key,
+        name: payload.name,
+        scope: "FIRM"
+      },
+      include: ROLE_INCLUDE
+    });
+
+    await writeAuditLog(tx, audit, {
+      action: "roles.create",
+      entityType: "Role",
+      entityId: role.id,
+      newData: { key: payload.key, name: payload.name }
+    });
+
+    return mapRole(role);
+  });
+}
+
+export async function updateRole(
+  actor: SessionUser,
+  roleId: string,
+  payload: UpdateRoleDto,
+  audit: AuditContext
+): Promise<RoleDto> {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.role.findFirstOrThrow({
+      where: { id: roleId, firmId: actor.firmId }
+    });
+
+    if (existing.scope === "SYSTEM") {
+      const err = new Error("System roles cannot be modified") as Error & { statusCode: number };
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const role = await tx.role.update({
+      where: { id: roleId },
+      data: { name: payload.name },
+      include: ROLE_INCLUDE
+    });
+
+    await writeAuditLog(tx, audit, {
+      action: "roles.update",
+      entityType: "Role",
+      entityId: roleId,
+      oldData: { name: existing.name },
+      newData: { name: payload.name }
+    });
+
+    return mapRole(role);
+  });
+}
+
+export async function deleteRole(
+  actor: SessionUser,
+  roleId: string,
+  audit: AuditContext
+): Promise<{ success: true }> {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.role.findFirstOrThrow({
+      where: { id: roleId, firmId: actor.firmId }
+    });
+
+    if (existing.scope === "SYSTEM") {
+      const err = new Error("System roles cannot be deleted") as Error & { statusCode: number };
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const userCount = await tx.user.count({ where: { roleId } });
+    if (userCount > 0) {
+      const err = new Error(`Cannot delete a role with ${userCount} assigned user(s). Reassign users first.`) as Error & { statusCode: number };
+      err.statusCode = 422;
+      throw err;
+    }
+
+    await tx.role.delete({ where: { id: roleId } });
+
+    await writeAuditLog(tx, audit, {
+      action: "roles.delete",
+      entityType: "Role",
+      entityId: roleId,
+      oldData: { key: existing.key, name: existing.name }
+    });
+
+    return { success: true as const };
+  });
+}
+
+export async function setRolePermissions(
+  actor: SessionUser,
+  roleId: string,
+  payload: SetRolePermissionsDto,
+  audit: AuditContext
+): Promise<RoleDto> {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.role.findFirstOrThrow({
+      where: { id: roleId, firmId: actor.firmId }
+    });
+
+    if (existing.scope === "SYSTEM") {
+      const err = new Error("System role permissions cannot be modified via this endpoint") as Error & { statusCode: number };
+      err.statusCode = 403;
+      throw err;
+    }
+
+    // Resolve permission IDs
+    const permissions = await tx.permission.findMany({
+      where: { key: { in: payload.permissionKeys } }
+    });
+
+    const unknownKeys = payload.permissionKeys.filter(
+      (k) => !permissions.some((p) => p.key === k)
+    );
+    if (unknownKeys.length > 0) {
+      const err = new Error(`Unknown permission key(s): ${unknownKeys.join(", ")}`) as Error & { statusCode: number };
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Replace all permissions atomically
+    await tx.rolePermission.deleteMany({ where: { roleId } });
+    await tx.rolePermission.createMany({
+      data: permissions.map((p) => ({ roleId, permissionId: p.id }))
+    });
+
+    await writeAuditLog(tx, audit, {
+      action: "roles.permissions.set",
+      entityType: "Role",
+      entityId: roleId,
+      newData: { permissionKeys: payload.permissionKeys }
+    });
+
+    const role = await tx.role.findFirstOrThrow({
+      where: { id: roleId },
+      include: ROLE_INCLUDE
+    });
+
+    return mapRole(role);
+  });
+}

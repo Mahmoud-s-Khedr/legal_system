@@ -1,0 +1,245 @@
+import type { FastifyInstance } from "fastify";
+import { requireAuth } from "../../middleware/requireAuth.js";
+import { requirePermission } from "../../middleware/requirePermission.js";
+import {
+  caseStatusDistribution,
+  hearingOutcomes,
+  lawyerWorkload,
+  revenueReport,
+  outstandingBalances,
+  caseProfitability
+} from "./reports.service.js";
+import {
+  listCustomReports,
+  createCustomReport,
+  updateCustomReport,
+  deleteCustomReport,
+  runCustomReport
+} from "./custom-reports.service.js";
+import { generateReportExcel, generateReportPdf } from "./report.export.js";
+
+export async function registerReportRoutes(app: FastifyInstance) {
+  app.get(
+    "/api/reports/case-status",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request) => {
+      const q = request.query as Record<string, string>;
+      return caseStatusDistribution(request.sessionUser!, {
+        dateFrom: q.dateFrom,
+        dateTo: q.dateTo
+      });
+    }
+  );
+
+  app.get(
+    "/api/reports/hearing-outcomes",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request) => {
+      const q = request.query as Record<string, string>;
+      return hearingOutcomes(request.sessionUser!, {
+        dateFrom: q.dateFrom,
+        dateTo: q.dateTo
+      });
+    }
+  );
+
+  app.get(
+    "/api/reports/lawyer-workload",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request) => {
+      return lawyerWorkload(request.sessionUser!);
+    }
+  );
+
+  app.get(
+    "/api/reports/revenue",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request) => {
+      const q = request.query as Record<string, string>;
+      return revenueReport(request.sessionUser!, {
+        dateFrom: q.dateFrom,
+        dateTo: q.dateTo
+      });
+    }
+  );
+
+  app.get(
+    "/api/reports/outstanding-balances",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request) => {
+      return outstandingBalances(request.sessionUser!);
+    }
+  );
+
+  app.get(
+    "/api/reports/case-profitability/:caseId",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const { caseId } = request.params as { caseId: string };
+      const result = await caseProfitability(request.sessionUser!, caseId);
+
+      if (!result) {
+        return reply.status(404).send({ error: "Case not found" });
+      }
+
+      return result;
+    }
+  );
+
+  // ── Export endpoints ──────────────────────────────────────────────────────
+
+  app.get(
+    "/api/reports/:reportType/export",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const { reportType } = request.params as { reportType: string };
+      const q = request.query as Record<string, string>;
+      const format = q.format === "pdf" ? "pdf" : "excel";
+      const filter = { dateFrom: q.dateFrom, dateTo: q.dateTo };
+      const generatedAt = new Date().toISOString().slice(0, 10);
+
+      let data: unknown;
+      switch (reportType) {
+        case "case-status":
+          data = await caseStatusDistribution(request.sessionUser!, filter);
+          break;
+        case "hearing-outcomes":
+          data = await hearingOutcomes(request.sessionUser!, filter);
+          break;
+        case "lawyer-workload":
+          data = await lawyerWorkload(request.sessionUser!);
+          break;
+        case "revenue":
+          data = await revenueReport(request.sessionUser!, filter);
+          break;
+        case "outstanding-balances":
+          data = await outstandingBalances(request.sessionUser!);
+          break;
+        default:
+          return reply.status(400).send({ error: "Unknown report type" });
+      }
+
+      if (format === "excel") {
+        const buf = await generateReportExcel(reportType, data, generatedAt);
+        return reply
+          .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+          .header("Content-Disposition", `attachment; filename="elms-report-${reportType}-${generatedAt}.xlsx"`)
+          .send(buf);
+      } else {
+        const buf = await generateReportPdf(reportType, data, generatedAt);
+        return reply
+          .header("Content-Type", "application/pdf")
+          .header("Content-Disposition", `attachment; filename="elms-report-${reportType}-${generatedAt}.pdf"`)
+          .send(buf);
+      }
+    }
+  );
+
+  // ── Custom report builder ─────────────────────────────────────────────────
+
+  app.get(
+    "/api/reports/custom",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request) => listCustomReports(request.sessionUser!)
+  );
+
+  app.post(
+    "/api/reports/custom",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const body = request.body as { name: string; description?: string; reportType: string; config: unknown };
+      const result = await createCustomReport(request.sessionUser!, body);
+      return reply.status(201).send(result);
+    }
+  );
+
+  app.put(
+    "/api/reports/custom/:id",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { name?: string; description?: string; reportType?: string; config?: unknown };
+      const result = await updateCustomReport(request.sessionUser!, id, body);
+      if (!result) return reply.status(404).send({ error: "Custom report not found" });
+      return result;
+    }
+  );
+
+  app.delete(
+    "/api/reports/custom/:id",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const ok = await deleteCustomReport(request.sessionUser!, id);
+      if (!ok) return reply.status(404).send({ error: "Custom report not found" });
+      return { success: true };
+    }
+  );
+
+  app.post(
+    "/api/reports/custom/:id/run",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const result = await runCustomReport(request.sessionUser!, id);
+      if (!result) return reply.status(404).send({ error: "Custom report not found" });
+      return result;
+    }
+  );
+
+  app.get(
+    "/api/reports/custom/:id/export",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const q = request.query as Record<string, string>;
+      const format = q.format === "pdf" ? "pdf" : "excel";
+      const generatedAt = new Date().toISOString().slice(0, 10);
+
+      const result = await runCustomReport(request.sessionUser!, id);
+      if (!result) return reply.status(404).send({ error: "Custom report not found" });
+
+      if (format === "excel") {
+        const buf = await generateReportExcel(result.reportType, result.rows, generatedAt);
+        return reply
+          .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+          .header("Content-Disposition", `attachment; filename="elms-custom-${id}-${generatedAt}.xlsx"`)
+          .send(buf);
+      } else {
+        const buf = await generateReportPdf(result.reportType, result.rows, generatedAt);
+        return reply
+          .header("Content-Type", "application/pdf")
+          .header("Content-Disposition", `attachment; filename="elms-custom-${id}-${generatedAt}.pdf"`)
+          .send(buf);
+      }
+    }
+  );
+
+  app.get(
+    "/api/reports/case-profitability/:caseId/export",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const { caseId } = request.params as { caseId: string };
+      const q = request.query as Record<string, string>;
+      const format = q.format === "pdf" ? "pdf" : "excel";
+      const generatedAt = new Date().toISOString().slice(0, 10);
+
+      const data = await caseProfitability(request.sessionUser!, caseId);
+      if (!data) return reply.status(404).send({ error: "Case not found" });
+
+      if (format === "excel") {
+        const buf = await generateReportExcel("case-profitability", data, generatedAt);
+        return reply
+          .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+          .header("Content-Disposition", `attachment; filename="elms-profitability-${caseId}-${generatedAt}.xlsx"`)
+          .send(buf);
+      } else {
+        const buf = await generateReportPdf("case-profitability", data, generatedAt);
+        return reply
+          .header("Content-Type", "application/pdf")
+          .header("Content-Disposition", `attachment; filename="elms-profitability-${caseId}-${generatedAt}.pdf"`)
+          .send(buf);
+      }
+    }
+  );
+}
