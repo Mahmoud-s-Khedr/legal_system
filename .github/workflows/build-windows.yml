@@ -1,0 +1,90 @@
+name: build-windows
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pg_version:
+        description: "PostgreSQL version to bundle"
+        default: "16.9"
+        required: false
+      node_version:
+        description: "Node.js LTS version to bundle"
+        default: "22.14.0"
+        required: false
+
+permissions:
+  contents: write   # required to attach the installer to a GitHub Release
+
+jobs:
+  build:
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── 2. Toolchain setup ───────────────────────────────────────────────────
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Rust (stable + MSVC target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      # ── 3. Install JS dependencies ───────────────────────────────────────────
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm prisma:generate
+
+      # ── 4. Bundle Windows-native dependencies ────────────────────────────────
+      - name: Bundle PostgreSQL + Node.js Windows binaries
+        shell: pwsh
+        run: |
+          $pgVer   = "${{ github.event.inputs.pg_version || '16.9' }}"
+          $nodeVer = "${{ github.event.inputs.node_version || '22.14.0' }}"
+          .\scripts\bundle-windows-deps.ps1 -PgVersion $pgVer -NodeVersion $nodeVer
+
+      # ── 5. Build Tauri NSIS installer ────────────────────────────────────────
+      # NOTE: tauri-action runs beforeBuildCommand from tauri.conf.json which
+      # calls build:desktop (backend) + frontend build. No separate pnpm build needed.
+      - name: Build Tauri Windows installer
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_DESKTOP_SHELL: "true"
+          VITE_API_BASE_URL: "http://127.0.0.1:7854"
+        with:
+          projectPath: apps/desktop
+          args: --target x86_64-pc-windows-msvc --bundles nsis
+
+      # ── 7. Upload installer as a build artifact ───────────────────────────────
+      - name: Upload NSIS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: elms-windows-installer-${{ github.sha }}
+          path: |
+            apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          retention-days: 30
+          if-no-files-found: error
