@@ -26,7 +26,9 @@ const DESKTOP_EXTERNALS = [
 ];
 
 export default defineConfig(() => {
-  const isDesktop = process.env.ELMS_BUILD_TARGET === "desktop";
+  const isDesktop =
+    process.env.ELMS_BUILD_TARGET === "desktop" ||
+    process.env.npm_lifecycle_event === "build:desktop";
   const outDir = isDesktop ? "dist/desktop" : "dist/cloud";
 
   return {

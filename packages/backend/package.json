@@ -11,7 +11,7 @@
     "dev:local": "node ./scripts/dev-local.mjs ../../apps/desktop/.env.desktop",
     "compile": "pnpm build",
     "build": "tsup --clean",
-    "build:desktop": "ELMS_BUILD_TARGET=desktop tsup --clean && node ../../scripts/desktop-bundle-extras.mjs",
+    "build:desktop": "tsup --clean && node ../../scripts/desktop-bundle-extras.mjs",
     "lint": "eslint src prisma --ext .ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
