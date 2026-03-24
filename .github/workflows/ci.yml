@@ -45,6 +45,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare desktop env resource for Tauri build checks
+        run: touch apps/desktop/.env.desktop
+
       - name: Validate
         run: pnpm validate
 
