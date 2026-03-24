@@ -1,0 +1,33 @@
+mod sidecar;
+
+use tauri::Manager;
+
+fn main() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .manage(sidecar::RuntimeState::default())
+        .invoke_handler(tauri::generate_handler![
+            sidecar::desktop_bootstrap_status,
+            sidecar::retry_bootstrap
+        ])
+        .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                sidecar::start_runtime_bootstrap(&handle);
+            });
+
+            if let Some(window) = app.get_webview_window("main") {
+                window.set_title("ELMS")?;
+            }
+
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("failed to build ELMS desktop shell")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                sidecar::shutdown_runtime(app);
+            }
+        });
+}
