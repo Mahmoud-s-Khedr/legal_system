@@ -1,0 +1,151 @@
+export enum Language {
+  AR = "AR",
+  EN = "EN",
+  FR = "FR"
+}
+
+export enum AuthMode {
+  LOCAL = "local",
+  CLOUD = "cloud"
+}
+
+export enum FirmType {
+  SOLO = "SOLO",
+  SMALL_FIRM = "SMALL_FIRM",
+  MEDIUM_FIRM = "MEDIUM_FIRM",
+  ENTERPRISE = "ENTERPRISE"
+}
+
+export enum EditionKey {
+  SOLO_OFFLINE = "solo_offline",
+  SOLO_ONLINE = "solo_online",
+  LOCAL_FIRM_OFFLINE = "local_firm_offline",
+  LOCAL_FIRM_ONLINE = "local_firm_online",
+  ENTERPRISE = "enterprise"
+}
+
+export enum FirmLifecycleStatus {
+  ACTIVE = "ACTIVE",
+  GRACE = "GRACE",
+  SUSPENDED = "SUSPENDED",
+  PENDING_DELETION = "PENDING_DELETION",
+  DATA_DELETION_PENDING = "DATA_DELETION_PENDING",
+  LICENSED = "LICENSED"
+}
+
+export enum PoaStatus {
+  ACTIVE = "ACTIVE",
+  EXPIRED = "EXPIRED",
+  REVOKED = "REVOKED",
+  PENDING = "PENDING"
+}
+
+export enum UserStatus {
+  ACTIVE = "ACTIVE",
+  INVITED = "INVITED",
+  SUSPENDED = "SUSPENDED"
+}
+
+export enum NotificationChannel {
+  IN_APP = "IN_APP",
+  EMAIL = "EMAIL",
+  SMS = "SMS",
+  DESKTOP_OS = "DESKTOP_OS"
+}
+
+export enum ClientType {
+  INDIVIDUAL = "INDIVIDUAL",
+  COMPANY = "COMPANY",
+  GOVERNMENT = "GOVERNMENT"
+}
+
+export enum CaseStatus {
+  ACTIVE = "ACTIVE",
+  SUSPENDED = "SUSPENDED",
+  CLOSED = "CLOSED",
+  WON = "WON",
+  LOST = "LOST",
+  SETTLED = "SETTLED",
+  ARCHIVED = "ARCHIVED"
+}
+
+export enum CaseRoleOnCase {
+  LEAD = "LEAD",
+  SUPPORTING = "SUPPORTING",
+  PARALEGAL = "PARALEGAL",
+  CONSULTANT = "CONSULTANT"
+}
+
+export enum TaskStatus {
+  PENDING = "PENDING",
+  IN_PROGRESS = "IN_PROGRESS",
+  REVIEW = "REVIEW",
+  DONE = "DONE",
+  CANCELLED = "CANCELLED"
+}
+
+export enum TaskPriority {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  URGENT = "URGENT"
+}
+
+export enum SessionOutcome {
+  POSTPONED = "POSTPONED",
+  DECIDED = "DECIDED",
+  PARTIAL_RULING = "PARTIAL_RULING",
+  ADJOURNED = "ADJOURNED",
+  EVIDENCE = "EVIDENCE",
+  EXPERT = "EXPERT",
+  MEDIATION = "MEDIATION",
+  PLEADING = "PLEADING",
+  CANCELLED = "CANCELLED"
+}
+
+export enum DocumentType {
+  GENERAL = "GENERAL",
+  CONTRACT = "CONTRACT",
+  COURT_FILING = "COURT_FILING",
+  RECEIPT = "RECEIPT",
+  POWER_OF_ATTORNEY = "POWER_OF_ATTORNEY"
+}
+
+export enum ExtractionStatus {
+  PENDING = "PENDING",
+  PROCESSING = "PROCESSING",
+  INDEXED = "INDEXED",
+  FAILED = "FAILED"
+}
+
+export enum OcrBackend {
+  TESSERACT = "TESSERACT",
+  GOOGLE_VISION = "GOOGLE_VISION"
+}
+
+export enum InvoiceStatus {
+  DRAFT = "DRAFT",
+  ISSUED = "ISSUED",
+  PARTIALLY_PAID = "PARTIALLY_PAID",
+  PAID = "PAID",
+  VOID = "VOID"
+}
+
+export enum PoaType {
+  GENERAL = "GENERAL",
+  SPECIAL = "SPECIAL",
+  LITIGATION = "LITIGATION"
+}
+
+export enum NotificationType {
+  HEARING_7_DAYS = "HEARING_7_DAYS",
+  HEARING_TOMORROW = "HEARING_TOMORROW",
+  HEARING_TODAY = "HEARING_TODAY",
+  TASK_OVERDUE = "TASK_OVERDUE",
+  INVOICE_OVERDUE = "INVOICE_OVERDUE",
+  DOCUMENT_INDEXED = "DOCUMENT_INDEXED",
+  RESEARCH_COMPLETE = "RESEARCH_COMPLETE",
+  TASK_DAILY_DIGEST = "TASK_DAILY_DIGEST",
+  CHEQUE_MATURITY_DUE = "CHEQUE_MATURITY_DUE",
+  PORTAL_APPOINTMENT_REQUEST = "PORTAL_APPOINTMENT_REQUEST"
+}
