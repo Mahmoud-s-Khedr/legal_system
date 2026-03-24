@@ -219,12 +219,46 @@ function verifyPackagedDesktopTree(bundleRoot) {
   }
 }
 
+function findPackagedDesktopTreeRoot(searchRoot) {
+  ensureDirectoryExists(searchRoot, "Packaged desktop search root");
+
+  const visited = new Set();
+  const queue = [resolve(searchRoot)];
+
+  while (queue.length > 0) {
+    const currentDir = queue.shift();
+    if (!currentDir || visited.has(currentDir)) {
+      continue;
+    }
+
+    visited.add(currentDir);
+
+    try {
+      verifyPackagedDesktopTree(currentDir);
+      return currentDir;
+    } catch {
+      // Keep traversing until we find a valid packaged desktop resource root.
+    }
+
+    for (const entry of readdirSync(currentDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      queue.push(join(currentDir, entry.name));
+    }
+  }
+
+  fail(`No packaged desktop resource root found under ${resolve(searchRoot)}`);
+}
+
 function verifySourceDesktopResources(repoRoot) {
   verifyNodeDirectory(join(repoRoot, "apps/desktop/resources/node"));
   verifyPostgresBundle(join(repoRoot, "apps/desktop/resources/postgres"));
 }
 
 export {
+  findPackagedDesktopTreeRoot,
   verifyPackagedDesktopTree,
   verifySourceDesktopResources,
 };

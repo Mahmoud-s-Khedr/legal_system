@@ -3,7 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="${DESKTOP_PACKAGE_LOG_DIR:-$ROOT_DIR/.logs}"
-LOG_FILE="$LOG_DIR/desktop-linux-package.log"
+DESKTOP_BUNDLES="${DESKTOP_BUNDLES:-appimage,deb,rpm}"
+DESKTOP_BUNDLES_SLUG="${DESKTOP_BUNDLES//,/--}"
+LOG_FILE="${DESKTOP_PACKAGE_LOG_FILE:-$LOG_DIR/desktop-linux-package-${DESKTOP_BUNDLES_SLUG}.log}"
 
 mkdir -p "$LOG_DIR"
 
@@ -13,7 +15,7 @@ bash ./scripts/bundle-linux-deps.sh
 node ./scripts/verify-desktop-resources.mjs
 
 set +e
-NO_STRIP=1 pnpm --filter @elms/desktop tauri build --bundles appimage,deb,rpm --ci 2>&1 | tee "$LOG_FILE"
+NO_STRIP=1 pnpm --filter @elms/desktop tauri build --bundles "$DESKTOP_BUNDLES" --ci 2>&1 | tee "$LOG_FILE"
 status=${PIPESTATUS[0]}
 set -e
 

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUNDLE_DIR="$ROOT_DIR/apps/desktop/src-tauri/target/release/bundle"
 TMP_DIR="$(mktemp -d -t elms-linux-verify-XXXXXX)"
+VERIFY_LINUX_BUNDLES="${VERIFY_LINUX_BUNDLES:-appimage,deb,rpm}"
 
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -79,16 +80,33 @@ verify_rpm() {
   verify_bundle_root "$install_root/usr/lib/ELMS"
 }
 
-require_cmd node
-require_cmd dpkg-deb
-require_cmd docker
+IFS=',' read -r -a bundle_types <<<"$VERIFY_LINUX_BUNDLES"
 
-APPIMAGE_FILE="$(find_single_artifact "$BUNDLE_DIR/appimage/*.AppImage")"
-DEB_FILE="$(find_single_artifact "$BUNDLE_DIR/deb/*.deb")"
-RPM_FILE="$(find_single_artifact "$BUNDLE_DIR/rpm/*.rpm")"
-
-verify_appimage "$APPIMAGE_FILE"
-verify_deb "$DEB_FILE"
-verify_rpm "$RPM_FILE"
+for bundle_type in "${bundle_types[@]}"; do
+  case "$bundle_type" in
+    appimage)
+      require_cmd node
+      APPIMAGE_FILE="$(find_single_artifact "$BUNDLE_DIR/appimage/*.AppImage")"
+      verify_appimage "$APPIMAGE_FILE"
+      ;;
+    deb)
+      require_cmd node
+      require_cmd dpkg-deb
+      DEB_FILE="$(find_single_artifact "$BUNDLE_DIR/deb/*.deb")"
+      verify_deb "$DEB_FILE"
+      ;;
+    rpm)
+      require_cmd node
+      require_cmd docker
+      RPM_FILE="$(find_single_artifact "$BUNDLE_DIR/rpm/*.rpm")"
+      verify_rpm "$RPM_FILE"
+      ;;
+    "")
+      ;;
+    *)
+      die "Unsupported Linux bundle type: $bundle_type"
+      ;;
+  esac
+done
 
 echo "Linux package artifacts verified."

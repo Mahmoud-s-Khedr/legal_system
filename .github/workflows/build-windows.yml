@@ -17,7 +17,7 @@ on:
         required: false
 
 permissions:
-  contents: write   # required to attach the installer to a GitHub Release
+  contents: read
 
 jobs:
   build:
@@ -87,6 +87,15 @@ jobs:
         with:
           projectPath: apps/desktop
           args: --target x86_64-pc-windows-msvc --bundles nsis
+
+      - name: Verify NSIS installer payload
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis" -Filter "*.exe" | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $installer) {
+            throw "NSIS installer not found."
+          }
+          .\scripts\verify-windows-installer.ps1 -InstallerPath $installer
 
       # ── 7. Upload installer as a build artifact ───────────────────────────────
       - name: Upload NSIS installer

@@ -17,10 +17,10 @@ on:
         required: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
+  build-deb-rpm:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -31,6 +31,7 @@ jobs:
       - name: Log packaged source SHA
         run: |
           echo "Packaging source SHA: $SOURCE_SHA"
+          echo "Linux bundle set: deb,rpm"
 
       - uses: actions/checkout@v4
         with:
@@ -77,25 +78,114 @@ jobs:
       - name: Prisma generate
         run: pnpm prisma:generate
 
-      - name: Build Linux installers
+      - name: Build Linux deb and rpm installers
         env:
           PG_VERSION: ${{ github.event.inputs.pg_version || '16' }}
           NODE_VERSION: ${{ github.event.inputs.node_version || '22.14.0' }}
           VITE_DESKTOP_SHELL: "true"
           VITE_API_BASE_URL: "http://127.0.0.1:7854"
           NO_STRIP: "1"
+          DESKTOP_BUNDLES: "deb,rpm"
         run: pnpm --filter @elms/desktop package:linux
 
-      - name: Validate Linux package artifacts
+      - name: Validate Linux deb and rpm artifacts
+        env:
+          VERIFY_LINUX_BUNDLES: "deb,rpm"
         run: bash scripts/verify-linux-packages.sh
 
-      - name: Upload Linux installers
+      - name: Upload Linux deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: elms-linux-installer-${{ env.SOURCE_SHA }}
-          path: |
-            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
-            apps/desktop/src-tauri/target/release/bundle/deb/*.deb
-            apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
+          name: elms-linux-deb-${{ env.SOURCE_SHA }}
+          path: apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Linux rpm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: elms-linux-rpm-${{ env.SOURCE_SHA }}
+          path: apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
+          retention-days: 30
+          if-no-files-found: error
+
+  build-appimage:
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+    steps:
+      - name: Log packaged source SHA
+        run: |
+          echo "Packaging source SHA: $SOURCE_SHA"
+          echo "Linux bundle set: appimage"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm \
+            fakeroot
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm prisma:generate
+
+      - name: Build Linux AppImage
+        env:
+          PG_VERSION: ${{ github.event.inputs.pg_version || '16' }}
+          NODE_VERSION: ${{ github.event.inputs.node_version || '22.14.0' }}
+          VITE_DESKTOP_SHELL: "true"
+          VITE_API_BASE_URL: "http://127.0.0.1:7854"
+          NO_STRIP: "1"
+          DESKTOP_BUNDLES: "appimage"
+        run: pnpm --filter @elms/desktop package:linux
+
+      - name: Validate Linux AppImage artifact
+        env:
+          VERIFY_LINUX_BUNDLES: "appimage"
+        run: bash scripts/verify-linux-packages.sh
+
+      - name: Upload Linux AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: elms-linux-appimage-${{ env.SOURCE_SHA }}
+          path: apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
           retention-days: 30
           if-no-files-found: error

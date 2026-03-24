@@ -13,7 +13,7 @@ on:
         required: false
 
 permissions:
-  contents: write   # required to attach the installer to a GitHub Release
+  contents: read
 
 jobs:
   build:
@@ -104,6 +104,15 @@ jobs:
         with:
           projectPath: apps/desktop
           args: --target ${{ matrix.target }} --bundles dmg
+
+      - name: Verify macOS dmg payload
+        run: |
+          dmg_path="$(find "apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg" -maxdepth 1 -name '*.dmg' -print -quit)"
+          if [[ -z "$dmg_path" ]]; then
+            echo "macOS dmg not found." >&2
+            exit 1
+          fi
+          bash scripts/verify-macos-dmg.sh "$dmg_path"
 
       # ── 6. Upload dmg as build artifact ──────────────────────────────────────
       - name: Upload macOS installer

@@ -1,0 +1,435 @@
+name: release-desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      pg_version:
+        description: "PostgreSQL version to bundle"
+        default: "16"
+        required: false
+      windows_pg_version:
+        description: "PostgreSQL version to bundle on Windows"
+        default: "16.9"
+        required: false
+      node_version:
+        description: "Node.js LTS version to bundle"
+        default: "22.14.0"
+        required: false
+      publish_release:
+        description: "Publish installers to GitHub Releases"
+        type: boolean
+        default: false
+        required: false
+      release_tag:
+        description: "Optional tag to build or publish"
+        required: false
+
+permissions:
+  contents: write
+
+env:
+  SOURCE_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref }}
+  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || (github.event.inputs.release_tag != '' && github.event.inputs.release_tag || format('desktop-{0}', github.sha)) }}
+
+jobs:
+  linux-deb-rpm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_REF }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm \
+            fakeroot
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm prisma:generate
+
+      - name: Build Linux deb and rpm installers
+        env:
+          PG_VERSION: ${{ github.event.inputs.pg_version || '16' }}
+          NODE_VERSION: ${{ github.event.inputs.node_version || '22.14.0' }}
+          VITE_DESKTOP_SHELL: "true"
+          VITE_API_BASE_URL: "http://127.0.0.1:7854"
+          NO_STRIP: "1"
+          DESKTOP_BUNDLES: "deb,rpm"
+        run: pnpm --filter @elms/desktop package:linux
+
+      - name: Validate Linux deb and rpm artifacts
+        env:
+          VERIFY_LINUX_BUNDLES: "deb,rpm"
+        run: bash scripts/verify-linux-packages.sh
+
+      - name: Upload Linux deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-deb-${{ env.RELEASE_TAG }}
+          path: apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Linux rpm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-rpm-${{ env.RELEASE_TAG }}
+          path: apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
+          retention-days: 30
+          if-no-files-found: error
+
+  linux-appimage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_REF }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm \
+            fakeroot
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm prisma:generate
+
+      - name: Build Linux AppImage
+        env:
+          PG_VERSION: ${{ github.event.inputs.pg_version || '16' }}
+          NODE_VERSION: ${{ github.event.inputs.node_version || '22.14.0' }}
+          VITE_DESKTOP_SHELL: "true"
+          VITE_API_BASE_URL: "http://127.0.0.1:7854"
+          NO_STRIP: "1"
+          DESKTOP_BUNDLES: "appimage"
+        run: pnpm --filter @elms/desktop package:linux
+
+      - name: Validate Linux AppImage artifact
+        env:
+          VERIFY_LINUX_BUNDLES: "appimage"
+        run: bash scripts/verify-linux-packages.sh
+
+      - name: Upload Linux AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-appimage-${{ env.RELEASE_TAG }}
+          path: apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+          retention-days: 30
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_REF }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm prisma:generate
+
+      - name: Bundle PostgreSQL + Node.js Windows binaries
+        shell: pwsh
+        run: |
+          $pgVer   = "${{ github.event.inputs.windows_pg_version || '16.9' }}"
+          $nodeVer = "${{ github.event.inputs.node_version || '22.14.0' }}"
+          .\scripts\bundle-windows-deps.ps1 -PgVersion $pgVer -NodeVersion $nodeVer
+
+      - name: Build Tauri Windows installer
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_DESKTOP_SHELL: "true"
+          VITE_API_BASE_URL: "http://127.0.0.1:7854"
+        with:
+          projectPath: apps/desktop
+          args: --target x86_64-pc-windows-msvc --bundles nsis
+
+      - name: Verify NSIS installer payload
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis" -Filter "*.exe" | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $installer) {
+            throw "NSIS installer not found."
+          }
+          .\scripts\verify-windows-installer.ps1 -InstallerPath $installer
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-nsis-${{ env.RELEASE_TAG }}
+          path: apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          retention-days: 30
+          if-no-files-found: error
+
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact_suffix: arm64
+            node_arch: arm64
+            runner: macos-15
+            target: aarch64-apple-darwin
+          - artifact_suffix: x64
+            node_arch: x64
+            runner: macos-15-intel
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_REF }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm prisma:generate
+
+      - name: Bundle macOS desktop runtimes
+        env:
+          PG_VERSION: "16"
+          NODE_VERSION: ${{ github.event.inputs.node_version || '22.14.0' }}
+          NODE_ARCH: ${{ matrix.node_arch }}
+        run: bash scripts/bundle-macos-deps.sh
+
+      - name: Verify bundled desktop resources
+        run: node scripts/verify-desktop-resources.mjs
+
+      - name: Build Tauri macOS installer
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_DESKTOP_SHELL: "true"
+          VITE_API_BASE_URL: "http://127.0.0.1:7854"
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: apps/desktop
+          args: --target ${{ matrix.target }} --bundles dmg
+
+      - name: Verify macOS dmg payload
+        run: |
+          dmg_path="$(find "apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg" -maxdepth 1 -name '*.dmg' -print -quit)"
+          if [[ -z "$dmg_path" ]]; then
+            echo "macOS dmg not found." >&2
+            exit 1
+          fi
+          bash scripts/verify-macos-dmg.sh "$dmg_path"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-${{ matrix.artifact_suffix }}-${{ env.RELEASE_TAG }}
+          path: apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          retention-days: 30
+          if-no-files-found: error
+
+  publish:
+    needs:
+      - linux-deb-rpm
+      - linux-appimage
+      - windows
+      - macos
+    if: |
+      always() &&
+      (github.event_name == 'push' || github.event.inputs.publish_release == 'true') &&
+      needs.linux-deb-rpm.result == 'success' &&
+      needs.windows.result == 'success' &&
+      needs.macos.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-linux-deb-${{ env.RELEASE_TAG }}
+          path: release-assets/linux-deb
+
+      - name: Download Linux rpm artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-linux-rpm-${{ env.RELEASE_TAG }}
+          path: release-assets/linux-rpm
+
+      - name: Download Linux AppImage artifact
+        if: needs.linux-appimage.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: release-linux-appimage-${{ env.RELEASE_TAG }}
+          path: release-assets/linux-appimage
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-windows-nsis-${{ env.RELEASE_TAG }}
+          path: release-assets/windows
+
+      - name: Download macOS arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-macos-arm64-${{ env.RELEASE_TAG }}
+          path: release-assets/macos-arm64
+
+      - name: Download macOS x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-macos-x64-${{ env.RELEASE_TAG }}
+          path: release-assets/macos-x64
+
+      - name: Publish GitHub Release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          shopt -s nullglob
+          files=(
+            release-assets/linux-deb/*.deb
+            release-assets/linux-rpm/*.rpm
+            release-assets/windows/*.exe
+            release-assets/macos-arm64/*.dmg
+            release-assets/macos-x64/*.dmg
+          )
+
+          if [[ -d release-assets/linux-appimage ]]; then
+            files+=(release-assets/linux-appimage/*.AppImage)
+          fi
+
+          expanded_files=()
+          for file in "${files[@]}"; do
+            if [[ -f "$file" ]]; then
+              expanded_files+=("$file")
+            fi
+          done
+
+          if [[ "${#expanded_files[@]}" -eq 0 ]]; then
+            echo "No release assets found to publish." >&2
+            exit 1
+          fi
+
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --target "$SOURCE_REF" --title "$RELEASE_TAG" --notes ""
+          fi
+
+          gh release upload "$RELEASE_TAG" "${expanded_files[@]}" --clobber
