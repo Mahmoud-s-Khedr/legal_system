@@ -1,0 +1,313 @@
+import { Link, Outlet, useMatches } from "@tanstack/react-router";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { AuthMode } from "@elms/shared";
+import {
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  Scale,
+  FileText,
+  CheckSquare,
+  Settings,
+  Menu,
+  X,
+  LogOut,
+  ChevronRight,
+  ChevronLeft,
+  Receipt,
+  FileCode,
+  BarChart2,
+  Library,
+  Wallet
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
+import { GlobalSearchBar } from "../../components/search/GlobalSearchBar";
+import { NotificationBell } from "../../components/notifications/NotificationBell";
+import { useAuthBootstrap } from "../../store/authStore";
+
+interface NavItem {
+  icon: LucideIcon;
+  label: string;
+  to: string;
+  cloudOnly?: boolean;
+  requiredPermission?: string;
+}
+
+interface NavSection {
+  label?: string;
+  items: NavItem[];
+}
+
+function getNavSections(t: (key: string) => string): NavSection[] {
+  return [
+    {
+      items: [
+        { icon: LayoutDashboard, label: t("nav.dashboard"), to: "/app/dashboard" },
+        { icon: Users, label: t("nav.clients"), to: "/app/clients" },
+        { icon: Briefcase, label: t("nav.cases"), to: "/app/cases" },
+        { icon: Scale, label: t("nav.hearings"), to: "/app/hearings" },
+        { icon: CheckSquare, label: t("nav.tasks"), to: "/app/tasks" },
+        { icon: FileText, label: t("nav.documents"), to: "/app/documents" }
+      ]
+    },
+    {
+      label: t("nav.groups.finance"),
+      items: [
+        { icon: Receipt, label: t("nav.invoices"), to: "/app/invoices", requiredPermission: "invoices:read" },
+        { icon: Wallet, label: t("nav.expenses"), to: "/app/expenses", requiredPermission: "invoices:read" }
+      ]
+    },
+    {
+      label: t("nav.groups.tools"),
+      items: [
+        { icon: BarChart2, label: t("nav.reports"), to: "/app/reports", requiredPermission: "reports:read" },
+        { icon: FileCode, label: t("nav.templates"), to: "/app/templates", requiredPermission: "templates:read" },
+        { icon: Library, label: t("nav.library"), to: "/app/library", requiredPermission: "library:read" }
+      ]
+    },
+    {
+      label: t("nav.groups.administration"),
+      items: [
+        { icon: Users, label: t("nav.users"), to: "/app/users", requiredPermission: "users:read" },
+        { icon: Settings, label: t("nav.settings"), to: "/app/settings", requiredPermission: "settings:read" }
+      ]
+    }
+  ];
+}
+
+/** UUID pattern — filters out raw IDs from breadcrumbs */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Numeric-only IDs */
+const NUMERIC_ID_PATTERN = /^\d+$/;
+
+export function AppLayout() {
+  const { t, i18n } = useTranslation("app");
+  const { user, mode, logout } = useAuthBootstrap();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const matches = useMatches();
+  const isRtl = i18n.resolvedLanguage === "ar";
+
+  const navSections = getNavSections(t).map((section) => ({
+    ...section,
+    items: section.items.filter(
+      (item) =>
+        (!item.cloudOnly || mode === AuthMode.CLOUD) &&
+        (!item.requiredPermission || (user?.permissions.includes(item.requiredPermission) ?? false))
+    )
+  })).filter((section) => section.items.length > 0);
+
+  // Build breadcrumbs from route matches — skip UUIDs and numeric IDs
+  const breadcrumbSegments = matches
+    .filter((m) => m.pathname !== "/" && m.pathname !== "/app")
+    .flatMap((m) =>
+      m.pathname
+        .split("/")
+        .filter((seg) =>
+          seg.length > 0 &&
+          seg !== "app" &&
+          !UUID_PATTERN.test(seg) &&
+          !NUMERIC_ID_PATTERN.test(seg)
+        )
+        .map((seg) => ({ path: m.pathname, label: seg }))
+    )
+    // Deduplicate consecutive identical labels
+    .filter((seg, i, arr) => i === 0 || seg.label !== arr[i - 1].label);
+
+  const userInitials = user?.fullName
+    ? user.fullName
+        .split(" ")
+        .slice(0, 2)
+        .map((s) => s[0])
+        .join("")
+        .toUpperCase()
+    : "?";
+
+  const SeparatorIcon = isRtl ? ChevronLeft : ChevronRight;
+
+  const navContent = (
+    <nav aria-label={t("nav.mainNavigation")} className="space-y-4">
+      {navSections.map((section, si) => (
+        <div key={si}>
+          {section.label && (
+            <p className="mb-1 px-4 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+              {section.label}
+            </p>
+          )}
+          <div className="space-y-0.5">
+            {section.items.map((item) => (
+              <NavLink
+                key={item.to}
+                icon={item.icon}
+                label={item.label}
+                to={item.to}
+                onClick={() => setDrawerOpen(false)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+
+  const userStrip = (
+    <div className="mt-4 border-t border-slate-100 pt-4">
+      <div className="flex items-center gap-3 rounded-2xl px-3 py-2">
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white"
+          aria-hidden="true"
+        >
+          {userInitials}
+        </div>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">
+          {user?.fullName ?? "—"}
+        </span>
+        <button
+          className="rounded-xl p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+          onClick={() => void logout()}
+          type="button"
+          aria-label={t("actions.logout")}
+          title={t("actions.logout")}
+        >
+          <LogOut size={16} />
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-sand text-ink">
+      {/* ── Skip to main content (keyboard / screen reader) ── */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:start-2 focus:z-50 focus:rounded-xl focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+      >
+        {t("actions.skipToContent")}
+      </a>
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-6">
+          <div className="flex items-center gap-3">
+            {/* Mobile hamburger */}
+            <button
+              className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
+              onClick={() => setDrawerOpen(true)}
+              type="button"
+              aria-label={t("nav.openMenu")}
+              aria-expanded={drawerOpen}
+              aria-controls="mobile-nav-drawer"
+            >
+              <Menu size={22} />
+            </button>
+            <div>
+              <p className="font-heading text-xl font-bold tracking-tight text-accent">ELMS</p>
+              {breadcrumbSegments.length > 0 && (
+                <div className="hidden items-center gap-1 text-xs text-slate-400 md:flex">
+                  {breadcrumbSegments.map((seg, i) => (
+                    <span key={`${seg.path}-${i}`} className="flex items-center gap-1">
+                      {i > 0 && <SeparatorIcon size={12} />}
+                      <span className="capitalize">{seg.label}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <GlobalSearchBar />
+            <NotificationBell />
+            <span className="hidden rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-emerald-900 sm:inline-flex">
+              {mode === AuthMode.LOCAL ? t("modes.local") : t("modes.cloud")}
+            </span>
+            <LanguageSwitcher />
+            {/* User avatar */}
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-xs font-bold text-white"
+              aria-label={user?.fullName ?? userInitials}
+              role="img"
+            >
+              <span aria-hidden="true">{userInitials}</span>
+            </div>
+            <button
+              className="hidden rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 sm:block"
+              onClick={() => void logout()}
+              type="button"
+              aria-label={t("actions.logout")}
+              title={t("actions.logout")}
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Mobile drawer overlay ── */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t("nav.mainNavigation")} id="mobile-nav-drawer">
+          <div
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in"
+            onClick={() => setDrawerOpen(false)}
+            aria-hidden="true"
+          />
+          <aside className="absolute inset-y-0 flex w-72 flex-col bg-white p-4 shadow-elevated animate-fade-in start-0">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="font-heading text-lg font-bold text-accent">ELMS</p>
+              <button
+                className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"
+                onClick={() => setDrawerOpen(false)}
+                type="button"
+                aria-label={t("nav.closeMenu")}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {navContent}
+            </div>
+            {userStrip}
+          </aside>
+        </div>
+      )}
+
+      {/* ── Main grid ── */}
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[260px_1fr] lg:px-6">
+        {/* Desktop sidebar */}
+        <aside className="hidden rounded-3xl bg-white p-4 shadow-card lg:flex lg:flex-col" aria-label={t("nav.mainNavigation")}>
+          <div className="flex-1 overflow-y-auto">
+            {navContent}
+          </div>
+          {userStrip}
+        </aside>
+        <main id="main-content" className="min-w-0 animate-fade-in rounded-3xl bg-white p-5 shadow-card sm:p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function NavLink({
+  to,
+  label,
+  icon: Icon,
+  onClick
+}: {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      activeProps={{ className: "bg-accent text-white shadow-sm", "aria-current": "page" }}
+      className="flex items-center gap-3 rtl:flex-row-reverse rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition-all duration-fast hover:bg-accentSoft"
+      to={to}
+      onClick={onClick}
+    >
+      <Icon size={18} aria-hidden="true" />
+      <span>{label}</span>
+    </Link>
+  );
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <title>ELMS</title>
+  </head>
+  <body class="bg-sand">
+    <script>
+      (function () {
+        try {
+          var lang = localStorage.getItem("i18nextLng") || "ar";
+          var isRtl = lang === "ar";
+          document.documentElement.lang = lang;
+          document.documentElement.dir = isRtl ? "rtl" : "ltr";
+          document.documentElement.setAttribute("data-dir", isRtl ? "rtl" : "ltr");
+        } catch (e) {}
+      })();
+    </script>
+    <div id="root"></div>
+    <noscript>
+      <div style="font-family: system-ui, sans-serif; text-align: center; padding: 2rem; color: #1e293b;">
+        Javascript is required to run ELMS.
+      </div>
+    </noscript>
+    <div id="js-init-fallback" style="font-family: system-ui, sans-serif; text-align: center; padding: 2rem; color: #64748b;">
+      Loading ELMS...
+    </div>
+    <script>
+      // Remove fallback once JS successfully executes
+      document.addEventListener('DOMContentLoaded', () => {
+        const fallback = document.getElementById('js-init-fallback');
+        if (fallback) fallback.remove();
+      });
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+/*
+ * Custom @font-face declarations — Cairo only.
+ * We bundle woff/woff2 in public/fonts/ and declare woff FIRST
+ * because WebKitGTK (used by Tauri on Linux) renders woff more
+ * consistently than woff2 for complex Arabic script shaping.
+ *
+ * font-display: block prevents FOUT (flash of unstyled text).
+ */
+
+/* ─── Cairo (body + heading) ─── */
+@font-face {
+  font-family: "Cairo";
+  font-style: normal;
+  font-display: block;
+  font-weight: 400;
+  src:
+    url("/fonts/cairo-arabic-400-normal.woff") format("woff"),
+    url("/fonts/cairo-arabic-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Cairo";
+  font-style: normal;
+  font-display: block;
+  font-weight: 600;
+  src:
+    url("/fonts/cairo-arabic-600-normal.woff") format("woff"),
+    url("/fonts/cairo-arabic-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Cairo";
+  font-style: normal;
+  font-display: block;
+  font-weight: 700;
+  src:
+    url("/fonts/cairo-arabic-700-normal.woff") format("woff"),
+    url("/fonts/cairo-arabic-700-normal.woff2") format("woff2");
+}
