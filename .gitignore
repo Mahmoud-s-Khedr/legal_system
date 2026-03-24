@@ -1,0 +1,111 @@
+# ==============================================================================
+# Node.js & Monorepo Dependencies
+# ==============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==============================================================================
+# Build Outputs & Caches
+# ==============================================================================
+# Global dist outputs (covers frontend, backend, and shared packages)
+dist/
+build/
+out/
+.desktop-deploy-tmp/
+# Turborepo cache
+.turbo/
+
+# Vite / Rollup caches
+.vite/
+*.tsbuildinfo
+
+# ==============================================================================
+# Tauri & Rust (Desktop App)
+# ==============================================================================
+# Ignore Rust compilation artifacts
+apps/desktop/src-tauri/target/
+apps/desktop/resources/node/*
+!apps/desktop/resources/node/.gitkeep
+apps/desktop/resources/postgres/*
+!apps/desktop/resources/postgres/.gitkeep
+
+# Ignore generated binaries/installers inside the tauri target folder
+*.deb
+*.rpm
+*.AppImage
+*.msi
+*.app
+*.dmg
+*.exe
+
+# (Note: Cargo.lock is typically committed for application crates like Tauri)
+
+# ==============================================================================
+# Database & Backend specific
+# ==============================================================================
+# Ignore local SQLite databases if you ever use them
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Ignore user uploads generated during local development
+packages/backend/uploads/*
+!packages/backend/uploads/.gitkeep
+
+# ==============================================================================
+# Testing & Coverage
+# ==============================================================================
+# Vitest / Jest
+coverage/
+.nyc_output/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+
+# ==============================================================================
+# Environment Variables & Secrets
+# ==============================================================================
+.env
+.env.*
+!.env.example
+*.pem
+# Ignore your specific local license key
+elms.license
+
+# ==============================================================================
+# OS & IDE Files
+# ==============================================================================
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ==============================================================================
+# Project Specific & Misc
+# ==============================================================================
+# Logs generated in the root
+.logs/
+*.log
+tree.log
+
+# Tesseract trained data (Optional: uncomment if you don't want to commit OCR models)
+*.traineddata

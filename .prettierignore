@@ -1,0 +1,5 @@
+dist
+coverage
+.turbo
+node_modules
+packages/backend/prisma/migrations/0001_initial/migration.sql

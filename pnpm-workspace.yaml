@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - esbuild
+  - msgpackr-extract
+  - prisma
+  - protobufjs
+  - tesseract.js
