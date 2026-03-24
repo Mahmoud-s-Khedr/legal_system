@@ -1,0 +1,16 @@
+{
+  "name": "@elms/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "pnpm compose:validate",
+    "compose:validate": "APP_ENV_FILE=.env.production.example BACKEND_IMAGE=elms-backend:local FRONTEND_IMAGE=elms-frontend:local ELMS_DOMAIN=example.com ACME_EMAIL=ops@example.com bash -lc 'set -a; . \"${APP_ENV_FILE:-.env.production.example}\"; set +a; docker compose -f docker-compose.prod.yml config > /dev/null'",
+    "lint": "pnpm compose:validate",
+    "typecheck": "pnpm compose:validate",
+    "test": "pnpm compose:validate",
+    "docker:build:backend": "docker build -f apps/web/backend.Dockerfile -t elms-backend:local .",
+    "docker:build:frontend": "docker build -f apps/web/Dockerfile -t elms-frontend:local .",
+    "up": "docker compose up --build",
+    "down": "docker compose down -v"
+  }
+}
