@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const packageDir = resolve(scriptDir, "..");
 const repoRoot = resolve(packageDir, "../..");
-const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const pnpmBin = "pnpm";
 
 function run(command, args, options = {}) {
   return new Promise((resolveRun, rejectRun) => {
@@ -14,6 +14,7 @@ function run(command, args, options = {}) {
       cwd: options.cwd ?? packageDir,
       env: options.env ?? process.env,
       stdio: "inherit",
+      shell: options.shell ?? (command === pnpmBin && process.platform === "win32"),
     });
 
     child.on("error", rejectRun);

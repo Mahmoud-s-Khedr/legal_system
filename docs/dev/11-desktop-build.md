@@ -179,7 +179,7 @@ Artifacts are written to:
 - `apps/desktop/src-tauri/target/release/bundle/deb/*.deb`
 - `apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm`
 
-The desktop Tauri config uses cross-platform wrapper scripts for `beforeBuildCommand` and `beforeDevCommand` so the same build path works on Linux, macOS, and Windows runners without relying on Unix-style inline environment assignment.
+The desktop Tauri config uses cross-platform wrapper scripts for `beforeBuildCommand` and `beforeDevCommand` so the same build path works on Linux, macOS, and Windows runners without relying on Unix-style inline environment assignment. On Windows, those wrappers launch `pnpm` through a shell-backed spawn path instead of directly invoking `pnpm.cmd`, which avoids the `spawn EINVAL` failure seen in GitHub-hosted Windows packaging jobs.
 
 The `beforeBuildCommand` in `tauri.conf.json` automatically runs the backend `build:desktop`, verifies desktop resources, and then builds the frontend:
 

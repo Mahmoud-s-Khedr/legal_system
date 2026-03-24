@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "../../..");
-const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const pnpmBin = "pnpm";
 
 const child = spawn(
   pnpmBin,
@@ -17,6 +17,7 @@ const child = spawn(
       VITE_DESKTOP_SHELL: "true",
     },
     stdio: "inherit",
+    shell: process.platform === "win32",
   }
 );
 
