@@ -171,10 +171,12 @@ Artifacts are written to:
 - `apps/desktop/src-tauri/target/release/bundle/deb/*.deb`
 - `apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm`
 
-The `beforeBuildCommand` in `tauri.conf.json` automatically runs the backend `build:desktop` and the frontend build:
+The desktop Tauri config uses cross-platform wrapper scripts for `beforeBuildCommand` and `beforeDevCommand` so the same build path works on Linux, macOS, and Windows runners without relying on Unix-style inline environment assignment.
+
+The `beforeBuildCommand` in `tauri.conf.json` automatically runs the backend `build:desktop`, verifies desktop resources, and then builds the frontend:
 
 ```json
-"beforeBuildCommand": "pnpm --filter @elms/backend build:desktop && bash ../../scripts/verify-desktop-resources.sh && VITE_DESKTOP_SHELL=true VITE_API_BASE_URL=http://127.0.0.1:7854 pnpm --filter @elms/frontend build"
+"beforeBuildCommand": "node ../scripts/prepare-desktop-build.mjs"
 ```
 
 ### Windows (NSIS)
