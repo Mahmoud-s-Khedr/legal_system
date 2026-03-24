@@ -37,7 +37,7 @@ flowchart TD
     F1 --> F2[tauri-action NSIS .exe]
     F2 --> F3[Upload elms-windows-installer-SHA\n30 days retention]
 
-    G --> G1[Download Node 22 darwin-arm64]
+    G --> G1[bundle-macos-deps.sh\nPG 16 + Node 22 runtimes]
     G1 --> G2[tauri-action dmg aarch64]
     G2 --> G3[Upload elms-macos-installer-SHA\n30 days retention]
 ```
@@ -173,8 +173,9 @@ Runs on `macos-latest`, timeout 90 minutes.
 
 Key differences:
 - Rust targets: `aarch64-apple-darwin,x86_64-apple-darwin` (both loaded for potential universal binary support; the actual build targets `aarch64-apple-darwin`)
-- No PostgreSQL bundling step — macOS builds do not embed PostgreSQL (the macOS desktop app uses a different database strategy or relies on an external PostgreSQL instance)
-- Node.js download: fetches `node-v<version>-darwin-arm64.tar.gz` directly from nodejs.org and places the binary at `apps/desktop/resources/node/bin/node`
+- Native deps script: `bash scripts/bundle-macos-deps.sh` downloads the darwin-arm64 Node.js runtime to `apps/desktop/resources/node/node` and bundles Homebrew `postgresql@16` into `apps/desktop/resources/postgres/`
+- PostgreSQL uses the same `.layout.env` manifest contract as Linux so the desktop runtime and verifier resolve the packaged `bindir`, `sharedir`, `pkglibdir`, and runtime library directory consistently on both platforms
+- The workflow runs `bash scripts/verify-desktop-resources.sh` before invoking Tauri so missing Node.js or PostgreSQL resources fail fast instead of surfacing later inside `beforeBuildCommand`
 - Tauri build args: `--target aarch64-apple-darwin --bundles dmg`
 - Output artifact: `.dmg` file at `target/aarch64-apple-darwin/release/bundle/dmg/*.dmg`
 - **Apple notarization secrets** are consumed from GitHub secrets (required for distribution outside the Mac App Store):

@@ -54,16 +54,15 @@ jobs:
       - name: Prisma generate
         run: pnpm prisma:generate
 
-      # ── 4. Bundle macOS Node.js runtime ──────────────────────────────────────
-      - name: Download and bundle Node.js macOS binary
+      # ── 4. Bundle macOS desktop runtimes ─────────────────────────────────────
+      - name: Bundle macOS desktop runtimes
         env:
+          PG_VERSION: "16"
           NODE_VERSION: ${{ github.event.inputs.node_version || '22.14.0' }}
-        run: |
-          # Download universal Node.js binary for macOS
-          NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-darwin-arm64.tar.gz"
-          mkdir -p apps/desktop/resources/node/bin
-          curl -sSL "$NODE_URL" | tar -xz --strip-components=2 -C apps/desktop/resources/node/bin --wildcards "*/bin/node"
-          chmod +x apps/desktop/resources/node/bin/node
+        run: bash scripts/bundle-macos-deps.sh
+
+      - name: Verify bundled desktop resources
+        run: bash scripts/verify-desktop-resources.sh
 
       # ── 5. Build Tauri macOS dmg ──────────────────────────────────────────────
       - name: Build Tauri macOS installer

@@ -6,6 +6,20 @@ NODE_DIR="$ROOT_DIR/apps/desktop/resources/node"
 POSTGRES_DIR="$ROOT_DIR/apps/desktop/resources/postgres"
 POSTGRES_LAYOUT_FILE="$POSTGRES_DIR/.layout.env"
 
+is_safe_relative_path() {
+  local path="$1"
+
+  [[ -n "$path" ]] || return 1
+  [[ "$path" != /* ]] || return 1
+  [[ "$path" != "." ]] || return 1
+  [[ "$path" != *"/.."* ]] || return 1
+  [[ "$path" != ".."* ]] || return 1
+  [[ "$path" != *"../"* ]] || return 1
+  [[ "$path" != *"/./"* ]] || return 1
+  [[ "$path" != "./"* ]] || return 1
+  [[ "$path" != *"/." ]] || return 1
+}
+
 require_real_resources() {
   local dir="$1"
   local label="$2"
@@ -37,13 +51,13 @@ require_postgres_structure() {
     local label="$2"
     local resolved
 
-    if [[ -z "$relative" || "$relative" == /* || "$relative" == "." || "$relative" == *"/.."* || "$relative" == ".."* || "$relative" == *"../"* ]]; then
+    if ! is_safe_relative_path "$relative"; then
       echo "PostgreSQL layout manifest contains an unsafe $label path: $relative" >&2
       exit 1
     fi
 
-    resolved="$(realpath -m "$POSTGRES_DIR/$relative")"
-    if [[ "$resolved" != "$POSTGRES_DIR" && "$resolved" != "$POSTGRES_DIR"/* ]]; then
+    resolved="$POSTGRES_DIR/$relative"
+    if [[ "$resolved" != "$POSTGRES_DIR"/* ]]; then
       echo "PostgreSQL layout manifest resolves $label outside the bundle root: $resolved" >&2
       exit 1
     fi
