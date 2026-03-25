@@ -195,6 +195,21 @@ jobs:
         with:
           ref: ${{ env.SOURCE_REF }}
 
+      - name: Parse-check Windows installer verifier script
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            "scripts/verify-windows-installer.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          )
+          if ($errors -and $errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:

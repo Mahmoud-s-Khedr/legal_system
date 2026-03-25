@@ -154,6 +154,18 @@ pnpm dev:tauri
 
 ---
 
+## Build And Release Reality Check
+
+- `pnpm build` compiles workspace packages. It is a compile step, not a full release-readiness gate.
+- `pnpm validate` runs the full local quality gate: lockfile check, Prisma client generation, lint, typecheck, tests, and coverage.
+- `pnpm release:desktop:linux` builds and verifies Linux desktop installers (`deb`, `rpm`) from a Linux host.
+- `pnpm release:desktop:local` runs the supported local Linux + Windows (cross-build) desktop packaging flow.
+- `pnpm release:web` builds backend and frontend Docker images for cloud deployment.
+
+For a full build-readiness assessment and known risks, see [docs/dev/build-process-review-2026-03-24.md](docs/dev/build-process-review-2026-03-24.md).
+
+---
+
 ## Testing
 
 ```bash
@@ -197,4 +209,4 @@ See [docs/architecture/11-editions-and-licensing.md](docs/architecture/11-editio
 | Developers & contributors | [docs/dev/](docs/dev/) | Setup, repo structure, env vars, API reference, auth internals, testing, contributing, scripts, desktop build, i18n |
 | Architects & reviewers | [docs/architecture/](docs/architecture/) | System overview, tech stack rationale, data flow, auth & security, multi-tenancy, deployment topologies, document pipeline, AI research pipeline, async jobs, notifications, editions, CI/CD, scalability |
 | Investors & stakeholders | [docs/business/](docs/business/) | Executive summary, value proposition, feature matrix, market fit, deployment models, technology differentiation, roadmap, competitive positioning |
-| Law firm staff | [docs/user/](docs/user/) | Installation, first-time setup, case management, hearings, documents, billing, AI research, law library, roles, backup/restore, troubleshooting |
+| Law firm staff | [docs/user/index.md](docs/user/index.md) | Installation, first-time setup, case management, hearings, documents, billing, AI research, law library, roles, backup/restore, troubleshooting |

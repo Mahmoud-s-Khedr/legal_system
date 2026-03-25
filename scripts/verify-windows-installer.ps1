@@ -35,7 +35,7 @@ function Invoke-PackagedTreeVerification {
             "Unknown verification failure."
         }
 
-        throw "Packaged desktop tree verification failed at ${BundleRoot}: $failureMessage"
+        throw ("Packaged desktop tree verification failed at {0}: {1}" -f $BundleRoot, $failureMessage)
     }
 }
 
@@ -57,7 +57,7 @@ function Invoke-PackagedTreeSearch {
             "Unknown search failure."
         }
 
-        throw "Packaged desktop tree verification failed under ${SearchRoot}: $failureMessage"
+        throw ("Packaged desktop tree verification failed under {0}: {1}" -f $SearchRoot, $failureMessage)
     }
 }
 
@@ -140,10 +140,10 @@ function Invoke-VerificationCandidates {
     $failures = New-Object 'System.Collections.Generic.List[string]'
 
     if ($Candidates.Count -eq 0) {
-        throw "No packaged desktop root candidates were found for $Label."
+        throw ("No packaged desktop root candidates were found for {0}." -f $Label)
     }
 
-    Write-Host "Attempting packaged desktop roots for ${Label}:"
+    Write-Host ("Attempting packaged desktop roots for {0}:" -f $Label)
     $Candidates | ForEach-Object { Write-Host " - $_" }
 
     foreach ($candidate in $Candidates) {
@@ -164,7 +164,7 @@ function Invoke-VerificationCandidates {
         "Unknown verification failure."
     }
 
-    throw "Tried packaged desktop roots for ${Label}: $attemptedSummary. Last failure: $failureSummary"
+    throw ("Tried packaged desktop roots for {0}: {1}. Last failure: {2}" -f $Label, $attemptedSummary, $failureSummary)
 }
 
 function Resolve-7ZipExecutable {
@@ -196,13 +196,13 @@ if (-not $InstallerPath) {
         Select-Object -First 1 -ExpandProperty FullName
 
     if (-not $InstallerPath) {
-        throw "NSIS installer not found under $NsisDir"
+        throw ("NSIS installer not found under {0}" -f $NsisDir)
     }
 }
 
 $ResolvedInstaller = (Resolve-Path $InstallerPath).Path
 if (-not (Test-Path $ResolvedInstaller -PathType Leaf)) {
-    throw "NSIS installer not found at $ResolvedInstaller"
+    throw ("NSIS installer not found at {0}" -f $ResolvedInstaller)
 }
 
 Write-Host "Confirmed NSIS installer exists at: $ResolvedInstaller"
@@ -224,7 +224,7 @@ try {
 
 $sevenZip = Resolve-7ZipExecutable
 if (-not $sevenZip) {
-    throw "NSIS installer exists at $ResolvedInstaller, but the packaged payload could not be inspected because no 7-Zip extractor was found. Direct release-root verification failed: $($directVerificationError.Exception.Message)"
+    throw ("NSIS installer exists at {0}, but the packaged payload could not be inspected because no 7-Zip extractor was found. Direct release-root verification failed: {1}" -f $ResolvedInstaller, $directVerificationError.Exception.Message)
 }
 
 $ExtractionRoot = $null
@@ -234,7 +234,7 @@ try {
 
     & $sevenZip x "-o$ExtractionRoot" "-y" $ResolvedInstaller | Out-Host
     if ($LASTEXITCODE -ne 0) {
-        throw "7-Zip failed to extract $ResolvedInstaller"
+        throw ("7-Zip failed to extract {0}" -f $ResolvedInstaller)
     }
 
     $extractedCandidates = Get-VerificationCandidates -PreferredRoots @() -ExtractionRoot $ExtractionRoot
