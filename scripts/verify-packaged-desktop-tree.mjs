@@ -15,10 +15,12 @@ if (searchRootFlagIndex !== -1) {
   }
 
   try {
-    const resolvedRoot = findPackagedDesktopTreeRoot(resolve(searchRoot));
+    const resolvedSearchRoot = resolve(searchRoot);
+    const resolvedRoot = findPackagedDesktopTreeRoot(resolvedSearchRoot);
     console.log(`Packaged desktop resources verified at ${resolvedRoot}.`);
   } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Packaged desktop search failed: ${message}`);
     process.exit(1);
   }
 

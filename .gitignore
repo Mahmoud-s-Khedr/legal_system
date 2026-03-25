@@ -107,6 +107,7 @@ Desktop.ini
 # Logs generated in the root
 .logs/
 *.log
+*.logs
 tree.log
 
 # Tesseract trained data (Optional: uncomment if you don't want to commit OCR models)

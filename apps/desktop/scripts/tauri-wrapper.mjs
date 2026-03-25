@@ -38,7 +38,9 @@ function withBuildConfigOverride(buildArgs) {
   const overridePath = join(tempDir, "tauri.bundle.env.json");
   const config = JSON.parse(readFileSync(tauriConfigPath, "utf8"));
   const envSourcePath = resolveDesktopEnvSource();
-  const resources = { ...(config.bundle?.resources ?? {}) };
+  const resources = Object.fromEntries(
+    Object.entries(config.bundle?.resources ?? {}).filter(([, destination]) => destination !== ".env.desktop")
+  );
   resources[envSourcePath] = ".env.desktop";
 
   writeFileSync(

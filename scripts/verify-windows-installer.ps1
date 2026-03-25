@@ -20,14 +20,151 @@ $VerifyPackagedTreeScript = Join-Path $RepoRoot "scripts\verify-packaged-desktop
 function Invoke-PackagedTreeVerification {
     param(
         [Parameter(Mandatory = $true)]
+        [string]$BundleRoot
+    )
+
+    Write-Host "Checking packaged desktop root candidate: $BundleRoot"
+    $output = & node $VerifyPackagedTreeScript $BundleRoot 2>&1
+    if ($output) {
+        $output | ForEach-Object { Write-Host $_ }
+    }
+    if ($LASTEXITCODE -ne 0) {
+        $failureMessage = if ($output) {
+            ($output | Select-Object -Last 1).ToString()
+        } else {
+            "Unknown verification failure."
+        }
+
+        throw "Packaged desktop tree verification failed at $BundleRoot: $failureMessage"
+    }
+}
+
+function Invoke-PackagedTreeSearch {
+    param(
+        [Parameter(Mandatory = $true)]
         [string]$SearchRoot
     )
 
     Write-Host "Searching for packaged desktop resources under: $SearchRoot"
-    & node $VerifyPackagedTreeScript --search-root $SearchRoot
-    if ($LASTEXITCODE -ne 0) {
-        throw "Packaged desktop tree verification failed under $SearchRoot"
+    $output = & node $VerifyPackagedTreeScript --search-root $SearchRoot 2>&1
+    if ($output) {
+        $output | ForEach-Object { Write-Host $_ }
     }
+    if ($LASTEXITCODE -ne 0) {
+        $failureMessage = if ($output) {
+            ($output | Select-Object -Last 1).ToString()
+        } else {
+            "Unknown search failure."
+        }
+
+        throw "Packaged desktop tree verification failed under $SearchRoot: $failureMessage"
+    }
+}
+
+function Add-VerificationCandidate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Collections.Generic.List[string]]$Candidates,
+
+        [Parameter(Mandatory = $true)]
+        [System.Collections.Generic.HashSet[string]]$Seen,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path $Path -PathType Container)) {
+        return
+    }
+
+    $resolvedPath = (Resolve-Path $Path).Path
+    if ($Seen.Add($resolvedPath)) {
+        $Candidates.Add($resolvedPath) | Out-Null
+    }
+}
+
+function Resolve-FrontEndBundleRoot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$IndexPath
+    )
+
+    $distDir = Split-Path -Parent $IndexPath
+    $frontendDir = Split-Path -Parent $distDir
+    $packagesDir = Split-Path -Parent $frontendDir
+    return Split-Path -Parent $packagesDir
+}
+
+function Get-VerificationCandidates {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$PreferredRoots,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ExtractionRoot
+    )
+
+    $candidates = New-Object 'System.Collections.Generic.List[string]'
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+
+    foreach ($preferredRoot in $PreferredRoots) {
+        Add-VerificationCandidate -Candidates $candidates -Seen $seen -Path $preferredRoot
+    }
+
+    if ($ExtractionRoot -and (Test-Path $ExtractionRoot -PathType Container)) {
+        Get-ChildItem -Path $ExtractionRoot -Directory -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -eq "resources" } |
+            ForEach-Object { Add-VerificationCandidate -Candidates $candidates -Seen $seen -Path $_.FullName }
+
+        Get-ChildItem -Path $ExtractionRoot -File -Recurse -Filter "index.html" -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like "*packages\frontend\dist\index.html" } |
+            ForEach-Object {
+                $bundleRoot = Resolve-FrontEndBundleRoot -IndexPath $_.FullName
+                Add-VerificationCandidate -Candidates $candidates -Seen $seen -Path $bundleRoot
+            }
+    }
+
+    return $candidates
+}
+
+function Invoke-VerificationCandidates {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Label,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Candidates
+    )
+
+    $attemptedRoots = New-Object 'System.Collections.Generic.List[string]'
+    $failures = New-Object 'System.Collections.Generic.List[string]'
+
+    if ($Candidates.Count -eq 0) {
+        throw "No packaged desktop root candidates were found for $Label."
+    }
+
+    Write-Host "Attempting packaged desktop roots for $Label:"
+    $Candidates | ForEach-Object { Write-Host " - $_" }
+
+    foreach ($candidate in $Candidates) {
+        $attemptedRoots.Add($candidate) | Out-Null
+
+        try {
+            Invoke-PackagedTreeVerification -BundleRoot $candidate
+            return
+        } catch {
+            $failures.Add($_.Exception.Message) | Out-Null
+        }
+    }
+
+    $attemptedSummary = ($attemptedRoots -join "; ")
+    $failureSummary = if ($failures.Count -gt 0) {
+        $failures[$failures.Count - 1]
+    } else {
+        "Unknown verification failure."
+    }
+
+    throw "Tried packaged desktop roots for $Label: $attemptedSummary. Last failure: $failureSummary"
 }
 
 function Resolve-7ZipExecutable {
@@ -71,13 +208,18 @@ if (-not (Test-Path $ResolvedInstaller -PathType Leaf)) {
 Write-Host "Confirmed NSIS installer exists at: $ResolvedInstaller"
 Write-Host "Verifying Windows installer payload from release root: $ResolvedReleaseRoot"
 
+$releaseCandidates = Get-VerificationCandidates -PreferredRoots @(
+    (Join-Path $ResolvedReleaseRoot "resources"),
+    $ResolvedReleaseRoot
+)
+
 try {
-    Invoke-PackagedTreeVerification -SearchRoot $ResolvedReleaseRoot
+    Invoke-VerificationCandidates -Label "release tree" -Candidates $releaseCandidates
     Write-Host "Windows installer payload verified from release tree."
     return
 } catch {
     $directVerificationError = $_
-    Write-Warning "No packaged desktop tree was found directly under $ResolvedReleaseRoot. Falling back to NSIS installer extraction."
+    Write-Warning "Release-tree verification failed. Falling back to NSIS installer extraction. $($directVerificationError.Exception.Message)"
 }
 
 $sevenZip = Resolve-7ZipExecutable
@@ -95,7 +237,16 @@ try {
         throw "7-Zip failed to extract $ResolvedInstaller"
     }
 
-    Invoke-PackagedTreeVerification -SearchRoot $ExtractionRoot
+    $extractedCandidates = Get-VerificationCandidates -PreferredRoots @() -ExtractionRoot $ExtractionRoot
+
+    try {
+        Invoke-VerificationCandidates -Label "extracted NSIS payload" -Candidates $extractedCandidates
+    } catch {
+        $candidateVerificationError = $_
+        Write-Warning "Explicit extracted-root verification failed. Falling back to recursive search. $($candidateVerificationError.Exception.Message)"
+        Invoke-PackagedTreeSearch -SearchRoot $ExtractionRoot
+    }
+
     Write-Host "Windows installer payload verified from extracted NSIS payload."
 } finally {
     if ($ExtractionRoot -and (Test-Path $ExtractionRoot -PathType Container)) {

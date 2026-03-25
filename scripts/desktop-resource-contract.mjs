@@ -131,6 +131,43 @@ function findFirstMatchingFile(rootDir, matcher) {
   return listFiles(rootDir).find((file) => matcher(file));
 }
 
+function pathExists(path, type) {
+  try {
+    const stats = statSync(path);
+    if (type === "file") {
+      return stats.isFile();
+    }
+
+    if (type === "directory") {
+      return stats.isDirectory();
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function scorePackagedDesktopCandidate(bundleRoot) {
+  let score = 0;
+
+  for (const relativePath of REQUIRED_PACKAGE_FILES) {
+    if (pathExists(join(bundleRoot, relativePath), "file")) {
+      score += 1;
+    }
+  }
+
+  if (pathExists(join(bundleRoot, "node"), "directory")) {
+    score += 1;
+  }
+
+  if (pathExists(join(bundleRoot, "postgres"), "directory")) {
+    score += 1;
+  }
+
+  return score;
+}
+
 function verifyNodeDirectory(nodeDir) {
   ensureDirectoryHasRealFiles(nodeDir, "Node.js resources");
 
@@ -223,7 +260,9 @@ function findPackagedDesktopTreeRoot(searchRoot) {
   ensureDirectoryExists(searchRoot, "Packaged desktop search root");
 
   const visited = new Set();
-  const queue = [resolve(searchRoot)];
+  const resolvedSearchRoot = resolve(searchRoot);
+  const queue = [resolvedSearchRoot];
+  let bestCandidate = null;
 
   while (queue.length > 0) {
     const currentDir = queue.shift();
@@ -236,8 +275,20 @@ function findPackagedDesktopTreeRoot(searchRoot) {
     try {
       verifyPackagedDesktopTree(currentDir);
       return currentDir;
-    } catch {
-      // Keep traversing until we find a valid packaged desktop resource root.
+    } catch (error) {
+      const score = scorePackagedDesktopCandidate(currentDir);
+      if (
+        score > 0 &&
+        (!bestCandidate ||
+          score > bestCandidate.score ||
+          (score === bestCandidate.score && currentDir.length < bestCandidate.path.length))
+      ) {
+        bestCandidate = {
+          path: currentDir,
+          score,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
     }
 
     for (const entry of readdirSync(currentDir, { withFileTypes: true })) {
@@ -249,7 +300,13 @@ function findPackagedDesktopTreeRoot(searchRoot) {
     }
   }
 
-  fail(`No packaged desktop resource root found under ${resolve(searchRoot)}`);
+  if (bestCandidate) {
+    fail(
+      `No packaged desktop resource root found under ${resolvedSearchRoot}. Closest candidate ${bestCandidate.path} failed verification: ${bestCandidate.error}`
+    );
+  }
+
+  fail(`No packaged desktop resource root found under ${resolvedSearchRoot}`);
 }
 
 function verifySourceDesktopResources(repoRoot) {
