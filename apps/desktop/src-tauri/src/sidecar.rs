@@ -13,6 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, State};
 
 const MAX_BACKEND_RESTARTS: u8 = 3;
+#[cfg(unix)]
 const BACKEND_SHUTDOWN_GRACE_PERIOD: Duration = Duration::from_secs(5);
 const PRISMA_ENGINE_RECURSIVE_SEARCH_DEPTH: usize = 6;
 const PRISMA_QUERY_ENGINE_PREFIXES: &[&str] = &["libquery_engine", "query_engine"];
@@ -523,6 +524,7 @@ fn terminate_backend_child(child: &mut Child) {
     let _ = child.wait();
 }
 
+#[cfg(unix)]
 fn wait_for_child_exit(child: &mut Child, timeout: Duration) -> bool {
     let started_at = Instant::now();
 

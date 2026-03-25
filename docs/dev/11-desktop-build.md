@@ -140,6 +140,8 @@ Backend licensing data and activation flows still exist for product logic, but t
 
 Desktop releases are installer-only in the current release train. The Tauri updater plugin and OTA manifest flow are not active, so version upgrades are distributed by shipping new platform installers.
 
+For verified local installer generation, use `pnpm release:desktop:linux` or `pnpm release:desktop:local`. `pnpm build` remains a compile-oriented workspace command, not a local installer release workflow.
+
 ---
 
 ## Building for Each Platform
@@ -158,18 +160,11 @@ sudo apt-get install -y \
 **Steps:**
 
 ```bash
-# 1. Bundle PostgreSQL and Node.js binaries
-bash scripts/bundle-linux-deps.sh
+# 1. Preflight the Linux host
+bash scripts/check-desktop-packaging-host.sh --targets linux
 
-# 2. Install JS dependencies
-pnpm install --frozen-lockfile
-pnpm prisma:generate
-
-# 3. Build Tauri installers with resource verification and log capture
-pnpm --filter @elms/desktop package:linux
-
-# 4. Smoke-test the packaged AppImage, deb, and rpm artifacts
-bash scripts/verify-linux-packages.sh
+# 2. Build and verify the supported local Linux installers
+pnpm release:desktop:linux
 ```
 
 `bundle-linux-deps.sh` now performs a PostgreSQL smoke test after copying resources: it runs the bundled `postgres` binary and initializes a temporary data directory with the bundled `initdb` binary before writing the bundle sentinel.
@@ -178,6 +173,8 @@ Artifacts are written to:
 - `apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage`
 - `apps/desktop/src-tauri/target/release/bundle/deb/*.deb`
 - `apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm`
+
+`pnpm release:desktop:linux` intentionally targets `deb,rpm` only. AppImage remains available through lower-level scripts and CI, but it is not part of the required local success bar.
 
 The desktop Tauri config uses cross-platform wrapper scripts for `beforeBuildCommand` and `beforeDevCommand` so the same build path works on Linux, macOS, and Windows runners without relying on Unix-style inline environment assignment. On Windows, those wrappers launch `pnpm` through a shell-backed spawn path instead of directly invoking `pnpm.cmd`, which avoids the `spawn EINVAL` failure seen in GitHub-hosted Windows packaging jobs.
 
@@ -188,6 +185,10 @@ The `beforeBuildCommand` in `tauri.conf.json` automatically runs the backend `bu
 ```
 
 ### Windows (NSIS)
+
+#### Windows host (recommended)
+
+Windows remains the recommended host for production NSIS installers. It matches the release workflows in `.github/workflows/build-windows.yml` and `.github/workflows/release-desktop.yml`, supports the native MSVC toolchain directly, and aligns with the expected installer signing flow.
 
 **Prerequisites:** Rust stable with target `x86_64-pc-windows-msvc`, Visual Studio build tools, pnpm, Node.js 22.
 
@@ -205,7 +206,64 @@ pnpm --filter @elms/desktop tauri build --target x86_64-pc-windows-msvc --bundle
 
 Artifact: `apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe`
 
+#### Fedora Linux cross-build (experimental)
+
+Fedora can cross-compile the Windows desktop binary and reach the NSIS bundling stage, but this path is still experimental. Use it for local debugging and iteration; use Windows CI for release-quality artifacts.
+
+**Fedora prerequisites:** Node.js 22, pnpm 10.27.0, Rust stable, plus Fedora system packages:
+
+```bash
+sudo dnf install llvm lld clang mingw64-nsis
+rustup target add x86_64-pc-windows-msvc
+cargo install --locked cargo-xwin
+```
+
+**Build steps:**
+
+```bash
+# 1. Preflight the Linux host
+bash scripts/check-desktop-packaging-host.sh --targets windows
+
+# 2. Cross-build and verify the Windows NSIS installer
+pnpm --filter @elms/desktop package:windows:cross
+```
+
+The helper script bundles Windows runtimes, verifies the source desktop resources, captures the Tauri output into `.logs/desktop-windows-cross-package.log`, applies a temporary Tauri config override with `bundle.targets: "nsis"`, and verifies the produced NSIS payload from Linux.
+
+**Observed behavior on Fedora:** the Rust cross-compile and Tauri Windows compile can succeed locally, but the bundle step may still fail with `failed to run command makensis.exe` if the host only provides `makensis`.
+
+**Troubleshooting:** on Linux, Tauri expects `makensis.exe` to be available on `PATH`. If Fedora only installs `makensis`, create a local shim or symlink named `makensis.exe` that forwards to the real `makensis` binary, then rerun the build.
+
+**Bundle selection note:** on Linux, the Tauri CLI only accepts Linux bundle values for `--bundles`, even when the target is Windows. If you invoke `pnpm --filter @elms/desktop tauri build ...` directly, Tauri can still inspect the configured Windows bundle types and emit extra `msi`/WiX bundle-type warnings. Use `package:windows:cross` for the supported Linux-hosted smoke-build path because it applies an NSIS-only config override for that run.
+
+**Signing note:** Linux cross-builds skip installer signing by default. Final signed release artifacts should come from the Windows GitHub Actions workflows.
+
+### One Linux Host: Ubuntu, Fedora, and Windows Installers
+
+When you want the full supported local installer set from a Linux machine:
+
+```bash
+pnpm release:desktop:local
+```
+
+That flow:
+- runs `pnpm install --frozen-lockfile`
+- checks the host prerequisites for Ubuntu/Fedora local packaging plus Windows cross-build
+- builds and verifies `deb` and `rpm`
+- builds and verifies the Windows NSIS installer
+- restores Linux desktop runtime resources afterward so the repo remains Linux-ready
+
+#### Windows MSI (WiX) manual path
+
+WiX/MSI remains available for explicit Windows-host packaging, but it is not part of Linux cross-builds, CI artifacts, or the recommended release path.
+
+```bash
+pnpm --filter @elms/desktop tauri build --target x86_64-pc-windows-msvc --bundles msi
+```
+
 ### macOS (dmg)
+
+macOS packaging requires a macOS host. Linux is not a supported host for producing `.dmg` installers.
 
 **Prerequisites:** Rust stable with targets `aarch64-apple-darwin` and `x86_64-apple-darwin`, Xcode command-line tools.
 

@@ -27,7 +27,9 @@
     "format:check": "prettier --check .",
     "prisma:generate": "pnpm --filter @elms/backend prisma generate",
     "prisma:seed": "pnpm --filter @elms/backend prisma db seed",
-    "release:desktop:linux": "pnpm --filter @elms/desktop package:linux",
+    "check:desktop:packaging-host": "bash ./scripts/check-desktop-packaging-host.sh",
+    "release:desktop:linux": "DESKTOP_RELEASE_TARGETS=linux bash ./scripts/release-desktop-local.sh",
+    "release:desktop:local": "bash ./scripts/release-desktop-local.sh",
     "release:web": "pnpm --filter @elms/web docker:build:backend && pnpm --filter @elms/web docker:build:frontend",
     "seed:dev": "NODE_ENV=development pnpm --filter @elms/backend seed:dev",
     "seed:dev:cloud": "DATABASE_URL=postgresql://elms:elms@127.0.0.1:5432/elms_cloud?schema=public NODE_ENV=development pnpm --filter @elms/backend seed:dev:cloud"
@@ -37,6 +39,7 @@
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.8.1",
     "@vitest/coverage-v8": "^3.2.4",
+    "7zip-bin": "^5.2.0",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",

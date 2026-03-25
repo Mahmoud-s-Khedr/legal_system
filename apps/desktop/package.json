@@ -11,7 +11,8 @@
     "tauri": "node ./scripts/tauri-wrapper.mjs",
     "tauri:dev": "tauri dev",
     "package:binary": "pnpm tauri build --no-bundle --ci",
-    "package:linux": "bash ../../scripts/package-desktop-linux.sh"
+    "package:linux": "bash ../../scripts/package-desktop-linux.sh",
+    "package:windows:cross": "bash ../../scripts/package-desktop-windows-cross.sh"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.9.2"

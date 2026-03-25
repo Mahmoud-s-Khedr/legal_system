@@ -89,6 +89,21 @@ function ensureDirectoryHasRealFiles(path, label) {
   }
 }
 
+function ensureAnyFileExists(paths, label) {
+  for (const path of paths) {
+    try {
+      const stats = statSync(path);
+      if (stats.isFile()) {
+        return path;
+      }
+    } catch {
+      // Continue searching other candidates.
+    }
+  }
+
+  fail(`${label} is missing at ${paths.join(" or ")}`);
+}
+
 function parseLayoutManifest(layoutFile) {
   ensureFileExists(layoutFile, "PostgreSQL layout manifest");
 
@@ -171,18 +186,10 @@ function scorePackagedDesktopCandidate(bundleRoot) {
 function verifyNodeDirectory(nodeDir) {
   ensureDirectoryHasRealFiles(nodeDir, "Node.js resources");
 
-  const candidates = ["node", "node.exe"].map((entry) => join(nodeDir, entry));
-  const nodeBinary = candidates.find((candidate) => {
-    try {
-      return statSync(candidate).isFile();
-    } catch {
-      return false;
-    }
-  });
-
-  if (!nodeBinary) {
-    fail(`Node.js resources are missing the bundled runtime binary under ${nodeDir}`);
-  }
+  ensureAnyFileExists(
+    ["node", "node.exe"].map((entry) => join(nodeDir, entry)),
+    "Node.js bundled runtime binary"
+  );
 }
 
 function verifyPostgresBundle(postgresDir) {
@@ -201,9 +208,11 @@ function verifyPostgresBundle(postgresDir) {
 
   ensureDirectoryExists(join(shareDir, "timezonesets"), "Bundled PostgreSQL timezone data");
 
-  const executableSuffix = process.platform === "win32" ? ".exe" : "";
   for (const executable of REQUIRED_POSTGRES_EXECUTABLES) {
-    ensureFileExists(join(binDir, `${executable}${executableSuffix}`), `Bundled PostgreSQL executable ${executable}`);
+    ensureAnyFileExists(
+      [join(binDir, executable), join(binDir, `${executable}.exe`)],
+      `Bundled PostgreSQL executable ${executable}`
+    );
   }
 
   const pkgLibFiles = listFiles(pkgLibDir);

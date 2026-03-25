@@ -6,7 +6,32 @@ BUNDLE_DIR="$ROOT_DIR/apps/desktop/src-tauri/target/release/bundle"
 TMP_DIR="$(mktemp -d -t elms-linux-verify-XXXXXX)"
 VERIFY_LINUX_BUNDLES="${VERIFY_LINUX_BUNDLES:-appimage,deb,rpm}"
 
-trap 'rm -rf "$TMP_DIR"' EXIT
+cleanup() {
+  local status=$?
+
+  if rm -rf "$TMP_DIR" 2>/dev/null; then
+    exit "$status"
+  fi
+
+  if command -v docker >/dev/null 2>&1; then
+    docker run --rm \
+      -v "$TMP_DIR:/cleanup" \
+      ubuntu:24.04 \
+      bash -lc '
+        set -euo pipefail
+        find /cleanup -mindepth 1 -delete
+      ' >/dev/null 2>&1 || true
+
+    rm -rf "$TMP_DIR" 2>/dev/null || true
+  fi
+
+  if [[ -d "$TMP_DIR" ]]; then
+    echo "WARN: Failed to fully remove temporary verification directory: $TMP_DIR" >&2
+  fi
+
+  exit "$status"
+}
+trap cleanup EXIT
 
 die() {
   echo "ERROR: $*" >&2
@@ -53,10 +78,20 @@ verify_appimage() {
 verify_deb() {
   local deb_file="$1"
   local extract_dir="$TMP_DIR/deb"
+  local deb_relative="${deb_file#"$ROOT_DIR"/}"
 
   echo "Verifying Debian package payload: $deb_file"
   mkdir -p "$extract_dir"
-  dpkg-deb -x "$deb_file" "$extract_dir"
+
+  docker run --rm \
+    -v "$ROOT_DIR:/workspace:ro" \
+    -v "$extract_dir:/extract" \
+    ubuntu:24.04 \
+    bash -lc '
+      set -euo pipefail
+      dpkg-deb -x "/workspace/'"$deb_relative"'" /extract
+    '
+
   verify_bundle_root "$extract_dir/usr/lib/ELMS"
 }
 
@@ -91,7 +126,7 @@ for bundle_type in "${bundle_types[@]}"; do
       ;;
     deb)
       require_cmd node
-      require_cmd dpkg-deb
+      require_cmd docker
       DEB_FILE="$(find_single_artifact "$BUNDLE_DIR/deb/*.deb")"
       verify_deb "$DEB_FILE"
       ;;

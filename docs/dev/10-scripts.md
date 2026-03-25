@@ -10,12 +10,15 @@ All scripts live in the `scripts/` directory at the repository root. This docume
 - [bundle-linux-deps.sh](#bundle-linux-depssh)
 - [bundle-windows-deps.ps1](#bundle-windows-depsps1)
 - [check-lockfile.sh](#check-lockfilesh)
+- [check-desktop-packaging-host.sh](#check-desktop-packaging-hostsh)
 - [desktop-bundle-extras.mjs](#desktop-bundle-extrasmjs)
 - [generate-license.ts](#generate-licensets)
 - [i18n-audit.ts](#i18n-auditts)
 - [package-desktop-linux.sh](#package-desktop-linuxsh)
+- [release-desktop-local.sh](#release-desktop-localsh)
 - [verify-desktop-resources.sh](#verify-desktop-resourcessh)
 - [verify-desktop-runtime.sh](#verify-desktop-runtimesh)
+- [verify-windows-installer.mjs](#verify-windows-installermjs)
 
 ---
 
@@ -195,6 +198,37 @@ bash scripts/check-lockfile.sh
 
 ---
 
+## check-desktop-packaging-host.sh
+
+**What it does:** Verifies that the current Ubuntu/Fedora host has the required local packaging tools before running the desktop installer build flow.
+
+**When to use:** Before local Linux packaging, Windows cross-builds from Linux, or the combined local release flow.
+
+**How it works:**
+1. Detects the Linux distro family from `/etc/os-release`.
+2. Checks common toolchain commands (`pnpm`, `node`, `cargo`, `rustup`, `curl`, `tar`, `patchelf`, `docker`).
+3. Checks Linux packaging tools when `linux` is part of the requested target set.
+4. Checks Windows cross-build tools (`cargo-xwin`, `pwsh`, `makensis`/`makensis.exe`, archive extractor) when `windows` is part of the requested target set.
+5. Prints concrete install commands instead of failing later in the packaging step.
+
+**Environment variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DESKTOP_RELEASE_TARGETS` | `linux,windows` | Comma-separated target set to validate |
+
+**Usage:**
+
+```bash
+# Check the full local Linux + Windows packaging host
+bash scripts/check-desktop-packaging-host.sh
+
+# Check only Linux packaging prerequisites
+bash scripts/check-desktop-packaging-host.sh --targets linux
+```
+
+---
+
 ## desktop-bundle-extras.mjs
 
 **What it does:** After `tsup` bundles the backend into a single `server.js`, this script copies the packages that cannot be bundled (native binaries, WASM, generated clients) into `packages/backend/dist/desktop/node_modules/`.
@@ -330,6 +364,40 @@ bash scripts/package-desktop-linux.sh
 
 ---
 
+## release-desktop-local.sh
+
+**What it does:** Runs the supported local desktop release flow on a Linux host.
+
+**When to use:** When you want one command to build and verify the required local installer set (`.deb`, `.rpm`, and Windows NSIS `.exe`).
+
+**How it works:**
+1. Runs `pnpm install --frozen-lockfile`.
+2. Runs `check-desktop-packaging-host.sh`.
+3. Generates the Prisma client.
+4. Builds and verifies Linux desktop packages (`deb,rpm` by default).
+5. Builds and verifies the Windows NSIS installer through the Linux-hosted cross-build flow.
+6. Restores Linux desktop runtime resources after a mixed Linux+Windows run so the repo remains Linux-ready.
+
+**Environment variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DESKTOP_RELEASE_TARGETS` | `linux,windows` | Comma-separated target set (`linux`, `windows`, or both) |
+| `DESKTOP_BUNDLES` | `deb,rpm` | Linux bundle types to build |
+| `VERIFY_LINUX_BUNDLES` | same as `DESKTOP_BUNDLES` | Linux bundle types to verify |
+
+**Usage:**
+
+```bash
+# Build and verify Linux and Windows installers from one Linux host
+bash scripts/release-desktop-local.sh
+
+# Linux-only local packaging
+DESKTOP_RELEASE_TARGETS=linux bash scripts/release-desktop-local.sh
+```
+
+---
+
 ## verify-desktop-resources.sh
 
 **What it does:** Thin shell wrapper around `node scripts/verify-desktop-resources.mjs`, which validates the cross-platform desktop resource contract before packaging.
@@ -380,6 +448,30 @@ Desktop runtime verification passed: backend and embedded PostgreSQL are healthy
 ```
 
 On failure, the last 120 lines of the log are printed to stderr.
+
+---
+
+## verify-windows-installer.mjs
+
+**What it does:** Verifies a Windows NSIS installer payload from Linux by inspecting either the Tauri release tree or the extracted installer contents.
+
+**When to use:** After a Linux-hosted Windows cross-build, or when validating a locally produced NSIS installer outside Windows CI.
+
+**How it works:**
+1. Accepts either an installer path or a Tauri Windows release root.
+2. Tries direct packaged-tree verification from the release root first.
+3. Falls back to extracting the NSIS `.exe` with `7z`, `7zz`, `bsdtar`, or the repo-managed `7zip-bin` binary.
+4. Reuses `verify-packaged-desktop-tree.mjs` and `desktop-resource-contract.mjs` to validate the extracted payload.
+
+**Usage:**
+
+```bash
+# Verify from the Tauri Windows release root
+node scripts/verify-windows-installer.mjs --release-root apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release
+
+# Verify a specific NSIS installer file
+node scripts/verify-windows-installer.mjs apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/ELMS_0.1.0_x64-setup.exe
+```
 
 ---
 

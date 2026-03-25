@@ -124,7 +124,7 @@ pnpm dev:tauri
 # Opens the native desktop window with embedded backend on http://127.0.0.1:7854
 ```
 
-> The desktop app bundles its own PostgreSQL and Node.js runtimes. For production desktop builds, see [docs/dev/11-desktop-build.md](docs/dev/11-desktop-build.md).
+> The desktop app bundles its own PostgreSQL and Node.js runtimes. Windows NSIS installers can be cross-built from Fedora/Linux experimentally, but release-quality Windows artifacts should come from Windows CI. macOS installers require a macOS host. For production desktop builds, see [docs/dev/11-desktop-build.md](docs/dev/11-desktop-build.md).
 
 ---
 

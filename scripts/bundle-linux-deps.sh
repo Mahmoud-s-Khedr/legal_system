@@ -136,6 +136,30 @@ manifest_layout_is_usable() {
   return 0
 }
 
+linux_postgres_bundle_is_usable() {
+  local layout_file="$1"
+  local bundle_root="$2"
+
+  manifest_layout_is_usable "$layout_file" "$bundle_root" || return 1
+  # shellcheck disable=SC1090
+  source "$layout_file"
+
+  local exe
+  for exe in pg_ctl initdb pg_isready createdb postgres; do
+    [[ -f "$bundle_root/$POSTGRES_BIN_DIR/$exe" ]] || return 1
+  done
+
+  return 0
+}
+
+linux_node_bundle_is_usable() {
+  local node_root="$1"
+
+  [[ -f "$node_root/node" ]] || return 1
+  [[ ! -f "$node_root/node.exe" ]] || return 1
+  return 0
+}
+
 run_postgres_layout_smoke_test() {
   local bundle_root="$1"
   local bin_relative="$2"
@@ -169,7 +193,7 @@ echo "[info] Detected distro family: $DISTRO"
 PG_SENTINEL="$PG_DEST/.bundle-complete"
 PG_LAYOUT_FILE="$PG_DEST/.layout.env"
 
-if [[ -f "$PG_SENTINEL" ]] && manifest_layout_is_usable "$PG_LAYOUT_FILE" "$PG_DEST"; then
+if [[ -f "$PG_SENTINEL" ]] && linux_postgres_bundle_is_usable "$PG_LAYOUT_FILE" "$PG_DEST"; then
   echo "[PG] PostgreSQL $PG_VERSION already bundled — skipping."
 else
   if [[ -d "$PG_DEST" ]]; then
@@ -286,9 +310,14 @@ fi
 
 NODE_SENTINEL="$NODE_DEST/.bundle-complete"
 
-if [[ -f "$NODE_SENTINEL" ]]; then
+if [[ -f "$NODE_SENTINEL" ]] && linux_node_bundle_is_usable "$NODE_DEST"; then
   echo "[Node] Node.js $NODE_VERSION already bundled — skipping."
 else
+  if [[ -d "$NODE_DEST" ]]; then
+    echo "[Node] Existing Node.js bundle is missing the expected Linux runtime binary — rebuilding."
+    rm -rf "$NODE_DEST"
+  fi
+
   echo "[Node] Bundling Node.js $NODE_VERSION ..."
 
   require_cmd curl

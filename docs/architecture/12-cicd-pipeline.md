@@ -164,6 +164,8 @@ Key differences from Linux:
 - Output artifact: NSIS `.exe` installer at `target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe`
 - No system library apt-get step (Windows runner has required toolchain pre-installed)
 
+Windows CI is the release source of truth even though Fedora/Linux can be used experimentally for local NSIS cross-builds with `cargo-xwin`. The Windows runners have the native MSVC toolchain, native NSIS execution, and the expected environment for artifact signing and upload, so shipped Windows installers should come from CI rather than local Linux hosts.
+
 ---
 
 ## Workflow: `build-macos.yml`
@@ -182,6 +184,8 @@ Key differences:
 - Tauri build args: `--target <matrix-target> --bundles dmg`
 - Output artifacts: `.dmg` files at `target/aarch64-apple-darwin/release/bundle/dmg/*.dmg` and `target/x86_64-apple-darwin/release/bundle/dmg/*.dmg`
 - **Apple notarization secrets** are consumed from GitHub secrets (required for distribution outside the Mac App Store):
+
+Unlike Windows NSIS, there is no supported Linux cross-build path for production macOS `.dmg` artifacts. macOS installers require macOS runners or a macOS host.
 
 | Secret | Purpose |
 |---|---|

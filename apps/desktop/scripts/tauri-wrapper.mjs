@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { platform } from "node:os";
+import { platform, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -34,7 +34,7 @@ function resolveDesktopEnvSource() {
 }
 
 function withBuildConfigOverride(buildArgs) {
-  const tempDir = mkdtempSync(join(process.cwd(), ".tauri-config-"));
+  const tempDir = mkdtempSync(join(tmpdir(), "elms-tauri-config-"));
   const overridePath = join(tempDir, "tauri.bundle.env.json");
   const config = JSON.parse(readFileSync(tauriConfigPath, "utf8"));
   const envSourcePath = resolveDesktopEnvSource();
