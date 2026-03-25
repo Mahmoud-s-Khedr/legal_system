@@ -35,7 +35,7 @@ function Invoke-PackagedTreeVerification {
             "Unknown verification failure."
         }
 
-        throw "Packaged desktop tree verification failed at $BundleRoot: $failureMessage"
+        throw "Packaged desktop tree verification failed at ${BundleRoot}: $failureMessage"
     }
 }
 
@@ -57,7 +57,7 @@ function Invoke-PackagedTreeSearch {
             "Unknown search failure."
         }
 
-        throw "Packaged desktop tree verification failed under $SearchRoot: $failureMessage"
+        throw "Packaged desktop tree verification failed under ${SearchRoot}: $failureMessage"
     }
 }
 
@@ -143,7 +143,7 @@ function Invoke-VerificationCandidates {
         throw "No packaged desktop root candidates were found for $Label."
     }
 
-    Write-Host "Attempting packaged desktop roots for $Label:"
+    Write-Host "Attempting packaged desktop roots for ${Label}:"
     $Candidates | ForEach-Object { Write-Host " - $_" }
 
     foreach ($candidate in $Candidates) {
@@ -164,7 +164,7 @@ function Invoke-VerificationCandidates {
         "Unknown verification failure."
     }
 
-    throw "Tried packaged desktop roots for $Label: $attemptedSummary. Last failure: $failureSummary"
+    throw "Tried packaged desktop roots for ${Label}: $attemptedSummary. Last failure: $failureSummary"
 }
 
 function Resolve-7ZipExecutable {
