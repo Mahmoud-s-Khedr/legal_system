@@ -56,9 +56,8 @@ export async function registerClientRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const payload = clientSchema.parse(request.body);
-      // Returns { client, conflictWarnings } — the schema is relaxed here since
-      // conflictWarnings is additive and not part of the strict clientDtoSchema.
-      return createClient(request.sessionUser!, payload, getAuditContext(request));
+      const { client } = await createClient(request.sessionUser!, payload, getAuditContext(request));
+      return client;
     }
   );
 
