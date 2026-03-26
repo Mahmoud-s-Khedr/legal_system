@@ -24,6 +24,7 @@ export interface AcceptInviteDto {
 
 export interface AuthResponseDto {
   session: AppSession;
+  localSessionToken?: string;
 }
 
 export interface MeResponseDto {

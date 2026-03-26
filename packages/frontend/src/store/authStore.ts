@@ -9,7 +9,7 @@ import type {
   AcceptInviteDto
 } from "@elms/shared";
 import { AuthMode } from "@elms/shared";
-import { apiFetch } from "../lib/api";
+import { apiFetch, clearDesktopLocalSessionToken, persistDesktopLocalSessionToken } from "../lib/api";
 
 interface AuthState {
   user: SessionUser | null;
@@ -38,6 +38,9 @@ const useAuthStore = create<AuthState>((set, get) => ({
     bootstrapPromise = (async () => {
       try {
         const response = await apiFetch<AuthResponseDto>("/api/auth/me");
+        if (!response.session.user) {
+          clearDesktopLocalSessionToken();
+        }
         let needsSetup = false;
         if (!response.session.user && response.session.mode === AuthMode.LOCAL) {
           try {
@@ -72,6 +75,8 @@ const useAuthStore = create<AuthState>((set, get) => ({
       body: JSON.stringify(payload)
     });
 
+    persistDesktopLocalSessionToken(response.localSessionToken);
+
     set({
       mode: response.session.mode,
       user: response.session.user,
@@ -83,6 +88,8 @@ const useAuthStore = create<AuthState>((set, get) => ({
       method: "POST",
       body: JSON.stringify(payload)
     });
+
+    persistDesktopLocalSessionToken(response.localSessionToken);
 
     set({
       mode: response.session.mode,
@@ -96,6 +103,8 @@ const useAuthStore = create<AuthState>((set, get) => ({
       body: JSON.stringify(payload)
     });
 
+    persistDesktopLocalSessionToken(response.localSessionToken);
+
     set({
       mode: response.session.mode,
       user: response.session.user,
@@ -108,6 +117,8 @@ const useAuthStore = create<AuthState>((set, get) => ({
       method: "POST",
       body: JSON.stringify(payload)
     });
+
+    persistDesktopLocalSessionToken(response.localSessionToken);
 
     set({
       mode: response.session.mode,
@@ -127,6 +138,8 @@ const useAuthStore = create<AuthState>((set, get) => ({
     await apiFetch<{ success: true }>("/api/auth/logout", {
       method: "POST"
     });
+
+    clearDesktopLocalSessionToken();
 
     set({
       mode: null,

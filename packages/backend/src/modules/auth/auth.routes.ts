@@ -5,6 +5,7 @@ import { createAuthService } from "./createAuthService.js";
 import { newPasswordSchema } from "../../utils/passwordPolicy.js";
 import { authResponseSchema, errorSchema, successSchema } from "../../schemas/index.js";
 import { prisma } from "../../db/prisma.js";
+import { LOCAL_SESSION_COOKIE } from "../../config/constants.js";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -34,7 +35,7 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     const response = await authService.login(payload);
     setCookies(reply, authService, response, env);
     request.sessionUser = response.session.user;
-    return response;
+    return withLocalSessionToken(authService, response);
   });
 
   app.post("/api/auth/register", { schema: { response: authOrDisabledResponses }, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
@@ -46,7 +47,7 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     const response = await authService.register(payload);
     setCookies(reply, authService, response, env);
     request.sessionUser = response.session.user;
-    return response;
+    return withLocalSessionToken(authService, response);
   });
 
   app.get("/api/auth/setup", async (_request, reply) => {
@@ -66,7 +67,7 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     const response = await authService.setup(payload);
     setCookies(reply, authService, response, env);
     request.sessionUser = response.session.user;
-    return response;
+    return withLocalSessionToken(authService, response);
   });
 
   app.post("/api/auth/accept-invite", { schema: { response: authOrDisabledResponses } }, async (request, reply) => {
@@ -78,7 +79,7 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     const response = await authService.acceptInvite(payload);
     setCookies(reply, authService, response, env);
     request.sessionUser = response.session.user;
-    return response;
+    return withLocalSessionToken(authService, response);
   });
 
   app.post("/api/auth/refresh", { schema: { response: authOrDisabledResponses } }, async (request, reply) => {
@@ -89,7 +90,7 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     const response = await authService.refresh(request.cookies);
     setCookies(reply, authService, response, env);
     request.sessionUser = response.session.user;
-    return response;
+    return withLocalSessionToken(authService, response);
   });
 
   app.post("/api/auth/logout", { schema: { response: { 200: successSchema } } }, async (request, reply) => {
@@ -124,6 +125,17 @@ function setCookies(
       secure: env.NODE_ENV === "production"
     });
   }
+}
+
+function withLocalSessionToken<T extends { session: { mode: string } }>(
+  authService: ReturnType<typeof createAuthService>,
+  response: T
+) {
+  const cookies = authService.getResponseCookies?.(response as never) ?? {};
+  return {
+    ...response,
+    localSessionToken: cookies[LOCAL_SESSION_COOKIE] ?? null
+  };
 }
 
 function clearCookies(reply: FastifyReply, authService: ReturnType<typeof createAuthService>) {

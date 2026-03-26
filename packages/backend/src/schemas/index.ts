@@ -54,7 +54,10 @@ export const appSessionSchema = {
 
 export const authResponseSchema = {
   type: "object",
-  properties: { session: appSessionSchema },
+  properties: {
+    session: appSessionSchema,
+    localSessionToken: { anyOf: [{ type: "string" }, { type: "null" }] }
+  },
   required: ["session"],
   additionalProperties: false
 } as const;

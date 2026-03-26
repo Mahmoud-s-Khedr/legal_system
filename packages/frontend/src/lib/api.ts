@@ -1,4 +1,39 @@
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
+const LOCAL_SESSION_STORAGE_KEY = "elms.localSessionToken";
+
+function readDesktopLocalSessionToken() {
+  if (!isDesktopShell) {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(LOCAL_SESSION_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function persistDesktopLocalSessionToken(token?: string | null) {
+  if (!isDesktopShell) {
+    return;
+  }
+
+  try {
+    if (token && token.trim().length > 0) {
+      window.localStorage.setItem(LOCAL_SESSION_STORAGE_KEY, token);
+      return;
+    }
+
+    window.localStorage.removeItem(LOCAL_SESSION_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures and rely on in-memory flow.
+  }
+}
+
+export function clearDesktopLocalSessionToken() {
+  persistDesktopLocalSessionToken(null);
+}
 
 export function resolveApiUrl(input: string) {
   if (!apiBaseUrl || /^https?:\/\//.test(input)) {
@@ -29,17 +64,21 @@ export async function apiFetch<T>(
   init?: RequestInit
 ): Promise<T> {
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
+  const headers = new Headers(initHeaders);
+  const desktopLocalSessionToken = readDesktopLocalSessionToken();
+  if (desktopLocalSessionToken) {
+    headers.set("x-elms-session", desktopLocalSessionToken);
+  }
   const shouldSetJsonContentType =
-    restInit.body != null && !(restInit.body instanceof FormData) && !hasContentTypeHeader(initHeaders);
+    restInit.body != null && !(restInit.body instanceof FormData) && !hasContentTypeHeader(headers);
+
+  if (shouldSetJsonContentType) {
+    headers.set("Content-Type", "application/json");
+  }
 
   const response = await fetch(resolveApiUrl(input), {
     credentials: "include",
-    headers: shouldSetJsonContentType
-      ? {
-          "Content-Type": "application/json",
-          ...(initHeaders ?? {})
-        }
-      : initHeaders,
+    headers,
     signal,
     ...restInit
   });
@@ -57,9 +96,16 @@ export async function apiFormFetch<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
-  const { signal, ...restInit } = init ?? {};
+  const { signal, headers: initHeaders, ...restInit } = init ?? {};
+  const headers = new Headers(initHeaders);
+  const desktopLocalSessionToken = readDesktopLocalSessionToken();
+  if (desktopLocalSessionToken) {
+    headers.set("x-elms-session", desktopLocalSessionToken);
+  }
+
   const response = await fetch(resolveApiUrl(input), {
     credentials: "include",
+    headers,
     signal,
     ...restInit
   });

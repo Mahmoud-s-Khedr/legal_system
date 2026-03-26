@@ -1,6 +1,7 @@
 import cors from "@fastify/cors";
 import type { FastifyInstance } from "fastify";
 import type { AppEnv } from "../config/env.js";
+import { LOCAL_SESSION_HEADER } from "../config/constants.js";
 
 export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
   const extraOrigins = env.ALLOWED_ORIGINS
@@ -15,7 +16,7 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
     origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", LOCAL_SESSION_HEADER],
     exposedHeaders: ["set-cookie"],
     maxAge: env.NODE_ENV === "production" ? 3600 : 0
   });
