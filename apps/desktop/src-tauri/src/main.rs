@@ -9,7 +9,9 @@ fn main() {
         .manage(sidecar::RuntimeState::default())
         .invoke_handler(tauri::generate_handler![
             sidecar::desktop_bootstrap_status,
-            sidecar::retry_bootstrap
+            sidecar::retry_bootstrap,
+            sidecar::repair_bootstrap_migrations,
+            sidecar::reset_local_database
         ])
         .setup(|app| {
             let handle = app.handle().clone();

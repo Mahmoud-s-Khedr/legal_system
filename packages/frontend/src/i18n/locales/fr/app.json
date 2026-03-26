@@ -503,6 +503,11 @@
   "desktopBootstrap": {
     "eyebrow": "Runtime desktop",
     "retry": "Relancer",
+    "repair": "Reparer la base locale",
+    "repairing": "Reparation de l'etat local des migrations",
+    "resetDatabase": "Reinitialiser la base locale",
+    "resetting": "Reinitialisation de la base locale et redemarrage",
+    "resetConfirm": "Cette action supprimera les donnees locales de la base desktop sur cet appareil. Continuer ?",
     "retrying": "Nouvelle tentative de démarrage local",
     "unreachable": "Le shell desktop attend encore la réponse des services locaux.",
     "starting": {

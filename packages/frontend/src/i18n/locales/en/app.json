@@ -455,6 +455,11 @@
   "desktopBootstrap": {
     "eyebrow": "Desktop runtime",
     "retry": "Retry startup",
+    "repair": "Repair database",
+    "repairing": "Repairing local migration state",
+    "resetDatabase": "Reset local database",
+    "resetting": "Resetting local database and restarting",
+    "resetConfirm": "This will delete local desktop database data on this device. Continue?",
     "retrying": "Retrying local startup",
     "unreachable": "The desktop shell is waiting for the local services to respond.",
     "starting": {

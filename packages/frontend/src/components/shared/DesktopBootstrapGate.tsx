@@ -73,6 +73,11 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
     };
   }, [t]);
 
+  const failureMessage = status.message ?? "";
+  const isRecoverableMigrationFailure =
+    status.phase === "failed" &&
+    (failureMessage.includes("P3009") || failureMessage.toLowerCase().includes("migration failed"));
+
   if (!isDesktopShell || status.phase === "ready") {
     return <>{children}</>;
   }
@@ -89,6 +94,21 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
         </p>
         {status.phase === "failed" ? (
           <div className="mt-6 flex gap-3">
+            {isRecoverableMigrationFailure ? (
+              <button
+                className="rounded-2xl bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-800"
+                onClick={() => {
+                  setStatus({
+                    phase: "recovering",
+                    message: t("desktopBootstrap.repairing")
+                  });
+                  void invokeDesktopCommand("repair_bootstrap_migrations");
+                }}
+                type="button"
+              >
+                {t("desktopBootstrap.repair")}
+              </button>
+            ) : null}
             <button
               className="rounded-2xl bg-accent px-5 py-3 font-semibold text-white"
               onClick={() => {
@@ -102,6 +122,26 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
             >
               {t("desktopBootstrap.retry")}
             </button>
+            {isRecoverableMigrationFailure ? (
+              <button
+                className="rounded-2xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 hover:bg-rose-50"
+                onClick={() => {
+                  const approved = window.confirm(t("desktopBootstrap.resetConfirm"));
+                  if (!approved) {
+                    return;
+                  }
+
+                  setStatus({
+                    phase: "recovering",
+                    message: t("desktopBootstrap.resetting")
+                  });
+                  void invokeDesktopCommand("reset_local_database");
+                }}
+                type="button"
+              >
+                {t("desktopBootstrap.resetDatabase")}
+              </button>
+            ) : null}
             <button
               className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-600 hover:bg-slate-50"
               onClick={() => void quitApp()}

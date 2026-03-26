@@ -161,6 +161,8 @@ struct RuntimeStateInner {
     is_bootstrapping: AtomicBool,
     is_monitoring: AtomicBool,
     shutting_down: AtomicBool,
+    migration_repair_requested: AtomicBool,
+    reset_database_requested: AtomicBool,
 }
 
 impl RuntimeStateInner {
@@ -174,6 +176,33 @@ impl RuntimeStateInner {
             .lock()
             .expect("runtime status mutex poisoned")
             .clone()
+    }
+
+    fn request_migration_repair(&self) {
+        self.migration_repair_requested
+            .store(true, Ordering::SeqCst);
+    }
+
+    fn take_migration_repair_request(&self) -> bool {
+        self.migration_repair_requested
+            .swap(false, Ordering::SeqCst)
+    }
+
+    fn clear_migration_repair_request(&self) {
+        self.migration_repair_requested
+            .store(false, Ordering::SeqCst);
+    }
+
+    fn request_database_reset(&self) {
+        self.reset_database_requested.store(true, Ordering::SeqCst);
+    }
+
+    fn take_database_reset_request(&self) -> bool {
+        self.reset_database_requested.swap(false, Ordering::SeqCst)
+    }
+
+    fn clear_database_reset_request(&self) {
+        self.reset_database_requested.store(false, Ordering::SeqCst);
     }
 }
 
@@ -194,6 +223,8 @@ impl Default for RuntimeState {
                 is_bootstrapping: AtomicBool::new(false),
                 is_monitoring: AtomicBool::new(false),
                 shutting_down: AtomicBool::new(false),
+                migration_repair_requested: AtomicBool::new(false),
+                reset_database_requested: AtomicBool::new(false),
             }),
         }
     }
@@ -210,9 +241,47 @@ pub fn retry_bootstrap(app: AppHandle, state: State<'_, RuntimeState>) -> Result
         return Ok(());
     }
 
+    state.inner.clear_migration_repair_request();
+    state.inner.clear_database_reset_request();
+
     state
         .inner
         .set_status("starting", Some("Retrying desktop runtime".to_string()));
+    start_runtime_bootstrap(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn repair_bootstrap_migrations(
+    app: AppHandle,
+    state: State<'_, RuntimeState>,
+) -> Result<(), String> {
+    if state.inner.is_bootstrapping.load(Ordering::SeqCst) {
+        return Ok(());
+    }
+
+    state.inner.clear_database_reset_request();
+    state.inner.request_migration_repair();
+    state.inner.set_status(
+        "recovering",
+        Some("Repairing failed database migrations".to_string()),
+    );
+    start_runtime_bootstrap(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn reset_local_database(app: AppHandle, state: State<'_, RuntimeState>) -> Result<(), String> {
+    if state.inner.is_bootstrapping.load(Ordering::SeqCst) {
+        return Ok(());
+    }
+
+    state.inner.clear_migration_repair_request();
+    state.inner.request_database_reset();
+    state.inner.set_status(
+        "recovering",
+        Some("Resetting local database and restarting desktop runtime".to_string()),
+    );
     start_runtime_bootstrap(&app);
     Ok(())
 }
@@ -286,6 +355,13 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     let app_data_dir = resolve_app_data_dir(app)?;
     let log_dir = app_data_dir.join("logs");
     let postgres_data_dir = app_data_dir.join("postgres");
+
+    let should_reset_database = inner.take_database_reset_request();
+    if should_reset_database && postgres_data_dir.exists() {
+        fs::remove_dir_all(&postgres_data_dir)
+            .map_err(|error| format!("Unable to reset local PostgreSQL data directory: {error}"))?;
+    }
+
     fs::create_dir_all(&log_dir).map_err(|error| error.to_string())?;
     fs::create_dir_all(&postgres_data_dir).map_err(|error| error.to_string())?;
     let bootstrap_log_file = log_dir.join("desktop-bootstrap.log");
@@ -329,6 +405,20 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             env!("CARGO_PKG_VERSION")
         ),
     );
+    if should_reset_database {
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            "Reset local PostgreSQL data directory by user request",
+        );
+    }
+
+    let allow_migration_repair = inner.take_migration_repair_request();
+    if allow_migration_repair {
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            "Migration repair mode enabled for this bootstrap attempt",
+        );
+    }
 
     for candidate in desktop_env_candidates(app) {
         log_startup_diagnostic(
@@ -417,13 +507,15 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
     } else {
         log_startup_diagnostic(&bootstrap_log_file, "Applying database migrations");
-        run_db_migration(app, &desktop_env).map_err(|error| {
+        run_db_migration(app, &desktop_env, allow_migration_repair, &bootstrap_log_file).map_err(
+            |error| {
             append_bootstrap_log_line(
                 &bootstrap_log_file,
                 &format!("Database migration failed: {error}"),
             );
             error
-        })?;
+        },
+        )?;
     }
 
     let backend_port = desktop_env
@@ -1168,7 +1260,26 @@ fn stop_postgres(app: &AppHandle, data_dir: &Path) -> Result<(), String> {
     })
 }
 
-fn run_db_migration(app: &AppHandle, env: &HashMap<String, String>) -> Result<(), String> {
+fn extract_failed_migration_name(detail: &str) -> Option<String> {
+    let marker = "The `";
+    let start = detail.find(marker)? + marker.len();
+    let rest = &detail[start..];
+    let end = rest.find("` migration")?;
+    let name = rest[..end].trim();
+
+    if name.is_empty() {
+        None
+    } else {
+        Some(name.to_string())
+    }
+}
+
+fn run_db_migration(
+    app: &AppHandle,
+    env: &HashMap<String, String>,
+    allow_repair: bool,
+    bootstrap_log_file: &Path,
+) -> Result<(), String> {
     if should_use_workspace_runtime() {
         if let Some(root) = workspace_root() {
             if root.join("package.json").exists() {
@@ -1323,6 +1434,108 @@ fn run_db_migration(app: &AppHandle, env: &HashMap<String, String>) -> Result<()
         } else {
             format!("process exited with status {}", output.status)
         };
+
+        if detail.contains("P3009") {
+            if allow_repair {
+                let failed_migration = extract_failed_migration_name(&detail).ok_or_else(|| {
+                    format!(
+                        "Database migration failed with P3009 but failed migration name could not be parsed: {detail}"
+                    )
+                })?;
+
+                append_bootstrap_log_line(
+                    bootstrap_log_file,
+                    &format!(
+                        "Detected Prisma P3009. Attempting repair using migrate resolve --rolled-back {}",
+                        failed_migration
+                    ),
+                );
+
+                let mut resolve_command = Command::new(&node_exe);
+                #[cfg(windows)]
+                resolve_command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+                let resolve_output = resolve_command
+                    .arg(&prisma_cli)
+                    .args(["migrate", "resolve", "--rolled-back"])
+                    .arg(&failed_migration)
+                    .args(["--schema"])
+                    .arg(&schema)
+                    .current_dir(&resource_dir)
+                    .envs(env)
+                    .output()
+                    .map_err(|error| {
+                        format!("Failed to run prisma migrate resolve for repair: {error}")
+                    })?;
+
+                if !resolve_output.status.success() {
+                    let resolve_stderr =
+                        String::from_utf8_lossy(&resolve_output.stderr).trim().to_string();
+                    let resolve_stdout =
+                        String::from_utf8_lossy(&resolve_output.stdout).trim().to_string();
+                    let resolve_detail = if !resolve_stderr.is_empty() {
+                        resolve_stderr
+                    } else if !resolve_stdout.is_empty() {
+                        resolve_stdout
+                    } else {
+                        format!("process exited with status {}", resolve_output.status)
+                    };
+
+                    return Err(format!(
+                        "Database migration repair failed while marking {} as rolled back: {}",
+                        failed_migration, resolve_detail
+                    ));
+                }
+
+                append_bootstrap_log_line(
+                    bootstrap_log_file,
+                    "Migration repair marker applied. Retrying prisma migrate deploy",
+                );
+
+                let mut retry_command = Command::new(&node_exe);
+                #[cfg(windows)]
+                retry_command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+                let retry_output = retry_command
+                    .arg(&prisma_cli)
+                    .args(["migrate", "deploy", "--schema"])
+                    .arg(&schema)
+                    .current_dir(&resource_dir)
+                    .envs(env)
+                    .output()
+                    .map_err(|error| {
+                        format!("Failed to rerun prisma migrate deploy after repair: {error}")
+                    })?;
+
+                if retry_output.status.success() {
+                    append_bootstrap_log_line(
+                        bootstrap_log_file,
+                        "Migration repair succeeded and prisma migrate deploy completed",
+                    );
+                    return Ok(());
+                }
+
+                let retry_stderr = String::from_utf8_lossy(&retry_output.stderr).trim().to_string();
+                let retry_stdout = String::from_utf8_lossy(&retry_output.stdout).trim().to_string();
+                let retry_detail = if !retry_stderr.is_empty() {
+                    retry_stderr
+                } else if !retry_stdout.is_empty() {
+                    retry_stdout
+                } else {
+                    format!("process exited with status {}", retry_output.status)
+                };
+
+                return Err(format!(
+                    "Database migration repair was attempted but deploy still failed: {}",
+                    retry_detail
+                ));
+            }
+
+            return Err(format!(
+                "Database migration failed: {}. This database has a failed migration record (P3009). Use the desktop Repair Database action to recover without data loss.",
+                detail
+            ));
+        }
 
         return Err(format!("Database migration failed: {detail}"));
     }
