@@ -1569,6 +1569,23 @@ where
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        if let Some(runtime_lib_dir) =
+            read_postgres_layout_entry(&resource_dir, "POSTGRES_RUNTIME_LIB_DIR")
+        {
+            if runtime_lib_dir.exists() {
+                let mut combined_paths = vec![runtime_lib_dir];
+                if let Some(existing_path) = std::env::var_os("PATH") {
+                    combined_paths.extend(std::env::split_paths(&existing_path));
+                }
+
+                if let Ok(path_value) = std::env::join_paths(combined_paths) {
+                    command.env("PATH", path_value);
+                }
+            }
+        }
+    }
+
     configure(&mut command);
     let output = command
         .output()

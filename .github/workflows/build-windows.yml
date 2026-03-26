@@ -117,6 +117,7 @@ jobs:
           name: windows-release-payload-${{ env.SOURCE_SHA }}
           path: |
             apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/**
+          include-hidden-files: true
           retention-days: 7
           if-no-files-found: error
 

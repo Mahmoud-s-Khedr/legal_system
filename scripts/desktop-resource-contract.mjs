@@ -249,10 +249,11 @@ function verifyPackagedDesktopTree(bundleRoot) {
     !findFirstMatchingFile(
       bundleRoot,
       (file) =>
-        /^packages\/backend\/dist\/desktop\/node_modules\/@prisma\/engines\/(libquery_engine|query_engine)/.test(file)
+        /^packages\/backend\/dist\/desktop\/node_modules\/@prisma\/engines\/(libquery_engine|query_engine)/.test(file) ||
+        /^packages\/backend\/dist\/desktop\/node_modules\/\.prisma\/client\/(libquery_engine|query_engine)/.test(file)
     )
   ) {
-    fail("Packaged desktop bundle is missing the Prisma query-engine binary");
+    fail("Packaged desktop bundle is missing the Prisma query-engine binary in @prisma/engines or .prisma/client");
   }
 
   if (

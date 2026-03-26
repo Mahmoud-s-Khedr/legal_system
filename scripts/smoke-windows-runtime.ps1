@@ -38,7 +38,9 @@ $fatalPatterns = @(
     "(?i)pg_ctl failed:.*system cannot find the path specified",
     "(?i)initdb failed:.*system cannot find the path specified",
     '(?i)program "postgres" is needed by pg_ctl but was not found',
-    '(?i)program "postgres" is needed by initdb but was not found'
+    '(?i)program "postgres" is needed by initdb but was not found',
+    "(?i)missing bundled prisma query engine library",
+    "(?i)missing bundled prisma engines package"
 )
 
 function Get-DesktopLogRoots {
