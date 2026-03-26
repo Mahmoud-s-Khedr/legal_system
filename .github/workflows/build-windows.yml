@@ -179,6 +179,7 @@ jobs:
             Write-Host "migrationStartedSeen=$($summary.migrationStartedSeen)"
             Write-Host "backendSpawnAttemptedSeen=$($summary.backendSpawnAttemptedSeen)"
             Write-Host "backendHealthSeen=$($summary.backendHealthSeen)"
+            Write-Host "postgresCommandStallDetected=$($summary.postgresCommandStallDetected)"
             Write-Host "failureMessage=$($summary.failureMessage)"
             Write-Host "----- End Smoke Summary (parsed) -----"
           } else {

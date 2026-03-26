@@ -160,6 +160,7 @@ function Get-BootstrapPhaseSnapshot {
         migrationStartedSeen = $false
         backendSpawnAttemptedSeen = $false
         backendHealthSeen = $false
+        postgresCommandStallDetected = $false
     }
 
     $bootstrapLog = $null
@@ -187,6 +188,9 @@ function Get-BootstrapPhaseSnapshot {
 
     $snapshot.lastLine = $tail[-1]
 
+    $pgCtlStartSeen = $false
+    $pgCtlEndSeen = $false
+
     foreach ($line in $tail) {
         if ($line -match "Embedded PostgreSQL startup path completed|database system is ready to accept connections") {
             $snapshot.postgresReadySeen = $true
@@ -200,6 +204,16 @@ function Get-BootstrapPhaseSnapshot {
         if ($line -match "Desktop runtime bootstrap completed|checkpoint stage=backend step=health action=probe result=ok") {
             $snapshot.backendHealthSeen = $true
         }
+        if ($line -match "checkpoint stage=postgres step=pg_ctl action=command result=start") {
+            $pgCtlStartSeen = $true
+        }
+        if ($line -match "checkpoint stage=postgres step=pg_ctl action=command result=(ok|failed)") {
+            $pgCtlEndSeen = $true
+        }
+    }
+
+    if ($pgCtlStartSeen -and -not $pgCtlEndSeen) {
+        $snapshot.postgresCommandStallDetected = $true
     }
 
     if ($snapshot.backendHealthSeen) {
@@ -210,6 +224,10 @@ function Get-BootstrapPhaseSnapshot {
         $snapshot.phase = "migrations"
     } elseif ($snapshot.postgresReadySeen) {
         $snapshot.phase = "postgres_ready"
+    } elseif ($snapshot.postgresCommandStallDetected) {
+        $snapshot.phase = "postgres_command_stall"
+    } elseif ($snapshot.lastLine -match "checkpoint stage=postgres") {
+        $snapshot.phase = "postgres_starting"
     } elseif ($snapshot.lastLine -match "Initializing embedded PostgreSQL") {
         $snapshot.phase = "postgres_starting"
     }
@@ -268,6 +286,7 @@ function Export-Diagnostics {
         ("migration_started_seen={0}" -f $snapshot.migrationStartedSeen),
         ("backend_spawn_attempted_seen={0}" -f $snapshot.backendSpawnAttemptedSeen),
         ("backend_health_seen={0}" -f $snapshot.backendHealthSeen),
+        ("postgres_command_stall_detected={0}" -f $snapshot.postgresCommandStallDetected),
         ("runner_appdata={0}" -f $env:APPDATA),
         ("runner_localappdata={0}" -f $env:LOCALAPPDATA)
     )
@@ -287,6 +306,7 @@ function Export-Diagnostics {
         migrationStartedSeen = $snapshot.migrationStartedSeen
         backendSpawnAttemptedSeen = $snapshot.backendSpawnAttemptedSeen
         backendHealthSeen = $snapshot.backendHealthSeen
+        postgresCommandStallDetected = $snapshot.postgresCommandStallDetected
         runnerAppData = $env:APPDATA
         runnerLocalAppData = $env:LOCALAPPDATA
     }

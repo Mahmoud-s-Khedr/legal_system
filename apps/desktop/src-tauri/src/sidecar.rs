@@ -2058,12 +2058,14 @@ where
 
     configure(&mut command);
 
+    let args_vec = command
+        .get_args()
+        .map(|arg| arg.to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    let args = args_vec.join(" ");
+    let is_pg_ctl_start = executable == "pg_ctl" && args_vec.iter().any(|arg| arg == "start");
+
     if let Some(log_file) = bootstrap_log_file {
-        let args = command
-            .get_args()
-            .map(|arg| arg.to_string_lossy().into_owned())
-            .collect::<Vec<_>>()
-            .join(" ");
         log_bootstrap_checkpoint(
             log_file,
             "postgres",
@@ -2072,6 +2074,82 @@ where
             "start",
             &format!("bin={} args={}", binary.display(), args),
         );
+    }
+
+    if is_pg_ctl_start {
+        // pg_ctl start can daemonize and leave inherited handles behind on
+        // Windows; avoid piped capture to prevent hanging wait_with_output.
+        command.stdout(Stdio::null()).stderr(Stdio::null());
+
+        let started_at = Instant::now();
+        let mut child = command
+            .spawn()
+            .map_err(|error| format!("Unable to run {executable}: {error}"))?;
+
+        loop {
+            match child.try_wait() {
+                Ok(Some(status)) => {
+                    let elapsed_ms = started_at.elapsed().as_millis();
+                    if let Some(log_file) = bootstrap_log_file {
+                        log_bootstrap_checkpoint(
+                            log_file,
+                            "postgres",
+                            executable,
+                            "command",
+                            if status.success() { "ok" } else { "failed" },
+                            &format!(
+                                "exit={} elapsed_ms={} stdout='(capture_skipped)' stderr='(capture_skipped)'",
+                                status, elapsed_ms
+                            ),
+                        );
+                    }
+
+                    if status.success() {
+                        return Ok(());
+                    }
+
+                    return Err(format!(
+                        "{executable} failed with status {} (output capture skipped for pg_ctl start)",
+                        status
+                    ));
+                }
+                Ok(None) => {
+                    if started_at.elapsed() > POSTGRES_COMMAND_TIMEOUT {
+                        let _ = child.kill();
+                        let message = format!(
+                            "{executable} timed out after {}ms (output capture skipped for pg_ctl start)",
+                            started_at.elapsed().as_millis()
+                        );
+                        if let Some(log_file) = bootstrap_log_file {
+                            log_bootstrap_checkpoint(
+                                log_file,
+                                "postgres",
+                                executable,
+                                "command",
+                                "failed",
+                                &message,
+                            );
+                        }
+                        return Err(message);
+                    }
+                    thread::sleep(Duration::from_millis(50));
+                }
+                Err(error) => {
+                    let message = format!("Unable to monitor {executable} process: {error}");
+                    if let Some(log_file) = bootstrap_log_file {
+                        log_bootstrap_checkpoint(
+                            log_file,
+                            "postgres",
+                            executable,
+                            "command",
+                            "failed",
+                            &message,
+                        );
+                    }
+                    return Err(message);
+                }
+            }
+        }
     }
 
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
