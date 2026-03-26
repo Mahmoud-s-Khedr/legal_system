@@ -2,7 +2,7 @@
 
 ## Overview
 
-The ELMS CI/CD pipeline is implemented as GitHub Actions workflows. It separates quality validation (which runs on every push and pull request) from desktop release builds (which run only when CI passes on the `main` branch). The three platform build workflows run in parallel and are independent of each other.
+The ELMS CI/CD pipeline is implemented as GitHub Actions workflows. It separates quality validation (which runs on every push and pull request) from desktop release builds. Windows desktop compatibility is the top priority: Windows build validation runs directly on pull requests and `main` pushes and should be configured as the required merge gate in GitHub branch protection/rulesets.
 
 ---
 
@@ -24,10 +24,10 @@ flowchart TD
     C --> C1[Build frontend only\npnpm --filter @elms/frontend build]
     C1 --> C2[lhci autorun\nagainst dist/]
 
-    B9 --> D{Merge to main\nci.yml conclusion = success}
-    D --> E[build-linux.yml\nubuntu-latest]
-    D --> F[build-windows.yml\nwindows-latest]
-    D --> G[build-macos.yml\nmacos-latest]
+    A --> F[build-windows.yml\nrequired gate]
+    B9 --> D{Merge to main\nci.yml success}
+    D --> E[build-linux.yml\ninformational]
+    D --> G[build-macos.yml\ninformational]
 
     E --> E1[bundle-linux-deps.sh\nPG 16 + Node 22 binaries]
     E1 --> E2[tauri-action AppImage + deb + rpm]
@@ -150,21 +150,27 @@ Runs on `ubuntu-latest`, timeout 90 minutes.
 
 ## Workflow: `build-windows.yml`
 
-Triggers: same as build-linux.yml.
+Triggers: push to `main`, any pull request, and manual `workflow_dispatch`.
 
 Runs on `windows-latest`, timeout 90 minutes.
 
 **Manual inputs:** Same as Linux (`pg_version` default `16.9`, `node_version` default `22.14.0`).
 
 Key differences from Linux:
-- Checkout is pinned to the same resolved packaged source SHA pattern used by Linux/macOS
+- Runs directly for PRs and `main` to catch Windows regressions before merge
 - Rust target: `x86_64-pc-windows-msvc` (MSVC toolchain, no MinGW)
 - Native deps script: `scripts/bundle-windows-deps.ps1 -PgVersion <ver> -NodeVersion <ver>` (PowerShell, downloads EnterpriseDB zip + Node.js zip and writes the required PostgreSQL `.layout.env` manifest)
 - Tauri build args: `--target x86_64-pc-windows-msvc --bundles nsis`
+- Runtime smoke check: `scripts/smoke-windows-runtime.ps1` launches `elms-desktop.exe` and waits for `http://127.0.0.1:7854/api/health`
+- Installer integrity check: `scripts/verify-windows-installer.ps1` validates packaged desktop payload structure before artifact upload
 - Output artifact: NSIS `.exe` installer at `target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe`
 - No system library apt-get step (Windows runner has required toolchain pre-installed)
 
 Windows CI is the release source of truth even though Fedora/Linux can be used experimentally for local NSIS cross-builds with `cargo-xwin`. The Windows runners have the native MSVC toolchain, native NSIS execution, and the expected environment for artifact signing and upload, so shipped Windows installers should come from CI rather than local Linux hosts.
+
+### Branch Protection Requirement
+
+Configure GitHub branch protection/rulesets so `build-windows / build` is a required status check for merging to `main`. Linux and macOS desktop build checks can remain non-blocking informational checks unless release policy changes.
 
 ---
 
@@ -229,7 +235,8 @@ Artifacts are named with the git SHA to allow traceability. Desktop release arti
 
 ### Automatic (recommended)
 
-Merge a pull request to `main`. Once `ci.yml` completes successfully, all three build workflows trigger automatically via `workflow_run`.
+- Open or update a pull request: `build-windows.yml` runs immediately and should be required for merge.
+- Merge to `main` after CI passes: Linux/macOS desktop build workflows run as informational post-merge build signals.
 
 ### Manual
 

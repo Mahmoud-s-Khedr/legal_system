@@ -1,10 +1,10 @@
 name: build-windows
 
 on:
-  workflow_run:
-    workflows: ["ci"]
-    types: [completed]
-    branches: [main]
+  push:
+    branches:
+      - main
+  pull_request:
   workflow_dispatch:
     inputs:
       pg_version:
@@ -21,18 +21,17 @@ permissions:
 
 jobs:
   build:
-    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 90
     env:
-      SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      SOURCE_SHA: ${{ github.sha }}
 
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────────
       - name: Log packaged source SHA
-        shell: bash
+        shell: pwsh
         run: |
-          echo "Packaging source SHA: $SOURCE_SHA"
+          Write-Host "Packaging source SHA: $env:SOURCE_SHA"
 
       - uses: actions/checkout@v4
         with:
@@ -103,8 +102,15 @@ jobs:
           projectPath: apps/desktop
           args: --target x86_64-pc-windows-msvc --bundles nsis
 
-      # TEMP: verifier disabled to validate whether generated installer exe works end-to-end.
-      # Re-enable after diagnosing scripts/verify-windows-installer.ps1 in CI.
+      - name: Smoke test desktop runtime startup
+        shell: pwsh
+        run: |
+          .\scripts\smoke-windows-runtime.ps1 -ReleaseRoot "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release" -TimeoutSeconds 120
+
+      - name: Verify NSIS installer payload
+        shell: pwsh
+        run: |
+          .\scripts\verify-windows-installer.ps1 -ReleaseRoot "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release"
 
       # ── 7. Upload installer as a build artifact ───────────────────────────────
       - name: Upload NSIS installer

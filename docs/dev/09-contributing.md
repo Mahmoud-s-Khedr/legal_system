@@ -132,12 +132,22 @@ Before requesting review, confirm all of the following:
 - [ ] **i18n keys added** — any new UI copy has entries in all three locale files (`en`, `ar`, `fr`); run `pnpm tsx scripts/i18n-audit.ts` to verify
 - [ ] **PR description** explains the motivation and links the related issue
 
+### Windows-First Audit (Required for desktop/backend runtime-impacting changes)
+
+If your PR touches `apps/desktop/**` or `packages/backend/**`, include an explicit Windows compatibility self-review before requesting approval:
+
+- [ ] No hardcoded POSIX-only paths/assumptions in runtime code paths
+- [ ] No shell-specific runtime invocation that breaks on Windows (`sh`, `bash`, POSIX wrappers)
+- [ ] Executable resolution remains platform-aware (`node`/`node.exe`, PostgreSQL tools)
+- [ ] Packaging/resource paths work with Windows path semantics
+- [ ] `build-windows` CI should pass, including runtime smoke and installer payload verification
+
 ---
 
 ## Code Review Process
 
 1. All pull requests require at least **one approving review** from a maintainer before merging.
-2. The CI pipeline must be fully green (lint, typecheck, test, coverage, build).
+2. The Windows desktop workflow (`build-windows`) is the required merge gate. Other platform desktop workflows are informational unless release policy explicitly requires them.
 3. Reviewers may request changes. Address each comment with either a code change or a reply explaining why no change is needed.
 4. Once approved and CI is green, a maintainer will squash-merge the PR into `main`.
 5. The merge commit message follows the same conventional commit format as individual commits.

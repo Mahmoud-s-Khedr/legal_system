@@ -254,6 +254,11 @@ jobs:
           projectPath: apps/desktop
           args: --target x86_64-pc-windows-msvc --bundles nsis
 
+      - name: Smoke test desktop runtime startup
+        shell: pwsh
+        run: |
+          .\scripts\smoke-windows-runtime.ps1 -ReleaseRoot "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release" -TimeoutSeconds 120
+
       - name: Verify NSIS installer payload
         shell: pwsh
         run: |
