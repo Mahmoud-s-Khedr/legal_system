@@ -688,10 +688,11 @@ fn recover_backend(
 }
 
 fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let mut app_data_dir = app
+    let path = app
         .path()
         .app_data_dir()
         .map_err(|error| format!("Unable to resolve app data directory: {error}"))?;
+    let mut app_data_dir = strip_unc_prefix(&path);
 
     if should_use_workspace_runtime() && workspace_dev_isolation_enabled() {
         if let Some(name) = app_data_dir.file_name().and_then(|value| value.to_str()) {
@@ -807,11 +808,13 @@ fn desktop_env_candidates(app: &AppHandle) -> Vec<PathBuf> {
         if let Some(root) = workspace_root() {
             candidates.extend(workspace_desktop_env_candidates(&root));
         }
-        if let Ok(resource_dir) = app.path().resource_dir() {
+        if let Ok(path) = app.path().resource_dir() {
+            let resource_dir = strip_unc_prefix(&path);
             candidates.push(resource_dir.join(".env.desktop"));
         }
     } else {
-        if let Ok(resource_dir) = app.path().resource_dir() {
+        if let Ok(path) = app.path().resource_dir() {
+            let resource_dir = strip_unc_prefix(&path);
             candidates.push(resource_dir.join(".env.desktop"));
         }
         if let Some(root) = workspace_root() {
@@ -847,10 +850,11 @@ fn should_use_workspace_runtime() -> bool {
 }
 
 fn validate_packaged_runtime_resources(app: &AppHandle, log_file: &Path) -> Result<(), String> {
-    let resource_dir = app
+    let path = app
         .path()
         .resource_dir()
         .map_err(|error| format!("Unable to resolve resource directory: {error}"))?;
+    let resource_dir = strip_unc_prefix(&path);
 
     log_startup_diagnostic(
         log_file,
@@ -1202,10 +1206,11 @@ fn run_db_migration(app: &AppHandle, env: &HashMap<String, String>) -> Result<()
     // Using node + prisma/build/index.js rather than the .bin/prisma shell
     // wrapper so this works on Windows where shell wrappers are not executable
     // by Command::new.
-    let resource_dir = app
+    let path = app
         .path()
         .resource_dir()
         .map_err(|e| format!("Unable to resolve resource directory: {e}"))?;
+    let resource_dir = strip_unc_prefix(&path);
     let node_exe = resolve_node_binary(&resource_dir);
     let prisma_cli_candidates = [
         resource_dir.join("packages/backend/dist/desktop/node_modules/prisma/build/index.js"),
@@ -1354,10 +1359,11 @@ fn resolve_backend_launch(
         }
     }
 
-    let resource_dir = app
+    let path = app
         .path()
         .resource_dir()
         .map_err(|error| format!("Unable to resolve resource directory: {error}"))?;
+    let resource_dir = strip_unc_prefix(&path);
 
     let bundled_backend = resource_dir.join("packages/backend/dist/desktop/server.js");
     if bundled_backend.exists() {
@@ -1569,7 +1575,8 @@ where
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
-    if let Ok(resource_dir) = app.path().resource_dir() {
+    if let Ok(path) = app.path().resource_dir() {
+        let resource_dir = strip_unc_prefix(&path);
         if let Some(runtime_lib_dir) =
             read_postgres_layout_entry(&resource_dir, "POSTGRES_RUNTIME_LIB_DIR")
         {
@@ -1650,7 +1657,8 @@ fn resolve_postgres_binary(app: &AppHandle, executable: &str) -> PathBuf {
     #[cfg(not(windows))]
     let executable = executable.to_string();
 
-    if let Ok(resource_dir) = app.path().resource_dir() {
+    if let Ok(path) = app.path().resource_dir() {
+        let resource_dir = strip_unc_prefix(&path);
         if let Some(bin_dir) = read_postgres_layout_entry(&resource_dir, "POSTGRES_BIN_DIR") {
             let candidate = bin_dir.join(&executable);
             if candidate.exists() {
@@ -1666,7 +1674,8 @@ fn resolve_postgres_binary(app: &AppHandle, executable: &str) -> PathBuf {
         }
     }
 
-    if let Ok(resource_dir) = app.path().resource_dir() {
+    if let Ok(path) = app.path().resource_dir() {
+        let resource_dir = strip_unc_prefix(&path);
         let candidate = resource_dir.join("postgres/bin").join(&executable);
         if candidate.exists() {
             return candidate;
@@ -2083,6 +2092,15 @@ fn find_file_with_prefix_recursive(
     }
 
     None
+}
+
+pub(crate) fn strip_unc_prefix(path: &Path) -> PathBuf {
+    let s = path.to_string_lossy();
+    if s.starts_with(r"\\?\") {
+        PathBuf::from(s[4..].to_string())
+    } else {
+        path.to_path_buf()
+    }
 }
 
 #[cfg(test)]
