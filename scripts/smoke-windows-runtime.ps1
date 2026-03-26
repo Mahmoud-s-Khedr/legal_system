@@ -168,7 +168,7 @@ function Export-Diagnostics {
     )
     $summaryLines | Set-Content -Path $summaryPath -Encoding UTF8
 
-    $logFiles = Get-DesktopLogFiles
+    $logFiles = @(Get-DesktopLogFiles)
     $manifest = Join-Path $resolvedDiagnosticsDir "log-manifest.txt"
     if (-not $logFiles -or $logFiles.Count -eq 0) {
         "No ELMS desktop runtime log files discovered." | Set-Content -Path $manifest -Encoding UTF8

@@ -102,10 +102,58 @@ jobs:
           projectPath: apps/desktop
           args: --target x86_64-pc-windows-msvc --bundles nsis
 
+      - name: Upload NSIS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: elms-windows-installer-${{ env.SOURCE_SHA }}
+          path: |
+            apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Windows verification payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-payload-${{ env.SOURCE_SHA }}
+          path: |
+            apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/**
+          retention-days: 7
+          if-no-files-found: error
+
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    needs: build
+    env:
+      SOURCE_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout source for verification scripts
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Download Windows verification payload
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release-payload-${{ env.SOURCE_SHA }}
+          path: apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release
+
+      - name: Resolve downloaded release root
+        shell: pwsh
+        run: |
+          $candidate = Get-ChildItem -Path "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc" -Recurse -Filter "elms-desktop.exe" -File | Select-Object -First 1
+          if (-not $candidate) {
+            throw "Unable to locate elms-desktop.exe in downloaded Windows verification payload"
+          }
+          $releaseRoot = $candidate.Directory.FullName
+          Write-Host "Resolved release root: $releaseRoot"
+          "WINDOWS_RELEASE_ROOT=$releaseRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Smoke test desktop runtime startup
         shell: pwsh
         run: |
-          .\scripts\smoke-windows-runtime.ps1 -ReleaseRoot "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release" -TimeoutSeconds 240 -DiagnosticsDir "artifacts/windows-runtime-diagnostics"
+          .\scripts\smoke-windows-runtime.ps1 -ReleaseRoot "$env:WINDOWS_RELEASE_ROOT" -TimeoutSeconds 240 -DiagnosticsDir "artifacts/windows-runtime-diagnostics"
 
       - name: Upload Windows runtime smoke diagnostics
         if: always()
@@ -119,14 +167,4 @@ jobs:
       - name: Verify NSIS installer payload
         shell: pwsh
         run: |
-          .\scripts\verify-windows-installer.ps1 -ReleaseRoot "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release"
-
-      # ── 7. Upload installer as a build artifact ───────────────────────────────
-      - name: Upload NSIS installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: elms-windows-installer-${{ env.SOURCE_SHA }}
-          path: |
-            apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
-          retention-days: 30
-          if-no-files-found: error
+          .\scripts\verify-windows-installer.ps1 -ReleaseRoot "$env:WINDOWS_RELEASE_ROOT"

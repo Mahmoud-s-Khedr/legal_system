@@ -12,6 +12,9 @@ use std::time::{Duration, Instant};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, State};
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 const MAX_BACKEND_RESTARTS: u8 = 3;
 #[cfg(unix)]
 const BACKEND_SHUTDOWN_GRACE_PERIOD: Duration = Duration::from_secs(5);
@@ -1170,7 +1173,11 @@ fn run_db_migration(app: &AppHandle, env: &HashMap<String, String>) -> Result<()
                 let pnpm = "pnpm.cmd";
                 #[cfg(not(windows))]
                 let pnpm = "pnpm";
-                let status = Command::new(pnpm)
+                let mut command = Command::new(pnpm);
+                #[cfg(windows)]
+                command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+                let status = command
                     .args([
                         "--filter",
                         "@elms/backend",
@@ -1287,7 +1294,11 @@ fn run_db_migration(app: &AppHandle, env: &HashMap<String, String>) -> Result<()
     }
 
     let schema = resource_dir.join("packages/backend/prisma/schema.prisma");
-    let output = Command::new(&node_exe)
+    let mut command = Command::new(&node_exe);
+    #[cfg(windows)]
+    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+    let output = command
         .arg(&prisma_cli)
         .args(["migrate", "deploy", "--schema"])
         .arg(&schema)
@@ -1455,6 +1466,9 @@ fn spawn_backend(launch: &BackendLaunch) -> Result<Child, String> {
         .map_err(|error| format!("Unable to open backend stderr log file: {error}"))?;
 
     let mut command = Command::new(&launch.program);
+    #[cfg(windows)]
+    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
     command
         .args(&launch.args)
         .current_dir(&launch.current_dir)
@@ -1552,6 +1566,9 @@ where
 {
     let binary = resolve_postgres_binary(app, executable);
     let mut command = Command::new(binary);
+    #[cfg(windows)]
+    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
     configure(&mut command);
     let output = command
         .output()
