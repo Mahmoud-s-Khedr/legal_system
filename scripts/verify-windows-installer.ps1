@@ -64,6 +64,7 @@ function Invoke-PackagedTreeSearch {
 function Add-VerificationCandidate {
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [System.Collections.Generic.List[string]]$Candidates,
 
         [Parameter(Mandatory = $true)]
@@ -98,6 +99,7 @@ function Resolve-FrontEndBundleRoot {
 function Get-VerificationCandidates {
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [string[]]$PreferredRoots,
 
         [Parameter(Mandatory = $false)]
@@ -133,6 +135,7 @@ function Invoke-VerificationCandidates {
         [string]$Label,
 
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [string[]]$Candidates
     )
 
