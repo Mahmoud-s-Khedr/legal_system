@@ -68,6 +68,7 @@ function Add-VerificationCandidate {
         [System.Collections.Generic.List[string]]$Candidates,
 
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [System.Collections.Generic.HashSet[string]]$Seen,
 
         [Parameter(Mandatory = $true)]
