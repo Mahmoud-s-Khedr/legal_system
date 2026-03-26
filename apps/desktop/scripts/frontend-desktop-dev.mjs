@@ -6,6 +6,11 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "../../..");
 const pnpmBin = "pnpm";
+const disableWorkspaceIsolation =
+  /^(1|true|yes|on)$/i.test(process.env.ELMS_DISABLE_WORKSPACE_DEV_ISOLATION ?? "");
+const defaultBackendPort = disableWorkspaceIsolation ? "7854" : "17854";
+const desktopBackendUrl =
+  process.env.DESKTOP_BACKEND_URL ?? `http://127.0.0.1:${defaultBackendPort}`;
 
 const child = spawn(
   pnpmBin,
@@ -15,6 +20,7 @@ const child = spawn(
     env: {
       ...process.env,
       VITE_DESKTOP_SHELL: "true",
+      DESKTOP_BACKEND_URL: desktopBackendUrl,
     },
     stdio: "inherit",
     shell: process.platform === "win32",

@@ -308,6 +308,17 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         &bootstrap_log_file,
         &format!("Runtime mode: {runtime_mode}"),
     );
+    if should_use_workspace_runtime() {
+        let isolation = if workspace_dev_isolation_enabled() {
+            "enabled"
+        } else {
+            "disabled"
+        };
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            &format!("Workspace dev isolation: {isolation}"),
+        );
+    }
     log_startup_diagnostic(
         &bootstrap_log_file,
         &format!(
@@ -358,6 +369,18 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         log_startup_diagnostic(
             &bootstrap_log_file,
             &format!("Backend health target: 127.0.0.1:{port}/api/health"),
+        );
+    }
+    if let Some(port) = desktop_env.get("DESKTOP_POSTGRES_PORT") {
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            &format!("Embedded PostgreSQL port: {port}"),
+        );
+    }
+    if let Some(database_url) = desktop_env.get("DATABASE_URL") {
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            &format!("Database URL: {database_url}"),
         );
     }
     inner.set_status(
@@ -662,32 +685,61 @@ fn recover_backend(
 }
 
 fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app
+    let mut app_data_dir = app
         .path()
         .app_data_dir()
         .map_err(|error| format!("Unable to resolve app data directory: {error}"))?;
+
+    if should_use_workspace_runtime() && workspace_dev_isolation_enabled() {
+        if let Some(name) = app_data_dir.file_name().and_then(|value| value.to_str()) {
+            app_data_dir.set_file_name(format!("{name}.workspace-dev"));
+        } else {
+            app_data_dir.push("workspace-dev");
+        }
+    }
+
     fs::create_dir_all(&app_data_dir).map_err(|error| error.to_string())?;
     Ok(app_data_dir)
 }
 
 fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
-    let default_node_env = if should_use_workspace_runtime() {
+    let use_workspace_runtime = should_use_workspace_runtime();
+    let isolate_workspace_runtime = use_workspace_runtime && workspace_dev_isolation_enabled();
+
+    let default_node_env = if use_workspace_runtime {
         "development"
     } else {
         "production"
     };
+
+    let default_backend_port = if isolate_workspace_runtime {
+        "17854"
+    } else {
+        "7854"
+    };
+    let default_postgres_port = if isolate_workspace_runtime {
+        "15433"
+    } else {
+        "5433"
+    };
+    let default_database_name = if isolate_workspace_runtime {
+        "elms_desktop_dev"
+    } else {
+        "elms_desktop"
+    };
+    let default_database_url = format!(
+        "postgresql://elms:elms@127.0.0.1:{default_postgres_port}/{default_database_name}?schema=public"
+    );
+    let default_backend_url = format!("http://127.0.0.1:{default_backend_port}");
 
     let mut env = HashMap::from([
         ("NODE_ENV".to_string(), default_node_env.to_string()),
         ("AUTH_MODE".to_string(), "local".to_string()),
         ("STORAGE_DRIVER".to_string(), "local".to_string()),
         ("HOST".to_string(), "127.0.0.1".to_string()),
-        ("BACKEND_PORT".to_string(), "7854".to_string()),
+        ("BACKEND_PORT".to_string(), default_backend_port.to_string()),
         ("FRONTEND_PORT".to_string(), "5173".to_string()),
-        (
-            "DATABASE_URL".to_string(),
-            "postgresql://elms:elms@127.0.0.1:5433/elms_desktop?schema=public".to_string(),
-        ),
+        ("DATABASE_URL".to_string(), default_database_url.clone()),
         (
             "REDIS_URL".to_string(),
             "redis://127.0.0.1:6379".to_string(),
@@ -702,9 +754,12 @@ fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
         ),
         (
             "DESKTOP_BACKEND_URL".to_string(),
-            "http://127.0.0.1:7854".to_string(),
+            default_backend_url.clone(),
         ),
-        ("DESKTOP_POSTGRES_PORT".to_string(), "5433".to_string()),
+        (
+            "DESKTOP_POSTGRES_PORT".to_string(),
+            default_postgres_port.to_string(),
+        ),
     ]);
 
     for candidate in desktop_env_candidates(app) {
@@ -722,7 +777,25 @@ fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
         }
     }
 
+    if isolate_workspace_runtime {
+        // Always enforce isolated workspace defaults unless explicitly disabled.
+        env.insert("BACKEND_PORT".to_string(), default_backend_port.to_string());
+        env.insert("DATABASE_URL".to_string(), default_database_url);
+        env.insert("DESKTOP_BACKEND_URL".to_string(), default_backend_url);
+        env.insert(
+            "DESKTOP_POSTGRES_PORT".to_string(),
+            default_postgres_port.to_string(),
+        );
+    }
+
     env
+}
+
+fn workspace_dev_isolation_enabled() -> bool {
+    std::env::var("ELMS_DISABLE_WORKSPACE_DEV_ISOLATION")
+        .ok()
+        .map(|value| !parse_truthy(&value))
+        .unwrap_or(true)
 }
 
 fn desktop_env_candidates(app: &AppHandle) -> Vec<PathBuf> {

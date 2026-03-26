@@ -32,7 +32,7 @@ ELMS ships a standalone desktop application built with Tauri 2.x. The desktop pa
 │                                    │                 │
 │                         ┌──────────▼──────────┐     │
 │                         │  Embedded PostgreSQL │     │
-│                         │  (port 5433)         │     │
+│                         │  (profile-based port)│     │
 │                         └──────────────────────┘     │
 └─────────────────────────────────────────────────────┘
 ```
@@ -43,7 +43,7 @@ The Tauri Rust core manages the application window and lifecycle. On startup it:
 3. Verifies backend identity by requiring a per-launch bootstrap token in `/api/health`.
 4. Opens the WebView pointing to the React frontend (bundled as static files in the installer).
 
-The frontend communicates with the backend exclusively via `http://127.0.0.1:7854` (loopback). The CSP in `tauri.conf.json` enforces this:
+The frontend communicates with the backend over loopback. In packaged runtime the backend default is `http://127.0.0.1:7854`. In workspace development runtime the backend default is isolated to `http://127.0.0.1:17854` so dev and installed apps can run in parallel without conflicts. The CSP in `tauri.conf.json` still allows loopback access:
 
 ```json
 "csp": "default-src 'self' tauri: asset: http://127.0.0.1:7854; connect-src 'self' http://127.0.0.1:7854 ws://127.0.0.1:7854"
@@ -100,7 +100,19 @@ Desktop installations include a self-contained PostgreSQL binary set. The sideca
 | `createdb` | Create the initial database |
 | `postgres` | The server process |
 
-PostgreSQL listens on port **5433** by default (not 5432) to avoid conflicts with any system PostgreSQL. The data directory is stored under the Tauri app data directory: `~/.local/share/com.elms.desktop/postgres` on Linux.
+Desktop runtime now uses profile-specific defaults to prevent workspace development from sharing installed-app state on the same machine.
+
+- **Packaged runtime defaults**
+  - PostgreSQL port: `5433`
+  - App data root (Linux): `~/.local/share/com.elms.desktop`
+  - PostgreSQL data dir (Linux): `~/.local/share/com.elms.desktop/postgres`
+- **Workspace development defaults**
+  - PostgreSQL port: `15433`
+  - Backend port: `17854`
+  - App data root (Linux): `~/.local/share/com.elms.desktop.workspace-dev`
+  - PostgreSQL data dir (Linux): `~/.local/share/com.elms.desktop.workspace-dev/postgres`
+
+To temporarily revert workspace isolation for compatibility testing, set `ELMS_DISABLE_WORKSPACE_DEV_ISOLATION=true` before launching `pnpm dev:tauri`.
 
 On Linux the executables have their RPATH patched with `patchelf` to resolve bundled shared libraries via `$ORIGIN/../lib`, making the binaries fully portable without requiring `LD_LIBRARY_PATH`.
 

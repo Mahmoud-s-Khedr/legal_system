@@ -35,6 +35,11 @@ CREATE INDEX "LookupOption_entity_isActive_idx"
 -- The USING clause preserves existing values as their text form.
 -- ============================================================
 
+-- Drop defaults that still depend on enum types before we drop those types.
+ALTER TABLE "Case"            ALTER COLUMN "type"       DROP DEFAULT;
+ALTER TABLE "Document"        ALTER COLUMN "type"       DROP DEFAULT;
+ALTER TABLE "Invoice"         ALTER COLUMN "feeType"    DROP DEFAULT;
+
 ALTER TABLE "Case"            ALTER COLUMN "type"       TYPE TEXT USING "type"::TEXT;
 ALTER TABLE "Case"            ALTER COLUMN "courtLevel"  TYPE TEXT USING "courtLevel"::TEXT;
 ALTER TABLE "CaseParty"       ALTER COLUMN "role"        TYPE TEXT USING "role"::TEXT;
@@ -43,6 +48,11 @@ ALTER TABLE "Invoice"         ALTER COLUMN "feeType"     TYPE TEXT USING "feeTyp
 ALTER TABLE "Payment"         ALTER COLUMN "method"      TYPE TEXT USING "method"::TEXT;
 ALTER TABLE "Expense"         ALTER COLUMN "category"    TYPE TEXT USING "category"::TEXT;
 ALTER TABLE "LibraryDocument" ALTER COLUMN "type"        TYPE TEXT USING "type"::TEXT;
+
+-- Restore equivalent defaults after conversion to TEXT.
+ALTER TABLE "Case"            ALTER COLUMN "type"       SET DEFAULT 'CIVIL';
+ALTER TABLE "Document"        ALTER COLUMN "type"       SET DEFAULT 'GENERAL';
+ALTER TABLE "Invoice"         ALTER COLUMN "feeType"    SET DEFAULT 'FIXED';
 
 -- ============================================================
 -- PART 3: Drop the old PostgreSQL ENUM types

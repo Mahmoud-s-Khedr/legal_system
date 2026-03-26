@@ -13,7 +13,7 @@ pnpm-debug.log*
 
 apps/desktop/src-tauri/target
 apps/desktop/src-tauri/gen
-
+apps/desktop/.tauri-build-tmp
 packages/backend/dist
 packages/backend/uploads
 packages/frontend/dist
