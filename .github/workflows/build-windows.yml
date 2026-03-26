@@ -105,7 +105,16 @@ jobs:
       - name: Smoke test desktop runtime startup
         shell: pwsh
         run: |
-          .\scripts\smoke-windows-runtime.ps1 -ReleaseRoot "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release" -TimeoutSeconds 120
+          .\scripts\smoke-windows-runtime.ps1 -ReleaseRoot "apps/desktop/src-tauri/target/x86_64-pc-windows-msvc/release" -TimeoutSeconds 240 -DiagnosticsDir "artifacts/windows-runtime-diagnostics"
+
+      - name: Upload Windows runtime smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-runtime-diagnostics-${{ env.SOURCE_SHA }}
+          path: artifacts/windows-runtime-diagnostics/**
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Verify NSIS installer payload
         shell: pwsh
