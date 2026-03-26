@@ -18,6 +18,7 @@ use std::os::windows::process::CommandExt;
 const MAX_BACKEND_RESTARTS: u8 = 3;
 #[cfg(unix)]
 const BACKEND_SHUTDOWN_GRACE_PERIOD: Duration = Duration::from_secs(5);
+const POSTGRES_COMMAND_TIMEOUT: Duration = Duration::from_secs(30);
 const PRISMA_ENGINE_RECURSIVE_SEARCH_DEPTH: usize = 6;
 const PRISMA_QUERY_ENGINE_PREFIXES: &[&str] = &["libquery_engine", "query_engine"];
 
@@ -49,6 +50,22 @@ fn append_bootstrap_log_line(log_file: &Path, message: &str) {
 fn log_startup_diagnostic(log_file: &Path, message: &str) {
     bootstrap_log(message);
     append_bootstrap_log_line(log_file, message);
+}
+
+fn log_bootstrap_checkpoint(
+    log_file: &Path,
+    stage: &str,
+    step: &str,
+    action: &str,
+    result: &str,
+    detail: &str,
+) {
+    log_startup_diagnostic(
+        log_file,
+        &format!(
+            "checkpoint stage={stage} step={step} action={action} result={result} detail={detail}"
+        ),
+    );
 }
 
 fn parse_truthy(value: &str) -> bool {
@@ -481,13 +498,15 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         Some("Initializing embedded PostgreSQL".to_string()),
     );
     log_startup_diagnostic(&bootstrap_log_file, "Initializing embedded PostgreSQL");
-    ensure_postgres_ready(app, &postgres_data_dir, &desktop_env).map_err(|error| {
+    ensure_postgres_ready(app, &postgres_data_dir, &desktop_env, &bootstrap_log_file).map_err(
+        |error| {
         append_bootstrap_log_line(
             &bootstrap_log_file,
             &format!("Embedded PostgreSQL startup failed: {error}"),
         );
         error
-    })?;
+    },
+    )?;
 
     inner.set_status("starting", Some("Applying database migrations".to_string()));
     let skip_migrations = desktop_env
@@ -571,6 +590,19 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             launch.log_file.display()
         ),
     );
+    log_bootstrap_checkpoint(
+        &bootstrap_log_file,
+        "backend",
+        "spawn",
+        "invoke",
+        "start",
+        &format!(
+            "stdout_log={} stderr_log={}",
+            launch.log_file.with_extension("stdout.log").display(),
+            launch.log_file.with_extension("stderr.log").display()
+        ),
+    );
+
     let child = spawn_backend(&launch).map_err(|error| {
         append_bootstrap_log_line(
             &bootstrap_log_file,
@@ -578,6 +610,25 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
         error
     })?;
+
+    log_bootstrap_checkpoint(
+        &bootstrap_log_file,
+        "backend",
+        "spawn",
+        "invoke",
+        "ok",
+        &format!("pid={}", child.id()),
+    );
+
+    log_bootstrap_checkpoint(
+        &bootstrap_log_file,
+        "backend",
+        "health",
+        "probe",
+        "start",
+        &format!("port={backend_port}"),
+    );
+
     wait_for_backend_health(&desktop_env).map_err(|error| {
         append_bootstrap_log_line(
             &bootstrap_log_file,
@@ -585,6 +636,15 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
         error
     })?;
+
+    log_bootstrap_checkpoint(
+        &bootstrap_log_file,
+        "backend",
+        "health",
+        "probe",
+        "ok",
+        &format!("port={backend_port}"),
+    );
 
     log_startup_diagnostic(&bootstrap_log_file, "Desktop runtime bootstrap completed");
 
@@ -1096,17 +1156,56 @@ fn ensure_postgres_ready(
     app: &AppHandle,
     data_dir: &Path,
     env: &HashMap<String, String>,
+    bootstrap_log_file: &Path,
 ) -> Result<(), String> {
+    log_bootstrap_checkpoint(
+        bootstrap_log_file,
+        "postgres",
+        "cluster",
+        "inspect",
+        "start",
+        &format!("data_dir={}", data_dir.display()),
+    );
+
     if !data_dir.join("PG_VERSION").exists() {
-        run_postgres_command(app, "initdb", |command| {
+        log_bootstrap_checkpoint(
+            bootstrap_log_file,
+            "postgres",
+            "initdb",
+            "invoke",
+            "start",
+            "creating fresh embedded cluster",
+        );
+
+        run_postgres_command(app, "initdb", Some(bootstrap_log_file), |command| {
             command
                 .arg("-A")
                 .arg("trust")
                 .arg("-U")
                 .arg("elms")
+                .arg("--encoding")
+                .arg("UTF8")
                 .arg("-D")
                 .arg(data_dir);
         })?;
+
+        log_bootstrap_checkpoint(
+            bootstrap_log_file,
+            "postgres",
+            "initdb",
+            "invoke",
+            "ok",
+            "embedded cluster initialized with encoding=UTF8",
+        );
+    } else {
+        log_bootstrap_checkpoint(
+            bootstrap_log_file,
+            "postgres",
+            "initdb",
+            "skip",
+            "ok",
+            "existing PG_VERSION detected",
+        );
     }
 
     let log_file = data_dir
@@ -1135,8 +1234,16 @@ fn ensure_postgres_ready(
 
     // Fast path: server is already accepting connections (e.g. the Tauri
     // process was killed but PostgreSQL kept running). Skip pg_ctl entirely.
-    if postgres_is_ready(app, env) {
-        create_desktop_database(app, env)?;
+    if postgres_is_ready(app, env, bootstrap_log_file) {
+        log_bootstrap_checkpoint(
+            bootstrap_log_file,
+            "postgres",
+            "readiness",
+            "probe",
+            "ok",
+            "server already ready before pg_ctl start",
+        );
+        create_desktop_database(app, env, bootstrap_log_file)?;
         return Ok(());
     }
 
@@ -1146,9 +1253,26 @@ fn ensure_postgres_ready(
     if pid_file.exists() {
         fs::remove_file(&pid_file)
             .map_err(|e| format!("Unable to remove stale postmaster.pid: {e}"))?;
+        log_bootstrap_checkpoint(
+            bootstrap_log_file,
+            "postgres",
+            "postmaster_pid",
+            "cleanup",
+            "ok",
+            &format!("removed stale pid file at {}", pid_file.display()),
+        );
     }
 
-    let start_result = run_postgres_command(app, "pg_ctl", |command| {
+    log_bootstrap_checkpoint(
+        bootstrap_log_file,
+        "postgres",
+        "pg_ctl_start",
+        "invoke",
+        "start",
+        &format!("port={pg_port} log={}", log_file.display()),
+    );
+
+    let start_result = run_postgres_command(app, "pg_ctl", Some(bootstrap_log_file), |command| {
         command
             .arg("-D")
             .arg(data_dir)
@@ -1163,20 +1287,46 @@ fn ensure_postgres_ready(
         // PostgreSQL 16 on Windows exits 1 with "might be running" even when
         // the start actually succeeded. Do a final readiness check before
         // propagating the error.
-        if !postgres_is_ready(app, env) {
+        if !postgres_is_ready(app, env, bootstrap_log_file) {
             return Err(pg_ctl_error);
         }
+
+        log_bootstrap_checkpoint(
+            bootstrap_log_file,
+            "postgres",
+            "pg_ctl_start",
+            "invoke",
+            "warn",
+            "pg_ctl returned non-zero but readiness probe succeeded",
+        );
+    } else {
+        log_bootstrap_checkpoint(
+            bootstrap_log_file,
+            "postgres",
+            "pg_ctl_start",
+            "invoke",
+            "ok",
+            "pg_ctl start returned success",
+        );
     }
 
-    wait_for_postgres(app, env)?;
-    create_desktop_database(app, env)?;
+    wait_for_postgres(app, env, bootstrap_log_file)?;
+    create_desktop_database(app, env, bootstrap_log_file)?;
+    log_bootstrap_checkpoint(
+        bootstrap_log_file,
+        "postgres",
+        "cluster",
+        "initialize",
+        "ok",
+        "embedded PostgreSQL startup path completed",
+    );
     Ok(())
 }
 
 /// Single-shot pg_isready check (1-second timeout). Returns true if
 /// PostgreSQL is already accepting connections on the configured port.
-fn postgres_is_ready(app: &AppHandle, env: &HashMap<String, String>) -> bool {
-    run_postgres_command(app, "pg_isready", |command| {
+fn postgres_is_ready(app: &AppHandle, env: &HashMap<String, String>, log_file: &Path) -> bool {
+    run_postgres_command(app, "pg_isready", Some(log_file), |command| {
         let port = env
             .get("DESKTOP_POSTGRES_PORT")
             .map(String::as_str)
@@ -1194,15 +1344,28 @@ fn postgres_is_ready(app: &AppHandle, env: &HashMap<String, String>) -> bool {
     .is_ok()
 }
 
-fn wait_for_postgres(app: &AppHandle, env: &HashMap<String, String>) -> Result<(), String> {
+fn wait_for_postgres(
+    app: &AppHandle,
+    env: &HashMap<String, String>,
+    bootstrap_log_file: &Path,
+) -> Result<(), String> {
     let port = env
         .get("DESKTOP_POSTGRES_PORT")
         .and_then(|value| value.parse::<u16>().ok())
         .unwrap_or(5433);
     let started_at = Instant::now();
 
+    log_bootstrap_checkpoint(
+        bootstrap_log_file,
+        "postgres",
+        "pg_isready",
+        "poll",
+        "start",
+        &format!("port={port}"),
+    );
+
     loop {
-        let status = run_postgres_command(app, "pg_isready", |command| {
+        let status = run_postgres_command(app, "pg_isready", Some(bootstrap_log_file), |command| {
             command
                 .arg("-h")
                 .arg("127.0.0.1")
@@ -1213,10 +1376,26 @@ fn wait_for_postgres(app: &AppHandle, env: &HashMap<String, String>) -> Result<(
         });
 
         if status.is_ok() {
+            log_bootstrap_checkpoint(
+                bootstrap_log_file,
+                "postgres",
+                "pg_isready",
+                "poll",
+                "ok",
+                &format!("ready_after_ms={}", started_at.elapsed().as_millis()),
+            );
             return Ok(());
         }
 
         if started_at.elapsed() > Duration::from_secs(25) {
+            log_bootstrap_checkpoint(
+                bootstrap_log_file,
+                "postgres",
+                "pg_isready",
+                "poll",
+                "failed",
+                "timed out waiting for readiness",
+            );
             return Err("Embedded PostgreSQL failed to become ready".to_string());
         }
 
@@ -1224,7 +1403,11 @@ fn wait_for_postgres(app: &AppHandle, env: &HashMap<String, String>) -> Result<(
     }
 }
 
-fn create_desktop_database(app: &AppHandle, env: &HashMap<String, String>) -> Result<(), String> {
+fn create_desktop_database(
+    app: &AppHandle,
+    env: &HashMap<String, String>,
+    bootstrap_log_file: &Path,
+) -> Result<(), String> {
     let database_name = env
         .get("DATABASE_URL")
         .and_then(|value| value.split('/').next_back())
@@ -1235,7 +1418,16 @@ fn create_desktop_database(app: &AppHandle, env: &HashMap<String, String>) -> Re
         .map(String::as_str)
         .unwrap_or("5433");
 
-    let _ = run_postgres_command(app, "createdb", |command| {
+    log_bootstrap_checkpoint(
+        bootstrap_log_file,
+        "postgres",
+        "createdb",
+        "invoke",
+        "start",
+        &format!("database={database_name} port={port}"),
+    );
+
+    let _ = run_postgres_command(app, "createdb", Some(bootstrap_log_file), |command| {
         command
             .arg("-h")
             .arg("127.0.0.1")
@@ -1246,11 +1438,20 @@ fn create_desktop_database(app: &AppHandle, env: &HashMap<String, String>) -> Re
             .arg(database_name);
     });
 
+    log_bootstrap_checkpoint(
+        bootstrap_log_file,
+        "postgres",
+        "createdb",
+        "invoke",
+        "ok",
+        &format!("database={database_name}"),
+    );
+
     Ok(())
 }
 
 fn stop_postgres(app: &AppHandle, data_dir: &Path) -> Result<(), String> {
-    run_postgres_command(app, "pg_ctl", |command| {
+    run_postgres_command(app, "pg_ctl", None, |command| {
         command
             .arg("-D")
             .arg(data_dir)
@@ -1410,6 +1611,20 @@ fn run_db_migration(
     }
 
     let schema = resource_dir.join("packages/backend/prisma/schema.prisma");
+    log_bootstrap_checkpoint(
+        bootstrap_log_file,
+        "migration",
+        "deploy",
+        "invoke",
+        "start",
+        &format!(
+            "node={} prisma_cli={} schema={}",
+            node_exe.display(),
+            prisma_cli.display(),
+            schema.display()
+        ),
+    );
+
     let mut command = Command::new(&node_exe);
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
@@ -1537,8 +1752,28 @@ fn run_db_migration(
             ));
         }
 
+        if detail.contains("P3018") && detail.contains("22P05") {
+            append_bootstrap_log_line(
+                bootstrap_log_file,
+                "Detected migration encoding mismatch (P3018/22P05). Existing database cluster encoding is likely non-UTF8.",
+            );
+            return Err(format!(
+                "Database migration failed: {}. This indicates an encoding mismatch (P3018/22P05), typically from a non-UTF8 local PostgreSQL cluster. Use Reset Local Database to recreate the embedded cluster with UTF8.",
+                detail
+            ));
+        }
+
         return Err(format!("Database migration failed: {detail}"));
     }
+
+    log_bootstrap_checkpoint(
+        bootstrap_log_file,
+        "migration",
+        "deploy",
+        "invoke",
+        "ok",
+        "prisma migrate deploy completed",
+    );
     Ok(())
 }
 
@@ -1779,12 +2014,27 @@ fn show_main_window(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn run_postgres_command<F>(app: &AppHandle, executable: &str, configure: F) -> Result<(), String>
+fn trim_for_log(text: &str) -> String {
+    const MAX_LEN: usize = 280;
+    let trimmed = text.trim();
+    if trimmed.len() <= MAX_LEN {
+        trimmed.to_string()
+    } else {
+        format!("{}...", &trimmed[..MAX_LEN])
+    }
+}
+
+fn run_postgres_command<F>(
+    app: &AppHandle,
+    executable: &str,
+    bootstrap_log_file: Option<&Path>,
+    configure: F,
+) -> Result<(), String>
 where
     F: FnOnce(&mut Command),
 {
     let binary = resolve_postgres_binary(app, executable);
-    let mut command = Command::new(binary);
+    let mut command = Command::new(&binary);
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
@@ -1807,18 +2057,114 @@ where
     }
 
     configure(&mut command);
-    let output = command
-        .output()
+
+    if let Some(log_file) = bootstrap_log_file {
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join(" ");
+        log_bootstrap_checkpoint(
+            log_file,
+            "postgres",
+            executable,
+            "command",
+            "start",
+            &format!("bin={} args={}", binary.display(), args),
+        );
+    }
+
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+
+    let started_at = Instant::now();
+    let mut child = command
+        .spawn()
         .map_err(|error| format!("Unable to run {executable}: {error}"))?;
+
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) => {
+                if started_at.elapsed() > POSTGRES_COMMAND_TIMEOUT {
+                    let _ = child.kill();
+                    let output = child
+                        .wait_with_output()
+                        .map_err(|error| format!("Unable to collect timed out {executable} output: {error}"))?;
+                    let stderr_tail = trim_for_log(&String::from_utf8_lossy(&output.stderr));
+                    let stdout_tail = trim_for_log(&String::from_utf8_lossy(&output.stdout));
+                    let message = format!(
+                        "{executable} timed out after {}ms; stdout='{}' stderr='{}'",
+                        started_at.elapsed().as_millis(),
+                        stdout_tail,
+                        stderr_tail
+                    );
+                    if let Some(log_file) = bootstrap_log_file {
+                        log_bootstrap_checkpoint(
+                            log_file,
+                            "postgres",
+                            executable,
+                            "command",
+                            "failed",
+                            &message,
+                        );
+                    }
+                    return Err(message);
+                }
+                thread::sleep(Duration::from_millis(50));
+            }
+            Err(error) => {
+                let message = format!("Unable to monitor {executable} process: {error}");
+                if let Some(log_file) = bootstrap_log_file {
+                    log_bootstrap_checkpoint(
+                        log_file,
+                        "postgres",
+                        executable,
+                        "command",
+                        "failed",
+                        &message,
+                    );
+                }
+                return Err(message);
+            }
+        }
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("Unable to collect {executable} output: {error}"))?;
+
+    let elapsed_ms = started_at.elapsed().as_millis();
+    let stderr_tail = trim_for_log(&String::from_utf8_lossy(&output.stderr));
+    let stdout_tail = trim_for_log(&String::from_utf8_lossy(&output.stdout));
+
+    if let Some(log_file) = bootstrap_log_file {
+        log_bootstrap_checkpoint(
+            log_file,
+            "postgres",
+            executable,
+            "command",
+            if output.status.success() { "ok" } else { "failed" },
+            &format!(
+                "exit={} elapsed_ms={} stdout='{}' stderr='{}'",
+                output.status,
+                elapsed_ms,
+                stdout_tail,
+                stderr_tail
+            ),
+        );
+    }
 
     if output.status.success() {
         return Ok(());
     }
 
-    Err(format!(
-        "{executable} failed: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
-    ))
+    if !stderr_tail.is_empty() {
+        Err(format!("{executable} failed: {stderr_tail}"))
+    } else if !stdout_tail.is_empty() {
+        Err(format!("{executable} failed: {stdout_tail}"))
+    } else {
+        Err(format!("{executable} failed with status {}", output.status))
+    }
 }
 
 fn read_postgres_layout_entry(resource_dir: &Path, key: &str) -> Option<PathBuf> {

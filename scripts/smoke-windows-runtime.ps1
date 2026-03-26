@@ -32,15 +32,22 @@ New-Item -ItemType Directory -Path $resolvedDiagnosticsDir -Force | Out-Null
 $healthUri = "http://127.0.0.1:7854/api/health"
 $pollIntervalMs = 2000
 $startTime = Get-Date
+$lastProbeSnapshotAt = Get-Date "1970-01-01"
 $desktopProcess = $null
 $failureMessage = $null
+$lastHealthError = ""
 $fatalPatterns = @(
     "(?i)pg_ctl failed:.*system cannot find the path specified",
     "(?i)initdb failed:.*system cannot find the path specified",
     '(?i)program "postgres" is needed by pg_ctl but was not found',
     '(?i)program "postgres" is needed by initdb but was not found',
     "(?i)missing bundled prisma query engine library",
-    "(?i)missing bundled prisma engines package"
+    "(?i)missing bundled prisma engines package",
+    "(?i)database migration failed:.*p3018",
+    "(?i)sqlstate\(e22p05\)",
+    "(?i)encoding mismatch \(p3018/22p05\)",
+    "(?i)backend spawn failed",
+    "(?i)backend health check failed"
 )
 
 function Get-DesktopLogRoots {
@@ -145,6 +152,93 @@ function Write-LogTailToConsole {
     Write-Host "----- END LOG TAIL -----"
 }
 
+function Get-BootstrapPhaseSnapshot {
+    $snapshot = @{
+        phase = "unknown"
+        lastLine = ""
+        postgresReadySeen = $false
+        migrationStartedSeen = $false
+        backendSpawnAttemptedSeen = $false
+        backendHealthSeen = $false
+    }
+
+    $bootstrapLog = $null
+    foreach ($logFile in Get-DesktopLogFiles) {
+        if ((Split-Path -Leaf $logFile) -ieq "desktop-bootstrap.log") {
+            $bootstrapLog = $logFile
+            break
+        }
+    }
+
+    if (-not $bootstrapLog) {
+        return $snapshot
+    }
+
+    $tail = @()
+    try {
+        $tail = Get-Content -Path $bootstrapLog -Tail 250 -ErrorAction SilentlyContinue
+    } catch {
+        return $snapshot
+    }
+
+    if (-not $tail -or $tail.Count -eq 0) {
+        return $snapshot
+    }
+
+    $snapshot.lastLine = $tail[-1]
+
+    foreach ($line in $tail) {
+        if ($line -match "Embedded PostgreSQL startup path completed|database system is ready to accept connections") {
+            $snapshot.postgresReadySeen = $true
+        }
+        if ($line -match "Applying database migrations|Skipping database migrations") {
+            $snapshot.migrationStartedSeen = $true
+        }
+        if ($line -match "Launching backend program=|checkpoint stage=backend step=spawn") {
+            $snapshot.backendSpawnAttemptedSeen = $true
+        }
+        if ($line -match "Desktop runtime bootstrap completed|checkpoint stage=backend step=health action=probe result=ok") {
+            $snapshot.backendHealthSeen = $true
+        }
+    }
+
+    if ($snapshot.backendHealthSeen) {
+        $snapshot.phase = "backend_healthy"
+    } elseif ($snapshot.backendSpawnAttemptedSeen) {
+        $snapshot.phase = "backend_launch"
+    } elseif ($snapshot.migrationStartedSeen) {
+        $snapshot.phase = "migrations"
+    } elseif ($snapshot.postgresReadySeen) {
+        $snapshot.phase = "postgres_ready"
+    } elseif ($snapshot.lastLine -match "Initializing embedded PostgreSQL") {
+        $snapshot.phase = "postgres_starting"
+    }
+
+    return $snapshot
+}
+
+function Write-ProbeSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [double]$ElapsedSeconds,
+        [Parameter(Mandatory = $true)]
+        [bool]$ProcessAlive
+    )
+
+    $snapshot = Get-BootstrapPhaseSnapshot
+    Write-Host (
+        "probe elapsed={0:n1}s process_alive={1} phase={2} postgres_ready_seen={3} migration_started_seen={4} backend_spawn_attempted_seen={5} backend_health_seen={6} last_health_error={7}" -f `
+        $ElapsedSeconds,
+        $ProcessAlive,
+        $snapshot.phase,
+        $snapshot.postgresReadySeen,
+        $snapshot.migrationStartedSeen,
+        $snapshot.backendSpawnAttemptedSeen,
+        $snapshot.backendHealthSeen,
+        $lastHealthError
+    )
+}
+
 function Export-Diagnostics {
     param(
         [Parameter(Mandatory = $false)]
@@ -154,10 +248,12 @@ function Export-Diagnostics {
     )
 
     $summaryPath = Join-Path $resolvedDiagnosticsDir "smoke-summary.txt"
+    $summaryJsonPath = Join-Path $resolvedDiagnosticsDir "smoke-summary.json"
     $failureSummary = ""
     if ($FailureMessage) {
         $failureSummary = $FailureMessage
     }
+    $snapshot = Get-BootstrapPhaseSnapshot
     $summaryLines = @(
         ("timestamp={0}" -f (Get-Date).ToString("o")),
         ("desktop_exe={0}" -f $desktopExe),
@@ -165,10 +261,36 @@ function Export-Diagnostics {
         ("timeout_seconds={0}" -f $TimeoutSeconds),
         ("healthy={0}" -f $Healthy),
         ("failure_message={0}" -f $failureSummary),
+        ("last_health_error={0}" -f $lastHealthError),
+        ("bootstrap_phase={0}" -f $snapshot.phase),
+        ("bootstrap_last_line={0}" -f $snapshot.lastLine),
+        ("postgres_ready_seen={0}" -f $snapshot.postgresReadySeen),
+        ("migration_started_seen={0}" -f $snapshot.migrationStartedSeen),
+        ("backend_spawn_attempted_seen={0}" -f $snapshot.backendSpawnAttemptedSeen),
+        ("backend_health_seen={0}" -f $snapshot.backendHealthSeen),
         ("runner_appdata={0}" -f $env:APPDATA),
         ("runner_localappdata={0}" -f $env:LOCALAPPDATA)
     )
     $summaryLines | Set-Content -Path $summaryPath -Encoding UTF8
+
+    $summaryObject = [ordered]@{
+        timestamp = (Get-Date).ToString("o")
+        desktopExe = $desktopExe
+        healthUri = $healthUri
+        timeoutSeconds = $TimeoutSeconds
+        healthy = $Healthy
+        failureMessage = $failureSummary
+        lastHealthError = $lastHealthError
+        bootstrapPhase = $snapshot.phase
+        bootstrapLastLine = $snapshot.lastLine
+        postgresReadySeen = $snapshot.postgresReadySeen
+        migrationStartedSeen = $snapshot.migrationStartedSeen
+        backendSpawnAttemptedSeen = $snapshot.backendSpawnAttemptedSeen
+        backendHealthSeen = $snapshot.backendHealthSeen
+        runnerAppData = $env:APPDATA
+        runnerLocalAppData = $env:LOCALAPPDATA
+    }
+    $summaryObject | ConvertTo-Json -Depth 5 | Set-Content -Path $summaryJsonPath -Encoding UTF8
 
     $logFiles = @(Get-DesktopLogFiles)
     $manifest = Join-Path $resolvedDiagnosticsDir "log-manifest.txt"
@@ -210,7 +332,20 @@ try {
 
         $elapsedSeconds = ((Get-Date) - $startTime).TotalSeconds
         if ($elapsedSeconds -ge $TimeoutSeconds) {
-            throw ("Desktop runtime health check timed out after {0} seconds" -f $TimeoutSeconds)
+            $snapshot = Get-BootstrapPhaseSnapshot
+            $backendLaunchState = if ($snapshot.backendSpawnAttemptedSeen) { "reached" } else { "not-reached" }
+            throw (
+                "Desktop runtime health check timed out after {0} seconds (phase={1}, backend_launch={2}, last_bootstrap_line={3})" -f `
+                $TimeoutSeconds,
+                $snapshot.phase,
+                $backendLaunchState,
+                $snapshot.lastLine
+            )
+        }
+
+        if ((Get-Date) - $lastProbeSnapshotAt -ge [TimeSpan]::FromSeconds(15)) {
+            Write-ProbeSnapshot -ElapsedSeconds $elapsedSeconds -ProcessAlive $true
+            $lastProbeSnapshotAt = Get-Date
         }
 
         $fatalError = Find-FatalBootstrapError
@@ -226,6 +361,7 @@ try {
                 break
             }
         } catch {
+            $lastHealthError = $_.Exception.Message
             # Service may still be booting; continue polling until timeout.
         }
 

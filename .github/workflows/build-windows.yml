@@ -156,6 +156,35 @@ jobs:
         run: |
           .\scripts\smoke-windows-runtime.ps1 -ReleaseRoot "$env:WINDOWS_RELEASE_ROOT" -TimeoutSeconds 240 -DiagnosticsDir "artifacts/windows-runtime-diagnostics"
 
+      - name: Print Windows smoke summary
+        if: always()
+        shell: pwsh
+        run: |
+          $summaryTxt = "artifacts/windows-runtime-diagnostics/smoke-summary.txt"
+          $summaryJson = "artifacts/windows-runtime-diagnostics/smoke-summary.json"
+
+          if (Test-Path $summaryTxt) {
+            Write-Host "----- Smoke Summary (text) -----"
+            Get-Content $summaryTxt | ForEach-Object { Write-Host $_ }
+            Write-Host "----- End Smoke Summary (text) -----"
+          } else {
+            Write-Host "Smoke summary text file not found at $summaryTxt"
+          }
+
+          if (Test-Path $summaryJson) {
+            Write-Host "----- Smoke Summary (parsed) -----"
+            $summary = Get-Content $summaryJson -Raw | ConvertFrom-Json
+            Write-Host "bootstrapPhase=$($summary.bootstrapPhase)"
+            Write-Host "postgresReadySeen=$($summary.postgresReadySeen)"
+            Write-Host "migrationStartedSeen=$($summary.migrationStartedSeen)"
+            Write-Host "backendSpawnAttemptedSeen=$($summary.backendSpawnAttemptedSeen)"
+            Write-Host "backendHealthSeen=$($summary.backendHealthSeen)"
+            Write-Host "failureMessage=$($summary.failureMessage)"
+            Write-Host "----- End Smoke Summary (parsed) -----"
+          } else {
+            Write-Host "Smoke summary json file not found at $summaryJson"
+          }
+
       - name: Upload Windows runtime smoke diagnostics
         if: always()
         uses: actions/upload-artifact@v4
