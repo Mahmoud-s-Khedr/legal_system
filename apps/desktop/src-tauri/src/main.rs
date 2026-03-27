@@ -1,3 +1,4 @@
+mod ppo_portal;
 mod sidecar;
 
 use tauri::Manager;
@@ -11,7 +12,9 @@ fn main() {
             sidecar::desktop_bootstrap_status,
             sidecar::retry_bootstrap,
             sidecar::repair_bootstrap_migrations,
-            sidecar::reset_local_database
+            sidecar::reset_local_database,
+            ppo_portal::open_ppo_portal_window,
+            ppo_portal::ppo_portal_navigate
         ])
         .setup(|app| {
             let handle = app.handle().clone();

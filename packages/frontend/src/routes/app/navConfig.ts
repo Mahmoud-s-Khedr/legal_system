@@ -5,6 +5,7 @@ import {
   CheckSquare,
   FileCode,
   FileText,
+  Landmark,
   LayoutDashboard,
   Library,
   Receipt,
@@ -93,6 +94,14 @@ export const navConfig: NavConfigItem[] = [
     group: "tools",
     order: 230,
     requiredPermission: "library:read"
+  },
+  {
+    id: "ppoPortal",
+    labelKey: "nav.ppoPortal",
+    to: "/app/integrations/ppo",
+    icon: Landmark,
+    group: "tools",
+    order: 240
   },
   {
     id: "users",

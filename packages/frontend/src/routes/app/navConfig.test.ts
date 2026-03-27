@@ -10,7 +10,7 @@ describe("buildSidebarNavSections", () => {
       permissions: []
     });
 
-    expect(sections.map((section) => section.id)).toEqual(["core"]);
+    expect(sections.map((section) => section.id)).toEqual(["core", "tools"]);
     expect(sections[0]?.items.map((item) => item.id)).toEqual([
       "dashboard",
       "clients",
@@ -20,6 +20,8 @@ describe("buildSidebarNavSections", () => {
       "tasks",
       "documents"
     ]);
+    expect(sections[1]?.id).toBe("tools");
+    expect(sections[1]?.items.map((item) => item.id)).toEqual(["ppoPortal"]);
   });
 
   it("filters and orders permission-gated sections", () => {
@@ -34,7 +36,10 @@ describe("buildSidebarNavSections", () => {
       "invoices",
       "expenses"
     ]);
-    expect(sections.find((section) => section.id === "tools")?.items.map((item) => item.id)).toEqual(["reports"]);
+    expect(sections.find((section) => section.id === "tools")?.items.map((item) => item.id)).toEqual([
+      "reports",
+      "ppoPortal"
+    ]);
     expect(sections.find((section) => section.id === "administration")?.items.map((item) => item.id)).toEqual(["users"]);
   });
 });

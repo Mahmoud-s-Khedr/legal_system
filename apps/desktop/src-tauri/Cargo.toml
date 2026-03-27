@@ -17,6 +17,9 @@ tauri-plugin-shell = "2.3.3"
 tauri-plugin-dialog = "2"
 log = "0.4"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = { version = "2.0.2", features = ["v2_6"] }
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

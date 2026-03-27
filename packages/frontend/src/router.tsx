@@ -50,6 +50,7 @@ import { TemplateCreatePage } from "./routes/app/TemplateCreatePage";
 import { TemplateEditPage } from "./routes/app/TemplateEditPage";
 import { ReportsPage } from "./routes/app/ReportsPage";
 import { ReportBuilderPage } from "./routes/app/ReportBuilderPage";
+import { PpoPortalPage } from "./routes/app/PpoPortalPage";
 import { LibraryPage } from "./routes/app/library/LibraryPage";
 import { LibraryDocumentPage } from "./routes/app/library/LibraryDocumentPage";
 import { LibrarySearchPage } from "./routes/app/library/LibrarySearchPage";
@@ -410,6 +411,12 @@ const reportBuilderRoute = createRoute({
   component: () => <PermissionGate permission="reports:read"><ReportBuilderPage /></PermissionGate>
 });
 
+const ppoPortalRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/integrations/ppo",
+  component: PpoPortalPage
+});
+
 // Research
 const researchRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -570,6 +577,7 @@ const routeTree = rootRoute.addChildren([
     notificationPreferencesRoute,
     reportsRoute,
     reportBuilderRoute,
+    ppoPortalRoute,
     researchRoute,
     researchSessionRoute,
     libraryRoute,

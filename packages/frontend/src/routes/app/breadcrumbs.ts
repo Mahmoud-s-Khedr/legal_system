@@ -27,6 +27,7 @@ const BREADCRUMB_META: BreadcrumbMeta[] = [
   { pattern: /^\/app\/expenses$/, labelKey: "nav.expenses" },
   { pattern: /^\/app\/reports$/, labelKey: "nav.reports" },
   { pattern: /^\/app\/reports\/builder$/, labelKey: "reports.builderTitle" },
+  { pattern: /^\/app\/integrations\/ppo$/, labelKey: "nav.ppoPortal" },
   { pattern: /^\/app\/templates$/, labelKey: "nav.templates" },
   { pattern: /^\/app\/templates\/new$/, labelKey: "actions.create" },
   { pattern: /^\/app\/templates\/[^/]+\/edit$/, labelKey: "actions.edit" },

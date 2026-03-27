@@ -70,6 +70,7 @@
     "library": "Library",
     "research": "AI Research",
     "expenses": "Expenses",
+    "ppoPortal": "PPO Portal",
     "mainNavigation": "Main navigation",
     "openMenu": "Open navigation menu",
     "closeMenu": "Close navigation menu",
@@ -505,6 +506,41 @@
     "calendarNotConnected": "Not connected",
     "calendarConnected": "Google Calendar connected successfully.",
     "calendarError": "Calendar connection error"
+  },
+  "ppo": {
+    "eyebrow": "Government Services",
+    "title": "Egyptian Public Prosecution Portal",
+    "description": "Launch the official PPO portal in a managed window/tab while keeping your ELMS workspace active.",
+    "launchSectionTitle": "Portal Launch",
+    "launchSectionDescription": "Open or refocus the PPO portal without leaving your current ELMS workflow.",
+    "sessionNote": "PPO authentication is separate from ELMS. You may need to sign in again on the government portal.",
+    "openAction": "Open PPO Portal",
+    "reopenAction": "Reopen PPO Portal",
+    "nav": {
+      "sectionTitle": "Navigation",
+      "back": "Back",
+      "forward": "Forward",
+      "reload": "Reload",
+      "home": "Home",
+      "openExternal": "Open in Browser",
+      "backHint": "Alt+Left",
+      "forwardHint": "Alt+Right",
+      "reloadHint": "Ctrl+R",
+      "homeHint": "Alt+Home"
+    },
+    "status": {
+      "opening": "Opening PPO portal...",
+      "openedTab": "PPO portal opened in a new browser tab.",
+      "openedWindow": "PPO portal opened in a managed desktop window.",
+      "focusedWindow": "Focused your existing PPO managed window.",
+      "macosTlsUnsupported": "Managed PPO desktop launch with TLS bypass is not supported on macOS.",
+      "failed": "Could not open PPO portal.",
+      "navigating": "Navigating...",
+      "navigationFailed": "Navigation failed.",
+      "windowNotOpen": "PPO window is not open.",
+      "hostWarning": "Warning: current page is outside ppo.gov.eg.",
+      "returnToHome": "Return to PPO Home"
+    }
   },
   "desktopBootstrap": {
     "eyebrow": "Desktop runtime",

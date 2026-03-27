@@ -69,6 +69,7 @@
     "library": "Bibliothèque juridique",
     "research": "Recherche IA",
     "expenses": "Dépenses",
+    "ppoPortal": "Portail du Parquet",
     "mainNavigation": "Navigation principale",
     "openMenu": "Ouvrir le menu de navigation",
     "closeMenu": "Fermer le menu de navigation",
@@ -541,6 +542,41 @@
     "calendarNotConnected": "Non connecté",
     "calendarConnected": "Google Agenda connecté avec succès.",
     "calendarError": "Erreur de connexion au calendrier"
+  },
+  "ppo": {
+    "eyebrow": "Services gouvernementaux",
+    "title": "Portail du Parquet public égyptien",
+    "description": "Lancez le portail PPO officiel dans une fenêtre/un onglet géré tout en gardant votre espace ELMS actif.",
+    "launchSectionTitle": "Ouverture du portail",
+    "launchSectionDescription": "Ouvrez ou remettez au premier plan le portail PPO sans quitter votre flux ELMS.",
+    "sessionNote": "L’authentification PPO est séparée d’ELMS. Vous devrez peut-être vous reconnecter sur le portail gouvernemental.",
+    "openAction": "Ouvrir le portail PPO",
+    "reopenAction": "Rouvrir le portail PPO",
+    "nav": {
+      "sectionTitle": "Navigation",
+      "back": "Précédent",
+      "forward": "Suivant",
+      "reload": "Actualiser",
+      "home": "Accueil",
+      "openExternal": "Ouvrir dans le navigateur",
+      "backHint": "Alt+Gauche",
+      "forwardHint": "Alt+Droite",
+      "reloadHint": "Ctrl+R",
+      "homeHint": "Alt+Début"
+    },
+    "status": {
+      "opening": "Ouverture du portail PPO...",
+      "openedTab": "Le portail PPO a été ouvert dans un nouvel onglet du navigateur.",
+      "openedWindow": "Le portail PPO a été ouvert dans une fenêtre desktop gérée.",
+      "focusedWindow": "La fenêtre PPO déjà ouverte a été remise au premier plan.",
+      "macosTlsUnsupported": "Le lancement desktop géré du portail PPO avec contournement TLS n’est pas pris en charge sur macOS.",
+      "failed": "Impossible d’ouvrir le portail PPO.",
+      "navigating": "Navigation en cours...",
+      "navigationFailed": "Échec de la navigation.",
+      "windowNotOpen": "La fenêtre PPO n’est pas ouverte.",
+      "hostWarning": "Avertissement : la page actuelle est hors de ppo.gov.eg.",
+      "returnToHome": "Retour à l’accueil PPO"
+    }
   },
   "desktopBootstrap": {
     "eyebrow": "Runtime desktop",

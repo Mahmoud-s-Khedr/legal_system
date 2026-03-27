@@ -5,6 +5,7 @@ describe("breadcrumb metadata resolver", () => {
   it("resolves static app routes", () => {
     expect(resolveBreadcrumbLabelKey("/app/dashboard")).toBe("nav.dashboard");
     expect(resolveBreadcrumbLabelKey("/app/reports")).toBe("nav.reports");
+    expect(resolveBreadcrumbLabelKey("/app/integrations/ppo")).toBe("nav.ppoPortal");
   });
 
   it("resolves dynamic app routes", () => {
