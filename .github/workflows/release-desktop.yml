@@ -157,6 +157,11 @@ jobs:
             patchelf \
             rpm \
             fakeroot
+          if apt-cache show libfuse2t64 >/dev/null 2>&1; then
+            sudo apt-get install -y libfuse2t64
+          else
+            sudo apt-get install -y libfuse2
+          fi
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -172,7 +177,28 @@ jobs:
           VITE_API_BASE_URL: "http://127.0.0.1:7854"
           NO_STRIP: "1"
           DESKTOP_BUNDLES: "appimage"
+          DESKTOP_PACKAGE_LOG_FILE: "${{ github.workspace }}/.logs/desktop-linux-package-appimage.log"
         run: pnpm --filter @elms/desktop package:linux
+
+      - name: Show Linux AppImage packaging log tail on failure
+        if: failure()
+        run: |
+          log_file=".logs/desktop-linux-package-appimage.log"
+          if [[ -f "$log_file" ]]; then
+            echo "Showing tail of AppImage packaging log: $log_file"
+            tail -n 120 "$log_file"
+          else
+            echo "AppImage packaging log was not found at $log_file"
+          fi
+
+      - name: Upload Linux AppImage packaging log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-appimage-log-${{ env.RELEASE_TAG }}
+          path: .logs/desktop-linux-package-appimage.log
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Validate Linux AppImage artifact
         env:
@@ -327,6 +353,38 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     steps:
+      - name: Validate Apple signing secrets
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          required_secrets=(
+            APPLE_CERTIFICATE
+            APPLE_CERTIFICATE_PASSWORD
+            APPLE_SIGNING_IDENTITY
+            APPLE_ID
+            APPLE_PASSWORD
+            APPLE_TEAM_ID
+          )
+          missing=()
+
+          for secret_name in "${required_secrets[@]}"; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              missing+=("$secret_name")
+            fi
+          done
+
+          if [[ "${#missing[@]}" -ne 0 ]]; then
+            echo "Missing required Apple signing secrets: ${missing[*]}" >&2
+            exit 1
+          fi
+
+          echo "All required Apple signing secrets are configured."
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.SOURCE_REF }}

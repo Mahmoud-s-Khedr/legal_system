@@ -346,6 +346,10 @@ Platform builds are defined in `.github/workflows/`. They are **not** part of th
 | `APPLE_PASSWORD` | App-specific password |
 | `APPLE_TEAM_ID` | Apple developer team ID |
 
+`build-macos.yml` now supports unsigned CI validation builds when any Apple signing secret is missing. In that case, the workflow still produces DMG artifacts but skips signing/notarization inputs.
+
+`release-desktop.yml` keeps signing mandatory for macOS release artifacts. It fails fast in a preflight validation step if any Apple signing secret is missing.
+
 ---
 
 ## Setting Up the Desktop Dev Environment

@@ -87,14 +87,48 @@ jobs:
         run: node scripts/verify-desktop-resources.mjs
 
       # ── 5. Build Tauri macOS dmg ──────────────────────────────────────────────
-      - name: Build Tauri macOS installer
+      - name: Determine macOS signing mode
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          required_secrets=(
+            APPLE_CERTIFICATE
+            APPLE_CERTIFICATE_PASSWORD
+            APPLE_SIGNING_IDENTITY
+            APPLE_ID
+            APPLE_PASSWORD
+            APPLE_TEAM_ID
+          )
+          missing=()
+
+          for secret_name in "${required_secrets[@]}"; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              missing+=("$secret_name")
+            fi
+          done
+
+          if [[ "${#missing[@]}" -eq 0 ]]; then
+            echo "SIGNING_ENABLED=true" >> "$GITHUB_ENV"
+            echo "macOS signing mode: signed"
+          else
+            echo "SIGNING_ENABLED=false" >> "$GITHUB_ENV"
+            echo "macOS signing mode: unsigned (missing secrets: ${missing[*]})"
+          fi
+
+      - name: Build Tauri macOS installer (signed)
+        if: env.SIGNING_ENABLED == 'true'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_DESKTOP_SHELL: "true"
           VITE_API_BASE_URL: "http://127.0.0.1:7854"
           # Apple notarization — requires secrets to be configured in GitHub repo settings.
-          # See docs/code-signing.md for how to obtain and encode these values.
+          # See docs/dev/11-desktop-build.md for setup details.
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -104,6 +138,22 @@ jobs:
         with:
           projectPath: apps/desktop
           args: --target ${{ matrix.target }} --bundles dmg
+
+      - name: Build Tauri macOS installer (unsigned)
+        if: env.SIGNING_ENABLED != 'true'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_DESKTOP_SHELL: "true"
+          VITE_API_BASE_URL: "http://127.0.0.1:7854"
+        with:
+          projectPath: apps/desktop
+          args: --target ${{ matrix.target }} --bundles dmg
+
+      - name: Summarize macOS signing mode
+        if: always()
+        run: |
+          echo "macOS signing mode for this run: ${SIGNING_ENABLED:-unknown}"
 
       - name: Verify macOS dmg payload
         run: |

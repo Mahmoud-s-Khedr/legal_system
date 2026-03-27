@@ -160,6 +160,11 @@ jobs:
             patchelf \
             rpm \
             fakeroot
+          if apt-cache show libfuse2t64 >/dev/null 2>&1; then
+            sudo apt-get install -y libfuse2t64
+          else
+            sudo apt-get install -y libfuse2
+          fi
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -175,7 +180,28 @@ jobs:
           VITE_API_BASE_URL: "http://127.0.0.1:7854"
           NO_STRIP: "1"
           DESKTOP_BUNDLES: "appimage"
+          DESKTOP_PACKAGE_LOG_FILE: "${{ github.workspace }}/.logs/desktop-linux-package-appimage.log"
         run: pnpm --filter @elms/desktop package:linux
+
+      - name: Show Linux AppImage packaging log tail on failure
+        if: failure()
+        run: |
+          log_file=".logs/desktop-linux-package-appimage.log"
+          if [[ -f "$log_file" ]]; then
+            echo "Showing tail of AppImage packaging log: $log_file"
+            tail -n 120 "$log_file"
+          else
+            echo "AppImage packaging log was not found at $log_file"
+          fi
+
+      - name: Upload Linux AppImage packaging log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: elms-linux-appimage-log-${{ env.SOURCE_SHA }}
+          path: .logs/desktop-linux-package-appimage.log
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Validate Linux AppImage artifact
         env:
