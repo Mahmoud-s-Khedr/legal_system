@@ -179,15 +179,40 @@ function deriveStatus(totalAmount: Decimal, payments: { amount: Decimal }[]): Pr
 
 export async function listInvoices(
   actor: SessionUser,
-  filters: { caseId?: string; clientId?: string; status?: string },
+  filters: { caseId?: string; clientId?: string; status?: string; from?: string; to?: string },
   pagination: { page: number; limit: number } = { page: 1, limit: 50 }
 ): Promise<InvoiceListResponseDto> {
   const { page, limit } = pagination;
+  const fromDate = filters.from ? new Date(filters.from) : null;
+  const toDate = filters.to ? new Date(filters.to) : null;
   const where = {
     firmId: actor.firmId,
     ...(filters.caseId ? { caseId: filters.caseId } : {}),
     ...(filters.clientId ? { clientId: filters.clientId } : {}),
-    ...(filters.status ? { status: filters.status as PrismaInvoiceStatus } : {})
+    ...(filters.status ? { status: filters.status as PrismaInvoiceStatus } : {}),
+    ...(fromDate || toDate
+      ? {
+          OR: [
+            {
+              dueDate: {
+                ...(fromDate ? { gte: fromDate } : {}),
+                ...(toDate ? { lte: toDate } : {})
+              }
+            },
+            {
+              AND: [
+                { dueDate: null },
+                {
+                  issuedAt: {
+                    ...(fromDate ? { gte: fromDate } : {}),
+                    ...(toDate ? { lte: toDate } : {})
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      : {})
   };
   const [items, total] = await Promise.all([
     prisma.invoice.findMany({

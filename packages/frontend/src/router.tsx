@@ -21,6 +21,7 @@ import { CasesPage } from "./routes/app/CasesPage";
 import { CaseCreatePage } from "./routes/app/CaseCreatePage";
 import { CaseDetailPage } from "./routes/app/CaseDetailPage";
 import { HearingsPage } from "./routes/app/HearingsPage";
+import { CalendarPage } from "./routes/app/CalendarPage";
 import { HearingCreatePage } from "./routes/app/HearingCreatePage";
 import { HearingEditPage } from "./routes/app/HearingEditPage";
 import { TasksPage } from "./routes/app/TasksPage";
@@ -220,6 +221,12 @@ const caseDetailRoute = createRoute({
 });
 
 // Hearings
+const calendarRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/calendar",
+  component: CalendarPage
+});
+
 const hearingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/hearings",
@@ -534,6 +541,7 @@ const routeTree = rootRoute.addChildren([
     casesRoute,
     caseCreateRoute,
     caseDetailRoute,
+    calendarRoute,
     hearingsRoute,
     hearingCreateRoute,
     hearingEditRoute,

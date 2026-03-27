@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CaseRoleOnCase, type CaseCourtDto, type CaseDto, type ClientDto, type CreateCaseAssignmentDto, type CreateCaseCourtDto, type CreateCasePartyDto, type HearingListResponseDto, type TaskListResponseDto, type UpdateCaseCourtDto, type UserListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { EnumBadge } from "../../components/shared/EnumBadge";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField, formatDateTime } from "./ui";
+import { DataTable, EmptyState, ErrorState, Field, FormAlert, PageHeader, PrimaryButton, SectionCard, SelectField, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatDateTime } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { DocumentUploadForm } from "../../components/documents/DocumentUploadForm";
 import { CaseBillingTab } from "../../components/billing/CaseBillingTab";
@@ -27,6 +28,7 @@ const EMPTY_COURT: CreateCaseCourtDto = {
 
 export function CaseDetailPage() {
   const { t } = useTranslation("app");
+  const feedback = useMutationFeedback();
   const queryClient = useQueryClient();
   const { caseId } = useParams({ from: "/app/cases/$caseId" });
   const [activeTab, setActiveTab] = useState<CaseTab>("overview");
@@ -40,6 +42,7 @@ export function CaseDetailPage() {
     userId: "",
     roleOnCase: CaseRoleOnCase.LEAD
   });
+  const [courtFormResetToken, setCourtFormResetToken] = useState(0);
 
   const caseQuery = useQuery({
     queryKey: ["case", caseId],
@@ -60,7 +63,6 @@ export function CaseDetailPage() {
   const partyRolesQuery = useLookupOptions("PartyRole");
   const courtLevelsQuery = useLookupOptions("CourtLevel");
   const caseTypesQuery = useLookupOptions("CaseType");
-  const [, setCourtForm] = useState<CreateCaseCourtDto>(EMPTY_COURT);
   const [editingCourt, setEditingCourt] = useState<CaseCourtDto | null>(null);
 
   const addPartyMutation = useMutation({
@@ -76,6 +78,7 @@ export function CaseDetailPage() {
         isOurClient: true,
         opposingCounselName: ""
       });
+      feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
     }
   });
@@ -87,6 +90,8 @@ export function CaseDetailPage() {
         body: JSON.stringify(payload)
       }),
     onSuccess: async () => {
+      feedback.success("messages.saved");
+      setCourtFormResetToken((value) => value + 1);
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
     }
   });
@@ -98,7 +103,7 @@ export function CaseDetailPage() {
         body: JSON.stringify(payload)
       }),
     onSuccess: async () => {
-      setCourtForm(EMPTY_COURT);
+      feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
     }
   });
@@ -111,6 +116,7 @@ export function CaseDetailPage() {
       }),
     onSuccess: async () => {
       setEditingCourt(null);
+      feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
     }
   });
@@ -119,6 +125,7 @@ export function CaseDetailPage() {
     mutationFn: (courtId: string) =>
       apiFetch(`/api/cases/${caseId}/courts/${courtId}`, { method: "DELETE" }),
     onSuccess: async () => {
+      feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
     }
   });
@@ -193,48 +200,66 @@ export function CaseDetailPage() {
       {activeTab === "courts" ? (
         <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <SectionCard title={t("cases.courts")} description={t("cases.courtsHelp")}>
-            {!caseItem.courts.length ? (
+            {caseQuery.isError ? (
+              <ErrorState
+                title={t("errors.title")}
+                description={(caseQuery.error as Error)?.message ?? t("errors.fallback")}
+                retryLabel={t("errors.reload")}
+                onRetry={() => void caseQuery.refetch()}
+              />
+            ) : !caseItem.courts.length ? (
               <EmptyState title={t("empty.noCourts")} description={t("empty.noCourtsHelp")} />
             ) : (
-              <div className="space-y-3">
-                {caseItem.courts.map((court, index) => (
-                  <article className="rounded-2xl border border-slate-200 bg-white p-4" key={court.id}>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold">
-                        {index + 1}. {court.courtName}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        {court.isActive ? (
-                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                            {t("labels.active")}
-                          </span>
-                        ) : null}
-                        <button
-                          className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
-                          onClick={() => setEditingCourt(court)}
-                          type="button"
-                        >
-                          {t("actions.edit")}
-                        </button>
-                        <button
-                          className="rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                          onClick={() => deleteCourtMutation.mutate(court.id)}
-                          type="button"
-                        >
-                          {t("actions.delete")}
-                        </button>
-                      </div>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {courtLevelMap.get(court.courtLevel) ?? court.courtLevel}{court.circuit ? ` · ${court.circuit}` : ""}{court.caseNumber ? ` · ${court.caseNumber}` : ""}
-                    </p>
-                    {court.startedAt ? (
-                      <p className="mt-1 text-xs text-slate-400">{formatDateTime(court.startedAt)}</p>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
+              <TableWrapper>
+                <DataTable>
+                  <TableHead>
+                    <tr>
+                      <TableHeadCell>{t("labels.courtName")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.courtLevel")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.caseNumber")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                      <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    </tr>
+                  </TableHead>
+                  <TableBody>
+                    {caseItem.courts.map((court) => (
+                      <TableRow key={court.id}>
+                        <TableCell>
+                          <p className="font-medium">{court.courtName}</p>
+                          <p className="text-xs text-slate-500">{court.circuit ?? "—"}</p>
+                        </TableCell>
+                        <TableCell>{courtLevelMap.get(court.courtLevel) ?? court.courtLevel}</TableCell>
+                        <TableCell>{court.caseNumber ?? "—"}</TableCell>
+                        <TableCell>{court.isActive ? t("labels.active") : t("labels.inactive")}</TableCell>
+                        <TableCell align="end">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                              onClick={() => setEditingCourt(court)}
+                              type="button"
+                            >
+                              {t("actions.edit")}
+                            </button>
+                            <button
+                              className="rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                              onClick={() => deleteCourtMutation.mutate(court.id)}
+                              type="button"
+                            >
+                              {t("actions.delete")}
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </DataTable>
+              </TableWrapper>
             )}
+            {deleteCourtMutation.isError ? (
+              <div className="mt-3">
+                <FormAlert message={(deleteCourtMutation.error as Error)?.message ?? t("errors.fallback")} />
+              </div>
+            ) : null}
           </SectionCard>
           <div className="space-y-4">
             {editingCourt ? (
@@ -247,15 +272,26 @@ export function CaseDetailPage() {
                   onSubmit={(payload) => updateCourtMutation.mutate({ courtId: editingCourt.id, payload })}
                   t={t}
                 />
+                {updateCourtMutation.isError ? (
+                  <div className="mt-3">
+                    <FormAlert message={(updateCourtMutation.error as Error)?.message ?? t("errors.fallback")} />
+                  </div>
+                ) : null}
               </SectionCard>
             ) : (
               <SectionCard title={t("cases.addCourt")} description={t("cases.addCourtHelp")}>
                 <CourtAddForm
                   courtLevelOptions={courtLevelOptions}
                   isPending={addCourtMutation.isPending}
+                  resetToken={courtFormResetToken}
                   onSubmit={(payload) => addCourtMutation.mutate(payload)}
                   t={t}
                 />
+                {addCourtMutation.isError ? (
+                  <div className="mt-3">
+                    <FormAlert message={(addCourtMutation.error as Error)?.message ?? t("errors.fallback")} />
+                  </div>
+                ) : null}
               </SectionCard>
             )}
           </div>
@@ -267,16 +303,28 @@ export function CaseDetailPage() {
             {!caseItem.parties.length ? (
               <EmptyState title={t("empty.noParties")} description={t("empty.noPartiesHelp")} />
             ) : (
-              <div className="space-y-3">
-                {caseItem.parties.map((party) => (
-                  <article className="rounded-2xl border border-slate-200 bg-white p-4" key={party.id}>
-                    <p className="font-semibold">{party.name}</p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {getEnumLabel(t, "PartyRole", party.role)} · {party.isOurClient ? t("cases.ourClient") : t("cases.externalParty")}
-                    </p>
-                  </article>
-                ))}
-              </div>
+              <TableWrapper>
+                <DataTable>
+                  <TableHead>
+                    <tr>
+                      <TableHeadCell>{t("labels.name")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.role")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.client")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.opposingCounsel")}</TableHeadCell>
+                    </tr>
+                  </TableHead>
+                  <TableBody>
+                    {caseItem.parties.map((party) => (
+                      <TableRow key={party.id}>
+                        <TableCell>{party.name}</TableCell>
+                        <TableCell>{getEnumLabel(t, "PartyRole", party.role)}</TableCell>
+                        <TableCell>{party.isOurClient ? t("cases.ourClient") : t("cases.externalParty")}</TableCell>
+                        <TableCell>{party.opposingCounselName ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </DataTable>
+              </TableWrapper>
             )}
           </SectionCard>
           <SectionCard title={t("cases.addParty")} description={t("cases.addPartyHelp")}>
@@ -305,12 +353,28 @@ export function CaseDetailPage() {
                 }
                 value={partyForm.role}
               />
+              <SelectField
+                label={t("labels.client")}
+                onChange={(value) =>
+                  setPartyForm({ ...partyForm, isOurClient: value === "true" })
+                }
+                options={[
+                  { value: "true", label: t("cases.ourClient") },
+                  { value: "false", label: t("cases.externalParty") }
+                ]}
+                value={String(partyForm.isOurClient)}
+              />
               <Field
                 label={t("labels.opposingCounsel")}
                 onChange={(value) => setPartyForm({ ...partyForm, opposingCounselName: value })}
                 value={partyForm.opposingCounselName ?? ""}
               />
-              <PrimaryButton type="submit">{t("actions.addParty")}</PrimaryButton>
+              {addPartyMutation.isError ? (
+                <FormAlert message={(addPartyMutation.error as Error)?.message ?? t("errors.fallback")} />
+              ) : null}
+              <PrimaryButton disabled={addPartyMutation.isPending} type="submit">
+                {addPartyMutation.isPending ? t("labels.saving") : t("actions.addParty")}
+              </PrimaryButton>
             </form>
           </SectionCard>
         </div>
@@ -321,14 +385,26 @@ export function CaseDetailPage() {
             {!caseItem.assignments.length ? (
               <EmptyState title={t("empty.noAssignments")} description={t("empty.noAssignmentsHelp")} />
             ) : (
-              <div className="space-y-3">
-                {caseItem.assignments.map((assignment) => (
-                  <article className="rounded-2xl border border-slate-200 bg-white p-4" key={assignment.id}>
-                    <p className="font-semibold">{assignment.userName}</p>
-                    <p className="mt-1 text-sm text-slate-600">{getEnumLabel(t, "CaseRoleOnCase", assignment.roleOnCase)}</p>
-                  </article>
-                ))}
-              </div>
+              <TableWrapper>
+                <DataTable>
+                  <TableHead>
+                    <tr>
+                      <TableHeadCell>{t("labels.user")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.role")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.startDate")}</TableHeadCell>
+                    </tr>
+                  </TableHead>
+                  <TableBody>
+                    {caseItem.assignments.map((assignment) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell>{assignment.userName}</TableCell>
+                        <TableCell>{getEnumLabel(t, "CaseRoleOnCase", assignment.roleOnCase)}</TableCell>
+                        <TableCell>{formatDateTime(assignment.assignedAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </DataTable>
+              </TableWrapper>
             )}
           </SectionCard>
           <SectionCard title={t("cases.assignLawyer")} description={t("cases.assignLawyerHelp")}>
@@ -358,6 +434,9 @@ export function CaseDetailPage() {
                 value={assignmentForm.roleOnCase}
               />
               <PrimaryButton type="submit">{t("actions.assignLawyer")}</PrimaryButton>
+              {addAssignmentMutation.isError ? (
+                <FormAlert message={(addAssignmentMutation.error as Error)?.message ?? t("errors.fallback")} />
+              ) : null}
             </form>
           </SectionCard>
         </div>
@@ -376,14 +455,24 @@ export function CaseDetailPage() {
           {!hearingsQuery.data?.items.length ? (
             <EmptyState title={t("empty.noHearings")} description={t("empty.noHearingsHelp")} />
           ) : (
-            <div className="space-y-3">
-              {hearingsQuery.data.items.map((hearing) => (
-                <article className="rounded-2xl border border-slate-200 bg-white p-4" key={hearing.id}>
-                  <p className="font-semibold">{formatDateTime(hearing.sessionDatetime)}</p>
-                  <p className="mt-1 text-sm text-slate-600">{hearing.assignedLawyerName ?? t("labels.unassigned")}</p>
-                </article>
-              ))}
-            </div>
+            <TableWrapper>
+              <DataTable>
+                <TableHead>
+                  <tr>
+                    <TableHeadCell>{t("labels.sessionDatetime")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {hearingsQuery.data.items.map((hearing) => (
+                    <TableRow key={hearing.id}>
+                      <TableCell>{formatDateTime(hearing.sessionDatetime)}</TableCell>
+                      <TableCell>{hearing.assignedLawyerName ?? t("labels.unassigned")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </DataTable>
+            </TableWrapper>
           )}
         </SectionCard>
       ) : null}
@@ -401,16 +490,26 @@ export function CaseDetailPage() {
           {!tasksQuery.data?.items.length ? (
             <EmptyState title={t("empty.noTasks")} description={t("empty.noTasksHelp")} />
           ) : (
-            <div className="space-y-3">
-              {tasksQuery.data.items.map((task) => (
-                <article className="rounded-2xl border border-slate-200 bg-white p-4" key={task.id}>
-                  <p className="font-semibold">{task.title}</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {getEnumLabel(t, "TaskStatus", task.status)} · {task.assignedToName ?? t("labels.unassigned")}
-                  </p>
-                </article>
-              ))}
-            </div>
+            <TableWrapper>
+              <DataTable>
+                <TableHead>
+                  <tr>
+                    <TableHeadCell>{t("labels.title")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {tasksQuery.data.items.map((task) => (
+                    <TableRow key={task.id}>
+                      <TableCell>{task.title}</TableCell>
+                      <TableCell>{getEnumLabel(t, "TaskStatus", task.status)}</TableCell>
+                      <TableCell>{task.assignedToName ?? t("labels.unassigned")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </DataTable>
+            </TableWrapper>
           )}
         </SectionCard>
       ) : null}
@@ -450,15 +549,22 @@ function Detail({ label, value }: { label: string; value: string | null }) {
 function CourtAddForm({
   courtLevelOptions,
   isPending,
+  resetToken,
   onSubmit,
   t
 }: {
   courtLevelOptions: { value: string; label: string }[];
   isPending: boolean;
+  resetToken: number;
   onSubmit: (payload: CreateCaseCourtDto) => void;
   t: (key: string) => string;
 }) {
   const [form, setForm] = useState<CreateCaseCourtDto>(EMPTY_COURT);
+  useEffect(() => {
+    if (resetToken > 0) {
+      setForm(EMPTY_COURT);
+    }
+  }, [resetToken]);
 
   return (
     <form
@@ -466,7 +572,6 @@ function CourtAddForm({
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit(form);
-        setForm(EMPTY_COURT);
       }}
     >
       <Field label={t("labels.courtName")} onChange={(v) => setForm({ ...form, courtName: v })} value={form.courtName} />
@@ -479,7 +584,7 @@ function CourtAddForm({
       <Field label={t("labels.circuit")} onChange={(v) => setForm({ ...form, circuit: v })} value={form.circuit ?? ""} />
       <Field label={t("labels.caseNumber")} onChange={(v) => setForm({ ...form, caseNumber: v })} value={form.caseNumber ?? ""} />
       <Field label={t("labels.startDate")} onChange={(v) => setForm({ ...form, startedAt: v })} type="date" commitMode="blur" value={form.startedAt ?? ""} />
-      <PrimaryButton type="submit">{isPending ? "..." : t("cases.addCourt")}</PrimaryButton>
+      <PrimaryButton disabled={isPending} type="submit">{isPending ? "..." : t("cases.addCourt")}</PrimaryButton>
     </form>
   );
 }

@@ -4,7 +4,7 @@ import type { CaseListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
+import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper } from "./ui";
 
 export function CasesPage() {
   const { t } = useTranslation("app");
@@ -40,21 +40,37 @@ export function CasesPage() {
         ) : !casesQuery.data?.items.length ? (
           <EmptyState title={t("empty.noCases")} description={t("empty.noCasesHelp")} />
         ) : (
-          <div className="space-y-3">
-            {casesQuery.data.items.map((caseItem) => (
-              <Link
-                className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-accent"
-                key={caseItem.id}
-                params={{ caseId: caseItem.id }}
-                to="/app/cases/$caseId"
-              >
-                <p className="font-semibold">{caseItem.title}</p>
-                <p className="mt-1 text-sm text-slate-600">
-                  {caseItem.caseNumber} · {getEnumLabel(t, "CaseStatus", caseItem.status)}
-                </p>
-              </Link>
-            ))}
-          </div>
+          <TableWrapper>
+            <DataTable>
+              <TableHead>
+                <tr>
+                  <TableHeadCell>{t("labels.title")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.caseNumber")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {casesQuery.data.items.map((caseItem) => (
+                  <TableRow key={caseItem.id}>
+                    <TableCell>{caseItem.title}</TableCell>
+                    <TableCell>{caseItem.caseNumber}</TableCell>
+                    <TableCell>{getEnumLabel(t, "CaseStatus", caseItem.status)}</TableCell>
+                    <TableCell align="end">
+                      <Link
+                        className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        key={caseItem.id}
+                        params={{ caseId: caseItem.id }}
+                        to="/app/cases/$caseId"
+                      >
+                        {t("actions.viewDocument")}
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          </TableWrapper>
         )}
       </SectionCard>
     </div>

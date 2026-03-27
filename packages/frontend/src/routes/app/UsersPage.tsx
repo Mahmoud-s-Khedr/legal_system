@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
-import { EmptyState, PageHeader, SectionCard } from "./ui";
+import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper } from "./ui";
 
 export function UsersPage() {
   const { t } = useTranslation("app");
@@ -34,28 +34,46 @@ export function UsersPage() {
         }
       />
       <SectionCard title={t("users.directory")} description={t("users.directoryHelp")}>
-        {!usersQuery.data?.items.length ? (
+        {usersQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(usersQuery.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void usersQuery.refetch()}
+          />
+        ) : !usersQuery.data?.items.length ? (
           <EmptyState title={t("empty.noUsers")} description={t("empty.noUsersHelp")} />
         ) : (
-          <div className="space-y-3">
-            {usersQuery.data.items.map((user) => (
-              <article className="rounded-2xl border border-slate-200 bg-white p-4" key={user.id}>
-                <p className="font-semibold">{user.fullName}</p>
-                <p className="mt-1 text-sm text-slate-600">
-                  {user.email} · {getEnumLabel(t, "UserRole", user.roleKey)}
-                </p>
-                <div className="mt-3">
-                  <Link
-                    className="inline-flex rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
-                    params={{ userId: user.id }}
-                    to="/app/users/$userId"
-                  >
-                    {t("users.manageUser")}
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
+          <TableWrapper>
+            <DataTable>
+              <TableHead>
+                <tr>
+                  <TableHeadCell>{t("labels.fullName")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.email")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.role")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {usersQuery.data.items.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{user.fullName}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{getEnumLabel(t, "UserRole", user.roleKey)}</TableCell>
+                    <TableCell align="end">
+                      <Link
+                        className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        params={{ userId: user.id }}
+                        to="/app/users/$userId"
+                      >
+                        {t("users.manageUser")}
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          </TableWrapper>
         )}
       </SectionCard>
     </div>

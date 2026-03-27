@@ -54,22 +54,33 @@ export async function listTasks(
     assignedToId?: string;
     status?: string;
     overdue?: string;
+    from?: string;
+    to?: string;
   },
   pagination: { page: number; limit: number } = { page: 1, limit: 50 }
 ): Promise<TaskListResponseDto> {
   const { page, limit } = pagination;
   return withTenant(prisma, actor.firmId, async (tx) => {
+    const dueAtFilter: { lt?: Date; gte?: Date; lte?: Date } = {};
+    if (filters.overdue === "true") {
+      dueAtFilter.lt = new Date();
+    }
+    if (filters.from) {
+      dueAtFilter.gte = new Date(filters.from);
+    }
+    if (filters.to) {
+      dueAtFilter.lte = new Date(filters.to);
+    }
+
     const where = {
       firmId: actor.firmId,
       deletedAt: null,
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.assignedToId ? { assignedToId: filters.assignedToId } : {}),
       ...(filters.status ? { status: filters.status as TaskStatus } : {}),
+      ...(Object.keys(dueAtFilter).length > 0 ? { dueAt: dueAtFilter } : {}),
       ...(filters.overdue === "true"
         ? {
-            dueAt: {
-              lt: new Date()
-            },
             status: {
               not: TaskStatus.DONE
             }

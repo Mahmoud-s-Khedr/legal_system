@@ -9,7 +9,7 @@ import {
   useCreateExpense,
   useDeleteExpense
 } from "../../lib/billing";
-import { EmptyState, SectionCard, formatCurrency } from "../../routes/app/ui";
+import { DataTable, EmptyState, ErrorState, FormAlert, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatCurrency } from "../../routes/app/ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 
 export function CaseBillingTab({ caseId }: { caseId: string }) {
@@ -24,14 +24,20 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [formError, setFormError] = useState("");
 
   async function handleCreateExpense(e: React.FormEvent) {
     e.preventDefault();
-    await createExpense.mutateAsync({ caseId, category, amount, description: description || null });
-    setCategory("");
-    setAmount("");
-    setDescription("");
-    setShowExpenseForm(false);
+    setFormError("");
+    try {
+      await createExpense.mutateAsync({ caseId, category, amount, description: description || null });
+      setCategory("");
+      setAmount("");
+      setDescription("");
+      setShowExpenseForm(false);
+    } catch (error) {
+      setFormError((error as Error)?.message ?? "Request failed");
+    }
   }
 
   return (
@@ -67,35 +73,57 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
             {t("actions.newInvoice")}
           </Link>
         </div>
-        {!invoices.data?.items.length ? (
+        {invoices.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(invoices.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void invoices.refetch()}
+          />
+        ) : !invoices.data?.items.length ? (
           <EmptyState title={t("empty.noInvoices")} description={t("empty.noInvoicesHelp")} />
         ) : (
-          <div className="space-y-2">
-            {invoices.data.items.map((inv) => (
-              <Link
-                key={inv.id}
-                to="/app/invoices/$invoiceId"
-                params={{ invoiceId: inv.id }}
-                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm hover:border-accent"
-              >
-                <span>{inv.invoiceNumber}</span>
-                <div className="flex items-center gap-2">
-                  <span>{formatCurrency(inv.totalAmount)}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      inv.status === InvoiceStatus.PAID
-                        ? "bg-emerald-100 text-emerald-800"
-                        : inv.status === InvoiceStatus.VOID
-                          ? "bg-red-100 text-red-800"
-                          : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {getEnumLabel(t, "InvoiceStatus", inv.status)}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <TableWrapper>
+            <DataTable>
+              <TableHead>
+                <tr>
+                  <TableHeadCell>{t("billing.invoice")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("billing.amount")}</TableHeadCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {invoices.data.items.map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell>
+                      <Link
+                        key={inv.id}
+                        to="/app/invoices/$invoiceId"
+                        params={{ invoiceId: inv.id }}
+                        className="font-medium text-accent hover:underline"
+                      >
+                        {inv.invoiceNumber}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          inv.status === InvoiceStatus.PAID
+                            ? "bg-emerald-100 text-emerald-800"
+                            : inv.status === InvoiceStatus.VOID
+                              ? "bg-red-100 text-red-800"
+                              : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        {getEnumLabel(t, "InvoiceStatus", inv.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell align="end">{formatCurrency(inv.totalAmount)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          </TableWrapper>
         )}
       </SectionCard>
 
@@ -146,6 +174,7 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                 />
               </div>
             </div>
+            {formError ? <FormAlert message={formError} /> : null}
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -165,32 +194,46 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
           </form>
         )}
 
-        {!expenses.data?.items.length ? (
+        {expenses.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(expenses.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void expenses.refetch()}
+          />
+        ) : !expenses.data?.items.length ? (
           <EmptyState title={t("empty.noExpenses")} description={t("empty.noExpensesHelp")} />
         ) : (
-          <div className="space-y-2">
-            {expenses.data.items.map((exp) => (
-              <div
-                key={exp.id}
-                className="flex items-start justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-medium">{exp.category}</p>
-                  {exp.description && <p className="text-xs text-slate-500">{exp.description}</p>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{formatCurrency(exp.amount)}</span>
-                  <button
-                    onClick={() => void deleteExpense.mutateAsync(exp.id)}
-                    disabled={deleteExpense.isPending}
-                    className="text-xs text-red-500 hover:underline disabled:opacity-50"
-                  >
-                    {t("actions.delete")}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <TableWrapper>
+            <DataTable>
+              <TableHead>
+                <tr>
+                  <TableHeadCell>{t("billing.category")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.description")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("billing.amount")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {expenses.data.items.map((exp) => (
+                  <TableRow key={exp.id}>
+                    <TableCell>{exp.category}</TableCell>
+                    <TableCell>{exp.description ?? "—"}</TableCell>
+                    <TableCell align="end">{formatCurrency(exp.amount)}</TableCell>
+                    <TableCell align="end">
+                      <button
+                        onClick={() => void deleteExpense.mutateAsync(exp.id)}
+                        disabled={deleteExpense.isPending}
+                        className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                      >
+                        {t("actions.delete")}
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          </TableWrapper>
         )}
       </SectionCard>
     </div>

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useExpenses, useCreateExpense, useDeleteExpense } from "../../lib/billing";
-import { EmptyState, PageHeader, SectionCard, formatCurrency } from "./ui";
+import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatCurrency } from "./ui";
 
 export function ExpensesPage() {
   const { t } = useTranslation("app");
-  const { data, isLoading } = useExpenses();
+  const { data, isLoading, isError, error, refetch } = useExpenses();
   const createExpense = useCreateExpense();
   const deleteExpense = useDeleteExpense();
 
@@ -13,11 +13,11 @@ export function ExpensesPage() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setFormError("");
     try {
       await createExpense.mutateAsync({ category, amount, description: description || null });
       setCategory("");
@@ -25,7 +25,7 @@ export function ExpensesPage() {
       setDescription("");
       setShowForm(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("errors.fallback"));
+      setFormError(err instanceof Error ? err.message : t("errors.fallback"));
     }
   }
 
@@ -79,7 +79,7 @@ export function ExpensesPage() {
                 />
               </div>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {formError && <p className="text-sm text-red-600">{formError}</p>}
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -102,36 +102,50 @@ export function ExpensesPage() {
 
       <SectionCard title={t("billing.expenseList")}>
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
-        {!isLoading && !data?.items.length && (
+        {!isLoading && isError && (
+          <ErrorState
+            title={t("errors.title")}
+            description={(error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void refetch()}
+          />
+        )}
+        {!isLoading && !isError && !data?.items.length && (
           <EmptyState title={t("empty.noExpenses")} description={t("empty.noExpensesHelp")} />
         )}
-        {!isLoading && !!data?.items.length && (
-          <div className="space-y-2">
-            {data.items.map((exp) => (
-              <div
-                key={exp.id}
-                className="flex items-start justify-between rounded-2xl border border-slate-200 bg-white p-4"
-              >
-                <div>
-                  <p className="font-semibold">{exp.category}</p>
-                  {exp.description && <p className="mt-0.5 text-sm text-slate-500">{exp.description}</p>}
-                  {exp.caseTitle && (
-                    <p className="mt-0.5 text-xs text-slate-400">{exp.caseTitle}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <p className="font-semibold">{formatCurrency(exp.amount)}</p>
-                  <button
-                    onClick={() => void deleteExpense.mutateAsync(exp.id)}
-                    disabled={deleteExpense.isPending}
-                    className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {t("actions.delete")}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+        {!isLoading && !isError && !!data?.items.length && (
+          <TableWrapper>
+            <DataTable>
+              <TableHead>
+                <tr>
+                  <TableHeadCell>{t("billing.category")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.description")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.case")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("billing.amount")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {data.items.map((exp) => (
+                  <TableRow key={exp.id}>
+                    <TableCell>{exp.category}</TableCell>
+                    <TableCell>{exp.description ?? "—"}</TableCell>
+                    <TableCell>{exp.caseTitle ?? "—"}</TableCell>
+                    <TableCell align="end">{formatCurrency(exp.amount)}</TableCell>
+                    <TableCell align="end">
+                      <button
+                        onClick={() => void deleteExpense.mutateAsync(exp.id)}
+                        disabled={deleteExpense.isPending}
+                        className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        {t("actions.delete")}
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          </TableWrapper>
         )}
       </SectionCard>
     </div>

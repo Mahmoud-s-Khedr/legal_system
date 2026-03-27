@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { NotificationListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
-import { EmptyState, ErrorState, PageHeader, SectionCard, formatDateTime } from "./ui";
+import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatDateTime } from "./ui";
 
 export function NotificationsPage() {
   const { t } = useTranslation("app");
@@ -66,32 +66,43 @@ export function NotificationsPage() {
           <EmptyState title={t("notifications.empty")} description="" />
         )}
         {!isLoading && !isError && !!data?.items.length && (
-          <div className="space-y-2">
-            {data.items.map((n) => (
-              <div
-                key={n.id}
-                className={`flex items-start justify-between rounded-2xl border px-4 py-3 ${
-                  n.isRead ? "border-slate-100 bg-white opacity-70" : "border-accent/30 bg-blue-50"
-                }`}
-              >
-                <div>
-                  <p className={`text-sm ${!n.isRead ? "font-semibold" : ""}`}>{n.title}</p>
-                  <p className="mt-0.5 text-sm text-slate-500">{n.body}</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {formatDateTime(n.createdAt)}
-                  </p>
-                </div>
-                {!n.isRead && (
-                  <button
-                    onClick={() => void markOne.mutateAsync(n.id)}
-                    className="ms-3 shrink-0 rounded-lg px-2 py-1 text-xs text-accent hover:bg-blue-100"
-                  >
-                    {t("notifications.markRead")}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+          <TableWrapper>
+            <DataTable>
+              <TableHead>
+                <tr>
+                  <TableHeadCell>{t("labels.title")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.description")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.date")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {data.items.map((n) => (
+                  <TableRow key={n.id}>
+                    <TableCell>
+                      <span className={!n.isRead ? "font-semibold" : ""}>{n.title}</span>
+                    </TableCell>
+                    <TableCell>{n.body}</TableCell>
+                    <TableCell>{formatDateTime(n.createdAt)}</TableCell>
+                    <TableCell>{n.isRead ? "Read" : "Unread"}</TableCell>
+                    <TableCell align="end">
+                      {!n.isRead ? (
+                        <button
+                          onClick={() => void markOne.mutateAsync(n.id)}
+                          className="ms-3 shrink-0 rounded-lg px-2 py-1 text-xs text-accent hover:bg-blue-100"
+                        >
+                          {t("notifications.markRead")}
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          </TableWrapper>
         )}
       </SectionCard>
     </div>

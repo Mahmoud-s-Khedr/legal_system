@@ -51,6 +51,42 @@ export function StatCard({ label, value }: { label: string; value: number | stri
   );
 }
 
+export function TableWrapper({ children }: PropsWithChildren) {
+  return <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">{children}</div>;
+}
+
+export function DataTable({ children }: PropsWithChildren) {
+  return <table className="min-w-full text-sm">{children}</table>;
+}
+
+export function TableHead({ children }: PropsWithChildren) {
+  return <thead className="bg-slate-50 text-slate-600">{children}</thead>;
+}
+
+export function TableHeadCell({
+  children,
+  align = "start"
+}: PropsWithChildren<{ align?: "start" | "end" | "center" }>) {
+  const alignClass = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
+  return <th className={`px-4 py-3 font-semibold ${alignClass}`}>{children}</th>;
+}
+
+export function TableBody({ children }: PropsWithChildren) {
+  return <tbody className="divide-y divide-slate-100">{children}</tbody>;
+}
+
+export function TableRow({ children }: PropsWithChildren) {
+  return <tr className="hover:bg-slate-50/60">{children}</tr>;
+}
+
+export function TableCell({
+  children,
+  align = "start"
+}: PropsWithChildren<{ align?: "start" | "end" | "center" }>) {
+  const alignClass = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
+  return <td className={`px-4 py-3 align-top ${alignClass}`}>{children}</td>;
+}
+
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-600">

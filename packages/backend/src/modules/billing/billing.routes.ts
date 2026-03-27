@@ -72,6 +72,16 @@ const createExpenseSchema = z.object({
 
 const updateExpenseSchema = createExpenseSchema.partial();
 
+const invoiceListQuerySchema = z.object({
+  caseId: z.string().uuid().optional(),
+  clientId: z.string().uuid().optional(),
+  status: z.string().optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  page: z.string().optional(),
+  limit: z.string().optional()
+});
+
 export async function registerBillingRoutes(app: FastifyInstance) {
   // ── Invoices ────────────────────────────────────────────────────────────────
 
@@ -82,7 +92,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("invoices:read")]
     },
     async (request) => {
-      const filters = request.query as Record<string, string>;
+      const filters = invoiceListQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(filters);
       return listInvoices(request.sessionUser!, filters, { page, limit });
     }

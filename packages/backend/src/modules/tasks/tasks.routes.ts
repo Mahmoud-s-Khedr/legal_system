@@ -29,6 +29,17 @@ const taskStatusSchema = z.object({
   status: z.nativeEnum(TaskStatus)
 });
 
+const taskListQuerySchema = z.object({
+  caseId: z.string().uuid().optional(),
+  assignedToId: z.string().uuid().optional(),
+  status: z.nativeEnum(TaskStatus).optional(),
+  overdue: z.string().optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  page: z.string().optional(),
+  limit: z.string().optional()
+});
+
 export async function registerTaskRoutes(app: FastifyInstance) {
   app.get(
     "/api/tasks",
@@ -37,7 +48,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("tasks:read")]
     },
     async (request) => {
-      const filters = request.query as Record<string, string>;
+      const filters = taskListQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(filters);
       return listTasks(request.sessionUser!, filters, { page, limit });
     }

@@ -4,7 +4,7 @@ import { AuthMode, type InvitationListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { useAuthBootstrap } from "../../store/authStore";
-import { EmptyState, PageHeader, SectionCard, formatDateTime } from "./ui";
+import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatDateTime } from "./ui";
 
 export function InvitationsPage() {
   const { t } = useTranslation("app");
@@ -48,33 +48,52 @@ export function InvitationsPage() {
         <EmptyState title={t("invitations.cloudOnly")} description={t("invitations.cloudOnlyHelp")} />
       ) : (
         <SectionCard title={t("invitations.directory")} description={t("invitations.directoryHelp")}>
-          {!invitationsQuery.data?.items.length ? (
+          {invitationsQuery.isError ? (
+            <ErrorState
+              title={t("errors.title")}
+              description={(invitationsQuery.error as Error)?.message ?? t("errors.fallback")}
+              retryLabel={t("errors.reload")}
+              onRetry={() => void invitationsQuery.refetch()}
+            />
+          ) : !invitationsQuery.data?.items.length ? (
             <EmptyState title={t("empty.noInvitations")} description={t("empty.noInvitationsHelp")} />
           ) : (
-            <div className="space-y-3">
-              {invitationsQuery.data.items.map((invite) => (
-                <article className="rounded-2xl border border-slate-200 bg-white p-4" key={invite.id}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-semibold">{invite.email}</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {invite.roleName} · {invite.status}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">{formatDateTime(invite.expiresAt)}</p>
-                    </div>
-                    {invite.status === "PENDING" ? (
-                      <button
-                        className="rounded-full border border-slate-300 px-3 py-1 text-sm"
-                        onClick={() => revokeMutation.mutate(invite.id)}
-                        type="button"
-                      >
-                        {t("actions.revoke")}
-                      </button>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-            </div>
+            <TableWrapper>
+              <DataTable>
+                <TableHead>
+                  <tr>
+                    <TableHeadCell>{t("labels.email")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.role")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.endDate")}</TableHeadCell>
+                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {invitationsQuery.data.items.map((invite) => (
+                    <TableRow key={invite.id}>
+                      <TableCell>{invite.email}</TableCell>
+                      <TableCell>{invite.roleName}</TableCell>
+                      <TableCell>{invite.status}</TableCell>
+                      <TableCell>{formatDateTime(invite.expiresAt)}</TableCell>
+                      <TableCell align="end">
+                        {invite.status === "PENDING" ? (
+                          <button
+                            className="rounded-full border border-slate-300 px-3 py-1 text-sm"
+                            onClick={() => revokeMutation.mutate(invite.id)}
+                            type="button"
+                          >
+                            {t("actions.revoke")}
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </DataTable>
+            </TableWrapper>
           )}
         </SectionCard>
       )}

@@ -49,6 +49,7 @@ function getNavSections(t: (key: string) => string): NavSection[] {
         { icon: LayoutDashboard, label: t("nav.dashboard"), to: "/app/dashboard" },
         { icon: Users, label: t("nav.clients"), to: "/app/clients" },
         { icon: Briefcase, label: t("nav.cases"), to: "/app/cases" },
+        { icon: Scale, label: t("nav.calendar"), to: "/app/calendar" },
         { icon: Scale, label: t("nav.hearings"), to: "/app/hearings" },
         { icon: CheckSquare, label: t("nav.tasks"), to: "/app/tasks" },
         { icon: FileText, label: t("nav.documents"), to: "/app/documents" }

@@ -1,6 +1,6 @@
 import React, { type PropsWithChildren } from "react";
 import ReactDOM from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import * as Sentry from "@sentry/react";
 import { router } from "./router";
@@ -14,8 +14,37 @@ import { ToastContainer } from "./components/shared/Toast";
 import { OfflineBanner } from "./pwa/offlineBanner";
 import { startSyncQueueReplay } from "./pwa/syncQueue";
 import { ErrorFallback } from "./components/ErrorFallback";
+import { ApiError } from "./lib/api";
+import { useToastStore } from "./store/toastStore";
 
-const queryClient = new QueryClient();
+function formatQueryError(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  return "An unexpected error occurred. Please try again.";
+}
+
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      if (query.state.data !== undefined) {
+        return;
+      }
+
+      useToastStore.getState().addToast(formatQueryError(error), "error");
+    }
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      useToastStore.getState().addToast(formatQueryError(error), "error");
+    }
+  })
+});
 
 const SENSITIVE_KEY_PATTERN =
   /(password|token|secret|authorization|cookie|nationalid|fullname|name|email|phone|case|document|content|body)/i;

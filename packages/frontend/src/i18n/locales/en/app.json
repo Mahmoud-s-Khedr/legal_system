@@ -55,6 +55,7 @@
     "dashboard": "Dashboard",
     "clients": "Clients",
     "cases": "Cases",
+    "calendar": "Calendar",
     "hearings": "Hearings",
     "tasks": "Tasks",
     "documents": "Documents",
@@ -380,12 +381,17 @@
     },
     "conflictWarning": "This lawyer already has a hearing around the selected time."
   },
+  "calendar": {
+    "title": "Unified Calendar",
+    "description": "View hearings, invoices, and tasks in one planning timeline."
+  },
   "tasks": {
     "eyebrow": "Task execution",
     "title": "Tasks, deadlines, and review flow",
     "description": "Track standalone and case-linked tasks, then scan the kanban board by status.",
     "board": "Task board",
     "boardHelp": "Status columns keep priorities visible for the whole team.",
+    "overdue": "Overdue only",
     "createTitle": "Create task",
     "createHelp": "Assign due dates, ownership, and optional case linkage.",
     "editTitle": "Task details",
@@ -676,6 +682,7 @@
     "invoiceDetails": "Invoice Details",
     "lineItems": "Line Items",
     "invoice": "Invoice",
+    "invoiceNumber": "Invoice #",
     "invoiceList": "Invoice List",
     "expenseList": "Expense List",
     "invoices": "Invoices",
@@ -792,6 +799,7 @@
     "clientCreated": "Client created successfully.",
     "caseCreated": "Case created successfully.",
     "taskCreated": "Task created successfully.",
+    "saved": "Saved successfully.",
     "invoiceCreated": "Invoice created successfully.",
     "paymentRecorded": "Payment recorded successfully.",
     "notificationMarkedRead": "Notification marked as read.",

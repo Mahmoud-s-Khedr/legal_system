@@ -5,7 +5,7 @@ import type { ClientListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { EnumBadge } from "../../components/shared/EnumBadge";
-import { EmptyState, ErrorState, Field, PageHeader, SectionCard } from "./ui";
+import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper } from "./ui";
 
 export function ClientsPage() {
   const { t } = useTranslation("app");
@@ -53,24 +53,41 @@ export function ClientsPage() {
           ) : !clientsQuery.data?.items.length ? (
             <EmptyState title={t("empty.noClients")} description={t("empty.noClientsHelp")} />
           ) : (
-            clientsQuery.data.items.map((client) => (
-              <Link
-                className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-accent"
-                key={client.id}
-                params={{ clientId: client.id }}
-                to="/app/clients/$clientId"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-semibold">{client.name}</p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {client.email ?? client.phone ?? t("labels.noContact")}
-                    </p>
-                  </div>
-                  <EnumBadge enumName="ClientType" value={client.type} />
-                </div>
-              </Link>
-            ))
+            <TableWrapper>
+              <DataTable>
+                <TableHead>
+                  <tr>
+                    <TableHeadCell>{t("labels.name")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.email")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.phone")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.type")}</TableHeadCell>
+                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {clientsQuery.data.items.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell>{client.name}</TableCell>
+                      <TableCell>{client.email ?? "—"}</TableCell>
+                      <TableCell>{client.phone ?? "—"}</TableCell>
+                      <TableCell>
+                        <EnumBadge enumName="ClientType" value={client.type} />
+                      </TableCell>
+                      <TableCell align="end">
+                        <Link
+                          className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          key={client.id}
+                          params={{ clientId: client.id }}
+                          to="/app/clients/$clientId"
+                        >
+                          {t("actions.viewDocument")}
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </DataTable>
+            </TableWrapper>
           )}
         </div>
       </SectionCard>

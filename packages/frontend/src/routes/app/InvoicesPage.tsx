@@ -3,13 +3,13 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { InvoiceStatus } from "@elms/shared";
 import { useInvoices } from "../../lib/billing";
-import { EmptyState, PageHeader, SectionCard, SelectField } from "./ui";
+import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, SelectField, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatCurrency } from "./ui";
 
 export function InvoicesPage() {
   const { t } = useTranslation("app");
   const [statusFilter, setStatusFilter] = useState("");
 
-  const { data, isLoading } = useInvoices(statusFilter ? { status: statusFilter } : undefined);
+  const { data, isLoading, isError, error, refetch } = useInvoices(statusFilter ? { status: statusFilter } : undefined);
 
   return (
     <div className="space-y-6">
@@ -40,43 +40,69 @@ export function InvoicesPage() {
 
         {isLoading && <p className="mt-4 text-sm text-slate-500">{t("labels.loading")}</p>}
 
-        {!isLoading && !data?.items.length && (
+        {!isLoading && isError && (
+          <div className="mt-4">
+            <ErrorState
+              title={t("errors.title")}
+              description={(error as Error)?.message ?? t("errors.fallback")}
+              retryLabel={t("errors.reload")}
+              onRetry={() => void refetch()}
+            />
+          </div>
+        )}
+
+        {!isLoading && !isError && !data?.items.length && (
           <div className="mt-4">
             <EmptyState title={t("empty.noInvoices")} description={t("empty.noInvoicesHelp")} />
           </div>
         )}
 
-        {!isLoading && !!data?.items.length && (
-          <div className="mt-4 space-y-2">
-            {data.items.map((invoice) => (
-              <Link
-                key={invoice.id}
-                to="/app/invoices/$invoiceId"
-                params={{ invoiceId: invoice.id }}
-                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-accent"
-              >
-                <div>
-                  <p className="font-semibold">{invoice.invoiceNumber}</p>
-                  <p className="mt-0.5 text-sm text-slate-500">
-                    {invoice.clientName ?? invoice.caseTitle ?? "—"}
-                  </p>
-                </div>
-                <div className="text-end">
-                  <p className="font-semibold">{invoice.totalAmount}</p>
-                  <span
-                    className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                      invoice.status === InvoiceStatus.PAID
-                        ? "bg-emerald-100 text-emerald-800"
-                        : invoice.status === InvoiceStatus.VOID
-                          ? "bg-red-100 text-red-800"
-                          : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {invoice.status}
-                  </span>
-                </div>
-              </Link>
-            ))}
+        {!isLoading && !isError && !!data?.items.length && (
+          <div className="mt-4">
+            <TableWrapper>
+              <DataTable>
+                <TableHead>
+                  <tr>
+                    <TableHeadCell>{t("billing.invoiceNumber")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.client")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                    <TableHeadCell align="end">{t("billing.total")}</TableHeadCell>
+                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {data.items.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell>{invoice.invoiceNumber}</TableCell>
+                      <TableCell>{invoice.clientName ?? invoice.caseTitle ?? "—"}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                            invoice.status === InvoiceStatus.PAID
+                              ? "bg-emerald-100 text-emerald-800"
+                              : invoice.status === InvoiceStatus.VOID
+                                ? "bg-red-100 text-red-800"
+                                : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
+                          {invoice.status}
+                        </span>
+                      </TableCell>
+                      <TableCell align="end">{formatCurrency(invoice.totalAmount)}</TableCell>
+                      <TableCell align="end">
+                        <Link
+                          to="/app/invoices/$invoiceId"
+                          params={{ invoiceId: invoice.id }}
+                          className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          {t("actions.viewDocument")}
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </DataTable>
+            </TableWrapper>
           </div>
         )}
       </SectionCard>

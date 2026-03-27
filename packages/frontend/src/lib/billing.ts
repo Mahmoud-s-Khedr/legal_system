@@ -14,11 +14,13 @@ import { apiFetch } from "./api";
 
 // ── Invoices ──────────────────────────────────────────────────────────────────
 
-export function useInvoices(filters?: { caseId?: string; clientId?: string; status?: string }) {
+export function useInvoices(filters?: { caseId?: string; clientId?: string; status?: string; from?: string; to?: string }) {
   const params = new URLSearchParams();
   if (filters?.caseId) params.set("caseId", filters.caseId);
   if (filters?.clientId) params.set("clientId", filters.clientId);
   if (filters?.status) params.set("status", filters.status);
+  if (filters?.from) params.set("from", filters.from);
+  if (filters?.to) params.set("to", filters.to);
   const qs = params.toString();
 
   return useQuery({

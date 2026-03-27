@@ -2,6 +2,31 @@ const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.re
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
 const LOCAL_SESSION_STORAGE_KEY = "elms.localSessionToken";
 
+export class ApiError extends Error {
+  status: number;
+  details: unknown;
+
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+async function parseErrorPayload(response: Response) {
+  const payload = await response
+    .json()
+    .catch(() => ({ message: response.statusText || "Request failed" }));
+
+  const message =
+    typeof payload?.message === "string" && payload.message.trim().length > 0
+      ? payload.message
+      : "Request failed";
+
+  throw new ApiError(message, response.status, payload);
+}
+
 function readDesktopLocalSessionToken() {
   if (!isDesktopShell) {
     return null;
@@ -84,8 +109,7 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({ message: "Request failed" }));
-    throw new Error(payload.message ?? "Request failed");
+    await parseErrorPayload(response);
   }
 
   return (await response.json()) as T;
@@ -111,8 +135,7 @@ export async function apiFormFetch<T>(
   });
 
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({ message: "Request failed" }));
-    throw new Error(payload.message ?? "Request failed");
+    await parseErrorPayload(response);
   }
 
   return (await response.json()) as T;

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, ErrorState } from "../../routes/app/ui";
+import { DataTable, EmptyState, ErrorState, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper } from "../../routes/app/ui";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { DocumentViewer } from "./DocumentViewer";
@@ -80,52 +80,65 @@ export function DocumentList({ caseId, clientId, queryKey }: DocumentListProps) 
 
   return (
     <>
-      <ul className="space-y-2">
-        {items.map((doc) => (
-          <li
-            key={doc.id}
-            className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{doc.title}</p>
-              <p className="text-xs text-slate-500">{doc.fileName}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <EnumBadge enumName="DocumentType" value={doc.type} />
-                <ExtractionStatusBadge status={doc.extractionStatus} />
-              </div>
-            </div>
-            <div className="ms-4 flex shrink-0 gap-2">
-              <button
-                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                onClick={() => setViewingDoc(doc)}
-                type="button"
-              >
-                {t("actions.viewDocument")}
-              </button>
-              <button
-                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                onClick={() => void handleDownload(doc)}
-                type="button"
-              >
-                {t("actions.downloadDocument")}
-              </button>
-              <button
-                className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                onClick={() => {
-                  if (window.confirm(t("actions.delete"))) {
-                    void deleteMutation.mutateAsync(doc.id);
-                  }
-                }}
-                type="button"
-                aria-label={`${t("actions.delete")} ${doc.title}`}
-                title={t("actions.delete")}
-              >
-                ×
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <TableWrapper>
+        <DataTable>
+          <TableHead>
+            <tr>
+              <TableHeadCell>{t("labels.title")}</TableHeadCell>
+              <TableHeadCell>{t("documents.fileType")}</TableHeadCell>
+              <TableHeadCell>{t("labels.status")}</TableHeadCell>
+              <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {items.map((doc) => (
+              <TableRow key={doc.id}>
+                <TableCell>
+                  <p className="truncate font-medium">{doc.title}</p>
+                  <p className="text-xs text-slate-500">{doc.fileName}</p>
+                </TableCell>
+                <TableCell>
+                  <EnumBadge enumName="DocumentType" value={doc.type} />
+                </TableCell>
+                <TableCell>
+                  <ExtractionStatusBadge status={doc.extractionStatus} />
+                </TableCell>
+                <TableCell align="end">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                      onClick={() => setViewingDoc(doc)}
+                      type="button"
+                    >
+                      {t("actions.viewDocument")}
+                    </button>
+                    <button
+                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                      onClick={() => void handleDownload(doc)}
+                      type="button"
+                    >
+                      {t("actions.downloadDocument")}
+                    </button>
+                    <button
+                      className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                      onClick={() => {
+                        if (window.confirm(t("actions.delete"))) {
+                          void deleteMutation.mutateAsync(doc.id);
+                        }
+                      }}
+                      type="button"
+                      aria-label={`${t("actions.delete")} ${doc.title}`}
+                      title={t("actions.delete")}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </DataTable>
+      </TableWrapper>
 
       {viewingDoc ? (
         <DocumentViewer

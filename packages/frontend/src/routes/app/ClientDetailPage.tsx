@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { EnumBadge } from "../../components/shared/EnumBadge";
-import { EmptyState, PageHeader, SectionCard } from "./ui";
+import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { useInvoices } from "../../lib/billing";
 
@@ -79,39 +79,61 @@ export function ClientDetailPage() {
       </div>
       <SectionCard title={t("labels.invoices")} description={t("billing.invoicesDescription")}>
         {invoicesQuery.isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
-        {!invoicesQuery.isLoading && !invoicesQuery.data?.items.length && (
+        {!invoicesQuery.isLoading && invoicesQuery.isError && (
+          <ErrorState
+            title={t("errors.title")}
+            description={(invoicesQuery.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void invoicesQuery.refetch()}
+          />
+        )}
+        {!invoicesQuery.isLoading && !invoicesQuery.isError && !invoicesQuery.data?.items.length && (
           <EmptyState title={t("empty.noInvoices")} description={t("empty.noInvoicesHelp")} />
         )}
-        {!invoicesQuery.isLoading && !!invoicesQuery.data?.items.length && (
-          <div className="space-y-2">
-            {invoicesQuery.data.items.map((invoice) => (
-              <Link
-                key={invoice.id}
-                to="/app/invoices/$invoiceId"
-                params={{ invoiceId: invoice.id }}
-                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-accent"
-              >
-                <div>
-                  <p className="font-semibold">{invoice.invoiceNumber}</p>
-                  <p className="mt-0.5 text-sm text-slate-500">{invoice.caseTitle ?? "—"}</p>
-                </div>
-                <div className="text-end">
-                  <p className="font-semibold">{invoice.totalAmount}</p>
-                  <span
-                    className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                      invoice.status === InvoiceStatus.PAID
-                        ? "bg-emerald-100 text-emerald-800"
-                        : invoice.status === InvoiceStatus.VOID
-                          ? "bg-red-100 text-red-800"
-                          : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {invoice.status}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+        {!invoicesQuery.isLoading && !invoicesQuery.isError && !!invoicesQuery.data?.items.length && (
+          <TableWrapper>
+            <DataTable>
+              <TableHead>
+                <tr>
+                  <TableHeadCell>{t("billing.invoice")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.case")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("billing.amount")}</TableHeadCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {invoicesQuery.data.items.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell>
+                      <Link
+                        key={invoice.id}
+                        to="/app/invoices/$invoiceId"
+                        params={{ invoiceId: invoice.id }}
+                        className="font-medium text-accent hover:underline"
+                      >
+                        {invoice.invoiceNumber}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{invoice.caseTitle ?? "—"}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                          invoice.status === InvoiceStatus.PAID
+                            ? "bg-emerald-100 text-emerald-800"
+                            : invoice.status === InvoiceStatus.VOID
+                              ? "bg-red-100 text-red-800"
+                              : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        {invoice.status}
+                      </span>
+                    </TableCell>
+                    <TableCell align="end">{invoice.totalAmount}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          </TableWrapper>
         )}
       </SectionCard>
       <SectionCard description={t("documents.listHelp")} title={t("labels.documents")}>
