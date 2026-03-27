@@ -2724,8 +2724,8 @@ fn find_file_with_prefix_recursive(
 
 pub(crate) fn strip_unc_prefix(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
-    if s.starts_with(r"\\?\") {
-        PathBuf::from(s[4..].to_string())
+    if let Some(stripped) = s.strip_prefix(r"\\?\") {
+        PathBuf::from(stripped)
     } else {
         path.to_path_buf()
     }
