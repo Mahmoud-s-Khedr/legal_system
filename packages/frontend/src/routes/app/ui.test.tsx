@@ -1,7 +1,8 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import { Field, FormAlert } from "./ui";
+import i18n from "../../i18n";
+import { Field, FormAlert, TablePagination } from "./ui";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -61,5 +62,50 @@ describe("shared ui fields", () => {
 
     expect(alert?.getAttribute("aria-live")).toBe("polite");
     expect(alert?.textContent).toContain("Login failed");
+  });
+
+  it("localizes table pagination labels and summary in English", async () => {
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+
+    const view = render(
+      <TablePagination
+        page={2}
+        pageSize={20}
+        total={55}
+        onPageChange={() => undefined}
+        onPageSizeChange={() => undefined}
+      />
+    );
+
+    expect(view.textContent).toContain("Showing 21 to 40 of 55");
+    expect(view.textContent).toContain("Page 2 of 3");
+    expect(view.textContent).toContain("Previous");
+    expect(view.textContent).toContain("Next");
+    expect(view.querySelector("select")?.getAttribute("aria-label")).toBe("Items per page");
+  });
+
+  it("localizes table pagination labels and summary in Arabic", async () => {
+    await act(async () => {
+      await i18n.changeLanguage("ar");
+    });
+
+    const view = render(
+      <TablePagination
+        page={2}
+        pageSize={20}
+        total={55}
+        onPageChange={() => undefined}
+        onPageSizeChange={() => undefined}
+      />
+    );
+
+    expect(view.textContent).toContain("عرض");
+    expect(view.textContent).toContain("من أصل");
+    expect(view.textContent).toContain("الصفحة");
+    expect(view.textContent).toContain("السابق");
+    expect(view.textContent).toContain("التالي");
+    expect(view.querySelector("select")?.getAttribute("aria-label")).toBe("عدد العناصر في الصفحة");
   });
 });

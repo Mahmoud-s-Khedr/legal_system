@@ -210,7 +210,10 @@
   },
   "pagination": {
     "prev": "Précédent",
-    "next": "Suivant"
+    "next": "Suivant",
+    "summary": "Affichage de {{from}} à {{to}} sur {{total}}",
+    "pageStatus": "Page {{page}} sur {{totalPages}}",
+    "pageSize": "Éléments par page"
   },
   "library": {
     "eyebrow": "Base de connaissances juridiques",

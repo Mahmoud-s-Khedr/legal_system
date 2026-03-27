@@ -7,8 +7,11 @@ function getString(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 
-function getPositiveInt(value: unknown, fallback: number) {
-  const parsed = Number.parseInt(typeof value === "string" ? value : String(fallback), 10);
+export function parsePositiveIntSearchParam(value: unknown, fallback: number) {
+  const normalized = typeof value === "number" || typeof value === "string"
+    ? String(value)
+    : String(fallback);
+  const parsed = Number.parseInt(normalized, 10);
   if (Number.isNaN(parsed)) {
     return fallback;
   }
@@ -56,8 +59,8 @@ export function useTableQueryState(options: {
       q: getString(search.q),
       sortBy: getString(search.sortBy, options.defaultSortBy),
       sortDir: (getString(search.sortDir, defaultSortDir) === "asc" ? "asc" : "desc"),
-      page: getPositiveInt(search.page, defaultPage),
-      limit: getPositiveInt(search.limit, defaultLimit),
+      page: parsePositiveIntSearchParam(search.page, defaultPage),
+      limit: parsePositiveIntSearchParam(search.limit, defaultLimit),
       filters
     };
   }, [defaultLimit, defaultPage, defaultSortDir, filterKeys, options.defaultSortBy, search]);
@@ -152,4 +155,3 @@ export function useTableQueryState(options: {
     toApiQueryString
   };
 }
-

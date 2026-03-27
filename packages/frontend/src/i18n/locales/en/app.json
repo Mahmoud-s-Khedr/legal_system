@@ -210,7 +210,10 @@
   },
   "pagination": {
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "summary": "Showing {{from}} to {{to}} of {{total}}",
+    "pageStatus": "Page {{page}} of {{totalPages}}",
+    "pageSize": "Items per page"
   },
   "library": {
     "eyebrow": "Legal knowledge base",

@@ -4,6 +4,7 @@ import { ClientType, type ClientListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { EnumBadge } from "../../components/shared/EnumBadge";
+import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper } from "./ui";
 
@@ -51,7 +52,7 @@ export function ClientsPage() {
             onChange={(value) => table.setFilter("type", value)}
             options={[
               { value: "", label: t("labels.all") },
-              ...Object.values(ClientType).map((value) => ({ value, label: value }))
+              ...Object.values(ClientType).map((value) => ({ value, label: getEnumLabel(t, "ClientType", value) }))
             ]}
           />
         </TableToolbar>

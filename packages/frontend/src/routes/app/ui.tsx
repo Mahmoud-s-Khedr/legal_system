@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type PropsWithChildren, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 
 export function PageHeader({
@@ -137,17 +138,28 @@ export function TablePagination({
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }) {
+  const { t } = useTranslation("app");
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
+  const lang = i18n.resolvedLanguage ?? "ar";
+  const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
+  const numberFormatter = new Intl.NumberFormat(locale);
+
+  const formattedFrom = numberFormatter.format(from);
+  const formattedTo = numberFormatter.format(to);
+  const formattedTotal = numberFormatter.format(total);
+  const formattedPage = numberFormatter.format(page);
+  const formattedTotalPages = numberFormatter.format(totalPages);
 
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
       <p>
-        {from}-{to} / {total}
+        {t("pagination.summary", { from: formattedFrom, to: formattedTo, total: formattedTotal })}
       </p>
       <div className="flex items-center gap-2">
         <select
+          aria-label={t("pagination.pageSize")}
           className="rounded-lg border border-slate-200 bg-white px-2 py-1"
           value={String(pageSize)}
           onChange={(event) => onPageSizeChange(Number.parseInt(event.target.value, 10))}
@@ -164,10 +176,10 @@ export function TablePagination({
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
-          Prev
+          {t("pagination.prev")}
         </button>
         <span>
-          {page}/{totalPages}
+          {t("pagination.pageStatus", { page: formattedPage, totalPages: formattedTotalPages })}
         </span>
         <button
           type="button"
@@ -175,7 +187,7 @@ export function TablePagination({
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >
-          Next
+          {t("pagination.next")}
         </button>
       </div>
     </div>

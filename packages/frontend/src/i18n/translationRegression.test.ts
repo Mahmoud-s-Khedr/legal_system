@@ -46,7 +46,15 @@ const criticalKeys: Array<{ ns: Namespace; key: string }> = [
   { ns: "app", key: "library.uploadSuccess" },
   { ns: "app", key: "documents.loadingPdf" },
   { ns: "app", key: "documents.chooseFile" },
-  { ns: "app", key: "documents.noFileSelected" }
+  { ns: "app", key: "documents.noFileSelected" },
+  { ns: "app", key: "pagination.prev" },
+  { ns: "app", key: "pagination.next" },
+  { ns: "app", key: "pagination.summary" },
+  { ns: "app", key: "pagination.pageStatus" },
+  { ns: "app", key: "pagination.pageSize" },
+  { ns: "app", key: "enums.ClientType.INDIVIDUAL" },
+  { ns: "app", key: "enums.ClientType.COMPANY" },
+  { ns: "app", key: "enums.ClientType.GOVERNMENT" }
 ];
 
 describe("i18n critical translation coverage", () => {
