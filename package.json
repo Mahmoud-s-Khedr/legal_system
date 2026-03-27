@@ -11,7 +11,7 @@
     "dev:tauri": "pnpm --filter @elms/desktop tauri:dev",
     "build": "pnpm compile",
     "compile": "turbo run compile",
-    "validate": "pnpm check:lockfile && pnpm prisma:generate && pnpm lint && pnpm typecheck && pnpm test && pnpm test:coverage",
+    "validate": "pnpm check:lockfile && pnpm prisma:generate && pnpm lint && pnpm i18n:check && pnpm typecheck && pnpm test && pnpm test:coverage",
     "check:lockfile": "bash ./scripts/check-lockfile.sh",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -32,7 +32,8 @@
     "release:desktop:local": "bash ./scripts/release-desktop-local.sh",
     "release:web": "pnpm --filter @elms/web docker:build:backend && pnpm --filter @elms/web docker:build:frontend",
     "seed:dev": "NODE_ENV=development pnpm --filter @elms/backend seed:dev",
-    "seed:dev:cloud": "DATABASE_URL=postgresql://elms:elms@127.0.0.1:5432/elms_cloud?schema=public NODE_ENV=development pnpm --filter @elms/backend seed:dev:cloud"
+    "seed:dev:cloud": "DATABASE_URL=postgresql://elms:elms@127.0.0.1:5432/elms_cloud?schema=public NODE_ENV=development pnpm --filter @elms/backend seed:dev:cloud",
+    "i18n:check": "pnpm --filter @elms/frontend i18n:check"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

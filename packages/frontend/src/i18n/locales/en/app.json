@@ -49,7 +49,9 @@
     "connect": "Connect",
     "disconnect": "Disconnect",
     "more": "More actions",
-    "clear": "Clear"
+    "clear": "Clear",
+    "close": "Close",
+    "uploadAnother": "Upload another"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -144,7 +146,8 @@
     "caseId": "Case ID",
     "caseIdPlaceholder": "Paste case UUID (optional)",
     "clientId": "Client ID",
-    "clientIdPlaceholder": "Paste client UUID (optional)"
+    "clientIdPlaceholder": "Paste client UUID (optional)",
+    "sort": "Sort"
   },
   "empty": {
     "noCourts": "No court stages yet",
@@ -198,7 +201,9 @@
     "noResults": "No results found",
     "noResultsHelp": "Try different keywords or adjust the filters.",
     "noSessions": "No research sessions yet",
-    "noSessionsHelp": "Start a new session to ask the AI assistant a legal question."
+    "noSessionsHelp": "Start a new session to ask the AI assistant a legal question.",
+    "noCustomReports": "No custom reports yet.",
+    "noData": "No data available."
   },
   "common": {
     "loading": "Loading…"
@@ -253,7 +258,30 @@
       "circular": "Circular",
       "article": "Article",
       "other": "Other"
-    }
+    },
+    "uploadTitle": "Upload legal document",
+    "uploadDescription": "Upload a legal source file and provide metadata for indexing.",
+    "uploadFile": "Upload file",
+    "uploadSuccess": "Document uploaded successfully",
+    "uploading": "Uploading...",
+    "upload": "Upload",
+    "allowedTypes": "Allowed types: PDF, DOCX, JPG, PNG, TIFF",
+    "dropFile": "Drop a file here or click to choose",
+    "documentMetadata": "Document metadata",
+    "type": "Type",
+    "scope": "Scope",
+    "scopeFirm": "Firm",
+    "scopeSystem": "System",
+    "category": "Category",
+    "noCategory": "No category",
+    "lawNumber": "Law number",
+    "lawYear": "Law year",
+    "legislationStatus": "Legislation status",
+    "judgmentNumber": "Judgment number",
+    "judgmentDate": "Judgment date",
+    "author": "Author",
+    "publishedAt": "Published at",
+    "extractionPending": "Text extraction is pending"
   },
   "research": {
     "eyebrow": "AI-powered legal research",
@@ -350,7 +378,8 @@
     "relatedHearings": "Related hearings",
     "relatedHearingsHelp": "Sessions linked to this case.",
     "relatedTasks": "Related tasks",
-    "relatedTasksHelp": "Open tasks connected to this matter."
+    "relatedTasksHelp": "Open tasks connected to this matter.",
+    "searchPlaceholder": "Search by title or case number"
   },
   "hearings": {
     "eyebrow": "Court calendar",
@@ -379,11 +408,17 @@
       "week": "Week",
       "day": "Day"
     },
-    "conflictWarning": "This lawyer already has a hearing around the selected time."
+    "conflictWarning": "This lawyer already has a hearing around the selected time.",
+    "searchPlaceholder": "Search hearings"
   },
   "calendar": {
     "title": "Unified Calendar",
-    "description": "View hearings, invoices, and tasks in one planning timeline."
+    "description": "View hearings, invoices, and tasks in one planning timeline.",
+    "eventTypes": {
+      "hearing": "Hearing",
+      "task": "Task",
+      "invoice": "Invoice"
+    }
   },
   "tasks": {
     "eyebrow": "Task execution",
@@ -395,7 +430,8 @@
     "createTitle": "Create task",
     "createHelp": "Assign due dates, ownership, and optional case linkage.",
     "editTitle": "Task details",
-    "editHelp": "View and update task status, assignment, and deadline."
+    "editHelp": "View and update task status, assignment, and deadline.",
+    "searchPlaceholder": "Search tasks"
   },
   "users": {
     "eyebrow": "Team management",
@@ -420,7 +456,9 @@
     "cloudTitle": "Cloud onboarding",
     "cloudHelp": "Cloud mode uses invitation-based onboarding instead of direct user creation.",
     "cloudOnly": "Direct creation is disabled in cloud mode",
-    "cloudOnlyHelp": "Use the Invitations section to onboard users in cloud deployments."
+    "cloudOnlyHelp": "Use the Invitations section to onboard users in cloud deployments.",
+    "searchPlaceholder": "Search users",
+    "seatLimitReached": "Seat limit reached for this plan."
   },
   "invitations": {
     "eyebrow": "Cloud onboarding",
@@ -431,7 +469,8 @@
     "createTitle": "Send invitation",
     "createHelp": "Choose a role and issue a short-lived onboarding token.",
     "cloudOnly": "Invitations are unavailable in desktop mode",
-    "cloudOnlyHelp": "Desktop mode creates users directly from the Users section."
+    "cloudOnlyHelp": "Desktop mode creates users directly from the Users section.",
+    "searchPlaceholder": "Search invitations"
   },
   "settings": {
     "eyebrow": "Firm settings",
@@ -559,7 +598,12 @@
     "noDocuments": "No documents yet",
     "noDocumentsHelp": "Upload the first document to begin building the matter file.",
     "fileTitle": "Document title",
-    "fileType": "Document type"
+    "fileType": "Document type",
+    "searchPlaceholder": "Search by title or file type",
+    "chooseFile": "Choose file",
+    "noFileSelected": "No file selected",
+    "loadingPdf": "Loading PDF...",
+    "pdfRenderFailed": "Failed to render PDF"
   },
   "search": {
     "eyebrow": "Full-text search",
@@ -718,7 +762,8 @@
     "issue": "Issue",
     "recordPayment": "Record Payment",
     "void": "Void",
-    "status": "Status"
+    "status": "Status",
+    "searchPlaceholder": "Search by invoice number or client"
   },
   "reports": {
     "title": "Reports",
@@ -738,7 +783,26 @@
     "daysOverdue": "Days overdue",
     "exportExcel": "Export Excel",
     "exportPdf": "Export PDF",
-    "noData": "No data found in the selected date range."
+    "noData": "No data found in the selected date range.",
+    "eyebrow": "Custom analytics",
+    "builderTitle": "Report builder",
+    "builderDescription": "Create, run, and export custom reports.",
+    "newReport": "New report",
+    "savedReports": "Saved reports",
+    "reportName": "Report name",
+    "dateFrom": "Date from",
+    "dateTo": "Date to",
+    "ranAt": "Ran at",
+    "results": "Results",
+    "run": "Run",
+    "searchPlaceholder": "Search result rows",
+    "type": {
+      "case-status": "Case status",
+      "hearing-outcomes": "Hearing outcomes",
+      "lawyer-workload": "Lawyer workload",
+      "revenue": "Revenue",
+      "outstanding-balances": "Outstanding balances"
+    }
   },
   "templates": {
     "title": "Document Templates",
@@ -773,7 +837,10 @@
     "preferencesDescriptionLocal": "Choose which notifications you want to see inside ELMS and on the desktop device.",
     "channelSettings": "Channel Settings",
     "channelSettingsLocal": "Visible Channels",
-    "eventType": "Event Type"
+    "eventType": "Event Type",
+    "searchPlaceholder": "Search notifications",
+    "read": "Read",
+    "unread": "Unread"
   },
   "portal": {
     "clientPortal": "Client Portal",
@@ -806,5 +873,46 @@
     "notificationsUpdated": "Notifications updated.",
     "invoiceIssued": "Invoice issued successfully.",
     "invoiceVoided": "Invoice voided successfully."
+  },
+  "import": {
+    "eyebrow": "Bulk import",
+    "title": "Import data",
+    "description": "Upload a file, preview rows, then import validated records.",
+    "step": {
+      "upload": "Upload",
+      "preview": "Preview",
+      "results": "Results"
+    },
+    "uploadFile": "Upload file",
+    "entity": {
+      "clients": "Clients",
+      "cases": "Cases"
+    },
+    "dropFile": "Drop a CSV/Excel file or click to browse",
+    "allowedTypes": "Allowed types: .csv, .xlsx, .xls",
+    "templateHint": "Need a template?",
+    "downloadTemplate": "Download template",
+    "preview": "Preview",
+    "previewTitle": "Preview rows",
+    "totalRows": "Total rows",
+    "validRows": "Valid rows",
+    "invalidRows": "Invalid rows",
+    "searchPlaceholder": "Search preview rows",
+    "row": "Row",
+    "status": "Status",
+    "import": "Import",
+    "imported": "Imported",
+    "failed": "Failed",
+    "resultsTitle": "Import results",
+    "importMore": "Import more",
+    "failedRows": "Failed rows",
+    "downloadErrors": "Download errors"
+  },
+  "partyRoles": {
+    "PLAINTIFF": "Plaintiff",
+    "DEFENDANT": "Defendant"
+  },
+  "caseTypes": {
+    "CIVIL": "Civil"
   }
 }

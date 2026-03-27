@@ -5,7 +5,7 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 import { Field, FormAlert, PrimaryButton, SectionCard } from "../app/ui";
 
 export function PortalAcceptInvitePage() {
-  const { t } = useTranslation("app");
+  const { t } = useTranslation(["app", "auth"]);
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { token?: string };
   const [password, setPassword] = useState("");
@@ -17,7 +17,7 @@ export function PortalAcceptInvitePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
-      setError(t("auth.passwordMismatch"));
+      setError(t("auth:passwordMismatch"));
       return;
     }
     setLoading(true);
@@ -55,7 +55,7 @@ export function PortalAcceptInvitePage() {
               {error ? <FormAlert message={error} /> : null}
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <Field
-                  label={t("auth.newPassword")}
+                  label={t("auth:newPassword")}
                   minLength={8}
                   required
                   type="password"
@@ -63,7 +63,7 @@ export function PortalAcceptInvitePage() {
                   onChange={setPassword}
                 />
                 <Field
-                  label={t("auth.confirmPassword")}
+                  label={t("auth:confirmPassword")}
                   minLength={8}
                   required
                   type="password"

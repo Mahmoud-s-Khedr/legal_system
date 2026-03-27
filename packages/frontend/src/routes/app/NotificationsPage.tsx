@@ -80,14 +80,14 @@ export function NotificationsPage() {
         <div className="mb-4 max-w-xs">
           <SelectField
             label={t("labels.status")}
-            value={table.state.filters.isRead ?? ""}
-            onChange={(value) => table.setFilter("isRead", value)}
-            options={[
-              { value: "", label: t("labels.all") },
-              { value: "false", label: "Unread" },
-              { value: "true", label: "Read" }
-            ]}
-          />
+              value={table.state.filters.isRead ?? ""}
+              onChange={(value) => table.setFilter("isRead", value)}
+              options={[
+                { value: "", label: t("labels.all") },
+                { value: "false", label: t("notifications.unread") },
+                { value: "true", label: t("notifications.read") }
+              ]}
+            />
         </div>
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
         {!isLoading && isError && (
@@ -122,7 +122,7 @@ export function NotificationsPage() {
                       </TableCell>
                       <TableCell>{n.body}</TableCell>
                       <TableCell>{formatDateTime(n.createdAt)}</TableCell>
-                      <TableCell>{n.isRead ? "Read" : "Unread"}</TableCell>
+                      <TableCell>{n.isRead ? t("notifications.read") : t("notifications.unread")}</TableCell>
                       <TableCell align="end">
                         {!n.isRead ? (
                           <button

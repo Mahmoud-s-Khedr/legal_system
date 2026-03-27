@@ -49,7 +49,9 @@
     "connect": "Connecter",
     "disconnect": "Déconnecter",
     "more": "Plus d'actions",
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "close": "Fermer",
+    "uploadAnother": "Téléverser un autre"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -74,7 +76,8 @@
       "finance": "Finance",
       "tools": "Analyses & Outils",
       "administration": "Administration"
-    }
+    },
+    "calendar": "Calendrier"
   },
   "modes": {
     "local": "Mode desktop",
@@ -143,7 +146,8 @@
     "caseId": "ID du dossier",
     "caseIdPlaceholder": "Collez l'UUID du dossier (optionnel)",
     "clientId": "ID du client",
-    "clientIdPlaceholder": "Collez l'UUID du client (optionnel)"
+    "clientIdPlaceholder": "Collez l'UUID du client (optionnel)",
+    "sort": "Trier"
   },
   "empty": {
     "noHearings": "Aucune audience",
@@ -197,7 +201,9 @@
     "noResults": "Aucun résultat",
     "noResultsHelp": "Essayez d'autres mots-clés ou ajustez les filtres.",
     "noSessions": "Aucune session de recherche",
-    "noSessionsHelp": "Démarrez une nouvelle session pour poser une question juridique à l'assistant IA."
+    "noSessionsHelp": "Démarrez une nouvelle session pour poser une question juridique à l'assistant IA.",
+    "noCustomReports": "Aucun rapport personnalisé pour le moment.",
+    "noData": "Aucune donnée disponible."
   },
   "common": {
     "loading": "Chargement…"
@@ -252,7 +258,30 @@
       "circular": "Circulaire",
       "article": "Article",
       "other": "Autre"
-    }
+    },
+    "uploadTitle": "Téléverser un document juridique",
+    "uploadDescription": "Téléversez un fichier juridique et renseignez les métadonnées pour l'indexation.",
+    "uploadFile": "Téléverser un fichier",
+    "uploadSuccess": "Document téléversé avec succès",
+    "uploading": "Téléversement...",
+    "upload": "Téléverser",
+    "allowedTypes": "Types autorisés: PDF, DOCX, JPG, PNG, TIFF",
+    "dropFile": "Déposez un fichier ici ou cliquez pour choisir",
+    "documentMetadata": "Métadonnées du document",
+    "type": "Type",
+    "scope": "Portée",
+    "scopeFirm": "Cabinet",
+    "scopeSystem": "Système",
+    "category": "Catégorie",
+    "noCategory": "Aucune catégorie",
+    "lawNumber": "Numéro de loi",
+    "lawYear": "Année de la loi",
+    "legislationStatus": "Statut de la législation",
+    "judgmentNumber": "Numéro du jugement",
+    "judgmentDate": "Date du jugement",
+    "author": "Auteur",
+    "publishedAt": "Date de publication",
+    "extractionPending": "Extraction du texte en attente"
   },
   "research": {
     "eyebrow": "Recherche juridique par IA",
@@ -349,7 +378,8 @@
     "relatedHearings": "Audiences liées",
     "relatedHearingsHelp": "Audiences enregistrées pour ce dossier.",
     "relatedTasks": "Tâches liées",
-    "relatedTasksHelp": "Tâches ouvertes rattachées à ce dossier."
+    "relatedTasksHelp": "Tâches ouvertes rattachées à ce dossier.",
+    "searchPlaceholder": "Rechercher par titre ou numéro de dossier"
   },
   "lookups": {
     "title": "Options de listes",
@@ -426,7 +456,8 @@
       "week": "Semaine",
       "day": "Jour"
     },
-    "conflictWarning": "Ce juriste a déjà une audience autour de ce créneau."
+    "conflictWarning": "Ce juriste a déjà une audience autour de ce créneau.",
+    "searchPlaceholder": "Rechercher des audiences"
   },
   "tasks": {
     "eyebrow": "Exécution",
@@ -437,7 +468,9 @@
     "createTitle": "Créer une tâche",
     "createHelp": "Définissez échéance, responsable et lien dossier si nécessaire.",
     "editTitle": "Détails de la tâche",
-    "editHelp": "Consultez et mettez à jour le statut, le responsable et l'échéance."
+    "editHelp": "Consultez et mettez à jour le statut, le responsable et l'échéance.",
+    "overdue": "En retard uniquement",
+    "searchPlaceholder": "Rechercher des tâches"
   },
   "users": {
     "eyebrow": "Équipe",
@@ -462,7 +495,9 @@
     "cloudTitle": "Onboarding cloud",
     "cloudHelp": "Le mode cloud utilise les invitations au lieu de la création directe.",
     "cloudOnly": "Création directe désactivée en mode cloud",
-    "cloudOnlyHelp": "Utilisez la section Invitations pour l'onboarding cloud."
+    "cloudOnlyHelp": "Utilisez la section Invitations pour l'onboarding cloud.",
+    "searchPlaceholder": "Rechercher des utilisateurs",
+    "seatLimitReached": "Limite d'utilisateurs atteinte pour ce plan."
   },
   "invitations": {
     "eyebrow": "Onboarding cloud",
@@ -473,7 +508,8 @@
     "createTitle": "Envoyer une invitation",
     "createHelp": "Choisissez un rôle et émettez un jeton temporaire.",
     "cloudOnly": "Les invitations ne sont pas disponibles en mode desktop",
-    "cloudOnlyHelp": "Le mode desktop crée les utilisateurs directement depuis Utilisateurs."
+    "cloudOnlyHelp": "Le mode desktop crée les utilisateurs directement depuis Utilisateurs.",
+    "searchPlaceholder": "Rechercher des invitations"
   },
   "settings": {
     "eyebrow": "Paramètres du cabinet",
@@ -553,7 +589,12 @@
     "noDocuments": "Aucun document",
     "noDocumentsHelp": "Téléversez le premier document pour commencer à constituer le dossier.",
     "fileTitle": "Titre du document",
-    "fileType": "Type de document"
+    "fileType": "Type de document",
+    "searchPlaceholder": "Rechercher par titre ou type de fichier",
+    "chooseFile": "Choisir un fichier",
+    "noFileSelected": "Aucun fichier sélectionné",
+    "loadingPdf": "Chargement du PDF...",
+    "pdfRenderFailed": "Échec du rendu du PDF"
   },
   "search": {
     "eyebrow": "Recherche plein texte",
@@ -711,7 +752,9 @@
     "issue": "Émettre",
     "recordPayment": "Enregistrer un paiement",
     "void": "Annuler",
-    "status": "Statut"
+    "status": "Statut",
+    "invoiceNumber": "N° facture",
+    "searchPlaceholder": "Rechercher par numéro de facture ou client"
   },
   "reports": {
     "title": "Rapports",
@@ -731,7 +774,26 @@
     "daysOverdue": "Jours de retard",
     "exportExcel": "Exporter Excel",
     "exportPdf": "Exporter PDF",
-    "noData": "Aucune donnée trouvée pour la période sélectionnée."
+    "noData": "Aucune donnée trouvée pour la période sélectionnée.",
+    "eyebrow": "Analyses personnalisées",
+    "builderTitle": "Générateur de rapports",
+    "builderDescription": "Créer, exécuter et exporter des rapports personnalisés.",
+    "newReport": "Nouveau rapport",
+    "savedReports": "Rapports enregistrés",
+    "reportName": "Nom du rapport",
+    "dateFrom": "Date de début",
+    "dateTo": "Date de fin",
+    "ranAt": "Exécuté le",
+    "results": "Résultats",
+    "run": "Exécuter",
+    "searchPlaceholder": "Rechercher dans les lignes",
+    "type": {
+      "case-status": "Statut des dossiers",
+      "hearing-outcomes": "Résultats des audiences",
+      "lawyer-workload": "Charge de travail des juristes",
+      "revenue": "Revenus",
+      "outstanding-balances": "Soldes impayés"
+    }
   },
   "templates": {
     "title": "Modèles de documents",
@@ -766,7 +828,10 @@
     "preferencesDescriptionLocal": "Choisissez quelles notifications voir dans ELMS et sur l'appareil desktop.",
     "channelSettings": "Paramètres des canaux",
     "channelSettingsLocal": "Canaux visibles",
-    "eventType": "Type d'événement"
+    "eventType": "Type d'événement",
+    "searchPlaceholder": "Rechercher des notifications",
+    "read": "Lue",
+    "unread": "Non lue"
   },
   "portal": {
     "clientPortal": "Portail client",
@@ -798,5 +863,55 @@
     "notificationsUpdated": "Notifications mises à jour.",
     "invoiceIssued": "Facture émise avec succès.",
     "invoiceVoided": "Facture annulée avec succès."
+  },
+  "calendar": {
+    "title": "Calendrier unifié",
+    "description": "Voir audiences, tâches et factures dans une seule chronologie.",
+    "eventTypes": {
+      "hearing": "Audience",
+      "task": "Tâche",
+      "invoice": "Facture"
+    }
+  },
+  "import": {
+    "eyebrow": "Import en masse",
+    "title": "Importer des données",
+    "description": "Téléversez un fichier, prévisualisez les lignes, puis importez les enregistrements valides.",
+    "step": {
+      "upload": "Téléversement",
+      "preview": "Aperçu",
+      "results": "Résultats"
+    },
+    "uploadFile": "Téléverser un fichier",
+    "entity": {
+      "clients": "Clients",
+      "cases": "Dossiers"
+    },
+    "dropFile": "Déposez un fichier CSV/Excel ou cliquez pour parcourir",
+    "allowedTypes": "Types autorisés: .csv, .xlsx, .xls",
+    "templateHint": "Besoin d'un modèle?",
+    "downloadTemplate": "Télécharger le modèle",
+    "preview": "Aperçu",
+    "previewTitle": "Aperçu des lignes",
+    "totalRows": "Lignes totales",
+    "validRows": "Lignes valides",
+    "invalidRows": "Lignes invalides",
+    "searchPlaceholder": "Rechercher dans l'aperçu",
+    "row": "Ligne",
+    "status": "Statut",
+    "import": "Importer",
+    "imported": "Importées",
+    "failed": "Échouées",
+    "resultsTitle": "Résultats de l'import",
+    "importMore": "Importer plus",
+    "failedRows": "Lignes échouées",
+    "downloadErrors": "Télécharger les erreurs"
+  },
+  "partyRoles": {
+    "PLAINTIFF": "Demandeur",
+    "DEFENDANT": "Défendeur"
+  },
+  "caseTypes": {
+    "CIVIL": "Civil"
   }
 }

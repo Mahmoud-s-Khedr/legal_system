@@ -50,7 +50,9 @@
     "connect": "ربط",
     "disconnect": "فصل",
     "more": "إجراءات إضافية",
-    "clear": "مسح"
+    "clear": "مسح",
+    "close": "إغلاق",
+    "uploadAnother": "رفع ملف آخر"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -145,7 +147,8 @@
     "caseId": "رقم القضية",
     "caseIdPlaceholder": "الصق معرّف القضية (اختياري)",
     "clientId": "رقم العميل",
-    "clientIdPlaceholder": "الصق معرّف العميل (اختياري)"
+    "clientIdPlaceholder": "الصق معرّف العميل (اختياري)",
+    "sort": "الترتيب"
   },
   "empty": {
     "noHearings": "لا توجد جلسات بعد",
@@ -199,7 +202,9 @@
     "noResults": "لا توجد نتائج",
     "noResultsHelp": "جرّب كلمات مختلفة أو عدّل المرشحات.",
     "noSessions": "لا توجد جلسات بحث بعد",
-    "noSessionsHelp": "ابدأ جلسة جديدة لطرح سؤال قانوني على المساعد الذكي."
+    "noSessionsHelp": "ابدأ جلسة جديدة لطرح سؤال قانوني على المساعد الذكي.",
+    "noCustomReports": "لا توجد تقارير مخصصة بعد.",
+    "noData": "لا توجد بيانات متاحة."
   },
   "common": {
     "loading": "جارٍ التحميل…"
@@ -254,7 +259,30 @@
       "circular": "منشور",
       "article": "مقالة",
       "other": "أخرى"
-    }
+    },
+    "uploadTitle": "رفع مستند قانوني",
+    "uploadDescription": "ارفع ملفًا قانونيًا وأدخل البيانات الوصفية لفهرسته.",
+    "uploadFile": "رفع ملف",
+    "uploadSuccess": "تم رفع المستند بنجاح",
+    "uploading": "جارٍ الرفع...",
+    "upload": "رفع",
+    "allowedTypes": "الأنواع المسموح بها: PDF وDOCX وJPG وPNG وTIFF",
+    "dropFile": "أسقط ملفًا هنا أو انقر للاختيار",
+    "documentMetadata": "بيانات المستند",
+    "type": "النوع",
+    "scope": "النطاق",
+    "scopeFirm": "المكتب",
+    "scopeSystem": "النظام",
+    "category": "الفئة",
+    "noCategory": "بدون فئة",
+    "lawNumber": "رقم القانون",
+    "lawYear": "سنة القانون",
+    "legislationStatus": "حالة التشريع",
+    "judgmentNumber": "رقم الحكم",
+    "judgmentDate": "تاريخ الحكم",
+    "author": "المؤلف",
+    "publishedAt": "تاريخ النشر",
+    "extractionPending": "استخراج النص قيد الانتظار"
   },
   "research": {
     "eyebrow": "بحث قانوني بالذكاء الاصطناعي",
@@ -351,7 +379,8 @@
     "relatedHearings": "الجلسات المرتبطة",
     "relatedHearingsHelp": "الجلسات المسجلة لهذه القضية.",
     "relatedTasks": "المهام المرتبطة",
-    "relatedTasksHelp": "المهام المفتوحة المرتبطة بهذه القضية."
+    "relatedTasksHelp": "المهام المفتوحة المرتبطة بهذه القضية.",
+    "searchPlaceholder": "ابحث بالعنوان أو رقم القضية"
   },
   "lookups": {
     "title": "خيارات القوائم",
@@ -438,11 +467,17 @@
       "week": "أسبوع",
       "day": "يوم"
     },
-    "conflictWarning": "يوجد تعارض زمني للمحامي المحدد حول هذا الموعد."
+    "conflictWarning": "يوجد تعارض زمني للمحامي المحدد حول هذا الموعد.",
+    "searchPlaceholder": "ابحث في الجلسات"
   },
   "calendar": {
     "title": "التقويم الموحد",
-    "description": "عرض الجلسات والفواتير والمهام في مخطط زمني واحد."
+    "description": "عرض الجلسات والفواتير والمهام في مخطط زمني واحد.",
+    "eventTypes": {
+      "hearing": "جلسة",
+      "task": "مهمة",
+      "invoice": "فاتورة"
+    }
   },
   "tasks": {
     "eyebrow": "تنفيذ المهام",
@@ -454,7 +489,8 @@
     "createTitle": "إنشاء مهمة",
     "createHelp": "حدد الاستحقاق والمسؤول والربط بالقضية عند الحاجة.",
     "editTitle": "تفاصيل المهمة",
-    "editHelp": "عرض وتعديل حالة المهمة والمسؤول وتاريخ الاستحقاق."
+    "editHelp": "عرض وتعديل حالة المهمة والمسؤول وتاريخ الاستحقاق.",
+    "searchPlaceholder": "ابحث في المهام"
   },
   "users": {
     "eyebrow": "إدارة الفريق",
@@ -480,7 +516,8 @@
     "cloudHelp": "في الوضع السحابي يتم الانضمام عبر الدعوات بدل الإنشاء المباشر.",
     "cloudOnly": "الإنشاء المباشر غير متاح في الوضع السحابي",
     "cloudOnlyHelp": "استخدم قسم الدعوات لإضافة مستخدمين في النشر السحابي.",
-    "seatLimitReached": "تم الوصول إلى الحد الأقصى لعدد المستخدمين في هذا الإصدار."
+    "seatLimitReached": "تم الوصول إلى الحد الأقصى لعدد المستخدمين في هذا الإصدار.",
+    "searchPlaceholder": "ابحث في المستخدمين"
   },
   "invitations": {
     "eyebrow": "الانضمام السحابي",
@@ -491,7 +528,8 @@
     "createTitle": "إرسال دعوة",
     "createHelp": "اختر الدور ثم أنشئ رمز انضمام مؤقت.",
     "cloudOnly": "الدعوات غير متاحة في وضع سطح المكتب",
-    "cloudOnlyHelp": "في وضع سطح المكتب يتم إنشاء المستخدمين مباشرة من قسم المستخدمين."
+    "cloudOnlyHelp": "في وضع سطح المكتب يتم إنشاء المستخدمين مباشرة من قسم المستخدمين.",
+    "searchPlaceholder": "ابحث في الدعوات"
   },
   "settings": {
     "eyebrow": "إعدادات المكتب",
@@ -573,7 +611,10 @@
     "fileTitle": "عنوان المستند",
     "fileType": "نوع المستند",
     "chooseFile": "اختر ملفاً",
-    "noFileSelected": "لم يُختَر ملف"
+    "noFileSelected": "لم يُختَر ملف",
+    "searchPlaceholder": "ابحث بالعنوان أو نوع الملف",
+    "loadingPdf": "جارٍ تحميل ملف PDF...",
+    "pdfRenderFailed": "تعذر عرض ملف PDF"
   },
   "search": {
     "eyebrow": "البحث الشامل",
@@ -732,7 +773,8 @@
     "issue": "إصدار",
     "recordPayment": "تسجيل دفعة",
     "void": "إلغاء",
-    "status": "الحالة"
+    "status": "الحالة",
+    "searchPlaceholder": "ابحث برقم الفاتورة أو العميل"
   },
   "reports": {
     "title": "التقارير",
@@ -752,7 +794,26 @@
     "daysOverdue": "أيام التأخر",
     "exportExcel": "تصدير Excel",
     "exportPdf": "تصدير PDF",
-    "noData": "لا توجد بيانات في النطاق الزمني المحدد."
+    "noData": "لا توجد بيانات في النطاق الزمني المحدد.",
+    "eyebrow": "تحليلات مخصصة",
+    "builderTitle": "منشئ التقارير",
+    "builderDescription": "أنشئ وشغّل وصدّر تقارير مخصصة.",
+    "newReport": "تقرير جديد",
+    "savedReports": "التقارير المحفوظة",
+    "reportName": "اسم التقرير",
+    "dateFrom": "من تاريخ",
+    "dateTo": "إلى تاريخ",
+    "ranAt": "وقت التشغيل",
+    "results": "النتائج",
+    "run": "تشغيل",
+    "searchPlaceholder": "ابحث داخل النتائج",
+    "type": {
+      "case-status": "حالة القضايا",
+      "hearing-outcomes": "نتائج الجلسات",
+      "lawyer-workload": "عبء عمل المحامين",
+      "revenue": "الإيرادات",
+      "outstanding-balances": "الأرصدة المستحقة"
+    }
   },
   "templates": {
     "title": "نماذج المستندات",
@@ -816,7 +877,10 @@
     "preferencesDescriptionLocal": "اختر الإشعارات التي تريد رؤيتها داخل ELMS وعلى جهاز سطح المكتب.",
     "channelSettings": "إعدادات القنوات",
     "channelSettingsLocal": "القنوات الظاهرة",
-    "eventType": "نوع الحدث"
+    "eventType": "نوع الحدث",
+    "searchPlaceholder": "ابحث في الإشعارات",
+    "read": "مقروء",
+    "unread": "غير مقروء"
   },
   "portal": {
     "clientPortal": "بوابة العملاء",
@@ -849,5 +913,46 @@
     "notificationsUpdated": "تم تحديث الإشعارات.",
     "invoiceIssued": "تم إصدار الفاتورة بنجاح.",
     "invoiceVoided": "تم إلغاء الفاتورة بنجاح."
+  },
+  "import": {
+    "eyebrow": "استيراد جماعي",
+    "title": "استيراد البيانات",
+    "description": "ارفع ملفًا، راجع الصفوف، ثم نفّذ الاستيراد للصفوف الصالحة.",
+    "step": {
+      "upload": "رفع",
+      "preview": "مراجعة",
+      "results": "النتائج"
+    },
+    "uploadFile": "رفع ملف",
+    "entity": {
+      "clients": "العملاء",
+      "cases": "القضايا"
+    },
+    "dropFile": "أسقط ملف CSV/Excel أو انقر للاختيار",
+    "allowedTypes": "الأنواع المسموح بها: .csv, .xlsx, .xls",
+    "templateHint": "تحتاج قالبًا؟",
+    "downloadTemplate": "تنزيل القالب",
+    "preview": "مراجعة",
+    "previewTitle": "معاينة الصفوف",
+    "totalRows": "إجمالي الصفوف",
+    "validRows": "الصفوف الصالحة",
+    "invalidRows": "الصفوف غير الصالحة",
+    "searchPlaceholder": "ابحث في صفوف المعاينة",
+    "row": "الصف",
+    "status": "الحالة",
+    "import": "استيراد",
+    "imported": "تم الاستيراد",
+    "failed": "فشل",
+    "resultsTitle": "نتائج الاستيراد",
+    "importMore": "استيراد المزيد",
+    "failedRows": "الصفوف الفاشلة",
+    "downloadErrors": "تنزيل الأخطاء"
+  },
+  "partyRoles": {
+    "PLAINTIFF": "مدعٍ",
+    "DEFENDANT": "مدعى عليه"
+  },
+  "caseTypes": {
+    "CIVIL": "مدني"
   }
 }

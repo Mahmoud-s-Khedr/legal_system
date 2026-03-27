@@ -17,10 +17,10 @@ import type { CalendarEvent } from "./calendarEvents";
 import { normalizeHearingEvents, normalizeInvoiceEvents, normalizeTaskEvents } from "./calendarEvents";
 import { type CalendarView, getVisibleRange, shiftFocusDate } from "./hearingCalendar";
 
-function eventTypeLabel(sourceType: CalendarEvent["sourceType"]) {
-  if (sourceType === "hearing") return "Hearing";
-  if (sourceType === "task") return "Task";
-  return "Invoice";
+function eventTypeLabel(sourceType: CalendarEvent["sourceType"], t: (key: string) => string) {
+  if (sourceType === "hearing") return t("calendar.eventTypes.hearing");
+  if (sourceType === "task") return t("calendar.eventTypes.task");
+  return t("calendar.eventTypes.invoice");
 }
 
 function eventLink(event: CalendarEvent) {
@@ -167,7 +167,7 @@ export function CalendarPage() {
                       key={event.id}
                     >
                       <div>
-                        <p className="text-xs text-slate-500">{eventTypeLabel(event.sourceType)}</p>
+                        <p className="text-xs text-slate-500">{eventTypeLabel(event.sourceType, t)}</p>
                         <p className="font-medium">{eventLink(event)}</p>
                         <p className="text-xs text-slate-500">{event.subtitle}</p>
                       </div>

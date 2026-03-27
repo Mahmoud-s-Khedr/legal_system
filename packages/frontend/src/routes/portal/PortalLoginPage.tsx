@@ -6,7 +6,7 @@ import { usePortalAuthStore } from "../../store/portalAuthStore";
 import { Field, FormAlert, PrimaryButton, SectionCard } from "../app/ui";
 
 export function PortalLoginPage() {
-  const { t } = useTranslation("app");
+  const { t } = useTranslation(["app", "auth"]);
   const navigate = useNavigate();
   const login = usePortalAuthStore((s) => s.login);
   const [form, setForm] = useState({ email: "", firmId: "", password: "" });
@@ -34,7 +34,7 @@ export function PortalLoginPage() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field
               autoComplete="email"
-              label={t("auth.email")}
+              label={t("auth:email")}
               required
               type="email"
               value={form.email}
@@ -49,7 +49,7 @@ export function PortalLoginPage() {
             />
             <Field
               autoComplete="current-password"
-              label={t("auth.password")}
+              label={t("auth:password")}
               required
               type="password"
               value={form.password}
@@ -58,7 +58,7 @@ export function PortalLoginPage() {
             {error ? <FormAlert message={error} /> : null}
             <PrimaryButton disabled={loading} type="submit">
               {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-              {t("auth.login")}
+              {t("auth:login")}
             </PrimaryButton>
           </form>
         </SectionCard>

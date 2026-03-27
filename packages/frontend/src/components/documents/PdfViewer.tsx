@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface PdfViewerProps {
   url: string;
 }
 
 export function PdfViewer({ url }: PdfViewerProps) {
+  const { t } = useTranslation("app");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pageCount, setPageCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -45,7 +47,7 @@ export function PdfViewer({ url }: PdfViewerProps) {
         await page.render({ canvasContext: ctx, viewport, canvas }).promise;
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to render PDF");
+          setError(err instanceof Error ? err.message : t("documents.pdfRenderFailed"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -56,7 +58,7 @@ export function PdfViewer({ url }: PdfViewerProps) {
     return () => {
       cancelled = true;
     };
-  }, [url, currentPage]);
+  }, [url, currentPage, t]);
 
   if (error) {
     return <p className="text-sm text-red-600">{error}</p>;
@@ -65,7 +67,7 @@ export function PdfViewer({ url }: PdfViewerProps) {
   return (
     <div className="space-y-3">
       {loading ? (
-        <p className="text-sm text-slate-500">Loading PDF...</p>
+        <p className="text-sm text-slate-500">{t("documents.loadingPdf")}</p>
       ) : null}
       <canvas className="w-full rounded-xl border border-slate-200" ref={canvasRef} />
       {pageCount > 1 ? (
