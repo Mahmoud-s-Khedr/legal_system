@@ -500,12 +500,12 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     log_startup_diagnostic(&bootstrap_log_file, "Initializing embedded PostgreSQL");
     ensure_postgres_ready(app, &postgres_data_dir, &desktop_env, &bootstrap_log_file).map_err(
         |error| {
-        append_bootstrap_log_line(
-            &bootstrap_log_file,
-            &format!("Embedded PostgreSQL startup failed: {error}"),
-        );
-        error
-    },
+            append_bootstrap_log_line(
+                &bootstrap_log_file,
+                &format!("Embedded PostgreSQL startup failed: {error}"),
+            );
+            error
+        },
     )?;
 
     inner.set_status("starting", Some("Applying database migrations".to_string()));
@@ -526,15 +526,19 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
     } else {
         log_startup_diagnostic(&bootstrap_log_file, "Applying database migrations");
-        run_db_migration(app, &desktop_env, allow_migration_repair, &bootstrap_log_file).map_err(
-            |error| {
+        run_db_migration(
+            app,
+            &desktop_env,
+            allow_migration_repair,
+            &bootstrap_log_file,
+        )
+        .map_err(|error| {
             append_bootstrap_log_line(
                 &bootstrap_log_file,
                 &format!("Database migration failed: {error}"),
             );
             error
-        },
-        )?;
+        })?;
     }
 
     let backend_port = desktop_env
@@ -1684,10 +1688,12 @@ fn run_db_migration(
                     })?;
 
                 if !resolve_output.status.success() {
-                    let resolve_stderr =
-                        String::from_utf8_lossy(&resolve_output.stderr).trim().to_string();
-                    let resolve_stdout =
-                        String::from_utf8_lossy(&resolve_output.stdout).trim().to_string();
+                    let resolve_stderr = String::from_utf8_lossy(&resolve_output.stderr)
+                        .trim()
+                        .to_string();
+                    let resolve_stdout = String::from_utf8_lossy(&resolve_output.stdout)
+                        .trim()
+                        .to_string();
                     let resolve_detail = if !resolve_stderr.is_empty() {
                         resolve_stderr
                     } else if !resolve_stdout.is_empty() {
@@ -1730,8 +1736,12 @@ fn run_db_migration(
                     return Ok(());
                 }
 
-                let retry_stderr = String::from_utf8_lossy(&retry_output.stderr).trim().to_string();
-                let retry_stdout = String::from_utf8_lossy(&retry_output.stdout).trim().to_string();
+                let retry_stderr = String::from_utf8_lossy(&retry_output.stderr)
+                    .trim()
+                    .to_string();
+                let retry_stdout = String::from_utf8_lossy(&retry_output.stdout)
+                    .trim()
+                    .to_string();
                 let retry_detail = if !retry_stderr.is_empty() {
                     retry_stderr
                 } else if !retry_stdout.is_empty() {
@@ -2122,12 +2132,7 @@ where
                         );
                         if let Some(log_file) = bootstrap_log_file {
                             log_bootstrap_checkpoint(
-                                log_file,
-                                "postgres",
-                                executable,
-                                "command",
-                                "failed",
-                                &message,
+                                log_file, "postgres", executable, "command", "failed", &message,
                             );
                         }
                         return Err(message);
@@ -2138,12 +2143,7 @@ where
                     let message = format!("Unable to monitor {executable} process: {error}");
                     if let Some(log_file) = bootstrap_log_file {
                         log_bootstrap_checkpoint(
-                            log_file,
-                            "postgres",
-                            executable,
-                            "command",
-                            "failed",
-                            &message,
+                            log_file, "postgres", executable, "command", "failed", &message,
                         );
                     }
                     return Err(message);
@@ -2165,9 +2165,9 @@ where
             Ok(None) => {
                 if started_at.elapsed() > POSTGRES_COMMAND_TIMEOUT {
                     let _ = child.kill();
-                    let output = child
-                        .wait_with_output()
-                        .map_err(|error| format!("Unable to collect timed out {executable} output: {error}"))?;
+                    let output = child.wait_with_output().map_err(|error| {
+                        format!("Unable to collect timed out {executable} output: {error}")
+                    })?;
                     let stderr_tail = trim_for_log(&String::from_utf8_lossy(&output.stderr));
                     let stdout_tail = trim_for_log(&String::from_utf8_lossy(&output.stdout));
                     let message = format!(
@@ -2178,12 +2178,7 @@ where
                     );
                     if let Some(log_file) = bootstrap_log_file {
                         log_bootstrap_checkpoint(
-                            log_file,
-                            "postgres",
-                            executable,
-                            "command",
-                            "failed",
-                            &message,
+                            log_file, "postgres", executable, "command", "failed", &message,
                         );
                     }
                     return Err(message);
@@ -2194,12 +2189,7 @@ where
                 let message = format!("Unable to monitor {executable} process: {error}");
                 if let Some(log_file) = bootstrap_log_file {
                     log_bootstrap_checkpoint(
-                        log_file,
-                        "postgres",
-                        executable,
-                        "command",
-                        "failed",
-                        &message,
+                        log_file, "postgres", executable, "command", "failed", &message,
                     );
                 }
                 return Err(message);
@@ -2221,13 +2211,14 @@ where
             "postgres",
             executable,
             "command",
-            if output.status.success() { "ok" } else { "failed" },
+            if output.status.success() {
+                "ok"
+            } else {
+                "failed"
+            },
             &format!(
                 "exit={} elapsed_ms={} stdout='{}' stderr='{}'",
-                output.status,
-                elapsed_ms,
-                stdout_tail,
-                stderr_tail
+                output.status, elapsed_ms, stdout_tail, stderr_tail
             ),
         );
     }
