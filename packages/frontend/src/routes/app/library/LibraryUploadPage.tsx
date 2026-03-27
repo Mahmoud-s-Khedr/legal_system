@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { Field, PageHeader, SectionCard, PrimaryButton } from "../ui";
+import { Field, PageHeader, SectionCard, PrimaryButton, SelectField } from "../ui";
 
 interface CategoryNode {
   id: string;
@@ -171,42 +171,30 @@ export function LibraryUploadPage() {
 
           {/* Type + Scope + Category */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">{t("library.type")}</span>
-              <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-              >
-                {DOCUMENT_TYPES.map((dt) => (
-                  <option key={dt} value={dt}>{dt}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">{t("library.scope")}</span>
-              <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                value={form.scope}
-                onChange={(e) => setForm({ ...form, scope: e.target.value })}
-              >
-                <option value="FIRM">{t("library.scopeFirm")}</option>
-                <option value="SYSTEM">{t("library.scopeSystem")}</option>
-              </select>
-            </label>
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">{t("library.category")}</span>
-              <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                value={form.categoryId}
-                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-              >
-                <option value="">{t("library.noCategory")}</option>
-                {flatCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label={t("library.type")}
+              value={form.type}
+              onChange={(value) => setForm({ ...form, type: value })}
+              options={DOCUMENT_TYPES.map((dt) => ({ value: dt, label: dt }))}
+            />
+            <SelectField
+              label={t("library.scope")}
+              value={form.scope}
+              onChange={(value) => setForm({ ...form, scope: value })}
+              options={[
+                { value: "FIRM", label: t("library.scopeFirm") },
+                { value: "SYSTEM", label: t("library.scopeSystem") }
+              ]}
+            />
+            <SelectField
+              label={t("library.category")}
+              value={form.categoryId}
+              onChange={(value) => setForm({ ...form, categoryId: value })}
+              options={[
+                { value: "", label: t("library.noCategory") },
+                ...flatCategories.map((c) => ({ value: c.id, label: c.label }))
+              ]}
+            />
           </div>
 
           {/* Legislation fields */}
@@ -232,18 +220,12 @@ export function LibraryUploadPage() {
                   onChange={(e) => setForm({ ...form, lawYear: e.target.value })}
                 />
               </label>
-              <label className="block space-y-1">
-                <span className="text-sm font-semibold">{t("library.legislationStatus")}</span>
-                <select
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                  value={form.legislationStatus}
-                  onChange={(e) => setForm({ ...form, legislationStatus: e.target.value })}
-                >
-                  {LEGISLATION_STATUSES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </label>
+              <SelectField
+                label={t("library.legislationStatus")}
+                value={form.legislationStatus}
+                onChange={(value) => setForm({ ...form, legislationStatus: value })}
+                options={LEGISLATION_STATUSES.map((status) => ({ value: status, label: status }))}
+              />
             </div>
           )}
 

@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import i18n from "../../i18n";
-import { Field, FormAlert, TablePagination } from "./ui";
+import { Field, FormAlert, SelectField, TablePagination, selectLabelFilter } from "./ui";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -64,6 +64,39 @@ describe("shared ui fields", () => {
     expect(alert?.textContent).toContain("Login failed");
   });
 
+  it("filters select options by visible label text", () => {
+    expect(selectLabelFilter("gov", { label: "Government" })).toBe(true);
+    expect(selectLabelFilter("comp", { label: "Company" })).toBe(true);
+    expect(selectLabelFilter("xyz", { label: "Company" })).toBe(false);
+  });
+
+  it("renders select field metadata with searchable combobox", () => {
+    const view = render(
+      <SelectField
+        id="client-type"
+        label="Type"
+        value=""
+        onChange={() => undefined}
+        options={[
+          { value: "", label: "All" },
+          { value: "INDIVIDUAL", label: "Individual" },
+          { value: "COMPANY", label: "Company" }
+        ]}
+        hint="Choose a type"
+      />
+    );
+
+    const label = view.querySelector("label#client-type-label");
+    const hint = view.querySelector("#client-type-hint");
+    expect(label?.textContent).toContain("Type");
+    expect(hint?.textContent).toContain("Choose a type");
+
+    const selectRoot = view.querySelector(".ant-select");
+    const combobox = view.querySelector("input[role='combobox']");
+    expect(selectRoot).not.toBeNull();
+    expect(combobox).not.toBeNull();
+  });
+
   it("localizes table pagination labels and summary in English", async () => {
     await act(async () => {
       await i18n.changeLanguage("en");
@@ -83,7 +116,7 @@ describe("shared ui fields", () => {
     expect(view.textContent).toContain("Page 2 of 3");
     expect(view.textContent).toContain("Previous");
     expect(view.textContent).toContain("Next");
-    expect(view.querySelector("select")?.getAttribute("aria-label")).toBe("Items per page");
+    expect(document.querySelector("[aria-label='Items per page']")).not.toBeNull();
   });
 
   it("localizes table pagination labels and summary in Arabic", async () => {
@@ -106,6 +139,6 @@ describe("shared ui fields", () => {
     expect(view.textContent).toContain("الصفحة");
     expect(view.textContent).toContain("السابق");
     expect(view.textContent).toContain("التالي");
-    expect(view.querySelector("select")?.getAttribute("aria-label")).toBe("عدد العناصر في الصفحة");
+    expect(document.querySelector("[aria-label='عدد العناصر في الصفحة']")).not.toBeNull();
   });
 });

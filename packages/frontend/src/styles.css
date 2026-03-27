@@ -163,3 +163,45 @@ textarea {
     transform: rotate(360deg);
   }
 }
+
+/* ─── Ant Design select mapping ─── */
+.elms-select.ant-select {
+  width: 100%;
+}
+
+.elms-select .ant-select-selector {
+  min-height: 48px !important;
+  border-radius: var(--radius-xl) !important;
+  border-color: rgb(226 232 240) !important;
+  padding-inline: 14px !important;
+  box-shadow: none !important;
+}
+
+.elms-select.ant-select-open .ant-select-selector,
+.elms-select.ant-select-focused .ant-select-selector {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 1px var(--color-accent) !important;
+}
+
+.elms-select .ant-select-selection-item,
+.elms-select .ant-select-selection-placeholder,
+.elms-select .ant-select-selection-search-input {
+  line-height: 46px !important;
+}
+
+.elms-select-sm .ant-select-selector {
+  min-height: 34px !important;
+  border-radius: var(--radius-md) !important;
+  padding-inline: 10px !important;
+}
+
+.elms-select-sm .ant-select-selection-item,
+.elms-select-sm .ant-select-selection-placeholder,
+.elms-select-sm .ant-select-selection-search-input {
+  line-height: 32px !important;
+}
+
+.elms-select-dropdown .ant-select-item-option-selected {
+  background: var(--color-accent-soft) !important;
+  color: #065f46 !important;
+}

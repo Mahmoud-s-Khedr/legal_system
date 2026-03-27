@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Select } from "antd";
 import { Search, BookOpen } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, ErrorState, PageHeader } from "../ui";
+import { EmptyState, ErrorState, PageHeader, selectLabelFilter } from "../ui";
 
 interface SearchResult {
   id: string;
@@ -56,20 +57,26 @@ export function LibrarySearchPage() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <select
+        <Select
           aria-label={t("library.filterByType")}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-accent"
+          className="elms-select"
+          style={{ minWidth: 220 }}
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-        >
-          <option value="">{t("library.allTypes")}</option>
-          <option value="LEGISLATION">{t("library.types.legislation")}</option>
-          <option value="REGULATION">{t("library.types.regulation")}</option>
-          <option value="JUDGMENT">{t("library.types.judgment")}</option>
-          <option value="CIRCULAR">{t("library.types.circular")}</option>
-          <option value="ARTICLE">{t("library.types.article")}</option>
-          <option value="OTHER">{t("library.types.other")}</option>
-        </select>
+          onChange={(value) => setTypeFilter(value)}
+          options={[
+            { value: "", label: t("library.allTypes") },
+            { value: "LEGISLATION", label: t("library.types.legislation") },
+            { value: "REGULATION", label: t("library.types.regulation") },
+            { value: "JUDGMENT", label: t("library.types.judgment") },
+            { value: "CIRCULAR", label: t("library.types.circular") },
+            { value: "ARTICLE", label: t("library.types.article") },
+            { value: "OTHER", label: t("library.types.other") }
+          ]}
+          showSearch
+          filterOption={(input, option) => selectLabelFilter(input, option)}
+          optionFilterProp="label"
+          classNames={{ popup: { root: "elms-select-dropdown" } }}
+        />
         <button
           className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
           disabled={!query.trim()}

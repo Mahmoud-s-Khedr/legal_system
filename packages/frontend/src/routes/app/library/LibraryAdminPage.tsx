@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, PageHeader, PrimaryButton, SectionCard } from "../ui";
+import { EmptyState, PageHeader, PrimaryButton, SectionCard, SelectField } from "../ui";
 
 function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -248,18 +248,15 @@ function CategoryForm({
             onChange={(e) => onChange({ ...form, slug: e.target.value })}
           />
         </FieldWrap>
-        <FieldWrap label={t("library.parentCategory")}>
-          <select
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-            value={form.parentId}
-            onChange={(e) => onChange({ ...form, parentId: e.target.value })}
-          >
-            <option value="">{t("library.noParent")}</option>
-            {allCategories.map((c) => (
-              <option key={c.id} value={c.id}>{c.nameEn}</option>
-            ))}
-          </select>
-        </FieldWrap>
+        <SelectField
+          label={t("library.parentCategory")}
+          value={form.parentId}
+          onChange={(value) => onChange({ ...form, parentId: value })}
+          options={[
+            { value: "", label: t("library.noParent") },
+            ...allCategories.map((category) => ({ value: category.id, label: category.nameEn }))
+          ]}
+        />
       </div>
       <div className="flex gap-2">
         <PrimaryButton

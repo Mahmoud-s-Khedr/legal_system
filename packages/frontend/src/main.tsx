@@ -6,6 +6,7 @@ import * as Sentry from "@sentry/react";
 import { router } from "./router";
 // Custom @font-face — self-hosted woff files with woff-first for WebKitGTK
 import "./fonts.css";
+import "antd/dist/reset.css";
 import "./styles.css";
 import "./i18n";
 import { DirectionProvider } from "./components/shared/DirectionProvider";
@@ -16,6 +17,7 @@ import { startSyncQueueReplay } from "./pwa/syncQueue";
 import { ErrorFallback } from "./components/ErrorFallback";
 import { ApiError } from "./lib/api";
 import { useToastStore } from "./store/toastStore";
+import { AntdProvider } from "./components/shared/AntdProvider";
 
 function formatQueryError(error: unknown) {
   if (error instanceof ApiError) {
@@ -155,13 +157,15 @@ ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <StartupErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <DirectionProvider>
-          <DesktopBootstrapGate>
-            <ToastContainer />
-            <OfflineBanner />
-            <RouterProvider router={router} />
-          </DesktopBootstrapGate>
-        </DirectionProvider>
+        <AntdProvider>
+          <DirectionProvider>
+            <DesktopBootstrapGate>
+              <ToastContainer />
+              <OfflineBanner />
+              <RouterProvider router={router} />
+            </DesktopBootstrapGate>
+          </DirectionProvider>
+        </AntdProvider>
       </QueryClientProvider>
     </StartupErrorBoundary>
   </React.StrictMode>

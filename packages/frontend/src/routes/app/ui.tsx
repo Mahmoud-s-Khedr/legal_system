@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type PropsWithChildren, type ReactNode } from "react";
+import { Select } from "antd";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 
@@ -158,18 +159,18 @@ export function TablePagination({
         {t("pagination.summary", { from: formattedFrom, to: formattedTo, total: formattedTotal })}
       </p>
       <div className="flex items-center gap-2">
-        <select
+        <Select<number>
           aria-label={t("pagination.pageSize")}
-          className="rounded-lg border border-slate-200 bg-white px-2 py-1"
-          value={String(pageSize)}
-          onChange={(event) => onPageSizeChange(Number.parseInt(event.target.value, 10))}
-        >
-          {[10, 20, 50, 100].map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))}
-        </select>
+          className="elms-select elms-select-sm"
+          style={{ width: 96 }}
+          value={pageSize}
+          onChange={(value) => onPageSizeChange(Number(value))}
+          options={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
+          showSearch
+          filterOption={(input, option) => selectLabelFilter(input, option)}
+          optionFilterProp="label"
+          classNames={{ popup: { root: "elms-select-dropdown" } }}
+        />
         <button
           type="button"
           className="rounded-lg border border-slate-200 px-2 py-1 disabled:opacity-50"
@@ -192,6 +193,12 @@ export function TablePagination({
       </div>
     </div>
   );
+}
+
+export function selectLabelFilter(input: string, option?: { label?: ReactNode }) {
+  const label = option?.label;
+  const normalizedLabel = typeof label === "string" ? label : String(label ?? "");
+  return normalizedLabel.toLowerCase().includes(input.toLowerCase());
 }
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
@@ -392,32 +399,43 @@ export function SelectField({
 }) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
+  const labelId = `${fieldId}-label`;
   const errorId = error ? `${fieldId}-error` : undefined;
   const hintId = hint ? `${fieldId}-hint` : undefined;
   const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
+  const selectStyle = dir && dir !== "auto" ? { direction: dir } : undefined;
 
   return (
     <div className="block space-y-2">
-      <label className="text-sm font-semibold" htmlFor={fieldId}>
+      <label className="text-sm font-semibold" htmlFor={fieldId} id={labelId}>
         {label}
         {required && <span className="text-red-500 ms-1" aria-hidden="true">*</span>}
       </label>
-      <select
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+      <Select<string>
         id={fieldId}
-        dir={dir}
-        onChange={(event) => onChange(event.target.value)}
+        className="elms-select"
+        classNames={{ popup: { root: "elms-select-dropdown" } }}
+        options={options}
+        showSearch
+        filterOption={(input, option) => selectLabelFilter(input, option)}
+        optionFilterProp="label"
         value={value}
+        onChange={(nextValue) => onChange(nextValue)}
+        style={selectStyle}
+        aria-labelledby={labelId}
+        aria-required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={describedBy}
+      />
+      <input
+        className="sr-only"
+        id={`${fieldId}-required-proxy`}
+        tabIndex={-1}
+        readOnly
+        value={value}
         required={required}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        aria-hidden="true"
+      />
       {hint ? (
         <p className="text-xs text-slate-500" id={hintId}>
           {hint}

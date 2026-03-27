@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useCreateInvoice } from "../../lib/billing";
-import { Field, FormAlert, PageHeader, SectionCard } from "./ui";
+import { Field, FormAlert, PageHeader, SectionCard, SelectField } from "./ui";
 
 interface ItemRow {
   description: string;
@@ -90,18 +90,16 @@ export function InvoiceCreatePage() {
                 placeholder={t("labels.clientIdPlaceholder")}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium">{t("billing.feeType")}</label>
-              <select
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                value={feeType}
-                onChange={(e) => setFeeType(e.target.value)}
-              >
-                <option value="FIXED">{t("billing.feeTypeFixed")}</option>
-                <option value="HOURLY">{t("billing.feeTypeHourly")}</option>
-                <option value="CONTINGENCY">{t("billing.feeTypeContingency")}</option>
-              </select>
-            </div>
+            <SelectField
+              label={t("billing.feeType")}
+              value={feeType}
+              onChange={setFeeType}
+              options={[
+                { value: "FIXED", label: t("billing.feeTypeFixed") },
+                { value: "HOURLY", label: t("billing.feeTypeHourly") },
+                { value: "CONTINGENCY", label: t("billing.feeTypeContingency") }
+              ]}
+            />
             <Field
               label={t("billing.dueDate")}
               type="date"
