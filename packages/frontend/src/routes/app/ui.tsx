@@ -71,6 +71,39 @@ export function TableHeadCell({
   return <th className={`px-4 py-3 font-semibold ${alignClass}`}>{children}</th>;
 }
 
+export function SortableTableHeadCell({
+  label,
+  sortKey,
+  sortBy,
+  sortDir,
+  onSort,
+  align = "start"
+}: {
+  label: string;
+  sortKey: string;
+  sortBy: string;
+  sortDir: "asc" | "desc";
+  onSort: (sortKey: string) => void;
+  align?: "start" | "end" | "center";
+}) {
+  const alignClass = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
+  const isActive = sortBy === sortKey;
+  const indicator = isActive ? (sortDir === "asc" ? "▲" : "▼") : "↕";
+
+  return (
+    <th className={`px-4 py-3 font-semibold ${alignClass}`}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 text-slate-700 hover:text-slate-900"
+        onClick={() => onSort(sortKey)}
+      >
+        <span>{label}</span>
+        <span className="text-xs text-slate-400">{indicator}</span>
+      </button>
+    </th>
+  );
+}
+
 export function TableBody({ children }: PropsWithChildren) {
   return <tbody className="divide-y divide-slate-100">{children}</tbody>;
 }
@@ -85,6 +118,68 @@ export function TableCell({
 }: PropsWithChildren<{ align?: "start" | "end" | "center" }>) {
   const alignClass = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
   return <td className={`px-4 py-3 align-top ${alignClass}`}>{children}</td>;
+}
+
+export function TableToolbar({ children }: PropsWithChildren) {
+  return <div className="mb-4 grid gap-3 md:grid-cols-2">{children}</div>;
+}
+
+export function TablePagination({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(total, page * pageSize);
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+      <p>
+        {from}-{to} / {total}
+      </p>
+      <div className="flex items-center gap-2">
+        <select
+          className="rounded-lg border border-slate-200 bg-white px-2 py-1"
+          value={String(pageSize)}
+          onChange={(event) => onPageSizeChange(Number.parseInt(event.target.value, 10))}
+        >
+          {[10, 20, 50, 100].map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="rounded-lg border border-slate-200 px-2 py-1 disabled:opacity-50"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          Prev
+        </button>
+        <span>
+          {page}/{totalPages}
+        </span>
+        <button
+          type="button"
+          className="rounded-lg border border-slate-200 px-2 py-1 disabled:opacity-50"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function EmptyState({ title, description }: { title: string; description: string }) {

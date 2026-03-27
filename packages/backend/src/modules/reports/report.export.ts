@@ -5,9 +5,6 @@
  * and produces a Buffer for streaming to the client.
  */
 
-import { readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import type {
   CaseStatusRow,
   HearingOutcomeRow,
@@ -16,29 +13,6 @@ import type {
   OutstandingBalanceRow,
   CaseProfitabilityDto
 } from "./reports.service.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const FONTS_DIR = join(__dirname, "../../../../assets/fonts");
-
-// ── Shared font loader (same path as invoice.pdf.ts) ─────────────────────────
-
-function loadFonts() {
-  const regularPath = join(FONTS_DIR, "Cairo-Regular.ttf");
-  const boldPath = join(FONTS_DIR, "Cairo-Bold.ttf");
-  if (!existsSync(regularPath) || !existsSync(boldPath)) {
-    throw new Error(
-      "Cairo TTF fonts not found. Place Cairo-Regular.ttf and Cairo-Bold.ttf in packages/backend/assets/fonts/"
-    );
-  }
-  return {
-    Cairo: {
-      normal: readFileSync(regularPath),
-      bold: readFileSync(boldPath),
-      italics: readFileSync(regularPath),
-      bolditalics: readFileSync(boldPath)
-    }
-  };
-}
 
 // ── Report column definitions ─────────────────────────────────────────────────
 
@@ -162,7 +136,7 @@ export async function generateReportExcel(
   data: unknown,
   generatedAt?: string
 ): Promise<Buffer> {
-  const ExcelJS = await import("exceljs");
+  const { default: ExcelJS } = await import("exceljs");
   const spec = buildSpec(reportType, data);
 
   const workbook = new ExcelJS.Workbook();
@@ -231,8 +205,8 @@ export async function generateReportPdf(
   generatedAt?: string
 ): Promise<Buffer> {
   const PdfPrinter = (await import("pdfmake")).default;
-  const fonts = loadFonts();
-  const printer = new PdfPrinter(fonts);
+  const fontConfig = (await import("../../utils/pdfFonts.js")).resolvePdfFontConfig();
+  const printer = new PdfPrinter(fontConfig.fonts);
   const spec = buildSpec(reportType, data);
 
   const headerRow = spec.columns.map((col) => ({
@@ -252,7 +226,7 @@ export async function generateReportPdf(
 
   const docDefinition = {
     pageDirection: "RTL" as const,
-    defaultStyle: { font: "Cairo", fontSize: 10, alignment: "right" as const },
+    defaultStyle: { font: fontConfig.defaultFont, fontSize: 10, alignment: "right" as const },
     content: [
       {
         text: spec.titleAr,

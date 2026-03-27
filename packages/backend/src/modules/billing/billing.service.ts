@@ -19,6 +19,7 @@ import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { Decimal } from "@prisma/client/runtime/library";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
@@ -179,17 +180,43 @@ function deriveStatus(totalAmount: Decimal, payments: { amount: Decimal }[]): Pr
 
 export async function listInvoices(
   actor: SessionUser,
-  filters: { caseId?: string; clientId?: string; status?: string; from?: string; to?: string },
+  filters: {
+    q?: string;
+    caseId?: string;
+    clientId?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+  },
   pagination: { page: number; limit: number } = { page: 1, limit: 50 }
 ): Promise<InvoiceListResponseDto> {
   const { page, limit } = pagination;
+  const q = filters.q?.trim();
   const fromDate = filters.from ? new Date(filters.from) : null;
   const toDate = filters.to ? new Date(filters.to) : null;
+  const sortBy = normalizeSort(
+    filters.sortBy,
+    ["createdAt", "dueDate", "issuedAt", "totalAmount", "invoiceNumber", "status"] as const,
+    "createdAt"
+  );
+  const sortDir = toPrismaSortOrder(filters.sortDir ?? "desc");
   const where = {
     firmId: actor.firmId,
     ...(filters.caseId ? { caseId: filters.caseId } : {}),
     ...(filters.clientId ? { clientId: filters.clientId } : {}),
     ...(filters.status ? { status: filters.status as PrismaInvoiceStatus } : {}),
+    ...(q
+      ? {
+          OR: [
+            { invoiceNumber: { contains: q, mode: "insensitive" as const } },
+            { feeType: { contains: q, mode: "insensitive" as const } },
+            { client: { name: { contains: q, mode: "insensitive" as const } } },
+            { case: { title: { contains: q, mode: "insensitive" as const } } }
+          ]
+        }
+      : {}),
     ...(fromDate || toDate
       ? {
           OR: [
@@ -218,7 +245,7 @@ export async function listInvoices(
     prisma.invoice.findMany({
       where,
       include: invoiceInclude,
-      orderBy: { createdAt: "desc" },
+      orderBy: sortBy === "dueDate" ? [{ dueDate: sortDir }, { createdAt: "desc" }] : { [sortBy]: sortDir },
       skip: (page - 1) * limit,
       take: limit
     }),
@@ -403,19 +430,38 @@ export async function addPayment(
 
 export async function listExpenses(
   actor: SessionUser,
-  filters: { caseId?: string },
+  filters: {
+    q?: string;
+    caseId?: string;
+    category?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+  },
   pagination: { page: number; limit: number } = { page: 1, limit: 50 }
 ): Promise<ExpenseListResponseDto> {
   const { page, limit } = pagination;
+  const q = filters.q?.trim();
+  const sortBy = normalizeSort(filters.sortBy, ["createdAt", "updatedAt", "amount", "category"] as const, "createdAt");
+  const sortDir = toPrismaSortOrder(filters.sortDir ?? "desc");
   const where = {
     firmId: actor.firmId,
-    ...(filters.caseId ? { caseId: filters.caseId } : {})
+    ...(filters.caseId ? { caseId: filters.caseId } : {}),
+    ...(filters.category ? { category: filters.category } : {}),
+    ...(q
+      ? {
+          OR: [
+            { category: { contains: q, mode: "insensitive" as const } },
+            { description: { contains: q, mode: "insensitive" as const } },
+            { case: { title: { contains: q, mode: "insensitive" as const } } }
+          ]
+        }
+      : {})
   };
   const [items, total] = await Promise.all([
     prisma.expense.findMany({
       where,
       include: expenseInclude,
-      orderBy: { createdAt: "desc" },
+      orderBy: { [sortBy]: sortDir },
       skip: (page - 1) * limit,
       take: limit
     }),

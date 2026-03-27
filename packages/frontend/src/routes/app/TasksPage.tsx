@@ -5,21 +5,25 @@ import { TaskStatus, type TaskListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, SelectField, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatDateTime } from "./ui";
+import { useTableQueryState } from "../../lib/tableQueryState";
+import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableWrapper, formatDateTime } from "./ui";
 
 type TaskViewMode = "table" | "kanban";
 
 export function TasksPage() {
   const { t, i18n } = useTranslation("app");
-  const [statusFilter, setStatusFilter] = useState("");
   const [viewMode, setViewMode] = useState<TaskViewMode>("table");
+  const table = useTableQueryState({
+    defaultSortBy: "dueAt",
+    defaultSortDir: "asc",
+    defaultLimit: 20,
+    filterKeys: ["status"]
+  });
 
   const tasksQuery = useQuery({
-    queryKey: ["tasks", statusFilter],
+    queryKey: ["tasks", table.state],
     queryFn: () =>
-      apiFetch<TaskListResponseDto>(
-        statusFilter ? `/api/tasks?status=${encodeURIComponent(statusFilter)}` : "/api/tasks"
-      )
+      apiFetch<TaskListResponseDto>(`/api/tasks?${table.toApiQueryString()}`)
   });
 
   const isRtl = i18n.resolvedLanguage === "ar";
@@ -53,9 +57,15 @@ export function TasksPage() {
       />
       <SectionCard title={t("tasks.board")} description={t("tasks.boardHelp")}>
         <div className="grid gap-4 md:grid-cols-2">
+          <Field
+            label={t("labels.search")}
+            onChange={table.setQ}
+            value={table.state.q}
+            placeholder={t("tasks.searchPlaceholder")}
+          />
           <SelectField
             label={t("labels.status")}
-            onChange={setStatusFilter}
+            onChange={(value) => table.setFilter("status", value)}
             options={[
               { value: "", label: t("labels.all") },
               ...Object.values(TaskStatus).map((value) => ({
@@ -63,8 +73,10 @@ export function TasksPage() {
                 label: getEnumLabel(t, "TaskStatus", value)
               }))
             ]}
-            value={statusFilter}
+            value={table.state.filters.status ?? ""}
           />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
           <SelectField
             label={t("labels.type")}
             onChange={(value) => setViewMode(value as TaskViewMode)}
@@ -99,11 +111,11 @@ export function TasksPage() {
               <DataTable>
                 <TableHead>
                   <tr>
-                    <TableHeadCell>{t("labels.title")}</TableHeadCell>
-                    <TableHeadCell>{t("labels.status")}</TableHeadCell>
-                    <TableHeadCell>{t("labels.priority")}</TableHeadCell>
+                    <SortableTableHeadCell label={t("labels.title")} sortKey="title" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell label={t("labels.status")} sortKey="status" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell label={t("labels.priority")} sortKey="priority" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
                     <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
-                    <TableHeadCell>{t("labels.dueDate")}</TableHeadCell>
+                    <SortableTableHeadCell label={t("labels.dueDate")} sortKey="dueAt" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
                     <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
                   </tr>
                 </TableHead>
@@ -130,6 +142,13 @@ export function TasksPage() {
                 </TableBody>
               </DataTable>
             </TableWrapper>
+            <TablePagination
+              page={table.state.page}
+              pageSize={table.state.limit}
+              total={tasksQuery.data?.total ?? 0}
+              onPageChange={table.setPage}
+              onPageSizeChange={table.setLimit}
+            />
           </div>
         ) : null}
 

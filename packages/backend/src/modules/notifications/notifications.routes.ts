@@ -19,6 +19,16 @@ import {
 } from "./notification.service.js";
 
 export async function registerNotificationRoutes(app: FastifyInstance) {
+  const listNotificationsQuerySchema = z.object({
+    q: z.string().optional(),
+    type: z.nativeEnum(NotificationType).optional(),
+    isRead: z.enum(["true", "false"]).optional(),
+    sortBy: z.string().optional(),
+    sortDir: z.enum(["asc", "desc"]).optional(),
+    page: z.string().optional(),
+    limit: z.string().optional()
+  });
+
   app.get(
     "/api/notifications",
     {
@@ -26,9 +36,17 @@ export async function registerNotificationRoutes(app: FastifyInstance) {
       preHandler: [requireAuth]
     },
     async (request) => {
-      const filters = request.query as Record<string, string>;
-      const { page, limit } = parsePaginationQuery(filters);
-      return listNotifications(request.sessionUser!, { page, limit });
+      const query = listNotificationsQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      return listNotifications(request.sessionUser!, {
+        q: query.q,
+        type: query.type,
+        isRead: query.isRead,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        page,
+        limit
+      });
     }
   );
 

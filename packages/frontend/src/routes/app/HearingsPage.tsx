@@ -1,20 +1,23 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { HearingListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { useTableQueryState } from "../../lib/tableQueryState";
 import {
   DataTable,
   EmptyState,
   ErrorState,
+  Field,
   PageHeader,
   SectionCard,
   SelectField,
+  SortableTableHeadCell,
   TableBody,
   TableCell,
   TableHead,
   TableHeadCell,
+  TablePagination,
   TableRow,
   TableWrapper,
   formatDateTime
@@ -22,14 +25,17 @@ import {
 
 export function HearingsPage() {
   const { t } = useTranslation("app");
-  const [overdue, setOverdue] = useState("");
+  const table = useTableQueryState({
+    defaultSortBy: "sessionDatetime",
+    defaultSortDir: "asc",
+    defaultLimit: 20,
+    filterKeys: ["overdue"]
+  });
 
   const hearingsQuery = useQuery({
-    queryKey: ["hearings-management", overdue],
+    queryKey: ["hearings-management", table.state],
     queryFn: () =>
-      apiFetch<HearingListResponseDto>(
-        overdue ? `/api/hearings?overdue=${encodeURIComponent(overdue)}` : "/api/hearings"
-      )
+      apiFetch<HearingListResponseDto>(`/api/hearings?${table.toApiQueryString()}`)
   });
 
   return (
@@ -46,11 +52,17 @@ export function HearingsPage() {
       />
 
       <SectionCard title={t("hearings.title")} description={t("hearings.description")}>
-        <div className="mb-4 max-w-xs">
+        <div className="mb-4 grid gap-3 md:grid-cols-2">
+          <Field
+            label={t("labels.search")}
+            value={table.state.q}
+            onChange={table.setQ}
+            placeholder={t("hearings.searchPlaceholder")}
+          />
           <SelectField
             label={t("labels.status")}
-            value={overdue}
-            onChange={setOverdue}
+            value={table.state.filters.overdue ?? ""}
+            onChange={(value) => table.setFilter("overdue", value)}
             options={[
               { value: "", label: t("labels.all") },
               { value: "true", label: t("tasks.overdue") }
@@ -74,38 +86,47 @@ export function HearingsPage() {
         ) : null}
 
         {!hearingsQuery.isLoading && !hearingsQuery.isError && !!hearingsQuery.data?.items.length ? (
-          <TableWrapper>
-            <DataTable>
-              <TableHead>
-                <tr>
-                  <TableHeadCell>{t("labels.case")}</TableHeadCell>
-                  <TableHeadCell>{t("labels.sessionDatetime")}</TableHeadCell>
-                  <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
-                  <TableHeadCell>{t("labels.outcome")}</TableHeadCell>
-                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
-                </tr>
-              </TableHead>
-              <TableBody>
-                {hearingsQuery.data.items.map((hearing) => (
-                  <TableRow key={hearing.id}>
-                    <TableCell>{hearing.caseTitle}</TableCell>
-                    <TableCell>{formatDateTime(hearing.sessionDatetime)}</TableCell>
-                    <TableCell>{hearing.assignedLawyerName ?? t("labels.unassigned")}</TableCell>
-                    <TableCell>{hearing.outcome ?? "—"}</TableCell>
-                    <TableCell align="end">
-                      <Link
-                        className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                        params={{ hearingId: hearing.id }}
-                        to="/app/hearings/$hearingId/edit"
-                      >
-                        {t("actions.edit")}
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </DataTable>
-          </TableWrapper>
+          <>
+            <TableWrapper>
+              <DataTable>
+                <TableHead>
+                  <tr>
+                    <TableHeadCell>{t("labels.case")}</TableHeadCell>
+                    <SortableTableHeadCell label={t("labels.sessionDatetime")} sortKey="sessionDatetime" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
+                    <SortableTableHeadCell label={t("labels.outcome")} sortKey="outcome" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {hearingsQuery.data.items.map((hearing) => (
+                    <TableRow key={hearing.id}>
+                      <TableCell>{hearing.caseTitle}</TableCell>
+                      <TableCell>{formatDateTime(hearing.sessionDatetime)}</TableCell>
+                      <TableCell>{hearing.assignedLawyerName ?? t("labels.unassigned")}</TableCell>
+                      <TableCell>{hearing.outcome ?? "—"}</TableCell>
+                      <TableCell align="end">
+                        <Link
+                          className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          params={{ hearingId: hearing.id }}
+                          to="/app/hearings/$hearingId/edit"
+                        >
+                          {t("actions.edit")}
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </DataTable>
+            </TableWrapper>
+            <TablePagination
+              page={table.state.page}
+              pageSize={table.state.limit}
+              total={hearingsQuery.data.total}
+              onPageChange={table.setPage}
+              onPageSizeChange={table.setLimit}
+            />
+          </>
         ) : null}
       </SectionCard>
     </div>

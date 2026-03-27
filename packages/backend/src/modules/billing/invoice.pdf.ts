@@ -1,47 +1,18 @@
 /**
  * Arabic invoice PDF generation using pdfmake.
  *
- * Prerequisites:
- *   - Place Cairo-Regular.ttf and Cairo-Bold.ttf in packages/backend/assets/fonts/
- *   - These can be downloaded from https://fonts.google.com/specimen/Cairo
- *
- * The PDF is generated server-side and streamed to the client.
+ * Uses Cairo when available and gracefully falls back to built-in Helvetica
+ * so exports do not fail if font assets are missing.
  */
 
-import { readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { InvoiceDto } from "@elms/shared";
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const FONTS_DIR = join(__dirname, "../../../../assets/fonts");
-
-function loadFonts() {
-  const regularPath = join(FONTS_DIR, "Cairo-Regular.ttf");
-  const boldPath = join(FONTS_DIR, "Cairo-Bold.ttf");
-
-  if (!existsSync(regularPath) || !existsSync(boldPath)) {
-    throw new Error(
-      "Cairo TTF fonts not found. Place Cairo-Regular.ttf and Cairo-Bold.ttf in packages/backend/assets/fonts/"
-    );
-  }
-
-  return {
-    Cairo: {
-      normal: readFileSync(regularPath),
-      bold: readFileSync(boldPath),
-      italics: readFileSync(regularPath),
-      bolditalics: readFileSync(boldPath)
-    }
-  };
-}
+import { resolvePdfFontConfig } from "../../utils/pdfFonts.js";
 
 export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string): Promise<Buffer> {
-  // Dynamic import of pdfmake to avoid issues with CommonJS/ESM boundaries
   const PdfPrinter = (await import("pdfmake")).default;
-  const fonts = loadFonts();
-  const printer = new PdfPrinter(fonts);
+  const fontConfig = resolvePdfFontConfig();
+  const printer = new PdfPrinter(fontConfig.fonts);
 
   const itemRows = invoice.items.map((item) => [
     { text: item.description, alignment: "right" as const },
@@ -51,13 +22,10 @@ export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string):
   ]);
 
   const docDefinition: TDocumentDefinitions = {
-    defaultStyle: { font: "Cairo", fontSize: 11, alignment: "right" },
+    defaultStyle: { font: fontConfig.defaultFont, fontSize: 11, alignment: "right" },
     content: [
-      // Header
       { text: firmName, style: "header", alignment: "right", marginBottom: 4 },
       { text: "فاتورة", style: "title", alignment: "center", marginBottom: 16 },
-
-      // Invoice metadata
       {
         columns: [
           { text: `رقم الفاتورة: ${invoice.invoiceNumber}`, width: "*" },
@@ -69,14 +37,8 @@ export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string):
         ],
         marginBottom: 4
       },
-      invoice.clientName
-        ? { text: `العميل: ${invoice.clientName}`, marginBottom: 4 }
-        : null,
-      invoice.caseTitle
-        ? { text: `القضية: ${invoice.caseTitle}`, marginBottom: 16 }
-        : null,
-
-      // Items table
+      invoice.clientName ? { text: `العميل: ${invoice.clientName}`, marginBottom: 4 } : null,
+      invoice.caseTitle ? { text: `القضية: ${invoice.caseTitle}`, marginBottom: 16 } : null,
       {
         table: {
           headerRows: 1,
@@ -93,8 +55,6 @@ export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string):
         },
         marginBottom: 8
       },
-
-      // Totals
       {
         columns: [
           { width: "*", text: "" },
@@ -116,8 +76,6 @@ export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string):
         ],
         marginBottom: 16
       },
-
-      // Status
       {
         text: `حالة الفاتورة: ${invoice.status}`,
         alignment: "center",

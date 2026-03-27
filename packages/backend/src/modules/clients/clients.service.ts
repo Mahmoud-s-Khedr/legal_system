@@ -11,6 +11,7 @@ import { Language } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 
 function mapClient(client: {
   id: string;
@@ -77,22 +78,39 @@ function contactCreateMany(
 
 export async function listClients(
   actor: SessionUser,
-  search?: string,
+  searchOrQuery?:
+    | string
+    | {
+        q?: string;
+        search?: string;
+        type?: string;
+        sortBy?: string;
+        sortDir?: SortDir;
+        page?: number;
+        limit?: number;
+      },
   pagination: { page: number; limit: number } = { page: 1, limit: 50 }
 ): Promise<ClientListResponseDto> {
-  const { page, limit } = pagination;
+  const query = typeof searchOrQuery === "string" ? { q: searchOrQuery } : (searchOrQuery ?? {});
+  const q = (query.q ?? query.search)?.trim();
+  const page = query.page ?? pagination.page;
+  const limit = query.limit ?? pagination.limit;
+  const sortBy = normalizeSort(query.sortBy, ["name", "email", "createdAt", "updatedAt", "type"] as const, "createdAt");
+  const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
+
   return withTenant(prisma, actor.firmId, async (tx) => {
     const where = {
       firmId: actor.firmId,
       deletedAt: null,
-      ...(search
+      ...(q
         ? {
             OR: [
-              { name: { contains: search, mode: "insensitive" as const } },
-              { email: { contains: search, mode: "insensitive" as const } }
+              { name: { contains: q, mode: "insensitive" as const } },
+              { email: { contains: q, mode: "insensitive" as const } }
             ]
           }
-        : {})
+        : {}),
+      ...(query.type ? { type: query.type as ClientType } : {})
     };
 
     const [total, clients] = await Promise.all([
@@ -125,7 +143,7 @@ export async function listClients(
             select: { parties: true, invoices: true, documents: true }
           }
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { [sortBy]: sortDir },
         skip: (page - 1) * limit,
         take: limit
       })

@@ -2,8 +2,11 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Play, Trash2, Download, Loader2 } from "lucide-react";
-import { apiFetch, resolveApiUrl } from "../../lib/api";
-import { PageHeader, SectionCard, PrimaryButton, Field, SelectField, formatDateTime } from "./ui";
+import { useToastStore } from "../../store/toastStore";
+import { apiFetch } from "../../lib/api";
+import { useTableQueryState } from "../../lib/tableQueryState";
+import { FormAlert, PageHeader, SectionCard, PrimaryButton, Field, SelectField, TablePagination, TableToolbar, formatDateTime } from "./ui";
+import { downloadReportFile } from "./reportExport";
 
 type ReportType = "case-status" | "hearing-outcomes" | "lawyer-workload" | "revenue" | "outstanding-balances";
 
@@ -16,10 +19,19 @@ interface CustomReportDto {
   createdAt: string;
 }
 
-interface RunResult {
+interface RunSessionResult {
+  runId: string;
   reportType: string;
-  rows: Record<string, unknown>[];
   ranAt: string;
+  total: number;
+  expiresAt: string;
+}
+
+interface RunRowsResult {
+  items: Record<string, unknown>[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 const REPORT_TYPES: ReportType[] = [
@@ -30,24 +42,22 @@ const REPORT_TYPES: ReportType[] = [
   "outstanding-balances"
 ];
 
-function triggerDownload(url: string) {
-  const a = document.createElement("a");
-  a.href = resolveApiUrl(url);
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
 const EMPTY_FORM = { name: "", description: "", reportType: "case-status" as ReportType, dateFrom: "", dateTo: "" };
 
 export function ReportBuilderPage() {
   const { t } = useTranslation("app");
+  const addToast = useToastStore((state) => state.addToast);
   const queryClient = useQueryClient();
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
-  const [runResult, setRunResult] = useState<{ id: string; data: RunResult } | null>(null);
+  const [runResult, setRunResult] = useState<{ id: string; data: RunSessionResult } | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const table = useTableQueryState({
+    defaultSortBy: "value",
+    defaultSortDir: "asc",
+    defaultLimit: 20
+  });
 
   const reportsQuery = useQuery({
     queryKey: ["custom-reports"],
@@ -80,14 +90,37 @@ export function ReportBuilderPage() {
   async function handleRun(id: string) {
     setRunningId(id);
     try {
-      const data = await apiFetch<RunResult>(`/api/reports/custom/${id}/run`, { method: "POST" });
+      const data = await apiFetch<RunSessionResult>(`/api/reports/custom/${id}/run`, { method: "POST" });
       setRunResult({ id, data });
     } finally {
       setRunningId(null);
     }
   }
 
+  async function handleExport(id: string) {
+    setExportError(null);
+    try {
+      await downloadReportFile(
+        `/api/reports/custom/${id}/export?format=excel`,
+        `custom-report-${id}.xlsx`
+      );
+    } catch (error) {
+      const message = (error as Error)?.message ?? t("errors.fallback");
+      setExportError(message);
+      addToast(message, "error");
+    }
+  }
+
   const reports = reportsQuery.data ?? [];
+
+  const runRowsQuery = useQuery({
+    queryKey: ["custom-report-rows", runResult?.data.runId, table.state],
+    queryFn: () =>
+      apiFetch<RunRowsResult>(
+        `/api/reports/custom/runs/${runResult!.data.runId}/rows?${table.toApiQueryString()}`
+      ),
+    enabled: Boolean(runResult?.data.runId)
+  });
 
   return (
     <div className="space-y-6">
@@ -162,6 +195,7 @@ export function ReportBuilderPage() {
 
       {/* Saved reports list */}
       <SectionCard title={t("reports.savedReports")}>
+        {exportError ? <FormAlert message={exportError} /> : null}
         {!reports.length ? (
           <p className="text-sm text-slate-500">{t("empty.noCustomReports")}</p>
         ) : (
@@ -183,16 +217,13 @@ export function ReportBuilderPage() {
                   {runningId === r.id ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
                   {t("reports.run")}
                 </button>
-                <a
+                <button
                   className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:text-accent"
-                  href={resolveApiUrl(`/api/reports/custom/${r.id}/export?format=excel`)}
-                  rel="noreferrer"
-                  target="_blank"
-                  onClick={(e) => { e.preventDefault(); triggerDownload(`/api/reports/custom/${r.id}/export?format=excel`); }}
+                  onClick={() => void handleExport(r.id)}
                 >
                   <Download className="size-4" />
                   {t("reports.exportExcel")}
-                </a>
+                </button>
                 <button
                   className="rounded-lg p-1.5 text-slate-400 hover:text-red-500"
                   onClick={() => deleteMutation.mutate(r.id)}
@@ -215,18 +246,40 @@ export function ReportBuilderPage() {
                 {t("actions.close")}
               </button>
             </div>
-            {runResult.data.rows.length > 0 ? (
+            <TableToolbar>
+              <Field
+                label={t("labels.search")}
+                value={table.state.q}
+                onChange={table.setQ}
+                placeholder={t("reports.searchPlaceholder")}
+              />
+              <SelectField
+                label={t("labels.sort")}
+                value={`${table.state.sortBy}:${table.state.sortDir}`}
+                onChange={(value) => {
+                  const [sortBy, sortDir] = value.split(":");
+                  table.update({ sortBy, sortDir: sortDir as "asc" | "desc", page: 1 });
+                }}
+                options={[
+                  { value: "value:asc", label: "A-Z" },
+                  { value: "value:desc", label: "Z-A" }
+                ]}
+              />
+            </TableToolbar>
+            {runRowsQuery.isLoading ? (
+              <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+            ) : runRowsQuery.data?.items.length ? (
               <div className="overflow-auto rounded-2xl border border-slate-200">
                 <table className="w-full text-sm">
                   <thead className="border-b bg-slate-50">
                     <tr>
-                      {Object.keys(runResult.data.rows[0]).map((k) => (
+                      {Object.keys(runRowsQuery.data.items[0]).map((k) => (
                         <th key={k} className="px-3 py-2 text-start font-semibold text-slate-600">{k}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {runResult.data.rows.map((row, i) => (
+                    {runRowsQuery.data.items.map((row, i) => (
                       <tr key={i} className="border-b last:border-0">
                         {Object.values(row).map((v, j) => (
                           <td key={j} className="px-3 py-2">{String(v ?? "-")}</td>
@@ -236,9 +289,18 @@ export function ReportBuilderPage() {
                   </tbody>
                 </table>
               </div>
+            ) : runRowsQuery.isError ? (
+              <FormAlert message={(runRowsQuery.error as Error)?.message ?? t("errors.fallback")} />
             ) : (
               <p className="text-sm text-slate-400">{t("empty.noData")}</p>
             )}
+            <TablePagination
+              page={table.state.page}
+              pageSize={table.state.limit}
+              total={runRowsQuery.data?.total ?? 0}
+              onPageChange={table.setPage}
+              onPageSizeChange={table.setLimit}
+            />
           </div>
         </SectionCard>
       )}

@@ -80,7 +80,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
 
   await registerCookiePlugin(app);
   await registerCorsPlugin(app, env);
-  await registerRateLimitPlugin(app);
+  await registerRateLimitPlugin(app, env);
   await registerMultipartPlugin(app, env);
   await registerJwtPlugin(app, env);
   registerSessionContext(app, env);

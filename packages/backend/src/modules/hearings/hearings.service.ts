@@ -7,10 +7,11 @@ import type {
   SessionUser,
   UpdateHearingDto
 } from "@elms/shared";
-import { SessionOutcome as PrismaSessionOutcome } from "@prisma/client";
+import { Prisma, SessionOutcome as PrismaSessionOutcome } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 
 function mapHearing(session: {
   id: string;
@@ -23,13 +24,13 @@ function mapHearing(session: {
   createdAt: Date;
   updatedAt: Date;
   case: { title: string };
-}): HearingDto {
+}, assignedLawyerName: string | null = null): HearingDto {
   return {
     id: session.id,
     caseId: session.caseId,
     caseTitle: session.case.title,
     assignedLawyerId: session.assignedLawyerId,
-    assignedLawyerName: null,
+    assignedLawyerName,
     sessionDatetime: session.sessionDatetime.toISOString(),
     nextSessionAt: session.nextSessionAt?.toISOString() ?? null,
     outcome: session.outcome as SessionOutcome | null,
@@ -96,35 +97,79 @@ async function syncEvent(
 export async function listHearings(
   actor: SessionUser,
   filters: {
+    q?: string;
     caseId?: string;
     assignedLawyerId?: string;
     overdue?: string;
     from?: string;
     to?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
   },
   pagination: { page: number; limit: number }
 ): Promise<HearingListResponseDto> {
   const { page, limit } = pagination;
+  const q = filters.q?.trim();
+  const sortBy = normalizeSort(filters.sortBy, ["sessionDatetime", "createdAt", "outcome"] as const, "sessionDatetime");
+  const sortDir = toPrismaSortOrder(filters.sortDir ?? "asc");
+
   return withTenant(prisma, actor.firmId, async (tx) => {
-    const where = {
+    const where: Prisma.CaseSessionWhereInput = {
       case: { firmId: actor.firmId, deletedAt: null },
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.assignedLawyerId ? { assignedLawyerId: filters.assignedLawyerId } : {}),
+      ...(filters.overdue === "true" ? { sessionDatetime: { lt: new Date() } } : {}),
       ...buildSessionDatetimeFilter(filters)
     };
+
+    if (q) {
+      const matchedUsers = await tx.user.findMany({
+        where: {
+          firmId: actor.firmId,
+          deletedAt: null,
+          fullName: { contains: q, mode: "insensitive" }
+        },
+        select: { id: true }
+      });
+      const qUpper = q.toUpperCase();
+      const maybeOutcome =
+        (Object.values(PrismaSessionOutcome) as string[]).includes(qUpper)
+          ? (qUpper as PrismaSessionOutcome)
+          : null;
+      where.OR = [
+        { case: { title: { contains: q, mode: "insensitive" } } },
+        { notes: { contains: q, mode: "insensitive" } },
+        ...(matchedUsers.length > 0 ? [{ assignedLawyerId: { in: matchedUsers.map((user) => user.id) } }] : []),
+        ...(maybeOutcome ? [{ outcome: maybeOutcome }] : [])
+      ];
+    }
 
     const [total, items] = await Promise.all([
       tx.caseSession.count({ where }),
       tx.caseSession.findMany({
         where,
         include: { case: true },
-        orderBy: { sessionDatetime: "asc" },
+        orderBy: { [sortBy]: sortDir },
         skip: (page - 1) * limit,
         take: limit
       })
     ]);
 
-    return { items: items.map(mapHearing), total, page, pageSize: limit };
+    const assignedLawyerIds = [...new Set(items.map((item) => item.assignedLawyerId).filter(Boolean))] as string[];
+    const assignedLawyers = assignedLawyerIds.length
+      ? await tx.user.findMany({
+          where: { id: { in: assignedLawyerIds }, firmId: actor.firmId, deletedAt: null },
+          select: { id: true, fullName: true }
+        })
+      : [];
+    const assignedLawyerNameById = new Map(assignedLawyers.map((lawyer) => [lawyer.id, lawyer.fullName]));
+
+    return {
+      items: items.map((item) => mapHearing(item, item.assignedLawyerId ? (assignedLawyerNameById.get(item.assignedLawyerId) ?? null) : null)),
+      total,
+      page,
+      pageSize: limit
+    };
   });
 }
 
@@ -157,7 +202,14 @@ export async function getHearing(actor: SessionUser, hearingId: string): Promise
       }
     });
 
-    return mapHearing(item);
+    const assignedLawyer = item.assignedLawyerId
+      ? await tx.user.findFirst({
+          where: { id: item.assignedLawyerId, firmId: actor.firmId, deletedAt: null },
+          select: { fullName: true }
+        })
+      : null;
+
+    return mapHearing(item, assignedLawyer?.fullName ?? null);
   });
 }
 
@@ -204,7 +256,7 @@ export async function createHearing(
       }
     });
 
-    return mapHearing(hearing);
+    return mapHearing(hearing, null);
   });
 }
 
@@ -265,7 +317,7 @@ export async function updateHearing(
       }
     });
 
-    return mapHearing(hearing);
+    return mapHearing(hearing, null);
   });
 }
 

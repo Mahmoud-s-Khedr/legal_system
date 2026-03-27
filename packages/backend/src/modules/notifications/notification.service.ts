@@ -18,6 +18,7 @@ import { sendEmail } from "./channels/email.js";
 import { sendSms } from "./channels/sms.js";
 import { sendDesktopOs } from "./channels/desktopOs.js";
 import { hasEditionFeature } from "../editions/editionPolicy.js";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
@@ -171,14 +172,46 @@ export async function dispatchNotification(
 
 export async function listNotifications(
   actor: SessionUser,
-  pagination: { page: number; limit: number } = { page: 1, limit: 50 }
+  query: {
+    q?: string;
+    type?: string;
+    isRead?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+    page?: number;
+    limit?: number;
+  } = { page: 1, limit: 50 }
 ): Promise<NotificationListResponseDto> {
-  const { page, limit } = pagination;
-  const where = { firmId: actor.firmId, userId: actor.id };
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 50;
+  const q = query.q?.trim();
+  const sortBy = normalizeSort(query.sortBy, ["createdAt", "type", "title", "isRead"] as const, "createdAt");
+  const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
+  const where = {
+    firmId: actor.firmId,
+    userId: actor.id,
+    ...(query.type ? { type: query.type as PrismaType } : {}),
+    ...(query.isRead === "true" ? { isRead: true } : {}),
+    ...(query.isRead === "false" ? { isRead: false } : {}),
+    ...(q
+      ? {
+          OR: [
+            { title: { contains: q, mode: "insensitive" as const } },
+            { body: { contains: q, mode: "insensitive" as const } }
+          ]
+        }
+      : {})
+  };
+  const orderBy =
+    query.sortBy === undefined
+      ? [{ isRead: "asc" as const }, { createdAt: "desc" as const }]
+      : sortBy === "isRead"
+        ? [{ isRead: sortDir }, { createdAt: "desc" as const }]
+        : { [sortBy]: sortDir };
   const [items, total] = await Promise.all([
     prisma.notification.findMany({
       where,
-      orderBy: [{ isRead: "asc" }, { createdAt: "desc" }],
+      orderBy,
       skip: (page - 1) * limit,
       take: limit
     }),

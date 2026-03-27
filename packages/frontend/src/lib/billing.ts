@@ -14,13 +14,29 @@ import { apiFetch } from "./api";
 
 // ── Invoices ──────────────────────────────────────────────────────────────────
 
-export function useInvoices(filters?: { caseId?: string; clientId?: string; status?: string; from?: string; to?: string }) {
+export function useInvoices(filters?: {
+  q?: string;
+  caseId?: string;
+  clientId?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}) {
   const params = new URLSearchParams();
+  if (filters?.q) params.set("q", filters.q);
   if (filters?.caseId) params.set("caseId", filters.caseId);
   if (filters?.clientId) params.set("clientId", filters.clientId);
   if (filters?.status) params.set("status", filters.status);
   if (filters?.from) params.set("from", filters.from);
   if (filters?.to) params.set("to", filters.to);
+  if (filters?.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters?.sortDir) params.set("sortDir", filters.sortDir);
+  if (filters?.page) params.set("page", String(filters.page));
+  if (filters?.limit) params.set("limit", String(filters.limit));
   const qs = params.toString();
 
   return useQuery({
@@ -98,9 +114,23 @@ export function useAddPayment(invoiceId: string) {
 
 // ── Expenses ──────────────────────────────────────────────────────────────────
 
-export function useExpenses(filters?: { caseId?: string }) {
+export function useExpenses(filters?: {
+  q?: string;
+  caseId?: string;
+  category?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}) {
   const params = new URLSearchParams();
+  if (filters?.q) params.set("q", filters.q);
   if (filters?.caseId) params.set("caseId", filters.caseId);
+  if (filters?.category) params.set("category", filters.category);
+  if (filters?.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters?.sortDir) params.set("sortDir", filters.sortDir);
+  if (filters?.page) params.set("page", String(filters.page));
+  if (filters?.limit) params.set("limit", String(filters.limit));
   const qs = params.toString();
 
   return useQuery({

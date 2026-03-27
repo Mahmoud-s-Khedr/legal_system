@@ -20,6 +20,7 @@ import type { IStorageAdapter } from "../../storage/IStorageAdapter.js";
 import type { AppEnv } from "../../config/env.js";
 import type { FastifyReply } from "fastify";
 import { hasEditionFeature } from "../editions/editionPolicy.js";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
@@ -98,17 +99,41 @@ function mapDocument(doc: {
 
 export async function listDocuments(
   actor: SessionUser,
-  filters: { caseId?: string; clientId?: string; type?: string },
+  filters: {
+    q?: string;
+    caseId?: string;
+    clientId?: string;
+    type?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+  },
   pagination: { page: number; limit: number }
 ): Promise<DocumentListResponseDto> {
   const { page, limit } = pagination;
+  const q = filters.q?.trim();
+  const sortBy = normalizeSort(
+    filters.sortBy,
+    ["createdAt", "updatedAt", "title", "fileName", "type", "extractionStatus"] as const,
+    "createdAt"
+  );
+  const sortDir = toPrismaSortOrder(filters.sortDir ?? "desc");
+
   return withTenant(prisma, actor.firmId, async (tx) => {
     const where = {
       firmId: actor.firmId,
       deletedAt: null,
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.clientId ? { clientId: filters.clientId } : {}),
-      ...(filters.type ? { type: filters.type } : {})
+      ...(filters.type ? { type: filters.type } : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" as const } },
+              { fileName: { contains: q, mode: "insensitive" as const } },
+              { mimeType: { contains: q, mode: "insensitive" as const } }
+            ]
+          }
+        : {})
     };
 
     const [total, docs] = await Promise.all([
@@ -116,7 +141,7 @@ export async function listDocuments(
       tx.document.findMany({
         where,
         include: { versions: { orderBy: { versionNumber: "desc" } } },
-        orderBy: { createdAt: "desc" },
+        orderBy: { [sortBy]: sortDir },
         skip: (page - 1) * limit,
         take: limit
       })

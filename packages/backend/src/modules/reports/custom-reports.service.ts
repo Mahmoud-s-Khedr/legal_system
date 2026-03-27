@@ -12,6 +12,8 @@ import {
   revenueReport,
   outstandingBalances
 } from "./reports.service.js";
+import { applyArrayTableQuery, normalizeSort, type SortDir } from "../../utils/tableQuery.js";
+import { createTableSession, getTableSession } from "../../utils/tableSessionStore.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,6 +39,14 @@ export interface CustomReportRunResult {
   reportType: string;
   rows: unknown[];
   ranAt: string;
+}
+
+export interface CustomReportRunSession {
+  runId: string;
+  reportType: string;
+  ranAt: string;
+  total: number;
+  expiresAt: string;
 }
 
 // ─── Supported report types ───────────────────────────────────────────────────
@@ -198,6 +208,89 @@ export async function runCustomReport(
   }
 
   return { reportType: report.reportType, rows, ranAt: new Date().toISOString() };
+}
+
+function ownerKey(actor: SessionUser) {
+  return `${actor.firmId}:${actor.id}`;
+}
+
+function toRowRecords(rows: unknown[]): Array<Record<string, unknown>> {
+  return rows.map((row) => {
+    if (row && typeof row === "object" && !Array.isArray(row)) {
+      return row as Record<string, unknown>;
+    }
+    return { value: row };
+  });
+}
+
+export async function createCustomReportRunSession(
+  actor: SessionUser,
+  id: string
+): Promise<CustomReportRunSession | null> {
+  const result = await runCustomReport(actor, id);
+  if (!result) {
+    return null;
+  }
+
+  const rows = toRowRecords(result.rows);
+  const session = createTableSession("custom_report_run", ownerKey(actor), rows, {
+    meta: { reportType: result.reportType, ranAt: result.ranAt }
+  });
+
+  return {
+    runId: session.id,
+    reportType: result.reportType,
+    ranAt: result.ranAt,
+    total: rows.length,
+    expiresAt: session.expiresAt
+  };
+}
+
+export function listCustomReportRunRows(
+  actor: SessionUser,
+  runId: string,
+  query: {
+    q?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+    page: number;
+    limit: number;
+  }
+) {
+  const session = getTableSession<Record<string, unknown>>("custom_report_run", ownerKey(actor), runId);
+  if (!session) {
+    return null;
+  }
+
+  const rows = session.rows;
+  const sortableColumns = Object.keys(rows[0] ?? {}).filter((column) => column.length > 0);
+  const defaultSort = (sortableColumns[0] ?? "value") as keyof Record<string, unknown>;
+  const sortBy = normalizeSort(
+    query.sortBy,
+    sortableColumns.length > 0 ? (sortableColumns as readonly string[]) : (["value"] as const),
+    String(defaultSort)
+  ) as keyof Record<string, unknown>;
+  const sortDir = query.sortDir ?? "asc";
+  const searchFields = (sortableColumns.length > 0
+    ? sortableColumns
+    : ["value"]) as Array<keyof Record<string, unknown>>;
+
+  const result = applyArrayTableQuery(rows, {
+    q: query.q,
+    searchFields,
+    sortBy,
+    sortDir,
+    page: query.page,
+    limit: query.limit
+  });
+
+  return {
+    items: result.items,
+    total: result.total,
+    page: query.page,
+    pageSize: query.limit,
+    expiresAt: new Date(session.expiresAt).toISOString()
+  };
 }
 
 // ─── Mapper ───────────────────────────────────────────────────────────────────

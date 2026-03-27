@@ -1,23 +1,25 @@
-import { useDeferredValue, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import type { ClientListResponseDto } from "@elms/shared";
+import { ClientType, type ClientListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { EnumBadge } from "../../components/shared/EnumBadge";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper } from "./ui";
+import { useTableQueryState } from "../../lib/tableQueryState";
+import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper } from "./ui";
 
 export function ClientsPage() {
   const { t } = useTranslation("app");
-  const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
+  const table = useTableQueryState({
+    defaultSortBy: "createdAt",
+    defaultSortDir: "desc",
+    defaultLimit: 20,
+    filterKeys: ["type"]
+  });
 
   const clientsQuery = useQuery({
-    queryKey: ["clients", deferredSearch],
+    queryKey: ["clients", table.state],
     queryFn: () =>
-      apiFetch<ClientListResponseDto>(
-        deferredSearch ? `/api/clients?search=${encodeURIComponent(deferredSearch)}` : "/api/clients"
-      )
+      apiFetch<ClientListResponseDto>(`/api/clients?${table.toApiQueryString()}`)
   });
 
   return (
@@ -36,12 +38,23 @@ export function ClientsPage() {
         }
       />
       <SectionCard title={t("clients.directory")} description={t("clients.directoryHelp")}>
-        <Field
-          label={t("labels.search")}
-          onChange={setSearch}
-          placeholder={t("clients.searchPlaceholder")}
-          value={search}
-        />
+        <TableToolbar>
+          <Field
+            label={t("labels.search")}
+            onChange={table.setQ}
+            placeholder={t("clients.searchPlaceholder")}
+            value={table.state.q}
+          />
+          <SelectField
+            label={t("labels.type")}
+            value={table.state.filters.type ?? ""}
+            onChange={(value) => table.setFilter("type", value)}
+            options={[
+              { value: "", label: t("labels.all") },
+              ...Object.values(ClientType).map((value) => ({ value, label: value }))
+            ]}
+          />
+        </TableToolbar>
         <div className="mt-4 space-y-3">
           {clientsQuery.isError ? (
             <ErrorState
@@ -53,41 +66,50 @@ export function ClientsPage() {
           ) : !clientsQuery.data?.items.length ? (
             <EmptyState title={t("empty.noClients")} description={t("empty.noClientsHelp")} />
           ) : (
-            <TableWrapper>
-              <DataTable>
-                <TableHead>
-                  <tr>
-                    <TableHeadCell>{t("labels.name")}</TableHeadCell>
-                    <TableHeadCell>{t("labels.email")}</TableHeadCell>
-                    <TableHeadCell>{t("labels.phone")}</TableHeadCell>
-                    <TableHeadCell>{t("labels.type")}</TableHeadCell>
-                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
-                  </tr>
-                </TableHead>
-                <TableBody>
-                  {clientsQuery.data.items.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell>{client.name}</TableCell>
-                      <TableCell>{client.email ?? "—"}</TableCell>
-                      <TableCell>{client.phone ?? "—"}</TableCell>
-                      <TableCell>
-                        <EnumBadge enumName="ClientType" value={client.type} />
-                      </TableCell>
-                      <TableCell align="end">
-                        <Link
-                          className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                          key={client.id}
-                          params={{ clientId: client.id }}
-                          to="/app/clients/$clientId"
-                        >
-                          {t("actions.viewDocument")}
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </DataTable>
-            </TableWrapper>
+            <>
+              <TableWrapper>
+                <DataTable>
+                  <TableHead>
+                    <tr>
+                      <SortableTableHeadCell label={t("labels.name")} sortKey="name" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                      <SortableTableHeadCell label={t("labels.email")} sortKey="email" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                      <TableHeadCell>{t("labels.phone")}</TableHeadCell>
+                      <SortableTableHeadCell label={t("labels.type")} sortKey="type" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                      <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    </tr>
+                  </TableHead>
+                  <TableBody>
+                    {clientsQuery.data.items.map((client) => (
+                      <TableRow key={client.id}>
+                        <TableCell>{client.name}</TableCell>
+                        <TableCell>{client.email ?? "—"}</TableCell>
+                        <TableCell>{client.phone ?? "—"}</TableCell>
+                        <TableCell>
+                          <EnumBadge enumName="ClientType" value={client.type} />
+                        </TableCell>
+                        <TableCell align="end">
+                          <Link
+                            className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            key={client.id}
+                            params={{ clientId: client.id }}
+                            to="/app/clients/$clientId"
+                          >
+                            {t("actions.viewDocument")}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </DataTable>
+              </TableWrapper>
+              <TablePagination
+                page={table.state.page}
+                pageSize={table.state.limit}
+                total={clientsQuery.data.total}
+                onPageChange={table.setPage}
+                onPageSizeChange={table.setLimit}
+              />
+            </>
           )}
         </div>
       </SectionCard>

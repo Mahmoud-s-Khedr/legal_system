@@ -1,5 +1,7 @@
 import type {
   CaseRoleOnCase,
+  CaseAssignmentDto,
+  CasePartyDto,
   CaseCourtDto,
   CaseStatus as SharedCaseStatus,
   CaseDto,
@@ -15,10 +17,11 @@ import type {
   UpdateCaseCourtDto,
   UpdateCaseDto
 } from "@elms/shared";
-import { CaseStatus, CaseRoleOnCase as PrismaCaseRoleOnCase } from "@prisma/client";
+import { CaseStatus, CaseRoleOnCase as PrismaCaseRoleOnCase, Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 
 function mapCourt(court: {
   id: string;
@@ -49,6 +52,42 @@ function mapCourt(court: {
     notes: court.notes,
     createdAt: court.createdAt.toISOString(),
     updatedAt: court.updatedAt.toISOString()
+  };
+}
+
+function mapCaseAssignment(assignment: {
+  id: string;
+  userId: string;
+  roleOnCase: string;
+  assignedAt: Date;
+  unassignedAt: Date | null;
+  user: { fullName: string };
+}): CaseAssignmentDto {
+  return {
+    id: assignment.id,
+    userId: assignment.userId,
+    userName: assignment.user.fullName,
+    roleOnCase: assignment.roleOnCase as CaseRoleOnCase,
+    assignedAt: assignment.assignedAt.toISOString(),
+    unassignedAt: assignment.unassignedAt?.toISOString() ?? null
+  };
+}
+
+function mapCaseParty(party: {
+  id: string;
+  clientId: string | null;
+  name: string;
+  role: string;
+  isOurClient: boolean;
+  opposingCounselName: string | null;
+}): CasePartyDto {
+  return {
+    id: party.id,
+    clientId: party.clientId,
+    name: party.name,
+    role: party.role,
+    isOurClient: party.isOurClient,
+    opposingCounselName: party.opposingCounselName
   };
 }
 
@@ -118,22 +157,8 @@ function mapCase(caseRecord: {
     courts: caseRecord.courts
       .sort((a, b) => a.stageOrder - b.stageOrder)
       .map(mapCourt),
-    assignments: caseRecord.assignments.map((assignment) => ({
-      id: assignment.id,
-      userId: assignment.userId,
-      userName: assignment.user.fullName,
-      roleOnCase: assignment.roleOnCase as CaseRoleOnCase,
-      assignedAt: assignment.assignedAt.toISOString(),
-      unassignedAt: assignment.unassignedAt?.toISOString() ?? null
-    })),
-    parties: caseRecord.parties.map((party) => ({
-      id: party.id,
-      clientId: party.clientId,
-      name: party.name,
-      role: party.role,
-      isOurClient: party.isOurClient,
-      opposingCounselName: party.opposingCounselName
-    })),
+    assignments: caseRecord.assignments.map(mapCaseAssignment),
+    parties: caseRecord.parties.map(mapCaseParty),
     statusHistory: caseRecord.statusHistory.map((entry) => ({
       id: entry.id,
       fromStatus: entry.fromStatus as SharedCaseStatus | null,
@@ -205,11 +230,37 @@ async function getCaseRecord(
 
 export async function listCases(
   actor: SessionUser,
-  pagination: { page: number; limit: number }
+  query: {
+    q?: string;
+    status?: string;
+    type?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+    page: number;
+    limit: number;
+  }
 ): Promise<CaseListResponseDto> {
-  const { page, limit } = pagination;
+  const { page, limit } = query;
+  const q = query.q?.trim();
+  const sortBy = normalizeSort(query.sortBy, ["updatedAt", "createdAt", "title", "caseNumber", "status"] as const, "updatedAt");
+  const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
+
   return withTenant(prisma, actor.firmId, async (tx) => {
-    const where = { firmId: actor.firmId, deletedAt: null };
+    const where = {
+      firmId: actor.firmId,
+      deletedAt: null,
+      ...(query.status ? { status: query.status as CaseStatus } : {}),
+      ...(query.type ? { type: query.type } : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" as const } },
+              { caseNumber: { contains: q, mode: "insensitive" as const } },
+              { internalReference: { contains: q, mode: "insensitive" as const } }
+            ]
+          }
+        : {})
+    };
     const [total, cases] = await Promise.all([
       tx.case.count({ where }),
       tx.case.findMany({
@@ -221,7 +272,7 @@ export async function listCases(
             take: 5
           }
         },
-        orderBy: { updatedAt: "desc" },
+        orderBy: { [sortBy]: sortDir },
         skip: (page - 1) * limit,
         take: limit
       })
@@ -611,21 +662,183 @@ export async function listCaseStatusHistory(actor: SessionUser, caseId: string) 
   return getCaseRecord(actor, caseId);
 }
 
+export async function listCaseParties(
+  actor: SessionUser,
+  caseId: string,
+  query: {
+    q?: string;
+    role?: string;
+    isOurClient?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+    page: number;
+    limit: number;
+  }
+) {
+  const q = query.q?.trim();
+  const sortBy = normalizeSort(query.sortBy, ["name", "role", "createdAt", "isOurClient"] as const, "createdAt");
+  const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
+
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    await tx.case.findFirstOrThrow({
+      where: { id: caseId, firmId: actor.firmId, deletedAt: null }
+    });
+
+    const where: Prisma.CasePartyWhereInput = {
+      caseId,
+      ...(query.role ? { role: query.role } : {}),
+      ...(query.isOurClient === "true" ? { isOurClient: true } : {}),
+      ...(query.isOurClient === "false" ? { isOurClient: false } : {}),
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { opposingCounselName: { contains: q, mode: "insensitive" } },
+              { client: { name: { contains: q, mode: "insensitive" } } }
+            ]
+          }
+        : {})
+    };
+
+    const [items, total] = await Promise.all([
+      tx.caseParty.findMany({
+        where,
+        orderBy: { [sortBy]: sortDir },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit
+      }),
+      tx.caseParty.count({ where })
+    ]);
+
+    return {
+      items: items.map(mapCaseParty),
+      total,
+      page: query.page,
+      pageSize: query.limit
+    };
+  });
+}
+
+export async function listCaseAssignments(
+  actor: SessionUser,
+  caseId: string,
+  query: {
+    q?: string;
+    roleOnCase?: string;
+    active?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+    page: number;
+    limit: number;
+  }
+) {
+  const q = query.q?.trim();
+  const sortBy = normalizeSort(query.sortBy, ["assignedAt", "unassignedAt", "roleOnCase", "userName"] as const, "assignedAt");
+  const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
+
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    await tx.case.findFirstOrThrow({
+      where: { id: caseId, firmId: actor.firmId, deletedAt: null }
+    });
+
+    const where: Prisma.CaseAssignmentWhereInput = {
+      caseId,
+      ...(query.roleOnCase ? { roleOnCase: query.roleOnCase as PrismaCaseRoleOnCase } : {}),
+      ...(query.active === "false" ? { unassignedAt: { not: null } } : { unassignedAt: null }),
+      ...(q ? { user: { fullName: { contains: q, mode: "insensitive" } } } : {})
+    };
+    const orderBy: Prisma.CaseAssignmentOrderByWithRelationInput =
+      sortBy === "userName" ? { user: { fullName: sortDir } } : { [sortBy]: sortDir };
+
+    const [items, total] = await Promise.all([
+      tx.caseAssignment.findMany({
+        where,
+        select: {
+          id: true,
+          userId: true,
+          roleOnCase: true,
+          assignedAt: true,
+          unassignedAt: true,
+          user: { select: { fullName: true } }
+        },
+        orderBy,
+        skip: (query.page - 1) * query.limit,
+        take: query.limit
+      }),
+      tx.caseAssignment.count({ where })
+    ]);
+
+    return {
+      items: items.map(mapCaseAssignment),
+      total,
+      page: query.page,
+      pageSize: query.limit
+    };
+  });
+}
+
 // ── Court Progression ─────────────────────────────────────────────────────────
 
-export async function listCaseCourts(actor: SessionUser, caseId: string) {
+export async function listCaseCourts(
+  actor: SessionUser,
+  caseId: string,
+  query: {
+    q?: string;
+    courtLevel?: string;
+    isActive?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+    page: number;
+    limit: number;
+  }
+) {
+  const q = query.q?.trim();
+  const sortBy = normalizeSort(
+    query.sortBy,
+    ["stageOrder", "courtName", "courtLevel", "createdAt", "startedAt", "isActive"] as const,
+    "stageOrder"
+  );
+  const sortDir = toPrismaSortOrder(query.sortDir ?? (sortBy === "stageOrder" ? "asc" : "desc"));
+
   return withTenant(prisma, actor.firmId, async (tx) => {
     // Verify case belongs to actor's firm
     await tx.case.findFirstOrThrow({
       where: { id: caseId, firmId: actor.firmId, deletedAt: null }
     });
 
-    const courts = await tx.caseCourt.findMany({
-      where: { caseId },
-      orderBy: { stageOrder: "asc" }
-    });
+    const where: Prisma.CaseCourtWhereInput = {
+      caseId,
+      ...(query.courtLevel ? { courtLevel: query.courtLevel } : {}),
+      ...(query.isActive === "true" ? { isActive: true } : {}),
+      ...(query.isActive === "false" ? { isActive: false } : {}),
+      ...(q
+        ? {
+            OR: [
+              { courtName: { contains: q, mode: "insensitive" } },
+              { caseNumber: { contains: q, mode: "insensitive" } },
+              { circuit: { contains: q, mode: "insensitive" } },
+              { notes: { contains: q, mode: "insensitive" } }
+            ]
+          }
+        : {})
+    };
 
-    return courts.map(mapCourt);
+    const [courts, total] = await Promise.all([
+      tx.caseCourt.findMany({
+        where,
+        orderBy: { [sortBy]: sortDir },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit
+      }),
+      tx.caseCourt.count({ where })
+    ]);
+
+    return {
+      items: courts.map(mapCourt),
+      total,
+      page: query.page,
+      pageSize: query.limit
+    };
   });
 }
 

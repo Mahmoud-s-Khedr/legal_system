@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
-import { DataTable, EmptyState, ErrorState, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper } from "../../routes/app/ui";
+import { DataTable, EmptyState, ErrorState, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableWrapper } from "../../routes/app/ui";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { DocumentViewer } from "./DocumentViewer";
@@ -11,10 +11,17 @@ import { DocumentViewer } from "./DocumentViewer";
 interface DocumentListProps {
   caseId?: string;
   clientId?: string;
-  queryKey: string[];
+  queryKey: unknown[];
+  queryParams?: Record<string, string | number | undefined>;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (size: number) => void;
+  };
 }
 
-export function DocumentList({ caseId, clientId, queryKey }: DocumentListProps) {
+export function DocumentList({ caseId, clientId, queryKey, queryParams, pagination }: DocumentListProps) {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
   const [viewingDoc, setViewingDoc] = useState<DocumentDto | null>(null);
@@ -22,6 +29,11 @@ export function DocumentList({ caseId, clientId, queryKey }: DocumentListProps) 
   const params = new URLSearchParams();
   if (caseId) params.set("caseId", caseId);
   if (clientId) params.set("clientId", clientId);
+  for (const [key, value] of Object.entries(queryParams ?? {})) {
+    if (value !== undefined && String(value).trim().length > 0) {
+      params.set(key, String(value));
+    }
+  }
 
   const docsQuery = useQuery({
     queryKey,
@@ -139,6 +151,15 @@ export function DocumentList({ caseId, clientId, queryKey }: DocumentListProps) 
           </TableBody>
         </DataTable>
       </TableWrapper>
+      {pagination && docsQuery.data ? (
+        <TablePagination
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          total={docsQuery.data.total}
+          onPageChange={pagination.onPageChange}
+          onPageSizeChange={pagination.onPageSizeChange}
+        />
+      ) : null}
 
       {viewingDoc ? (
         <DocumentViewer

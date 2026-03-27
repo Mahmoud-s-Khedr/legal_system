@@ -10,6 +10,7 @@ import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { createInvitationToken } from "../auth/inviteToken.js";
 import { assertCanCreateInvitation } from "../editions/editionPolicy.js";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 
 function mapInvitation(invitation: {
   id: string;
@@ -37,12 +38,33 @@ function mapInvitation(invitation: {
 
 export async function listInvitations(
   actor: SessionUser,
-  pagination: { page: number; limit: number } = { page: 1, limit: 50 }
+  query: {
+    q?: string;
+    status?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+    page?: number;
+    limit?: number;
+  } = { page: 1, limit: 50 }
 ): Promise<InvitationListResponseDto> {
-  const { page, limit } = pagination;
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 50;
+  const q = query.q?.trim();
+  const sortBy = normalizeSort(query.sortBy, ["createdAt", "expiresAt", "email", "status"] as const, "createdAt");
+  const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
+
   return withTenant(prisma, actor.firmId, async (tx) => {
     const where = {
-      firmId: actor.firmId
+      firmId: actor.firmId,
+      ...(query.status ? { status: query.status as InvitationStatus } : {}),
+      ...(q
+        ? {
+            OR: [
+              { email: { contains: q, mode: "insensitive" as const } },
+              { role: { name: { contains: q, mode: "insensitive" as const } } }
+            ]
+          }
+        : {})
     };
 
     const [total, invitations] = await Promise.all([
@@ -52,9 +74,7 @@ export async function listInvitations(
         include: {
           role: true
         },
-        orderBy: {
-          createdAt: "desc"
-        },
+        orderBy: { [sortBy]: sortDir },
         skip: (page - 1) * limit,
         take: limit
       })

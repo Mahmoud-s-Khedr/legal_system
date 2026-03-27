@@ -482,6 +482,8 @@ model CaseSession {
 
   @@index([caseId, sessionDatetime])
   @@index([assignedLawyerId, sessionDatetime])
+  @@index([caseId, createdAt])
+  @@index([sessionDatetime])
 }
 
 model PowerOfAttorney {
@@ -532,6 +534,8 @@ model Task {
 
   @@index([firmId, status, deletedAt])
   @@index([assignedToId, status])
+  @@index([firmId, deletedAt, dueAt])
+  @@index([firmId, deletedAt, createdAt])
 }
 
 model Document {
@@ -559,7 +563,10 @@ model Document {
   expenses         Expense[]
 
   @@index([firmId, deletedAt, createdAt])
+  @@index([firmId, deletedAt, updatedAt])
+  @@index([firmId, deletedAt, type, createdAt])
   @@index([caseId])
+  @@index([clientId])
 }
 
 model DocumentVersion {
@@ -608,6 +615,10 @@ model Invoice {
   payments       Payment[]
 
   @@unique([firmId, invoiceNumber])
+  @@index([firmId, createdAt])
+  @@index([firmId, status, dueDate])
+  @@index([firmId, clientId, createdAt])
+  @@index([firmId, caseId, createdAt])
 }
 
 model InvoiceItem {
@@ -673,6 +684,9 @@ model Notification {
   createdAt DateTime         @default(now())
   firm      Firm             @relation(fields: [firmId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([firmId, userId, isRead, createdAt])
+  @@index([firmId, userId, type, createdAt])
 }
 
 model NotificationPreference {

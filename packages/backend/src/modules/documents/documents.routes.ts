@@ -36,17 +36,36 @@ async function readUploadBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> 
   return Buffer.concat(chunks);
 }
 
+const listDocumentsQuerySchema = z.object({
+  q: z.string().optional(),
+  search: z.string().optional(),
+  caseId: z.string().uuid().optional(),
+  clientId: z.string().uuid().optional(),
+  type: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
+  page: z.string().optional(),
+  limit: z.string().optional()
+});
+
 export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) {
   // List documents (with optional filters)
   app.get(
     "/api/documents",
     { schema: { response: { 200: listResponseSchema(documentDtoSchema) } }, preHandler: [requireAuth, requirePermission("documents:read")] },
     async (request) => {
-      const query = request.query as Record<string, string>;
+      const query = listDocumentsQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(query);
       return listDocuments(
         request.sessionUser!,
-        { caseId: query.caseId, clientId: query.clientId, type: query.type },
+        {
+          q: query.q ?? query.search,
+          caseId: query.caseId,
+          clientId: query.clientId,
+          type: query.type,
+          sortBy: query.sortBy,
+          sortDir: query.sortDir
+        },
         { page, limit }
       );
     }

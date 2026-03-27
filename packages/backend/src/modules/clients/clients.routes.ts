@@ -42,9 +42,24 @@ export async function registerClientRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("clients:read")]
     },
     async (request) => {
-      const query = request.query as { search?: string; page?: string; limit?: string };
+      const query = request.query as {
+        q?: string;
+        search?: string;
+        type?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: string;
+        limit?: string;
+      };
       const { page, limit } = parsePaginationQuery(query);
-      return listClients(request.sessionUser!, query.search, { page, limit });
+      return listClients(request.sessionUser!, {
+        q: query.q ?? query.search,
+        type: query.type,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        page,
+        limit
+      });
     }
   );
 

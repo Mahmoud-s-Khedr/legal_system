@@ -30,12 +30,15 @@ const taskStatusSchema = z.object({
 });
 
 const taskListQuerySchema = z.object({
+  q: z.string().optional(),
   caseId: z.string().uuid().optional(),
   assignedToId: z.string().uuid().optional(),
   status: z.nativeEnum(TaskStatus).optional(),
   overdue: z.string().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
   page: z.string().optional(),
   limit: z.string().optional()
 });

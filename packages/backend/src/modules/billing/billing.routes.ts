@@ -73,11 +73,24 @@ const createExpenseSchema = z.object({
 const updateExpenseSchema = createExpenseSchema.partial();
 
 const invoiceListQuerySchema = z.object({
+  q: z.string().optional(),
   caseId: z.string().uuid().optional(),
   clientId: z.string().uuid().optional(),
   status: z.string().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
+  page: z.string().optional(),
+  limit: z.string().optional()
+});
+
+const expenseListQuerySchema = z.object({
+  q: z.string().optional(),
+  caseId: z.string().uuid().optional(),
+  category: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
   page: z.string().optional(),
   limit: z.string().optional()
 });
@@ -198,7 +211,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("expenses:read")]
     },
     async (request) => {
-      const filters = request.query as Record<string, string>;
+      const filters = expenseListQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(filters);
       return listExpenses(request.sessionUser!, filters, { page, limit });
     }

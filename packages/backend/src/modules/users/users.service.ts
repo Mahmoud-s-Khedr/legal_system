@@ -14,6 +14,7 @@ import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { assertCanCreateLocalUser } from "../editions/editionPolicy.js";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 import {
   toSessionUser,
   type UserWithRole,
@@ -31,13 +32,36 @@ function mapUser(user: UserWithRole): UserDto {
 
 export async function listUsers(
   actor: SessionUser,
-  pagination: { page: number; limit: number } = { page: 1, limit: 50 }
+  query: {
+    q?: string;
+    status?: string;
+    roleId?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
+    page?: number;
+    limit?: number;
+  } = { page: 1, limit: 50 }
 ): Promise<UserListResponseDto> {
-  const { page, limit } = pagination;
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 50;
+  const q = query.q?.trim();
+  const sortBy = normalizeSort(query.sortBy, ["fullName", "email", "createdAt", "status"] as const, "createdAt");
+  const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
+
   return withTenant(prisma, actor.firmId, async (tx) => {
     const where = {
       firmId: actor.firmId,
-      deletedAt: null
+      deletedAt: null,
+      ...(query.status ? { status: query.status as UserStatus } : {}),
+      ...(query.roleId ? { roleId: query.roleId } : {}),
+      ...(q
+        ? {
+            OR: [
+              { fullName: { contains: q, mode: "insensitive" as const } },
+              { email: { contains: q, mode: "insensitive" as const } }
+            ]
+          }
+        : {})
     };
 
     const [total, users] = await Promise.all([
@@ -45,9 +69,7 @@ export async function listUsers(
       tx.user.findMany({
         where,
         include: userWithRoleInclude,
-        orderBy: {
-          createdAt: "desc"
-        },
+        orderBy: { [sortBy]: sortDir },
         skip: (page - 1) * limit,
         take: limit
       })

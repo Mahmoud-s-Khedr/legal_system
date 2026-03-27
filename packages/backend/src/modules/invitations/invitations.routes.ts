@@ -35,10 +35,24 @@ export async function registerInvitationRoutes(app: FastifyInstance, env: AppEnv
         });
       }
 
-      const query = request.query as Record<string, string>;
+      const query = request.query as {
+        q?: string;
+        status?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: string;
+        limit?: string;
+      };
       const { page, limit } = parsePaginationQuery(query);
 
-      return listInvitations(request.sessionUser!, { page, limit });
+      return listInvitations(request.sessionUser!, {
+        q: query.q,
+        status: query.status,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        page,
+        limit
+      });
     }
   );
 

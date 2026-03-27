@@ -12,6 +12,8 @@ import { z } from "zod";
 import { prisma } from "../../db/prisma.js";
 import type { SessionUser } from "@elms/shared";
 import { writeAuditLog } from "../../services/audit.service.js";
+import { applyArrayTableQuery, normalizeSort, type SortDir } from "../../utils/tableQuery.js";
+import { createTableSession, getTableSession } from "../../utils/tableSessionStore.js";
 
 // ─── Row types ────────────────────────────────────────────────────────────────
 
@@ -22,16 +24,25 @@ export interface ParsedRow {
 }
 
 export interface ImportPreviewResult {
+  previewId: string;
   total: number;
   valid: number;
   invalid: number;
-  rows: ParsedRow[];
+  expiresAt: string;
 }
 
 export interface ImportExecuteResult {
   imported: number;
   failed: number;
   errors: Array<{ rowNumber: number; error: string }>;
+}
+
+export interface ImportPreviewRowQueryResult {
+  items: ParsedRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  expiresAt: string;
 }
 
 // ─── Validation schemas ───────────────────────────────────────────────────────
@@ -141,11 +152,16 @@ function bufferFromStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
   });
 }
 
+function previewOwnerKey(actor: SessionUser) {
+  return `${actor.firmId}:${actor.id}`;
+}
+
 // ─── Client import ────────────────────────────────────────────────────────────
 
 export async function previewClientImport(
   stream: NodeJS.ReadableStream,
-  mimeType: string
+  mimeType: string,
+  actor: SessionUser
 ): Promise<ImportPreviewResult> {
   const buffer = await bufferFromStream(stream);
   const rawRows = await parseFile(buffer, mimeType);
@@ -160,7 +176,16 @@ export async function previewClientImport(
   });
 
   const valid = rows.filter((r) => r.errors.length === 0).length;
-  return { total: rows.length, valid, invalid: rows.length - valid, rows };
+  const session = createTableSession("import_preview", previewOwnerKey(actor), rows, {
+    meta: { entityType: "clients" }
+  });
+  return {
+    previewId: session.id,
+    total: rows.length,
+    valid,
+    invalid: rows.length - valid,
+    expiresAt: session.expiresAt
+  };
 }
 
 export async function executeClientImport(
@@ -216,7 +241,8 @@ export async function executeClientImport(
 
 export async function previewCaseImport(
   stream: NodeJS.ReadableStream,
-  mimeType: string
+  mimeType: string,
+  actor: SessionUser
 ): Promise<ImportPreviewResult> {
   const buffer = await bufferFromStream(stream);
   const rawRows = await parseFile(buffer, mimeType);
@@ -231,7 +257,186 @@ export async function previewCaseImport(
   });
 
   const valid = rows.filter((r) => r.errors.length === 0).length;
-  return { total: rows.length, valid, invalid: rows.length - valid, rows };
+  const session = createTableSession("import_preview", previewOwnerKey(actor), rows, {
+    meta: { entityType: "cases" }
+  });
+  return {
+    previewId: session.id,
+    total: rows.length,
+    valid,
+    invalid: rows.length - valid,
+    expiresAt: session.expiresAt
+  };
+}
+
+export function listImportPreviewRows(
+  actor: SessionUser,
+  previewId: string,
+  query: {
+    q?: string;
+    status?: "valid" | "invalid";
+    sortBy?: string;
+    sortDir?: SortDir;
+    page: number;
+    limit: number;
+  }
+): ImportPreviewRowQueryResult | null {
+  const session = getTableSession<ParsedRow>("import_preview", previewOwnerKey(actor), previewId);
+  if (!session) {
+    return null;
+  }
+
+  const rows = session.rows;
+  const normalized = rows.map((row) => ({
+    rowNumber: row.rowNumber,
+    status: row.errors.length > 0 ? "invalid" : "valid",
+    errorsText: row.errors.join("; "),
+    ...row.data,
+    __row: row
+  })) as Array<Record<string, unknown> & { __row: ParsedRow; status: "valid" | "invalid" }>;
+
+  const filteredByStatus =
+    query.status === undefined
+      ? normalized
+      : normalized.filter((row) => row.status === query.status);
+
+  const sortableColumns = Object.keys(filteredByStatus[0] ?? {}).filter((key) => key !== "__row");
+  const sortBy = normalizeSort(
+    query.sortBy,
+    sortableColumns.length > 0 ? (sortableColumns as readonly string[]) : (["rowNumber"] as const),
+    "rowNumber"
+  ) as keyof (typeof filteredByStatus)[number];
+  const searchFields = (sortableColumns.length > 0 ? sortableColumns : ["rowNumber"]) as Array<keyof (typeof filteredByStatus)[number]>;
+  const result = applyArrayTableQuery(filteredByStatus, {
+    q: query.q,
+    searchFields,
+    sortBy,
+    sortDir: query.sortDir ?? "asc",
+    page: query.page,
+    limit: query.limit
+  });
+
+  return {
+    items: result.items.map((row) => row.__row),
+    total: result.total,
+    page: query.page,
+    pageSize: query.limit,
+    expiresAt: new Date(session.expiresAt).toISOString()
+  };
+}
+
+export async function executeClientImportPreview(
+  actor: SessionUser,
+  previewId: string,
+  auditCtx: { ipAddress?: string; userAgent?: string }
+): Promise<ImportExecuteResult | null> {
+  const session = getTableSession<ParsedRow>("import_preview", previewOwnerKey(actor), previewId);
+  if (!session || session.meta?.entityType !== "clients") {
+    return null;
+  }
+
+  let imported = 0;
+  const errors: ImportExecuteResult["errors"] = [];
+
+  for (const row of session.rows) {
+    const result = clientRowSchema.safeParse(row.data);
+    if (!result.success) {
+      errors.push({ rowNumber: row.rowNumber, error: result.error.issues.map((issue) => issue.message).join("; ") });
+      continue;
+    }
+
+    try {
+      const d = result.data;
+      const client = await prisma.client.create({
+        data: {
+          firmId: actor.firmId,
+          name: d.name,
+          type: d.type,
+          phone: d.phone || null,
+          email: d.email || null,
+          nationalId: d.nationalId || null,
+          commercialRegister: d.commercialRegister || null,
+          taxNumber: d.taxNumber || null,
+          governorate: d.governorate || null
+        }
+      });
+      await writeAuditLog(prisma, { actor, ipAddress: auditCtx.ipAddress, userAgent: auditCtx.userAgent }, {
+        action: "clients.bulk_import",
+        entityType: "Client",
+        entityId: client.id
+      });
+      imported++;
+    } catch (err) {
+      errors.push({ rowNumber: row.rowNumber, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  return { imported, failed: errors.length, errors };
+}
+
+export async function executeCaseImportPreview(
+  actor: SessionUser,
+  previewId: string,
+  auditCtx: { ipAddress?: string; userAgent?: string }
+): Promise<ImportExecuteResult | null> {
+  const session = getTableSession<ParsedRow>("import_preview", previewOwnerKey(actor), previewId);
+  if (!session || session.meta?.entityType !== "cases") {
+    return null;
+  }
+
+  let imported = 0;
+  const errors: ImportExecuteResult["errors"] = [];
+
+  for (const row of session.rows) {
+    const result = caseRowSchema.safeParse(row.data);
+    if (!result.success) {
+      errors.push({ rowNumber: row.rowNumber, error: result.error.issues.map((issue) => issue.message).join("; ") });
+      continue;
+    }
+
+    try {
+      const d = result.data;
+      const rawClientId = row.data.client_id ?? row.data.clientid ?? row.data.clientId ?? "";
+      let clientId = rawClientId.length === 36 ? rawClientId : undefined;
+      if (!clientId) {
+        const rawClientName = row.data.client_name ?? row.data.clientname ?? "";
+        if (rawClientName) {
+          const matched = await prisma.client.findFirst({
+            where: { firmId: actor.firmId, name: rawClientName, deletedAt: null }
+          });
+          clientId = matched?.id;
+        }
+      }
+      if (!clientId) {
+        errors.push({ rowNumber: row.rowNumber, error: "client_id or client_name required and must match an existing client" });
+        continue;
+      }
+
+      const caseRecord = await prisma.case.create({
+        data: {
+          firmId: actor.firmId,
+          clientId,
+          title: d.title,
+          caseNumber: d.caseNumber,
+          type: d.type,
+          status: d.status,
+          internalReference: d.internalReference || null,
+          judicialYear: d.judicialYear ? Number(d.judicialYear) : null
+        }
+      });
+
+      await writeAuditLog(prisma, { actor, ipAddress: auditCtx.ipAddress, userAgent: auditCtx.userAgent }, {
+        action: "cases.bulk_import",
+        entityType: "Case",
+        entityId: caseRecord.id
+      });
+      imported++;
+    } catch (err) {
+      errors.push({ rowNumber: row.rowNumber, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  return { imported, failed: errors.length, errors };
 }
 
 export async function executeCaseImport(

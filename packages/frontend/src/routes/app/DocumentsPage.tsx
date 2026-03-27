@@ -1,17 +1,30 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ErrorState, PageHeader, SectionCard, SelectField } from "./ui";
+import { useTableQueryState } from "../../lib/tableQueryState";
+import { ErrorState, Field, PageHeader, SectionCard, SelectField, TableToolbar } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useLookupOptions } from "../../lib/lookups";
 
 export function DocumentsPage() {
   const { t } = useTranslation("app");
-  const [typeFilter, setTypeFilter] = useState("");
+  const table = useTableQueryState({
+    defaultSortBy: "createdAt",
+    defaultSortDir: "desc",
+    defaultLimit: 20,
+    filterKeys: ["type"]
+  });
   const docTypesQuery = useLookupOptions("DocumentType");
 
-  const queryKey = ["documents", typeFilter];
+  const queryKey = [
+    "documents",
+    table.state.q,
+    table.state.filters.type,
+    table.state.sortBy,
+    table.state.sortDir,
+    table.state.page,
+    table.state.limit
+  ];
 
   const typeOptions = [
     { value: "", label: t("labels.all") },
@@ -45,15 +58,53 @@ export function DocumentsPage() {
             onRetry={() => void docTypesQuery.refetch()}
           />
         ) : null}
-        <div className="mb-4 max-w-xs">
+        <TableToolbar>
+          <Field
+            label={t("labels.search")}
+            value={table.state.q}
+            onChange={table.setQ}
+            placeholder={t("documents.searchPlaceholder")}
+          />
           <SelectField
             label={t("documents.fileType")}
-            onChange={setTypeFilter}
+            onChange={(value) => table.setFilter("type", value)}
             options={typeOptions}
-            value={typeFilter}
+            value={table.state.filters.type ?? ""}
+          />
+        </TableToolbar>
+        <div className="mb-4 max-w-xs">
+          <SelectField
+            label={t("labels.sort")}
+            value={`${table.state.sortBy}:${table.state.sortDir}`}
+            onChange={(value) => {
+              const [sortBy, sortDir] = value.split(":");
+              table.update({ sortBy, sortDir: sortDir as "asc" | "desc", page: 1 });
+            }}
+            options={[
+              { value: "createdAt:desc", label: `${t("labels.date")} ↓` },
+              { value: "createdAt:asc", label: `${t("labels.date")} ↑` },
+              { value: "title:asc", label: `${t("labels.title")} A-Z` },
+              { value: "title:desc", label: `${t("labels.title")} Z-A` }
+            ]}
           />
         </div>
-        <DocumentList queryKey={queryKey} />
+        <DocumentList
+          queryKey={queryKey}
+          queryParams={{
+            q: table.state.q || undefined,
+            type: table.state.filters.type || undefined,
+            sortBy: table.state.sortBy,
+            sortDir: table.state.sortDir,
+            page: table.state.page,
+            limit: table.state.limit
+          }}
+          pagination={{
+            page: table.state.page,
+            pageSize: table.state.limit,
+            onPageChange: table.setPage,
+            onPageSizeChange: table.setLimit
+          }}
+        />
       </SectionCard>
     </div>
   );

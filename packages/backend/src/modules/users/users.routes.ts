@@ -58,9 +58,25 @@ export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
       preHandler: [requireAuth, requirePermission("users:read")]
     },
     async (request) => {
-      const query = request.query as Record<string, string>;
+      const query = request.query as {
+        q?: string;
+        status?: string;
+        roleId?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: string;
+        limit?: string;
+      };
       const { page, limit } = parsePaginationQuery(query);
-      return listUsers(request.sessionUser!, { page, limit });
+      return listUsers(request.sessionUser!, {
+        q: query.q,
+        status: query.status,
+        roleId: query.roleId,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        page,
+        limit
+      });
     }
   );
 

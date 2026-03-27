@@ -1,21 +1,33 @@
 import React, { useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Upload, AlertCircle, CheckCircle2, XCircle, Loader2, Download } from "lucide-react";
-import { PageHeader, SectionCard, PrimaryButton } from "./ui";
+import { apiFetch, apiFormFetch } from "../../lib/api";
+import { useTableQueryState } from "../../lib/tableQueryState";
+import { Field, PageHeader, SectionCard, PrimaryButton, SelectField, TablePagination, TableToolbar } from "./ui";
 
 type EntityType = "clients" | "cases";
 
 interface RowError { rowNumber: number; error: string }
 
 interface PreviewResult {
+  previewId: string;
   total: number;
   valid: number;
   invalid: number;
-  rows: Array<{
+  expiresAt: string;
+}
+
+interface PreviewRowsResult {
+  items: Array<{
     rowNumber: number;
     data: Record<string, string>;
     errors: string[];
   }>;
+  total: number;
+  page: number;
+  pageSize: number;
+  expiresAt: string;
 }
 
 interface ExecuteResult {
@@ -26,24 +38,31 @@ interface ExecuteResult {
 
 type Step = "upload" | "preview" | "results";
 
-async function uploadFile(
+async function uploadPreviewFile(
   entityType: EntityType,
-  phase: "preview" | "execute",
-  file: File,
-  fallbackMessage: string
-): Promise<PreviewResult | ExecuteResult> {
+  file: File
+): Promise<PreviewResult> {
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch(`/api/import/${entityType}/${phase}`, {
+  return apiFormFetch<PreviewResult>(`/api/import/${entityType}/preview`, {
     method: "POST",
-    body: fd,
-    credentials: "include"
+    body: fd
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: fallbackMessage }));
-    throw new Error((err as { message?: string }).message ?? fallbackMessage);
+}
+
+async function executeFromPreview(
+  entityType: EntityType,
+  previewId: string,
+  fallbackMessage: string
+): Promise<ExecuteResult> {
+  try {
+    return await apiFetch<ExecuteResult>(`/api/import/${entityType}/execute-preview`, {
+      method: "POST",
+      body: JSON.stringify({ previewId })
+    });
+  } catch (error) {
+    throw new Error((error as Error)?.message ?? fallbackMessage);
   }
-  return res.json() as Promise<PreviewResult | ExecuteResult>;
 }
 
 function downloadErrorReport(errors: RowError[]) {
@@ -67,14 +86,29 @@ export function ImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [result, setResult] = useState<ExecuteResult | null>(null);
+  const table = useTableQueryState({
+    defaultSortBy: "rowNumber",
+    defaultSortDir: "asc",
+    defaultLimit: 20,
+    filterKeys: ["status"]
+  });
+
+  const previewRowsQuery = useQuery({
+    queryKey: ["import-preview-rows", preview?.previewId, table.state],
+    queryFn: () =>
+      apiFetch<PreviewRowsResult>(
+        `/api/import/previews/${preview!.previewId}/rows?${table.toApiQueryString()}`
+      ),
+    enabled: Boolean(preview?.previewId && step === "preview")
+  });
 
   async function handlePreview() {
     if (!file) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await uploadFile(entityType, "preview", file, t("errors.fallback"));
-      setPreview(data as PreviewResult);
+      const data = await uploadPreviewFile(entityType, file);
+      setPreview(data);
       setStep("preview");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.fallback"));
@@ -84,12 +118,12 @@ export function ImportPage() {
   }
 
   async function handleExecute() {
-    if (!file) return;
+    if (!preview?.previewId) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await uploadFile(entityType, "execute", file, t("errors.fallback"));
-      setResult(data as ExecuteResult);
+      const data = await executeFromPreview(entityType, preview.previewId, t("errors.fallback"));
+      setResult(data);
       setStep("results");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.fallback"));
@@ -219,19 +253,38 @@ export function ImportPage() {
               </div>
             </div>
 
+            <TableToolbar>
+              <Field
+                label={t("labels.search")}
+                value={table.state.q}
+                onChange={table.setQ}
+                placeholder={t("import.searchPlaceholder")}
+              />
+              <SelectField
+                label={t("labels.status")}
+                value={table.state.filters.status ?? ""}
+                onChange={(value) => table.setFilter("status", value)}
+                options={[
+                  { value: "", label: t("labels.all") },
+                  { value: "valid", label: t("import.validRows") },
+                  { value: "invalid", label: t("import.invalidRows") }
+                ]}
+              />
+            </TableToolbar>
+
             <div className="max-h-80 overflow-auto rounded-2xl border border-slate-200">
               <table className="w-full text-sm">
                 <thead className="border-b bg-slate-50">
                   <tr>
                     <th className="px-3 py-2 text-start font-semibold text-slate-600">{t("import.row")}</th>
-                    {Object.keys(preview.rows[0]?.data ?? {}).map((k) => (
+                    {Object.keys(previewRowsQuery.data?.items[0]?.data ?? {}).map((k) => (
                       <th key={k} className="px-3 py-2 text-start font-semibold text-slate-600">{k}</th>
                     ))}
                     <th className="px-3 py-2 text-start font-semibold text-slate-600">{t("import.status")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.rows.map((row) => (
+                  {(previewRowsQuery.data?.items ?? []).map((row) => (
                     <tr key={row.rowNumber} className={row.errors.length ? "bg-red-50" : ""}>
                       <td className="px-3 py-1.5 text-slate-400">{row.rowNumber}</td>
                       {Object.values(row.data).map((v, i) => (
@@ -249,6 +302,13 @@ export function ImportPage() {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              page={table.state.page}
+              pageSize={table.state.limit}
+              total={previewRowsQuery.data?.total ?? 0}
+              onPageChange={table.setPage}
+              onPageSizeChange={table.setLimit}
+            />
 
             <div className="flex gap-3">
               <PrimaryButton disabled={preview.valid === 0 || loading} onClick={handleExecute}>

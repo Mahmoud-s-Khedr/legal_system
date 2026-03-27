@@ -1,18 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import type { NotificationListResponseDto } from "@elms/shared";
+import { NotificationType, type NotificationListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
-import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatDateTime } from "./ui";
+import { useTableQueryState } from "../../lib/tableQueryState";
+import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper, formatDateTime } from "./ui";
 
 export function NotificationsPage() {
   const { t } = useTranslation("app");
   const qc = useQueryClient();
   const feedback = useMutationFeedback();
+  const table = useTableQueryState({
+    defaultSortBy: "createdAt",
+    defaultSortDir: "desc",
+    defaultLimit: 20,
+    filterKeys: ["type", "isRead"]
+  });
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["notifications-full"],
-    queryFn: () => apiFetch<NotificationListResponseDto>("/api/notifications")
+    queryKey: ["notifications-full", table.state],
+    queryFn: () => apiFetch<NotificationListResponseDto>(`/api/notifications?${table.toApiQueryString()}`)
   });
 
   const markAll = useMutation({
@@ -53,6 +60,35 @@ export function NotificationsPage() {
       />
 
       <SectionCard title={t("notifications.all")}>
+        <TableToolbar>
+          <Field
+            label={t("labels.search")}
+            value={table.state.q}
+            onChange={table.setQ}
+            placeholder={t("notifications.searchPlaceholder")}
+          />
+          <SelectField
+            label={t("labels.type")}
+            value={table.state.filters.type ?? ""}
+            onChange={(value) => table.setFilter("type", value)}
+            options={[
+              { value: "", label: t("labels.all") },
+              ...Object.values(NotificationType).map((value) => ({ value, label: value }))
+            ]}
+          />
+        </TableToolbar>
+        <div className="mb-4 max-w-xs">
+          <SelectField
+            label={t("labels.status")}
+            value={table.state.filters.isRead ?? ""}
+            onChange={(value) => table.setFilter("isRead", value)}
+            options={[
+              { value: "", label: t("labels.all") },
+              { value: "false", label: "Unread" },
+              { value: "true", label: "Read" }
+            ]}
+          />
+        </div>
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
         {!isLoading && isError && (
           <ErrorState
@@ -66,43 +102,52 @@ export function NotificationsPage() {
           <EmptyState title={t("notifications.empty")} description="" />
         )}
         {!isLoading && !isError && !!data?.items.length && (
-          <TableWrapper>
-            <DataTable>
-              <TableHead>
-                <tr>
-                  <TableHeadCell>{t("labels.title")}</TableHeadCell>
-                  <TableHeadCell>{t("labels.description")}</TableHeadCell>
-                  <TableHeadCell>{t("labels.date")}</TableHeadCell>
-                  <TableHeadCell>{t("labels.status")}</TableHeadCell>
-                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
-                </tr>
-              </TableHead>
-              <TableBody>
-                {data.items.map((n) => (
-                  <TableRow key={n.id}>
-                    <TableCell>
-                      <span className={!n.isRead ? "font-semibold" : ""}>{n.title}</span>
-                    </TableCell>
-                    <TableCell>{n.body}</TableCell>
-                    <TableCell>{formatDateTime(n.createdAt)}</TableCell>
-                    <TableCell>{n.isRead ? "Read" : "Unread"}</TableCell>
-                    <TableCell align="end">
-                      {!n.isRead ? (
-                        <button
-                          onClick={() => void markOne.mutateAsync(n.id)}
-                          className="ms-3 shrink-0 rounded-lg px-2 py-1 text-xs text-accent hover:bg-blue-100"
-                        >
-                          {t("notifications.markRead")}
-                        </button>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </DataTable>
-          </TableWrapper>
+          <>
+            <TableWrapper>
+              <DataTable>
+                <TableHead>
+                  <tr>
+                    <SortableTableHeadCell label={t("labels.title")} sortKey="title" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <TableHeadCell>{t("labels.description")}</TableHeadCell>
+                    <SortableTableHeadCell label={t("labels.date")} sortKey="createdAt" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell label={t("labels.status")} sortKey="isRead" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {data.items.map((n) => (
+                    <TableRow key={n.id}>
+                      <TableCell>
+                        <span className={!n.isRead ? "font-semibold" : ""}>{n.title}</span>
+                      </TableCell>
+                      <TableCell>{n.body}</TableCell>
+                      <TableCell>{formatDateTime(n.createdAt)}</TableCell>
+                      <TableCell>{n.isRead ? "Read" : "Unread"}</TableCell>
+                      <TableCell align="end">
+                        {!n.isRead ? (
+                          <button
+                            onClick={() => void markOne.mutateAsync(n.id)}
+                            className="ms-3 shrink-0 rounded-lg px-2 py-1 text-xs text-accent hover:bg-blue-100"
+                          >
+                            {t("notifications.markRead")}
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </DataTable>
+            </TableWrapper>
+            <TablePagination
+              page={table.state.page}
+              pageSize={table.state.limit}
+              total={data.total}
+              onPageChange={table.setPage}
+              onPageSizeChange={table.setLimit}
+            />
+          </>
         )}
       </SectionCard>
     </div>

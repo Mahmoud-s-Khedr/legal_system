@@ -1,6 +1,9 @@
+import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
+import { parsePaginationQuery } from "../../utils/pagination.js";
+import { applyArrayTableQuery, normalizeSort } from "../../utils/tableQuery.js";
 import {
   caseStatusDistribution,
   hearingOutcomes,
@@ -14,19 +17,77 @@ import {
   createCustomReport,
   updateCustomReport,
   deleteCustomReport,
-  runCustomReport
+  runCustomReport,
+  createCustomReportRunSession,
+  listCustomReportRunRows
 } from "./custom-reports.service.js";
 import { generateReportExcel, generateReportPdf } from "./report.export.js";
+
+const reportTableQuerySchema = z.object({
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  q: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
+  page: z.string().optional(),
+  limit: z.string().optional()
+});
+
+function toRowRecords(data: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+  return data.map((row) => (row && typeof row === "object" && !Array.isArray(row) ? (row as Record<string, unknown>) : { value: row }));
+}
+
+function toTableResponse(
+  rows: Array<Record<string, unknown>>,
+  query: { q?: string; sortBy?: string; sortDir?: "asc" | "desc"; page: number; limit: number },
+  options: {
+    searchable: string[];
+    sortable: string[];
+    defaultSortBy: string;
+    defaultSortDir: "asc" | "desc";
+  }
+) {
+  const sortBy = normalizeSort(
+    query.sortBy,
+    options.sortable as readonly string[],
+    options.defaultSortBy
+  ) as keyof Record<string, unknown>;
+  const searchFields = (options.searchable.length > 0 ? options.searchable : options.sortable) as Array<keyof Record<string, unknown>>;
+  const result = applyArrayTableQuery(rows, {
+    q: query.q,
+    searchFields,
+    sortBy,
+    sortDir: query.sortDir ?? options.defaultSortDir,
+    page: query.page,
+    limit: query.limit
+  });
+  return {
+    items: result.items,
+    total: result.total,
+    page: query.page,
+    pageSize: query.limit
+  };
+}
 
 export async function registerReportRoutes(app: FastifyInstance) {
   app.get(
     "/api/reports/case-status",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request) => {
-      const q = request.query as Record<string, string>;
-      return caseStatusDistribution(request.sessionUser!, {
-        dateFrom: q.dateFrom,
-        dateTo: q.dateTo
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await caseStatusDistribution(request.sessionUser!, {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo
+      });
+      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
+        searchable: ["status"],
+        sortable: ["status", "count"],
+        defaultSortBy: "count",
+        defaultSortDir: "desc"
       });
     }
   );
@@ -35,10 +96,17 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/hearing-outcomes",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request) => {
-      const q = request.query as Record<string, string>;
-      return hearingOutcomes(request.sessionUser!, {
-        dateFrom: q.dateFrom,
-        dateTo: q.dateTo
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await hearingOutcomes(request.sessionUser!, {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo
+      });
+      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
+        searchable: ["outcome"],
+        sortable: ["outcome", "count"],
+        defaultSortBy: "count",
+        defaultSortDir: "desc"
       });
     }
   );
@@ -47,7 +115,15 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/lawyer-workload",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request) => {
-      return lawyerWorkload(request.sessionUser!);
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await lawyerWorkload(request.sessionUser!);
+      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
+        searchable: ["fullName"],
+        sortable: ["fullName", "openCases", "openTasks", "upcomingHearings"],
+        defaultSortBy: "openCases",
+        defaultSortDir: "desc"
+      });
     }
   );
 
@@ -55,10 +131,17 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/revenue",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request) => {
-      const q = request.query as Record<string, string>;
-      return revenueReport(request.sessionUser!, {
-        dateFrom: q.dateFrom,
-        dateTo: q.dateTo
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await revenueReport(request.sessionUser!, {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo
+      });
+      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
+        searchable: ["month"],
+        sortable: ["month", "invoiced", "paid"],
+        defaultSortBy: "month",
+        defaultSortDir: "asc"
       });
     }
   );
@@ -67,7 +150,15 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/outstanding-balances",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request) => {
-      return outstandingBalances(request.sessionUser!);
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await outstandingBalances(request.sessionUser!);
+      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
+        searchable: ["invoiceNumber", "clientName"],
+        sortable: ["invoiceNumber", "clientName", "totalAmount", "dueDate", "daysOverdue"],
+        defaultSortBy: "daysOverdue",
+        defaultSortDir: "desc"
+      });
     }
   );
 
@@ -181,8 +272,32 @@ export async function registerReportRoutes(app: FastifyInstance) {
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const result = await runCustomReport(request.sessionUser!, id);
+      const result = await createCustomReportRunSession(request.sessionUser!, id);
       if (!result) return reply.status(404).send({ error: "Custom report not found" });
+      return result;
+    }
+  );
+
+  app.get(
+    "/api/reports/custom/runs/:runId/rows",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const result = listCustomReportRunRows(
+        request.sessionUser!,
+        (request.params as { runId: string }).runId,
+        {
+          q: query.q,
+          sortBy: query.sortBy,
+          sortDir: query.sortDir,
+          page,
+          limit
+        }
+      );
+      if (!result) {
+        return reply.status(404).send({ error: "Report run session not found or expired" });
+      }
       return result;
     }
   );

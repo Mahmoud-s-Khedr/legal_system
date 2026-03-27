@@ -8,10 +8,11 @@ import type {
   TaskStatus as SharedTaskStatus,
   UpdateTaskDto
 } from "@elms/shared";
-import { TaskPriority, TaskStatus } from "@prisma/client";
+import { Prisma, TaskPriority, TaskStatus } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
+import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 
 function mapTask(task: {
   id: string;
@@ -50,16 +51,28 @@ function mapTask(task: {
 export async function listTasks(
   actor: SessionUser,
   filters: {
+    q?: string;
     caseId?: string;
     assignedToId?: string;
     status?: string;
     overdue?: string;
     from?: string;
     to?: string;
+    sortBy?: string;
+    sortDir?: SortDir;
   },
   pagination: { page: number; limit: number } = { page: 1, limit: 50 }
 ): Promise<TaskListResponseDto> {
   const { page, limit } = pagination;
+  const q = filters.q?.trim();
+  const sortBy = normalizeSort(filters.sortBy, ["dueAt", "createdAt", "title", "priority", "status"] as const, "dueAt");
+  const sortDir = toPrismaSortOrder(filters.sortDir ?? "asc");
+
+  const orderBy: Prisma.TaskOrderByWithRelationInput | Prisma.TaskOrderByWithRelationInput[] =
+    sortBy === "dueAt"
+      ? [{ dueAt: sortDir }, { createdAt: "desc" }]
+      : { [sortBy]: sortDir };
+
   return withTenant(prisma, actor.firmId, async (tx) => {
     const dueAtFilter: { lt?: Date; gte?: Date; lte?: Date } = {};
     if (filters.overdue === "true") {
@@ -78,6 +91,16 @@ export async function listTasks(
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.assignedToId ? { assignedToId: filters.assignedToId } : {}),
       ...(filters.status ? { status: filters.status as TaskStatus } : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" as const } },
+              { description: { contains: q, mode: "insensitive" as const } },
+              { case: { title: { contains: q, mode: "insensitive" as const } } },
+              { assignedTo: { fullName: { contains: q, mode: "insensitive" as const } } }
+            ]
+          }
+        : {}),
       ...(Object.keys(dueAtFilter).length > 0 ? { dueAt: dueAtFilter } : {}),
       ...(filters.overdue === "true"
         ? {
@@ -97,7 +120,7 @@ export async function listTasks(
           assignedTo: true,
           createdBy: true
         },
-        orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+        orderBy,
         skip: (page - 1) * limit,
         take: limit
       })

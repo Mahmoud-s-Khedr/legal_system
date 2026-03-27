@@ -14,6 +14,12 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiDownloadResult {
+  blob: Blob;
+  filename?: string;
+  contentType: string | null;
+}
+
 async function parseErrorPayload(response: Response) {
   const payload = await response
     .json()
@@ -68,6 +74,37 @@ export function resolveApiUrl(input: string) {
   return `${apiBaseUrl}${input.startsWith("/") ? input : `/${input}`}`;
 }
 
+function buildAuthHeaders(initHeaders?: HeadersInit) {
+  const headers = new Headers(initHeaders);
+  const desktopLocalSessionToken = readDesktopLocalSessionToken();
+  if (desktopLocalSessionToken) {
+    headers.set("x-elms-session", desktopLocalSessionToken);
+  }
+  return headers;
+}
+
+function parseFilenameFromContentDisposition(value: string | null): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const utf8Match = value.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      return utf8Match[1].trim().replace(/^"|"$/g, "");
+    }
+  }
+
+  const asciiMatch = value.match(/filename\s*=\s*("?)([^";]+)\1/i);
+  if (asciiMatch?.[2]) {
+    return asciiMatch[2].trim();
+  }
+
+  return undefined;
+}
+
 function hasContentTypeHeader(headers: HeadersInit | undefined) {
   if (!headers) {
     return false;
@@ -89,11 +126,7 @@ export async function apiFetch<T>(
   init?: RequestInit
 ): Promise<T> {
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
-  const headers = new Headers(initHeaders);
-  const desktopLocalSessionToken = readDesktopLocalSessionToken();
-  if (desktopLocalSessionToken) {
-    headers.set("x-elms-session", desktopLocalSessionToken);
-  }
+  const headers = buildAuthHeaders(initHeaders);
   const shouldSetJsonContentType =
     restInit.body != null && !(restInit.body instanceof FormData) && !hasContentTypeHeader(headers);
 
@@ -121,11 +154,7 @@ export async function apiFormFetch<T>(
   init?: RequestInit
 ): Promise<T> {
   const { signal, headers: initHeaders, ...restInit } = init ?? {};
-  const headers = new Headers(initHeaders);
-  const desktopLocalSessionToken = readDesktopLocalSessionToken();
-  if (desktopLocalSessionToken) {
-    headers.set("x-elms-session", desktopLocalSessionToken);
-  }
+  const headers = buildAuthHeaders(initHeaders);
 
   const response = await fetch(resolveApiUrl(input), {
     credentials: "include",
@@ -139,4 +168,32 @@ export async function apiFormFetch<T>(
   }
 
   return (await response.json()) as T;
+}
+
+export async function apiDownload(
+  input: string,
+  init?: RequestInit
+): Promise<ApiDownloadResult> {
+  const { headers: initHeaders, signal, ...restInit } = init ?? {};
+  const headers = buildAuthHeaders(initHeaders);
+
+  const response = await fetch(resolveApiUrl(input), {
+    credentials: "include",
+    headers,
+    signal,
+    ...restInit
+  });
+
+  if (!response.ok) {
+    await parseErrorPayload(response);
+  }
+
+  const contentDisposition = response.headers.get("Content-Disposition");
+  const filename = parseFilenameFromContentDisposition(contentDisposition);
+
+  return {
+    blob: await response.blob(),
+    filename,
+    contentType: response.headers.get("Content-Type")
+  };
 }

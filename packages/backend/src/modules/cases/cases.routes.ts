@@ -14,6 +14,8 @@ import {
   createCase,
   deleteCase,
   getCase,
+  listCaseAssignments,
+  listCaseParties,
   listCaseCourts,
   listCaseStatusHistory,
   listCases,
@@ -86,6 +88,36 @@ const caseCourtReorderSchema = z.object({
   orderedIds: z.array(z.string().uuid()).min(1)
 });
 
+const casePartyListQuerySchema = z.object({
+  q: z.string().optional(),
+  role: z.string().optional(),
+  isOurClient: z.enum(["true", "false"]).optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
+  page: z.string().optional(),
+  limit: z.string().optional()
+});
+
+const caseAssignmentListQuerySchema = z.object({
+  q: z.string().optional(),
+  roleOnCase: z.nativeEnum(CaseRoleOnCase).optional(),
+  active: z.enum(["true", "false"]).optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
+  page: z.string().optional(),
+  limit: z.string().optional()
+});
+
+const caseCourtListQuerySchema = z.object({
+  q: z.string().optional(),
+  courtLevel: z.string().optional(),
+  isActive: z.enum(["true", "false"]).optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
+  page: z.string().optional(),
+  limit: z.string().optional()
+});
+
 const caseCourtDtoSchema = {
   type: "object",
   properties: {
@@ -115,9 +147,25 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("cases:read")]
     },
     async (request) => {
-      const query = request.query as { page?: string; limit?: string };
+      const query = request.query as {
+        q?: string;
+        status?: string;
+        type?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: string;
+        limit?: string;
+      };
       const { page, limit } = parsePaginationQuery(query);
-      return listCases(request.sessionUser!, { page, limit });
+      return listCases(request.sessionUser!, {
+        q: query.q,
+        status: query.status,
+        type: query.type,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        page,
+        limit
+      });
     }
   );
 
@@ -216,6 +264,26 @@ export async function registerCaseRoutes(app: FastifyInstance) {
     }
   );
 
+  app.get(
+    "/api/cases/:id/parties",
+    {
+      preHandler: [requireAuth, requirePermission("cases:read")]
+    },
+    async (request) => {
+      const query = casePartyListQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      return listCaseParties(request.sessionUser!, (request.params as { id: string }).id, {
+        q: query.q,
+        role: query.role,
+        isOurClient: query.isOurClient,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        page,
+        limit
+      });
+    }
+  );
+
   app.delete(
     "/api/cases/:id/parties/:partyId",
     {
@@ -248,6 +316,26 @@ export async function registerCaseRoutes(app: FastifyInstance) {
     }
   );
 
+  app.get(
+    "/api/cases/:id/assignments",
+    {
+      preHandler: [requireAuth, requirePermission("cases:read")]
+    },
+    async (request) => {
+      const query = caseAssignmentListQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      return listCaseAssignments(request.sessionUser!, (request.params as { id: string }).id, {
+        q: query.q,
+        roleOnCase: query.roleOnCase,
+        active: query.active,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        page,
+        limit
+      });
+    }
+  );
+
   app.delete(
     "/api/cases/:id/assignments/:assignmentId",
     {
@@ -268,11 +356,22 @@ export async function registerCaseRoutes(app: FastifyInstance) {
   app.get(
     "/api/cases/:id/courts",
     {
-      schema: { response: { 200: { type: "array", items: caseCourtDtoSchema } } },
+      schema: { response: { 200: listResponseSchema(caseCourtDtoSchema) } },
       preHandler: [requireAuth, requirePermission("cases:read")]
     },
-    async (request) =>
-      listCaseCourts(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => {
+      const query = caseCourtListQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      return listCaseCourts(request.sessionUser!, (request.params as { id: string }).id, {
+        q: query.q,
+        courtLevel: query.courtLevel,
+        isActive: query.isActive,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        page,
+        limit
+      });
+    }
   );
 
   app.post(

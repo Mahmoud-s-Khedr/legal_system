@@ -1,11 +1,25 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useExpenses, useCreateExpense, useDeleteExpense } from "../../lib/billing";
-import { DataTable, EmptyState, ErrorState, PageHeader, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatCurrency } from "./ui";
+import { useTableQueryState } from "../../lib/tableQueryState";
+import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper, formatCurrency } from "./ui";
 
 export function ExpensesPage() {
   const { t } = useTranslation("app");
-  const { data, isLoading, isError, error, refetch } = useExpenses();
+  const table = useTableQueryState({
+    defaultSortBy: "createdAt",
+    defaultSortDir: "desc",
+    defaultLimit: 20,
+    filterKeys: ["category"]
+  });
+  const { data, isLoading, isError, error, refetch } = useExpenses({
+    q: table.state.q || undefined,
+    category: table.state.filters.category || undefined,
+    sortBy: table.state.sortBy,
+    sortDir: table.state.sortDir,
+    page: table.state.page,
+    limit: table.state.limit
+  });
   const createExpense = useCreateExpense();
   const deleteExpense = useDeleteExpense();
 
@@ -101,6 +115,20 @@ export function ExpensesPage() {
       )}
 
       <SectionCard title={t("billing.expenseList")}>
+        <TableToolbar>
+          <Field
+            label={t("labels.search")}
+            value={table.state.q}
+            onChange={table.setQ}
+            placeholder={t("billing.searchPlaceholder")}
+          />
+          <Field
+            label={t("billing.category")}
+            value={table.state.filters.category ?? ""}
+            onChange={(value) => table.setFilter("category", value)}
+            placeholder={t("billing.category")}
+          />
+        </TableToolbar>
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
         {!isLoading && isError && (
           <ErrorState
@@ -114,38 +142,47 @@ export function ExpensesPage() {
           <EmptyState title={t("empty.noExpenses")} description={t("empty.noExpensesHelp")} />
         )}
         {!isLoading && !isError && !!data?.items.length && (
-          <TableWrapper>
-            <DataTable>
-              <TableHead>
-                <tr>
-                  <TableHeadCell>{t("billing.category")}</TableHeadCell>
-                  <TableHeadCell>{t("labels.description")}</TableHeadCell>
-                  <TableHeadCell>{t("labels.case")}</TableHeadCell>
-                  <TableHeadCell align="end">{t("billing.amount")}</TableHeadCell>
-                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
-                </tr>
-              </TableHead>
-              <TableBody>
-                {data.items.map((exp) => (
-                  <TableRow key={exp.id}>
-                    <TableCell>{exp.category}</TableCell>
-                    <TableCell>{exp.description ?? "—"}</TableCell>
-                    <TableCell>{exp.caseTitle ?? "—"}</TableCell>
-                    <TableCell align="end">{formatCurrency(exp.amount)}</TableCell>
-                    <TableCell align="end">
-                      <button
-                        onClick={() => void deleteExpense.mutateAsync(exp.id)}
-                        disabled={deleteExpense.isPending}
-                        className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 disabled:opacity-50"
-                      >
-                        {t("actions.delete")}
-                      </button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </DataTable>
-          </TableWrapper>
+          <>
+            <TableWrapper>
+              <DataTable>
+                <TableHead>
+                  <tr>
+                    <SortableTableHeadCell label={t("billing.category")} sortKey="category" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <TableHeadCell>{t("labels.description")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.case")}</TableHeadCell>
+                    <SortableTableHeadCell label={t("billing.amount")} sortKey="amount" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} align="end" />
+                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {data.items.map((exp) => (
+                    <TableRow key={exp.id}>
+                      <TableCell>{exp.category}</TableCell>
+                      <TableCell>{exp.description ?? "—"}</TableCell>
+                      <TableCell>{exp.caseTitle ?? "—"}</TableCell>
+                      <TableCell align="end">{formatCurrency(exp.amount)}</TableCell>
+                      <TableCell align="end">
+                        <button
+                          onClick={() => void deleteExpense.mutateAsync(exp.id)}
+                          disabled={deleteExpense.isPending}
+                          className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {t("actions.delete")}
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </DataTable>
+            </TableWrapper>
+            <TablePagination
+              page={table.state.page}
+              pageSize={table.state.limit}
+              total={data.total}
+              onPageChange={table.setPage}
+              onPageSizeChange={table.setLimit}
+            />
+          </>
         )}
       </SectionCard>
     </div>

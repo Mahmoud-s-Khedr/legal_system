@@ -28,11 +28,14 @@ const hearingSchema = z.object({
 });
 
 const hearingListQuerySchema = z.object({
+  q: z.string().optional(),
   caseId: z.string().uuid().optional(),
   assignedLawyerId: z.string().uuid().optional(),
   overdue: z.string().optional(),
   from: z.string().datetime().optional(),
-  to: z.string().datetime().optional()
+  to: z.string().datetime().optional(),
+  sortBy: z.string().optional(),
+  sortDir: z.enum(["asc", "desc"]).optional()
 });
 
 export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {

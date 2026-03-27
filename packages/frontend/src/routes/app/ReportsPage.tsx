@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { apiFetch, resolveApiUrl } from "../../lib/api";
-import { EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, formatCurrency } from "./ui";
+import { useToastStore } from "../../store/toastStore";
+import { apiFetch } from "../../lib/api";
+import { useTableQueryState } from "../../lib/tableQueryState";
+import { EmptyState, ErrorState, Field, FormAlert, PageHeader, SectionCard, SelectField, TablePagination, TableToolbar, formatCurrency } from "./ui";
+import { downloadReportFile } from "./reportExport";
 import type {
   CaseStatusRow,
   HearingOutcomeRow,
@@ -12,31 +15,30 @@ import type {
 } from "../../lib/reports";
 
 type ReportType = "case-status" | "hearing-outcomes" | "lawyer-workload" | "revenue" | "outstanding-balances";
-
-function triggerDownload(url: string) {
-  const a = document.createElement("a");
-  a.href = resolveApiUrl(url);
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+interface ReportListResponse {
+  items: unknown[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export function ReportsPage() {
   const { t } = useTranslation("app");
+  const addToast = useToastStore((state) => state.addToast);
   const [reportType, setReportType] = useState<ReportType>("case-status");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-
-  const qs = new URLSearchParams();
-  if (dateFrom) qs.set("dateFrom", dateFrom);
-  if (dateTo) qs.set("dateTo", dateTo);
-  const qsStr = qs.toString();
+  const [exportError, setExportError] = useState<string | null>(null);
+  const table = useTableQueryState({
+    defaultSortBy: "count",
+    defaultSortDir: "desc",
+    defaultLimit: 20
+  });
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["reports", reportType, dateFrom, dateTo],
+    queryKey: ["reports", reportType, dateFrom, dateTo, table.state],
     queryFn: () =>
-      apiFetch<unknown>(`/api/reports/${reportType}${qsStr ? `?${qsStr}` : ""}`)
+      apiFetch<ReportListResponse>(`/api/reports/${reportType}?${table.toApiQueryString({ dateFrom, dateTo })}`)
   });
 
   const reportOptions: { value: ReportType; label: string }[] = [
@@ -47,11 +49,51 @@ export function ReportsPage() {
     { value: "outstanding-balances", label: t("reports.outstandingBalances") }
   ];
 
-  function exportReport(format: "excel" | "pdf") {
+  const sortOptions: Record<ReportType, Array<{ value: string; label: string }>> = {
+    "case-status": [
+      { value: "count:desc", label: `${t("reports.count")} ↓` },
+      { value: "count:asc", label: `${t("reports.count")} ↑` },
+      { value: "status:asc", label: `${t("labels.status")} A-Z` }
+    ],
+    "hearing-outcomes": [
+      { value: "count:desc", label: `${t("reports.count")} ↓` },
+      { value: "count:asc", label: `${t("reports.count")} ↑` },
+      { value: "outcome:asc", label: `${t("labels.outcome")} A-Z` }
+    ],
+    "lawyer-workload": [
+      { value: "openCases:desc", label: `${t("reports.openCases")} ↓` },
+      { value: "openTasks:desc", label: `${t("reports.openTasks")} ↓` },
+      { value: "fullName:asc", label: `${t("labels.user")} A-Z` }
+    ],
+    revenue: [
+      { value: "month:asc", label: `${t("reports.month")} ↑` },
+      { value: "month:desc", label: `${t("reports.month")} ↓` },
+      { value: "invoiced:desc", label: `${t("billing.totalBilled")} ↓` }
+    ],
+    "outstanding-balances": [
+      { value: "daysOverdue:desc", label: `${t("reports.daysOverdue")} ↓` },
+      { value: "totalAmount:desc", label: `${t("billing.total")} ↓` },
+      { value: "invoiceNumber:asc", label: `${t("billing.invoiceNumber")} A-Z` }
+    ]
+  };
+
+  async function exportReport(format: "excel" | "pdf") {
+    setExportError(null);
     const exportQs = new URLSearchParams({ format });
     if (dateFrom) exportQs.set("dateFrom", dateFrom);
     if (dateTo) exportQs.set("dateTo", dateTo);
-    triggerDownload(`/api/reports/${reportType}/export?${exportQs.toString()}`);
+    const fallbackFilename = `report-${reportType}.${format === "pdf" ? "pdf" : "xlsx"}`;
+
+    try {
+      await downloadReportFile(
+        `/api/reports/${reportType}/export?${exportQs.toString()}`,
+        fallbackFilename
+      );
+    } catch (error) {
+      const message = (error as Error)?.message ?? t("errors.fallback");
+      setExportError(message);
+      addToast(message, "error");
+    }
   }
 
   return (
@@ -87,6 +129,7 @@ export function ReportsPage() {
       </SectionCard>
 
       <SectionCard title={reportOptions.find((o) => o.value === reportType)?.label ?? ""}>
+        {exportError ? <FormAlert message={exportError} /> : null}
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
         {!isLoading && isError && (
           <ErrorState
@@ -96,11 +139,28 @@ export function ReportsPage() {
             onRetry={() => void refetch()}
           />
         )}
-        {!isLoading && !isError && Array.isArray(data) && data.length === 0 && (
+        {!isLoading && !isError && (data?.items.length ?? 0) === 0 && (
           <p className="text-sm text-slate-500">{t("reports.noData")}</p>
         )}
-        {!isLoading && !isError && Array.isArray(data) && data.length > 0 && (
+        {!isLoading && !isError && (data?.items.length ?? 0) > 0 && (
           <>
+            <TableToolbar>
+              <Field
+                label={t("labels.search")}
+                value={table.state.q}
+                onChange={table.setQ}
+                placeholder={t("reports.searchPlaceholder")}
+              />
+              <SelectField
+                label={t("labels.sort")}
+                value={`${table.state.sortBy}:${table.state.sortDir}`}
+                onChange={(value) => {
+                  const [sortBy, sortDir] = value.split(":");
+                  table.update({ sortBy, sortDir: sortDir as "asc" | "desc", page: 1 });
+                }}
+                options={sortOptions[reportType]}
+              />
+            </TableToolbar>
             <div className="mb-4 flex gap-2 justify-end">
               <button
                 onClick={() => exportReport("excel")}
@@ -117,7 +177,14 @@ export function ReportsPage() {
                 {t("reports.exportPdf")}
               </button>
             </div>
-            <ReportTable reportType={reportType} data={data} />
+            <ReportTable reportType={reportType} data={data?.items ?? []} />
+            <TablePagination
+              page={table.state.page}
+              pageSize={table.state.limit}
+              total={data?.total ?? 0}
+              onPageChange={table.setPage}
+              onPageSizeChange={table.setLimit}
+            />
           </>
         )}
       </SectionCard>
