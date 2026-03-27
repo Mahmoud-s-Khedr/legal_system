@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { PageHeader, SectionCard, SelectField } from "./ui";
+import { ErrorState, PageHeader, SectionCard, SelectField } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useLookupOptions } from "../../lib/lookups";
@@ -37,6 +37,14 @@ export function DocumentsPage() {
         title={t("documents.title")}
       />
       <SectionCard description={t("documents.listHelp")} title={t("documents.list")}>
+        {docTypesQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(docTypesQuery.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void docTypesQuery.refetch()}
+          />
+        ) : null}
         <div className="mb-4 max-w-xs">
           <SelectField
             label={t("documents.fileType")}

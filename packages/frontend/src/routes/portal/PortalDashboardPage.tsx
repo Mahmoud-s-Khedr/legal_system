@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { Briefcase, FileText, Calendar } from "lucide-react";
-import { SectionCard } from "../app/ui";
+import { ErrorState, SectionCard, formatCurrency } from "../app/ui";
 
 interface PortalCase {
   id: string;
@@ -22,7 +22,7 @@ interface PortalInvoice {
 
 async function portalFetch<T>(url: string): Promise<T> {
   const res = await fetch(url, { credentials: "include" });
-  if (!res.ok) throw new Error("Request failed");
+  if (!res.ok) throw new Error("request_failed");
   return res.json() as Promise<T>;
 }
 
@@ -42,6 +42,7 @@ export function PortalDashboardPage() {
   const cases = casesQuery.data ?? [];
   const invoices = invoicesQuery.data ?? [];
   const overdueInvoices = invoices.filter((inv) => inv.status === "ISSUED" && inv.dueDate && new Date(inv.dueDate) < new Date());
+  const pageError = (casesQuery.error as Error | null) ?? (invoicesQuery.error as Error | null);
 
   return (
     <div className="space-y-6">
@@ -83,7 +84,14 @@ export function PortalDashboardPage() {
 
       {/* Cases */}
       <SectionCard title={t("portal.myCases")}>
-        {!cases.length ? (
+        {casesQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={pageError?.message === "request_failed" ? t("errors.fallback") : (pageError?.message ?? t("errors.fallback"))}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void casesQuery.refetch()}
+          />
+        ) : !cases.length ? (
           <p className="text-sm text-slate-400">{t("empty.noCases")}</p>
         ) : (
           <div className="space-y-2">
@@ -112,7 +120,14 @@ export function PortalDashboardPage() {
 
       {/* Invoices */}
       <SectionCard title={t("portal.invoices")}>
-        {!invoices.length ? (
+        {invoicesQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={pageError?.message === "request_failed" ? t("errors.fallback") : (pageError?.message ?? t("errors.fallback"))}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void invoicesQuery.refetch()}
+          />
+        ) : !invoices.length ? (
           <p className="text-sm text-slate-400">{t("empty.noInvoices")}</p>
         ) : (
           <div className="space-y-2">
@@ -122,7 +137,7 @@ export function PortalDashboardPage() {
                   <p className="font-semibold">{inv.invoiceNumber}</p>
                   <p className="text-sm text-slate-500">{inv.status}{inv.dueDate && ` · ${t("portal.due")} ${new Date(inv.dueDate).toLocaleDateString()}`}</p>
                 </div>
-                <p className="font-semibold">{inv.totalAmount.toLocaleString()} EGP</p>
+                <p className="font-semibold">{formatCurrency(inv.totalAmount)}</p>
               </div>
             ))}
           </div>

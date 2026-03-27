@@ -728,7 +728,8 @@
     "month": "Month",
     "daysOverdue": "Days overdue",
     "exportExcel": "Export Excel",
-    "exportPdf": "Export PDF"
+    "exportPdf": "Export PDF",
+    "noData": "No data found in the selected date range."
   },
   "templates": {
     "title": "Document Templates",

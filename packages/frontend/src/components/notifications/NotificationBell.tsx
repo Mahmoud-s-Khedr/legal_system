@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { NotificationListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
+import { useAccessibleOverlay } from "../shared/useAccessibleOverlay";
 
 export function NotificationBell() {
   const { t } = useTranslation("app");
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
+  const closePanel = useCallback(() => setOpen(false), []);
+
+  useAccessibleOverlay({
+    open,
+    mode: "popover",
+    contentRef: panelRef,
+    triggerRef,
+    onClose: closePanel
+  });
 
   const countQuery = useQuery({
     queryKey: ["notifications-count"],
@@ -43,11 +55,13 @@ export function NotificationBell() {
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         onClick={() => setOpen((v) => !v)}
         className="relative rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"
         aria-label={`${t("notifications.title")}${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
         aria-expanded={open}
-        aria-haspopup="true"
+        aria-haspopup="dialog"
+        aria-controls="notifications-panel"
         type="button"
       >
         <Bell size={20} aria-hidden="true" />
@@ -71,9 +85,12 @@ export function NotificationBell() {
           />
           {/* Dropdown */}
           <div
+            id="notifications-panel"
+            ref={panelRef}
+            tabIndex={-1}
             className="absolute end-0 top-full z-50 mt-2 w-80 rounded-2xl border border-slate-200 bg-white shadow-elevated"
             role="dialog"
-            aria-label={t("notifications.title")}
+            aria-labelledby="notifications-heading"
           >
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
               <p className="font-semibold" id="notifications-heading">{t("notifications.title")}</p>

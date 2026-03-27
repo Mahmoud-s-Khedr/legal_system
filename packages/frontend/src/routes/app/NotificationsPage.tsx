@@ -2,13 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { NotificationListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, PageHeader, SectionCard } from "./ui";
+import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
 
 export function NotificationsPage() {
   const { t } = useTranslation("app");
   const qc = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["notifications-full"],
     queryFn: () => apiFetch<NotificationListResponseDto>("/api/notifications")
   });
@@ -46,10 +46,18 @@ export function NotificationsPage() {
 
       <SectionCard title={t("notifications.all")}>
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
-        {!isLoading && !data?.items.length && (
+        {!isLoading && isError && (
+          <ErrorState
+            title={t("errors.title")}
+            description={(error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void refetch()}
+          />
+        )}
+        {!isLoading && !isError && !data?.items.length && (
           <EmptyState title={t("notifications.empty")} description="" />
         )}
-        {!isLoading && !!data?.items.length && (
+        {!isLoading && !isError && !!data?.items.length && (
           <div className="space-y-2">
             {data.items.map((n) => (
               <div

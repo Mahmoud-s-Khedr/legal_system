@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { DashboardSummaryDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, PageHeader, SectionCard, StatCard, formatDateTime } from "./ui";
+import { EmptyState, ErrorState, PageHeader, SectionCard, StatCard, formatDateTime } from "./ui";
 import { StatCardSkeleton, SectionCardSkeleton } from "../../components/shared/Skeleton";
 import { useAuthBootstrap } from "../../store/authStore";
 
@@ -24,6 +24,7 @@ export function DashboardPage() {
 
   const summary = summaryQuery.data;
   const isLoading = summaryQuery.isLoading;
+  const isError = summaryQuery.isError;
   const greeting = t(`greeting.${getGreetingKey()}`);
 
   return (
@@ -52,7 +53,14 @@ export function DashboardPage() {
       </div>
 
       {/* ── Detail sections ── */}
-      {isLoading ? (
+      {isError ? (
+        <ErrorState
+          title={t("errors.title")}
+          description={(summaryQuery.error as Error)?.message ?? t("errors.fallback")}
+          retryLabel={t("errors.reload")}
+          onRetry={() => void summaryQuery.refetch()}
+        />
+      ) : isLoading ? (
         <div className="grid gap-4 xl:grid-cols-3">
           <SectionCardSkeleton />
           <SectionCardSkeleton />
@@ -109,4 +117,3 @@ export function DashboardPage() {
     </div>
   );
 }
-

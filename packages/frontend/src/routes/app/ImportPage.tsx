@@ -29,7 +29,8 @@ type Step = "upload" | "preview" | "results";
 async function uploadFile(
   entityType: EntityType,
   phase: "preview" | "execute",
-  file: File
+  file: File,
+  fallbackMessage: string
 ): Promise<PreviewResult | ExecuteResult> {
   const fd = new FormData();
   fd.append("file", file);
@@ -39,8 +40,8 @@ async function uploadFile(
     credentials: "include"
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: "Request failed" }));
-    throw new Error((err as { message?: string }).message ?? "Request failed");
+    const err = await res.json().catch(() => ({ message: fallbackMessage }));
+    throw new Error((err as { message?: string }).message ?? fallbackMessage);
   }
   return res.json() as Promise<PreviewResult | ExecuteResult>;
 }
@@ -72,11 +73,11 @@ export function ImportPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await uploadFile(entityType, "preview", file);
+      const data = await uploadFile(entityType, "preview", file, t("errors.fallback"));
       setPreview(data as PreviewResult);
       setStep("preview");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Preview failed");
+      setError(e instanceof Error ? e.message : t("errors.fallback"));
     } finally {
       setLoading(false);
     }
@@ -87,11 +88,11 @@ export function ImportPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await uploadFile(entityType, "execute", file);
+      const data = await uploadFile(entityType, "execute", file, t("errors.fallback"));
       setResult(data as ExecuteResult);
       setStep("results");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Import failed");
+      setError(e instanceof Error ? e.message : t("errors.fallback"));
     } finally {
       setLoading(false);
     }

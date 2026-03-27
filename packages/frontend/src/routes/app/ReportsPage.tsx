@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiFetch, resolveApiUrl } from "../../lib/api";
-import { Field, PageHeader, SectionCard, SelectField } from "./ui";
+import { ErrorState, Field, PageHeader, SectionCard, SelectField } from "./ui";
 import type {
   CaseStatusRow,
   HearingOutcomeRow,
@@ -33,7 +33,7 @@ export function ReportsPage() {
   if (dateTo) qs.set("dateTo", dateTo);
   const qsStr = qs.toString();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["reports", reportType, dateFrom, dateTo],
     queryFn: () =>
       apiFetch<unknown>(`/api/reports/${reportType}${qsStr ? `?${qsStr}` : ""}`)
@@ -86,10 +86,18 @@ export function ReportsPage() {
 
       <SectionCard title={reportOptions.find((o) => o.value === reportType)?.label ?? ""}>
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
-        {!isLoading && Array.isArray(data) && data.length === 0 && (
+        {!isLoading && isError && (
+          <ErrorState
+            title={t("errors.title")}
+            description={(error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void refetch()}
+          />
+        )}
+        {!isLoading && !isError && Array.isArray(data) && data.length === 0 && (
           <p className="text-sm text-slate-500">{t("reports.noData")}</p>
         )}
-        {!isLoading && Array.isArray(data) && data.length > 0 && (
+        {!isLoading && !isError && Array.isArray(data) && data.length > 0 && (
           <>
             <div className="mb-4 flex gap-2 justify-end">
               <button

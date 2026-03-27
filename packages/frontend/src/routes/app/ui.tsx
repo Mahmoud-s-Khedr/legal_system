@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import { useId, type PropsWithChildren, type ReactNode } from "react";
 import i18n from "../../i18n";
 
 export function PageHeader({
@@ -60,6 +60,53 @@ export function EmptyState({ title, description }: { title: string; description:
   );
 }
 
+export function ErrorState({
+  title,
+  description,
+  retryLabel,
+  onRetry
+}: {
+  title: string;
+  description: string;
+  retryLabel?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+      <p className="font-semibold text-red-900">{title}</p>
+      <p className="mt-2">{description}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          className="mt-4 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+          onClick={onRetry}
+        >
+          {retryLabel}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export function FormAlert({
+  message,
+  variant = "error"
+}: {
+  message: string;
+  variant?: "error" | "info";
+}) {
+  const classes =
+    variant === "error"
+      ? "bg-red-50 text-red-700 border-red-100"
+      : "bg-sky-50 text-sky-700 border-sky-100";
+
+  return (
+    <div className={`rounded-xl border px-4 py-3 text-sm ${classes}`} role="status" aria-live="polite">
+      {message}
+    </div>
+  );
+}
+
 export type BadgeVariant = "green" | "blue" | "amber" | "red" | "gray" | "purple" | "default";
 
 const BADGE_CLASSES: Record<BadgeVariant, string> = {
@@ -81,14 +128,19 @@ export function Badge({ children, variant = "default" }: PropsWithChildren<{ var
 }
 
 export function Field({
+  id,
   label,
   value,
   onChange,
   placeholder,
   type = "text",
   dir,
-  required
+  required,
+  error,
+  hint,
+  ariaDescribedBy
 }: {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -96,51 +148,92 @@ export function Field({
   type?: string;
   dir?: "ltr" | "rtl" | "auto";
   required?: boolean;
+  error?: string;
+  hint?: string;
+  ariaDescribedBy?: string;
 }) {
+  const generatedId = useId();
+  const fieldId = id ?? generatedId;
+  const errorId = error ? `${fieldId}-error` : undefined;
+  const hintId = hint ? `${fieldId}-hint` : undefined;
+  const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
+
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-semibold">
+    <div className="block space-y-2">
+      <label className="text-sm font-semibold" htmlFor={fieldId}>
         {label}
         {required && <span className="text-red-500 ms-1" aria-hidden="true">*</span>}
-      </span>
+      </label>
       <input
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+        id={fieldId}
         dir={dir}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         type={type}
         value={value}
+        aria-invalid={Boolean(error)}
+        aria-describedby={describedBy}
+        required={required}
       />
-    </label>
+      {hint ? (
+        <p className="text-xs text-slate-500" id={hintId}>
+          {hint}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-xs text-red-600" id={errorId}>
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
 export function SelectField({
+  id,
   label,
   value,
   onChange,
   options,
   dir,
-  required
+  required,
+  error,
+  hint,
+  ariaDescribedBy
 }: {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
   dir?: "ltr" | "rtl" | "auto";
   required?: boolean;
+  error?: string;
+  hint?: string;
+  ariaDescribedBy?: string;
 }) {
+  const generatedId = useId();
+  const fieldId = id ?? generatedId;
+  const errorId = error ? `${fieldId}-error` : undefined;
+  const hintId = hint ? `${fieldId}-hint` : undefined;
+  const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
+
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-semibold">
+    <div className="block space-y-2">
+      <label className="text-sm font-semibold" htmlFor={fieldId}>
         {label}
         {required && <span className="text-red-500 ms-1" aria-hidden="true">*</span>}
-      </span>
+      </label>
       <select
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+        id={fieldId}
         dir={dir}
         onChange={(event) => onChange(event.target.value)}
         value={value}
+        aria-invalid={Boolean(error)}
+        aria-describedby={describedBy}
+        required={required}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -148,36 +241,74 @@ export function SelectField({
           </option>
         ))}
       </select>
-    </label>
+      {hint ? (
+        <p className="text-xs text-slate-500" id={hintId}>
+          {hint}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-xs text-red-600" id={errorId}>
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
 export function TextAreaField({
+  id,
   label,
   value,
   onChange,
   dir,
-  required
+  required,
+  error,
+  hint,
+  ariaDescribedBy
 }: {
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   dir?: "ltr" | "rtl" | "auto";
   required?: boolean;
+  error?: string;
+  hint?: string;
+  ariaDescribedBy?: string;
 }) {
+  const generatedId = useId();
+  const fieldId = id ?? generatedId;
+  const errorId = error ? `${fieldId}-error` : undefined;
+  const hintId = hint ? `${fieldId}-hint` : undefined;
+  const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
+
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-semibold">
+    <div className="block space-y-2">
+      <label className="text-sm font-semibold" htmlFor={fieldId}>
         {label}
         {required && <span className="text-red-500 ms-1" aria-hidden="true">*</span>}
-      </span>
+      </label>
       <textarea
         className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+        id={fieldId}
         dir={dir}
         onChange={(event) => onChange(event.target.value)}
         value={value}
+        aria-invalid={Boolean(error)}
+        aria-describedby={describedBy}
+        required={required}
       />
-    </label>
+      {hint ? (
+        <p className="text-xs text-slate-500" id={hintId}>
+          {hint}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-xs text-red-600" id={errorId}>
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

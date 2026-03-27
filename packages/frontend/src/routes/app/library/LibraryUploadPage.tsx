@@ -71,7 +71,7 @@ export function LibraryUploadPage() {
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("No file selected");
+      if (!file) throw new Error(t("documents.noFileSelected"));
       const fd = new FormData();
       fd.append("file", file);
       Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
@@ -81,8 +81,8 @@ export function LibraryUploadPage() {
         credentials: "include"
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Upload failed" }));
-        throw new Error((err as { message?: string }).message ?? "Upload failed");
+        const err = await res.json().catch(() => ({ message: t("errors.fallback") }));
+        throw new Error((err as { message?: string }).message ?? t("errors.fallback"));
       }
       return res.json() as Promise<UploadResult>;
     },

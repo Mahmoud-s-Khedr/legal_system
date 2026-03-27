@@ -7,6 +7,7 @@ import {
   useNavigate
 } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { LoginPage } from "./routes/auth/LoginPage";
 import { RegisterPage } from "./routes/auth/RegisterPage";
 import { SetupPage } from "./routes/auth/SetupPage";
@@ -67,6 +68,7 @@ function RootComponent() {
 }
 
 function ProtectedRoute() {
+  const { t } = useTranslation("app");
   const { user, isBootstrapped, bootstrap } = useAuthBootstrap();
   const navigate = useNavigate();
 
@@ -81,7 +83,7 @@ function ProtectedRoute() {
   }, [isBootstrapped, navigate, user]);
 
   if (!isBootstrapped) {
-    return <div className="p-8 text-center text-ink">Loading ELMS...</div>;
+    return <div className="p-8 text-center text-ink">{t("labels.loading")}</div>;
   }
 
   if (!user) {
@@ -92,6 +94,7 @@ function ProtectedRoute() {
 }
 
 function LandingRedirect() {
+  const { t } = useTranslation("app");
   const { user, needsSetup, isBootstrapped, bootstrap } = useAuthBootstrap();
   const navigate = useNavigate();
 
@@ -112,7 +115,7 @@ function LandingRedirect() {
   }, [isBootstrapped, navigate, needsSetup, user]);
 
   if (!isBootstrapped) {
-    return <div className="p-8 text-center text-ink">Loading ELMS...</div>;
+    return <div className="p-8 text-center text-ink">{t("labels.loading")}</div>;
   }
 
   return null;

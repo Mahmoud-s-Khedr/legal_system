@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Pencil, Trash2, Plus, BookOpen } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, PageHeader, PrimaryButton, SectionCard } from "../ui";
+import { EmptyState, ErrorState, PageHeader, PrimaryButton, SectionCard } from "../ui";
 
 function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -113,6 +113,18 @@ export function LibraryDocumentPage() {
 
   if (docQuery.isLoading) {
     return <p className="p-6 text-sm text-slate-500">{t("common.loading")}</p>;
+  }
+  if (docQuery.isError) {
+    return (
+      <div className="p-6">
+        <ErrorState
+          title={t("errors.title")}
+          description={(docQuery.error as Error)?.message ?? t("errors.fallback")}
+          retryLabel={t("errors.reload")}
+          onRetry={() => void docQuery.refetch()}
+        />
+      </div>
+    );
   }
   if (!doc) {
     return <p className="p-6 text-sm text-red-600">{t("errors.notFound")}</p>;

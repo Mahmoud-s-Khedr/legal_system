@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Search, BookOpen } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, PageHeader } from "../ui";
+import { EmptyState, ErrorState, PageHeader } from "../ui";
 
 interface SearchResult {
   id: string;
@@ -82,12 +82,20 @@ export function LibrarySearchPage() {
       {searchQuery.isLoading && (
         <p className="text-sm text-slate-500">{t("common.loading")}</p>
       )}
+      {searchQuery.isError && (
+        <ErrorState
+          title={t("errors.title")}
+          description={(searchQuery.error as Error)?.message ?? t("errors.fallback")}
+          retryLabel={t("errors.reload")}
+          onRetry={() => void searchQuery.refetch()}
+        />
+      )}
 
-      {searchQuery.data && !searchQuery.data.results.length && (
+      {searchQuery.data && !searchQuery.isError && !searchQuery.data.results.length && (
         <EmptyState description={t("empty.noResultsHelp")} title={t("empty.noResults")} />
       )}
 
-      {searchQuery.data?.results && searchQuery.data.results.length > 0 && (
+      {searchQuery.data?.results && !searchQuery.isError && searchQuery.data.results.length > 0 && (
         <div className="space-y-3">
           <p className="text-sm text-slate-500">
             {t("library.resultsCount", { count: searchQuery.data.results.length })}

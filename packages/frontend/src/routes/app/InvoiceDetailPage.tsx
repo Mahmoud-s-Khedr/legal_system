@@ -3,13 +3,13 @@ import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { InvoiceStatus } from "@elms/shared";
 import { useInvoice, useIssueInvoice, useVoidInvoice, useAddPayment } from "../../lib/billing";
-import { PageHeader, SectionCard, formatCurrency } from "./ui";
+import { ErrorState, PageHeader, SectionCard, formatCurrency } from "./ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 
 export function InvoiceDetailPage() {
   const { invoiceId } = useParams({ from: "/app/invoices/$invoiceId" });
   const { t } = useTranslation("app");
-  const { data: invoice, isLoading } = useInvoice(invoiceId);
+  const { data: invoice, isLoading, isError, error, refetch } = useInvoice(invoiceId);
 
   const issueInvoice = useIssueInvoice(invoiceId);
   const voidInvoice = useVoidInvoice(invoiceId);
@@ -21,6 +21,18 @@ export function InvoiceDetailPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   if (isLoading) return <p className="p-8 text-slate-500">{t("labels.loading")}</p>;
+  if (isError) {
+    return (
+      <div className="p-8">
+        <ErrorState
+          title={t("errors.title")}
+          description={(error as Error)?.message ?? t("errors.fallback")}
+          retryLabel={t("errors.reload")}
+          onRetry={() => void refetch()}
+        />
+      </div>
+    );
+  }
   if (!invoice) return <p className="p-8 text-red-500">{t("errors.notFound")}</p>;
 
   async function handleAddPayment(e: React.FormEvent) {

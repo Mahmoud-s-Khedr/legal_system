@@ -20,7 +20,7 @@ export function PortalLoginPage() {
       await login(form.email, form.firmId, form.password);
       void navigate({ to: "/portal/dashboard" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("errors.fallback"));
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export function PortalLoginPage() {
             />
           </label>
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-2.5 text-sm font-semibold text-white hover:bg-accentHover disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
             disabled={loading}
             type="submit"
           >

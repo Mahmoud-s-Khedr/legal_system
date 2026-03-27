@@ -3,6 +3,7 @@ import { useNavigate, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { AuthShell } from "./AuthShell";
 import { useAuthBootstrap } from "../../store/authStore";
+import { Field, FormAlert } from "../app/ui";
 
 export function SetupPage() {
   const { t } = useTranslation("auth");
@@ -29,11 +30,11 @@ export function SetupPage() {
   return (
     <AuthShell title={t("setupTitle")} subtitle={t("setupSubtitle")}>
       <form className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-xl" onSubmit={handleSubmit}>
-        <Field label={t("firmName")} value={firmName} onChange={setFirmName} />
-        <Field label={t("fullName")} value={fullName} onChange={setFullName} />
-        <Field label={t("email")} type="email" value={email} onChange={setEmail} />
-        <Field label={t("password")} type="password" value={password} onChange={setPassword} />
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        <Field id="setup-firm-name" label={t("firmName")} value={firmName} onChange={setFirmName} required />
+        <Field id="setup-full-name" label={t("fullName")} value={fullName} onChange={setFullName} required />
+        <Field id="setup-email" label={t("email")} type="email" value={email} onChange={setEmail} required />
+        <Field id="setup-password" label={t("password")} type="password" value={password} onChange={setPassword} required />
+        {error ? <FormAlert message={error} /> : null}
         <button className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white" type="submit">
           {t("completeSetup")}
         </button>
@@ -45,29 +46,5 @@ export function SetupPage() {
         </Link>
       </form>
     </AuthShell>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text"
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-sm font-semibold">{label}<span className="text-red-500 ms-1" aria-hidden="true">*</span></label>
-      <input
-        className="w-full rounded-2xl border border-slate-200 px-4 py-3"
-        onChange={(event) => onChange(event.target.value)}
-        type={type}
-        value={value}
-      />
-    </div>
   );
 }

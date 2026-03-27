@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BookOpen, ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, PageHeader, SectionCard } from "../ui";
+import { EmptyState, ErrorState, PageHeader, SectionCard } from "../ui";
 
 interface CategoryNode {
   id: string;
@@ -108,6 +108,13 @@ export function LibraryPage() {
           <SectionCard title={t("library.categories")}>
             {categoriesQuery.isLoading ? (
               <p className="text-sm text-slate-500">{t("common.loading")}</p>
+            ) : categoriesQuery.isError ? (
+              <ErrorState
+                title={t("errors.title")}
+                description={(categoriesQuery.error as Error)?.message ?? t("errors.fallback")}
+                retryLabel={t("errors.reload")}
+                onRetry={() => void categoriesQuery.refetch()}
+              />
             ) : (
               <>
                 <button
@@ -137,6 +144,13 @@ export function LibraryPage() {
 
           {documentsQuery.isLoading ? (
             <p className="text-sm text-slate-500">{t("common.loading")}</p>
+          ) : documentsQuery.isError ? (
+            <ErrorState
+              title={t("errors.title")}
+              description={(documentsQuery.error as Error)?.message ?? t("errors.fallback")}
+              retryLabel={t("errors.reload")}
+              onRetry={() => void documentsQuery.refetch()}
+            />
           ) : !documentsQuery.data?.items.length ? (
             <EmptyState description={t("empty.noDocumentsHelp")} title={t("empty.noDocuments")} />
           ) : (

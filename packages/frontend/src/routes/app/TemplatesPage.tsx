@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useTemplates, useDeleteTemplate } from "../../lib/templates";
-import { EmptyState, PageHeader, SectionCard } from "./ui";
+import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 
 export function TemplatesPage() {
   const { t } = useTranslation("app");
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const { data: templates, isLoading } = useTemplates();
+  const { data: templates, isLoading, isError, error, refetch } = useTemplates();
   const deleteMutation = useDeleteTemplate();
 
   return (
@@ -26,12 +26,20 @@ export function TemplatesPage() {
 
       <SectionCard title={t("templates.list")}>
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
+        {!isLoading && isError && (
+          <ErrorState
+            title={t("errors.title")}
+            description={(error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void refetch()}
+          />
+        )}
 
-        {!isLoading && !templates?.length && (
+        {!isLoading && !isError && !templates?.length && (
           <EmptyState title={t("empty.noTemplates")} description={t("empty.noTemplatesHelp")} />
         )}
 
-        {!isLoading && !!templates?.length && (
+        {!isLoading && !isError && !!templates?.length && (
           <div className="space-y-2">
             {templates.map((tpl) => (
               <div

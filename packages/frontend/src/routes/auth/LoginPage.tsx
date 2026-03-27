@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Eye, EyeOff } from "lucide-react";
 import { AuthShell } from "./AuthShell";
 import { useAuthBootstrap } from "../../store/authStore";
+import { Field, FormAlert } from "../app/ui";
 
 export function LoginPage() {
   const { t } = useTranslation("auth");
@@ -33,49 +34,51 @@ export function LoginPage() {
   return (
     <AuthShell title={t("loginTitle")} subtitle={t("loginSubtitle")}>
       <form className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-elevated animate-slide-up" onSubmit={handleSubmit}>
+        <Field
+          id="login-email"
+          label={t("email")}
+          onChange={setEmail}
+          required
+          type="email"
+          value={email}
+        />
         <div>
-          <label className="mb-2 block text-sm font-semibold">{t("email")}<span className="text-red-500 ms-1" aria-hidden="true">*</span></label>
-          <input
-            className="w-full rounded-2xl border border-slate-200 px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
-            onChange={(event) => setEmail(event.target.value)}
-            type="email"
-            value={email}
-            autoComplete="email"
-          />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-semibold">{t("password")}<span className="text-red-500 ms-1" aria-hidden="true">*</span></label>
+          <label className="mb-2 block text-sm font-semibold" htmlFor="login-password">
+            {t("password")}
+            <span className="text-red-500 ms-1" aria-hidden="true">*</span>
+          </label>
           <div className="relative">
             <input
+              id="login-password"
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 pe-12 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
               onChange={(event) => setPassword(event.target.value)}
               type={showPassword ? "text" : "password"}
               value={password}
               autoComplete="current-password"
+              required
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "login-form-error" : undefined}
             />
             <button
               className="absolute top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:text-slate-600 end-3"
               onClick={() => setShowPassword((prev) => !prev)}
               type="button"
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? t("hidePassword") : t("showPassword")}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
         </div>
-        {error ? (
-          <div className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-            <span className="font-bold">⚠</span>
-            <span>{error}</span>
-          </div>
-        ) : null}
+        {error ? <FormAlert message={error} /> : null}
         <button
           className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           type="submit"
           disabled={loading}
+          aria-describedby={error ? "login-form-error" : undefined}
         >
           {loading ? "…" : t("login")}
         </button>
+        {error ? <p id="login-form-error" className="sr-only">{error}</p> : null}
         <div className="flex justify-between text-sm text-slate-600">
           <Link className="transition hover:text-accent" to="/register">{t("registerLink")}</Link>
           <Link className="transition hover:text-accent" to="/setup">{t("desktopSetupLink")}</Link>
@@ -84,4 +87,3 @@ export function LoginPage() {
     </AuthShell>
   );
 }
-

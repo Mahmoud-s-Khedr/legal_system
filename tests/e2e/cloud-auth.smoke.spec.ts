@@ -11,3 +11,17 @@ test("cloud auth shell renders login workspace", async ({ page }) => {
   await expect(page.getByLabel(/email|البريد الإلكتروني|e-mail/i)).toBeVisible();
   await expect(page.getByLabel(/password|كلمة المرور|mot de passe/i)).toBeVisible();
 });
+
+test("register and setup forms expose labeled fields", async ({ page }) => {
+  await page.goto("/register");
+  await expect(page.getByLabel(/firm name|اسم المؤسسة|nom/i)).toBeVisible();
+  await expect(page.getByLabel(/full name|الاسم الكامل|nom complet/i)).toBeVisible();
+  await expect(page.getByLabel(/email|البريد الإلكتروني|e-mail/i)).toBeVisible();
+  await expect(page.getByLabel(/password|كلمة المرور|mot de passe/i)).toBeVisible();
+
+  await page.goto("/setup");
+  await expect(page.getByLabel(/firm name|اسم المؤسسة|nom/i)).toBeVisible();
+  await expect(page.getByLabel(/full name|الاسم الكامل|nom complet/i)).toBeVisible();
+  await expect(page.getByLabel(/email|البريد الإلكتروني|e-mail/i)).toBeVisible();
+  await expect(page.getByLabel(/password|كلمة المرور|mot de passe/i)).toBeVisible();
+});

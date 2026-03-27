@@ -5,7 +5,7 @@ import type { ClientListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { EnumBadge } from "../../components/shared/EnumBadge";
-import { EmptyState, Field, PageHeader, SectionCard } from "./ui";
+import { EmptyState, ErrorState, Field, PageHeader, SectionCard } from "./ui";
 
 export function ClientsPage() {
   const { t } = useTranslation("app");
@@ -43,7 +43,14 @@ export function ClientsPage() {
           value={search}
         />
         <div className="mt-4 space-y-3">
-          {!clientsQuery.data?.items.length ? (
+          {clientsQuery.isError ? (
+            <ErrorState
+              title={t("errors.title")}
+              description={(clientsQuery.error as Error)?.message ?? t("errors.fallback")}
+              retryLabel={t("errors.reload")}
+              onRetry={() => void clientsQuery.refetch()}
+            />
+          ) : !clientsQuery.data?.items.length ? (
             <EmptyState title={t("empty.noClients")} description={t("empty.noClientsHelp")} />
           ) : (
             clientsQuery.data.items.map((client) => (

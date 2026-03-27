@@ -728,7 +728,8 @@
     "month": "Mois",
     "daysOverdue": "Jours de retard",
     "exportExcel": "Exporter Excel",
-    "exportPdf": "Exporter PDF"
+    "exportPdf": "Exporter PDF",
+    "noData": "Aucune donnée trouvée pour la période sélectionnée."
   },
   "templates": {
     "title": "Modèles de documents",

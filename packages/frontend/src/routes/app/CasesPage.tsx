@@ -4,7 +4,7 @@ import type { CaseListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, PageHeader, SectionCard } from "./ui";
+import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
 
 export function CasesPage() {
   const { t } = useTranslation("app");
@@ -30,7 +30,14 @@ export function CasesPage() {
         }
       />
       <SectionCard title={t("cases.directory")} description={t("cases.directoryHelp")}>
-        {!casesQuery.data?.items.length ? (
+        {casesQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(casesQuery.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void casesQuery.refetch()}
+          />
+        ) : !casesQuery.data?.items.length ? (
           <EmptyState title={t("empty.noCases")} description={t("empty.noCasesHelp")} />
         ) : (
           <div className="space-y-3">

@@ -1,5 +1,5 @@
 import { Link, Outlet, useMatches } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AuthMode } from "@elms/shared";
 import {
@@ -25,6 +25,7 @@ import type { LucideIcon } from "lucide-react";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { GlobalSearchBar } from "../../components/search/GlobalSearchBar";
 import { NotificationBell } from "../../components/notifications/NotificationBell";
+import { useAccessibleOverlay } from "../../components/shared/useAccessibleOverlay";
 import { useAuthBootstrap } from "../../store/authStore";
 
 interface NavItem {
@@ -86,8 +87,19 @@ export function AppLayout() {
   const { t, i18n } = useTranslation("app");
   const { user, mode, logout } = useAuthBootstrap();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
+  const drawerTriggerRef = useRef<HTMLButtonElement>(null);
   const matches = useMatches();
   const isRtl = i18n.resolvedLanguage === "ar";
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  useAccessibleOverlay({
+    open: drawerOpen,
+    mode: "modal",
+    contentRef: drawerRef,
+    triggerRef: drawerTriggerRef,
+    onClose: closeDrawer
+  });
 
   const navSections = getNavSections(t).map((section) => ({
     ...section,
@@ -191,6 +203,7 @@ export function AppLayout() {
           <div className="flex items-center gap-3">
             {/* Mobile hamburger */}
             <button
+              ref={drawerTriggerRef}
               className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
               onClick={() => setDrawerOpen(true)}
               type="button"
@@ -245,15 +258,25 @@ export function AppLayout() {
 
       {/* ── Mobile drawer overlay ── */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t("nav.mainNavigation")} id="mobile-nav-drawer">
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mobile-nav-title"
+          id="mobile-nav-drawer"
+        >
           <div
             className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in"
             onClick={() => setDrawerOpen(false)}
             aria-hidden="true"
           />
-          <aside className="absolute inset-y-0 flex w-72 flex-col bg-white p-4 shadow-elevated animate-fade-in start-0">
+          <aside
+            ref={drawerRef}
+            tabIndex={-1}
+            className="absolute inset-y-0 flex w-72 flex-col bg-white p-4 shadow-elevated animate-fade-in start-0"
+          >
             <div className="mb-4 flex items-center justify-between">
-              <p className="font-heading text-lg font-bold text-accent">ELMS</p>
+              <p id="mobile-nav-title" className="font-heading text-lg font-bold text-accent">ELMS</p>
               <button
                 className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"
                 onClick={() => setDrawerOpen(false)}

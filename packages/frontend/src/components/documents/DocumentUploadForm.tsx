@@ -29,7 +29,7 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
   const uploadMutation = useMutation({
     mutationFn: async () => {
       const file = fileRef.current?.files?.[0];
-      if (!file) throw new Error("No file selected");
+      if (!file) throw new Error(t("documents.noFileSelected"));
 
       const formData = new FormData();
       formData.append("file", file);

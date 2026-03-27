@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
-import { EmptyState } from "../../routes/app/ui";
+import { EmptyState, ErrorState } from "../../routes/app/ui";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { DocumentViewer } from "./DocumentViewer";
@@ -53,7 +53,18 @@ export function DocumentList({ caseId, clientId, queryKey }: DocumentListProps) 
   };
 
   if (docsQuery.isLoading) {
-    return <p className="text-sm text-slate-500">{t("labels.none")}</p>;
+    return <p className="text-sm text-slate-500">{t("labels.loading")}</p>;
+  }
+
+  if (docsQuery.isError) {
+    return (
+      <ErrorState
+        title={t("errors.title")}
+        description={(docsQuery.error as Error)?.message ?? t("errors.fallback")}
+        retryLabel={t("errors.reload")}
+        onRetry={() => void docsQuery.refetch()}
+      />
+    );
   }
 
   const items = docsQuery.data?.items ?? [];
@@ -100,8 +111,14 @@ export function DocumentList({ caseId, clientId, queryKey }: DocumentListProps) 
               </button>
               <button
                 className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                onClick={() => void deleteMutation.mutateAsync(doc.id)}
+                onClick={() => {
+                  if (window.confirm(t("actions.delete"))) {
+                    void deleteMutation.mutateAsync(doc.id);
+                  }
+                }}
                 type="button"
+                aria-label={`${t("actions.delete")} ${doc.title}`}
+                title={t("actions.delete")}
               >
                 ×
               </button>
