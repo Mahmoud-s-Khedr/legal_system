@@ -5,7 +5,8 @@ import { ClientType, Language, type CreateClientDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { useMutationFeedback } from "../../lib/feedback";
+import { Field, FormAlert, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
 
 type ClientFormState = Omit<CreateClientDto, "type"> & { type: ClientType | "" };
 
@@ -37,6 +38,7 @@ export function ClientCreatePage() {
   const { t } = useTranslation("app");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const feedback = useMutationFeedback();
 
   const clientTypeOptions = Object.values(ClientType).map((v) => ({
     value: v,
@@ -68,6 +70,7 @@ export function ClientCreatePage() {
         body: JSON.stringify(payload)
       }),
     onSuccess: async () => {
+      feedback.success("messages.clientCreated");
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
       void navigate({ to: "/app/clients" });
     }
@@ -164,12 +167,8 @@ export function ClientCreatePage() {
             </>
           ) : null}
           <PrimaryButton type="submit">{t("actions.createClient")}</PrimaryButton>
-          {validationMessage ? (
-            <p className="text-sm text-red-600">{validationMessage}</p>
-          ) : null}
-          {createMutation.error ? (
-            <p className="text-sm text-red-600">{(createMutation.error as Error).message}</p>
-          ) : null}
+          {validationMessage ? <FormAlert message={validationMessage} /> : null}
+          {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
         </form>
       </SectionCard>
     </div>

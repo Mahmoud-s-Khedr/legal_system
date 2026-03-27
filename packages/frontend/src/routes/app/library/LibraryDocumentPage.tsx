@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Pencil, Trash2, Plus, BookOpen } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, ErrorState, PageHeader, PrimaryButton, SectionCard } from "../ui";
+import { EmptyState, ErrorState, PageHeader, PrimaryButton, SectionCard, formatDate } from "../ui";
 
 function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -163,7 +163,7 @@ export function LibraryDocumentPage() {
         )}
         {doc.publishedAt && (
           <span className="rounded-full bg-slate-100 px-3 py-1">
-            {new Date(doc.publishedAt).toLocaleDateString()}
+            {formatDate(doc.publishedAt)}
           </span>
         )}
         {doc.status && (

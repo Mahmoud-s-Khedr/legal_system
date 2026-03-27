@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Play, Trash2, Download, Loader2 } from "lucide-react";
 import { apiFetch, resolveApiUrl } from "../../lib/api";
-import { PageHeader, SectionCard, PrimaryButton, Field, SelectField } from "./ui";
+import { PageHeader, SectionCard, PrimaryButton, Field, SelectField, formatDateTime } from "./ui";
 
 type ReportType = "case-status" | "hearing-outcomes" | "lawyer-workload" | "revenue" | "outstanding-balances";
 
@@ -132,12 +132,14 @@ export function ReportBuilderPage() {
               <Field
                 label={t("reports.dateFrom")}
                 type="date"
+                commitMode="blur"
                 value={form.dateFrom}
                 onChange={(value) => setForm({ ...form, dateFrom: value })}
               />
               <Field
                 label={t("reports.dateTo")}
                 type="date"
+                commitMode="blur"
                 value={form.dateTo}
                 onChange={(value) => setForm({ ...form, dateTo: value })}
               />
@@ -208,7 +210,7 @@ export function ReportBuilderPage() {
         <SectionCard title={t("reports.results")}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500">{t("reports.ranAt")}: {new Date(runResult.data.ranAt).toLocaleString()}</p>
+              <p className="text-sm text-slate-500">{t("reports.ranAt")}: {formatDateTime(runResult.data.ranAt)}</p>
               <button className="text-sm text-slate-400 hover:text-slate-600" onClick={() => setRunResult(null)}>
                 {t("actions.close")}
               </button>

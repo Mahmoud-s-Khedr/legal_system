@@ -478,7 +478,7 @@ function CourtAddForm({
       />
       <Field label={t("labels.circuit")} onChange={(v) => setForm({ ...form, circuit: v })} value={form.circuit ?? ""} />
       <Field label={t("labels.caseNumber")} onChange={(v) => setForm({ ...form, caseNumber: v })} value={form.caseNumber ?? ""} />
-      <Field label={t("labels.startDate")} onChange={(v) => setForm({ ...form, startedAt: v })} type="date" value={form.startedAt ?? ""} />
+      <Field label={t("labels.startDate")} onChange={(v) => setForm({ ...form, startedAt: v })} type="date" commitMode="blur" value={form.startedAt ?? ""} />
       <PrimaryButton type="submit">{isPending ? "..." : t("cases.addCourt")}</PrimaryButton>
     </form>
   );
@@ -534,8 +534,8 @@ function CourtEditForm({
       />
       <Field label={t("labels.circuit")} onChange={(v) => setForm({ ...form, circuit: v ?? "" })} value={form.circuit ?? ""} />
       <Field label={t("labels.caseNumber")} onChange={(v) => setForm({ ...form, caseNumber: v })} value={form.caseNumber ?? ""} />
-      <Field label={t("labels.startDate")} onChange={(v) => setForm({ ...form, startedAt: v })} type="date" value={form.startedAt ?? ""} />
-      <Field label={t("labels.endDate")} onChange={(v) => setForm({ ...form, endedAt: v })} type="date" value={form.endedAt ?? ""} />
+      <Field label={t("labels.startDate")} onChange={(v) => setForm({ ...form, startedAt: v })} type="date" commitMode="blur" value={form.startedAt ?? ""} />
+      <Field label={t("labels.endDate")} onChange={(v) => setForm({ ...form, endedAt: v })} type="date" commitMode="blur" value={form.endedAt ?? ""} />
       <SelectField
         label={t("labels.status")}
         onChange={(v) => setForm({ ...form, isActive: v === "true" })}

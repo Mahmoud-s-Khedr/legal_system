@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { NotificationListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
+import { useMutationFeedback } from "../../lib/feedback";
+import { EmptyState, ErrorState, PageHeader, SectionCard, formatDateTime } from "./ui";
 
 export function NotificationsPage() {
   const { t } = useTranslation("app");
   const qc = useQueryClient();
+  const feedback = useMutationFeedback();
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["notifications-full"],
@@ -15,13 +17,19 @@ export function NotificationsPage() {
 
   const markAll = useMutation({
     mutationFn: () => apiFetch<{ success: boolean }>("/api/notifications/read-all", { method: "PATCH" }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["notifications-full"] })
+    onSuccess: () => {
+      feedback.success("messages.notificationsUpdated");
+      void qc.invalidateQueries({ queryKey: ["notifications-full"] });
+    }
   });
 
   const markOne = useMutation({
     mutationFn: (id: string) =>
       apiFetch<{ success: boolean }>(`/api/notifications/${id}/read`, { method: "PATCH" }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["notifications-full"] })
+    onSuccess: () => {
+      feedback.success("messages.notificationMarkedRead");
+      void qc.invalidateQueries({ queryKey: ["notifications-full"] });
+    }
   });
 
   const unread = data?.items.filter((n) => !n.isRead).length ?? 0;
@@ -70,7 +78,7 @@ export function NotificationsPage() {
                   <p className={`text-sm ${!n.isRead ? "font-semibold" : ""}`}>{n.title}</p>
                   <p className="mt-0.5 text-sm text-slate-500">{n.body}</p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {new Date(n.createdAt).toLocaleString()}
+                    {formatDateTime(n.createdAt)}
                   </p>
                 </div>
                 {!n.isRead && (

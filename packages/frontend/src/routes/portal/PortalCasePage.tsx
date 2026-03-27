@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Calendar } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { ErrorState, SectionCard } from "../app/ui";
+import { EmptyState, ErrorState, PageHeader, SectionCard, formatDate } from "../app/ui";
 
 interface PortalCaseDetail {
   id: string;
@@ -59,17 +58,19 @@ export function PortalCasePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link className="mb-4 flex items-center gap-1.5 text-sm text-slate-500 hover:text-accent" to="/portal/dashboard">
-          <ArrowLeft className="size-4" />
-          {t("portal.backToDashboard")}
-        </Link>
-        <h1 className="text-2xl font-bold text-slate-800">{c.title}</h1>
-        <p className="mt-1 text-slate-500">{c.caseNumber} · {c.type} · {c.status}</p>
-      </div>
+      <PageHeader
+        title={c.title}
+        description={`${c.caseNumber} · ${c.type} · ${c.status}`}
+        actions={(
+          <Link className="mb-0 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600 transition hover:border-accent hover:text-accent" to="/portal/dashboard">
+            <ArrowLeft className="size-4" />
+            {t("portal.backToDashboard")}
+          </Link>
+        )}
+      />
 
       {/* Assigned lawyers */}
-      {c.lawyers.length > 0 && (
+      {c.lawyers.length > 0 ? (
         <SectionCard title={t("portal.assignedLawyers")}>
           <div className="space-y-2">
             {c.lawyers.map((l, i) => (
@@ -80,10 +81,10 @@ export function PortalCasePage() {
             ))}
           </div>
         </SectionCard>
-      )}
+      ) : null}
 
       {/* Courts */}
-      {c.courts.length > 0 && (
+      {c.courts.length > 0 ? (
         <SectionCard title={t("cases.courts")}>
           <div className="space-y-2">
             {c.courts.map((court) => (
@@ -94,26 +95,26 @@ export function PortalCasePage() {
             ))}
           </div>
         </SectionCard>
-      )}
+      ) : null}
 
       {/* Hearings */}
       <SectionCard title={t("portal.hearings")}>
         {!c.hearings.length ? (
-          <p className="text-sm text-slate-400">{t("empty.noHearings")}</p>
+          <EmptyState title={t("empty.noHearings")} description={t("empty.noHearingsHelp")} />
         ) : (
           <div className="space-y-2">
             {c.hearings.map((h) => (
               <div key={h.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <Calendar className="size-5 text-slate-400" />
                 <div className="flex-1">
-                  <p className="font-medium">{new Date(h.sessionDatetime).toLocaleDateString()}</p>
+                  <p className="font-medium">{formatDate(h.sessionDatetime)}</p>
                   {h.outcome && <p className="text-sm text-slate-500">{h.outcome}</p>}
                 </div>
-                {h.nextSessionAt && (
+                {h.nextSessionAt ? (
                   <p className="text-sm text-slate-400">
-                    {t("hearings.next")}: {new Date(h.nextSessionAt).toLocaleDateString()}
+                    {t("hearings.next")}: {formatDate(h.nextSessionAt)}
                   </p>
-                )}
+                ) : null}
               </div>
             ))}
           </div>

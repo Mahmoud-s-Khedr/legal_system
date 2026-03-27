@@ -1,4 +1,4 @@
-import { useId, type PropsWithChildren, type ReactNode } from "react";
+import { useEffect, useId, useState, type PropsWithChildren, type ReactNode } from "react";
 import i18n from "../../i18n";
 
 export function PageHeader({
@@ -101,7 +101,11 @@ export function FormAlert({
       : "bg-sky-50 text-sky-700 border-sky-100";
 
   return (
-    <div className={`rounded-xl border px-4 py-3 text-sm ${classes}`} role="status" aria-live="polite">
+    <div
+      className={`rounded-xl border px-4 py-3 text-sm ${classes}`}
+      role={variant === "error" ? "alert" : "status"}
+      aria-live="polite"
+    >
       {message}
     </div>
   );
@@ -134,11 +138,15 @@ export function Field({
   onChange,
   placeholder,
   type = "text",
+  autoComplete,
+  minLength,
+  maxLength,
   dir,
   required,
   error,
   hint,
-  ariaDescribedBy
+  ariaDescribedBy,
+  commitMode = "immediate"
 }: {
   id?: string;
   label: string;
@@ -146,17 +154,29 @@ export function Field({
   onChange: (value: string) => void;
   placeholder?: string;
   type?: string;
+  autoComplete?: string;
+  minLength?: number;
+  maxLength?: number;
   dir?: "ltr" | "rtl" | "auto";
   required?: boolean;
   error?: string;
   hint?: string;
   ariaDescribedBy?: string;
+  commitMode?: "immediate" | "blur";
 }) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const errorId = error ? `${fieldId}-error` : undefined;
   const hintId = hint ? `${fieldId}-hint` : undefined;
   const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
+  const [draftValue, setDraftValue] = useState(value);
+  const isBlurCommit = commitMode === "blur";
+
+  useEffect(() => {
+    if (isBlurCommit) {
+      setDraftValue(value);
+    }
+  }, [isBlurCommit, value]);
 
   return (
     <div className="block space-y-2">
@@ -168,10 +188,24 @@ export function Field({
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
         id={fieldId}
         dir={dir}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          if (isBlurCommit) {
+            setDraftValue(event.target.value);
+            return;
+          }
+          onChange(event.target.value);
+        }}
+        onBlur={() => {
+          if (isBlurCommit && draftValue !== value) {
+            onChange(draftValue);
+          }
+        }}
         placeholder={placeholder}
         type={type}
-        value={value}
+        autoComplete={autoComplete}
+        minLength={minLength}
+        maxLength={maxLength}
+        value={isBlurCommit ? draftValue : value}
         aria-invalid={Boolean(error)}
         aria-describedby={describedBy}
         required={required}
@@ -182,7 +216,7 @@ export function Field({
         </p>
       ) : null}
       {error ? (
-        <p className="text-xs text-red-600" id={errorId}>
+        <p className="text-xs text-red-600" id={errorId} role="status" aria-live="polite">
           {error}
         </p>
       ) : null}
@@ -247,7 +281,7 @@ export function SelectField({
         </p>
       ) : null}
       {error ? (
-        <p className="text-xs text-red-600" id={errorId}>
+        <p className="text-xs text-red-600" id={errorId} role="status" aria-live="polite">
           {error}
         </p>
       ) : null}
@@ -304,7 +338,7 @@ export function TextAreaField({
         </p>
       ) : null}
       {error ? (
-        <p className="text-xs text-red-600" id={errorId}>
+        <p className="text-xs text-red-600" id={errorId} role="status" aria-live="polite">
           {error}
         </p>
       ) : null}
@@ -336,14 +370,40 @@ export function formatDateTime(value: string | null) {
   }
 
   const lang = i18n.resolvedLanguage ?? "ar";
-  const locale = lang === "ar" ? "ar-EG" : lang;
+  const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
 }
 
+export function formatDate(value: string | null) {
+  if (!value) {
+    return "—";
+  }
+
+  const lang = i18n.resolvedLanguage ?? "ar";
+  const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium"
+  }).format(new Date(value));
+}
+
 export function formatCurrency(value: string | number | null | undefined): string {
-  if (value === null || value === undefined || value === "") return "—";
-  return `ج.م ${value}`;
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(numeric)) {
+    return "—";
+  }
+
+  const lang = i18n.resolvedLanguage ?? "ar";
+  const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EGP",
+    maximumFractionDigits: 2
+  }).format(numeric);
 }

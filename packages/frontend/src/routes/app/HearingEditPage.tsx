@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,13 +10,10 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField, TextAreaField, formatDateTime } from "./ui";
 import { toDateTimeLocalValue } from "./hearingCalendar";
-
-function toIsoOrEmpty(value: string | null | undefined) {
-  return value ? new Date(value).toISOString() : "";
-}
 
 function normalizePayload(form: CreateHearingDto): CreateHearingDto {
   return {
@@ -85,6 +82,46 @@ export function HearingEditPage() {
     return () => clearTimeout(timer);
   }, [form.assignedLawyerId, form.sessionDatetime]);
 
+  const caseOptions = useMemo(
+    () => [
+      { value: "", label: t("labels.selectCase") },
+      ...(casesQuery.data?.items ?? []).map((caseItem) => ({
+        value: caseItem.id,
+        label: caseItem.title
+      }))
+    ],
+    [casesQuery.data?.items, t]
+  );
+
+  const assigneeOptions = useMemo(
+    () => [
+      { value: "", label: t("labels.unassigned") },
+      ...(usersQuery.data?.items ?? []).map((user) => ({
+        value: user.id,
+        label: user.fullName
+      }))
+    ],
+    [t, usersQuery.data?.items]
+  );
+
+  const outcomeOptions = useMemo(
+    () => [
+      { value: "", label: t("labels.none") },
+      ...Object.values(SessionOutcome).map((value) => ({
+        value,
+        label: getEnumLabel(t, "SessionOutcome", value)
+      }))
+    ],
+    [t]
+  );
+
+  const updateField = useCallback(
+    <K extends keyof CreateHearingDto>(key: K, value: CreateHearingDto[K]) => {
+      setForm((current) => ({ ...current, [key]: value }));
+    },
+    []
+  );
+
   const conflictQuery = useQuery({
     queryKey: [
       "hearing-conflicts",
@@ -97,7 +134,7 @@ export function HearingEditPage() {
         `/api/hearings/conflicts?assignedLawyerId=${encodeURIComponent(debouncedConflictInput.assignedLawyerId)}&sessionDatetime=${encodeURIComponent(toIsoOrEmpty(debouncedConflictInput.sessionDatetime))}&excludeId=${encodeURIComponent(hearingId)}`
       ),
     enabled: Boolean(
-      debouncedConflictInput.assignedLawyerId && debouncedConflictInput.sessionDatetime
+      debouncedConflictInput.assignedLawyerId && isValidDateTimeInput(debouncedConflictInput.sessionDatetime)
     )
   });
 
@@ -141,59 +178,43 @@ export function HearingEditPage() {
         >
           <SelectField
             label={t("labels.case")}
-            onChange={(value) => setForm({ ...form, caseId: value })}
-            options={[
-              { value: "", label: t("labels.selectCase") },
-              ...(casesQuery.data?.items ?? []).map((caseItem) => ({
-                value: caseItem.id,
-                label: caseItem.title
-              }))
-            ]}
+            onChange={(value) => updateField("caseId", value)}
+            options={caseOptions}
             required
             value={form.caseId}
           />
           <SelectField
             label={t("labels.assignedLawyer")}
-            onChange={(value) => setForm({ ...form, assignedLawyerId: value })}
-            options={[
-              { value: "", label: t("labels.unassigned") },
-              ...(usersQuery.data?.items ?? []).map((user) => ({
-                value: user.id,
-                label: user.fullName
-              }))
-            ]}
+            onChange={(value) => updateField("assignedLawyerId", value)}
+            options={assigneeOptions}
             value={form.assignedLawyerId ?? ""}
           />
           <Field
             dir="ltr"
             label={t("labels.sessionDatetime")}
-            onChange={(value) => setForm({ ...form, sessionDatetime: value })}
+            onChange={(value) => updateField("sessionDatetime", value)}
             required
             type="datetime-local"
+            commitMode="blur"
             value={form.sessionDatetime}
           />
           <Field
             dir="ltr"
             label={t("labels.nextSession")}
-            onChange={(value) => setForm({ ...form, nextSessionAt: value })}
+            onChange={(value) => updateField("nextSessionAt", value)}
             type="datetime-local"
+            commitMode="blur"
             value={form.nextSessionAt ?? ""}
           />
           <SelectField
             label={t("labels.outcome")}
-            onChange={(value) => setForm({ ...form, outcome: value ? (value as SessionOutcome) : null })}
-            options={[
-              { value: "", label: t("labels.none") },
-              ...Object.values(SessionOutcome).map((value) => ({
-                value,
-                label: getEnumLabel(t, "SessionOutcome", value)
-              }))
-            ]}
+            onChange={(value) => updateField("outcome", value ? (value as SessionOutcome) : null)}
+            options={outcomeOptions}
             value={form.outcome ?? ""}
           />
           <TextAreaField
             label={t("labels.notes")}
-            onChange={(value) => setForm({ ...form, notes: value })}
+            onChange={(value) => updateField("notes", value)}
             value={form.notes ?? ""}
           />
           {conflictQuery.data?.hasConflict ? (

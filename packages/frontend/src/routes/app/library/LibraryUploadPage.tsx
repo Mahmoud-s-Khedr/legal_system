@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { PageHeader, SectionCard, PrimaryButton } from "../ui";
+import { Field, PageHeader, SectionCard, PrimaryButton } from "../ui";
 
 interface CategoryNode {
   id: string;
@@ -259,15 +259,13 @@ export function LibraryUploadPage() {
                   onChange={(e) => setForm({ ...form, judgmentNumber: e.target.value })}
                 />
               </label>
-              <label className="block space-y-1">
-                <span className="text-sm font-semibold">{t("library.judgmentDate")}</span>
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                  type="date"
-                  value={form.judgmentDate}
-                  onChange={(e) => setForm({ ...form, judgmentDate: e.target.value })}
-                />
-              </label>
+              <Field
+                label={t("library.judgmentDate")}
+                type="date"
+                commitMode="blur"
+                value={form.judgmentDate}
+                onChange={(value) => setForm({ ...form, judgmentDate: value })}
+              />
             </div>
           )}
 
@@ -282,15 +280,13 @@ export function LibraryUploadPage() {
                 onChange={(e) => setForm({ ...form, author: e.target.value })}
               />
             </label>
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">{t("library.publishedAt")}</span>
-              <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                type="date"
-                value={form.publishedAt}
-                onChange={(e) => setForm({ ...form, publishedAt: e.target.value })}
-              />
-            </label>
+            <Field
+              label={t("library.publishedAt")}
+              type="date"
+              commitMode="blur"
+              value={form.publishedAt}
+              onChange={(value) => setForm({ ...form, publishedAt: value })}
+            />
           </div>
 
           <PrimaryButton

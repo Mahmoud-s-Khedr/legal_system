@@ -57,7 +57,7 @@ describe("shared ui fields", () => {
 
   it("renders form alert with polite live region", () => {
     const view = render(<FormAlert message="Login failed" />);
-    const alert = view.querySelector("[role='status']");
+    const alert = view.querySelector("[role='alert']");
 
     expect(alert?.getAttribute("aria-live")).toBe("polite");
     expect(alert?.textContent).toContain("Login failed");

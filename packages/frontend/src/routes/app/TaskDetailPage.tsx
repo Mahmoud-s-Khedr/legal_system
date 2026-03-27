@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -58,6 +58,53 @@ export function TaskDetailPage() {
     }
   }, [taskQuery.data]);
 
+  const caseOptions = useMemo(
+    () => [
+      { value: "", label: t("labels.generalTask") },
+      ...(casesQuery.data?.items ?? []).map((caseItem) => ({
+        value: caseItem.id,
+        label: caseItem.title
+      }))
+    ],
+    [casesQuery.data?.items, t]
+  );
+
+  const assigneeOptions = useMemo(
+    () => [
+      { value: "", label: t("labels.unassigned") },
+      ...(usersQuery.data?.items ?? []).map((user) => ({
+        value: user.id,
+        label: user.fullName
+      }))
+    ],
+    [t, usersQuery.data?.items]
+  );
+
+  const statusOptions = useMemo(
+    () =>
+      Object.values(TaskStatus).map((value) => ({
+        value,
+        label: getEnumLabel(t, "TaskStatus", value)
+      })),
+    [t]
+  );
+
+  const priorityOptions = useMemo(
+    () =>
+      Object.values(TaskPriority).map((value) => ({
+        value,
+        label: getEnumLabel(t, "TaskPriority", value)
+      })),
+    [t]
+  );
+
+  const updateField = useCallback(
+    <K extends keyof CreateTaskDto>(key: K, value: CreateTaskDto[K]) => {
+      setForm((current) => ({ ...current, [key]: value }));
+    },
+    []
+  );
+
   const updateMutation = useMutation({
     mutationFn: (payload: CreateTaskDto) =>
       apiFetch(`/api/tasks/${taskId}`, {
@@ -98,63 +145,46 @@ export function TaskDetailPage() {
         >
           <Field
             label={t("labels.title")}
-            onChange={(value) => setForm({ ...form, title: value })}
+            onChange={(value) => updateField("title", value)}
             value={form.title}
           />
           <TextAreaField
             label={t("labels.description")}
-            onChange={(value) => setForm({ ...form, description: value })}
+            onChange={(value) => updateField("description", value)}
             value={form.description ?? ""}
           />
           <SelectField
             label={t("labels.case")}
-            onChange={(value) => setForm({ ...form, caseId: value })}
-            options={[
-              { value: "", label: t("labels.generalTask") },
-              ...(casesQuery.data?.items ?? []).map((caseItem) => ({
-                value: caseItem.id,
-                label: caseItem.title
-              }))
-            ]}
+            onChange={(value) => updateField("caseId", value)}
+            options={caseOptions}
             value={form.caseId ?? ""}
           />
           <SelectField
             label={t("labels.assignedLawyer")}
-            onChange={(value) => setForm({ ...form, assignedToId: value })}
-            options={[
-              { value: "", label: t("labels.unassigned") },
-              ...(usersQuery.data?.items ?? []).map((user) => ({
-                value: user.id,
-                label: user.fullName
-              }))
-            ]}
+            onChange={(value) => updateField("assignedToId", value)}
+            options={assigneeOptions}
             value={form.assignedToId ?? ""}
           />
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField
               label={t("labels.status")}
-              onChange={(value) => setForm({ ...form, status: value as TaskStatus })}
-              options={Object.values(TaskStatus).map((value) => ({
-                value,
-                label: getEnumLabel(t, "TaskStatus", value)
-              }))}
+              onChange={(value) => updateField("status", value as TaskStatus)}
+              options={statusOptions}
               value={form.status ?? TaskStatus.PENDING}
             />
             <SelectField
               label={t("labels.priority")}
-              onChange={(value) => setForm({ ...form, priority: value as TaskPriority })}
-              options={Object.values(TaskPriority).map((value) => ({
-                value,
-                label: getEnumLabel(t, "TaskPriority", value)
-              }))}
+              onChange={(value) => updateField("priority", value as TaskPriority)}
+              options={priorityOptions}
               value={form.priority ?? TaskPriority.MEDIUM}
             />
           </div>
           <Field
             dir="ltr"
             label={t("labels.dueDate")}
-            onChange={(value) => setForm({ ...form, dueAt: value })}
+            onChange={(value) => updateField("dueAt", value)}
             type="datetime-local"
+            commitMode="blur"
             value={form.dueAt ?? ""}
           />
           <PrimaryButton type="submit">{t("actions.saveChanges")}</PrimaryButton>

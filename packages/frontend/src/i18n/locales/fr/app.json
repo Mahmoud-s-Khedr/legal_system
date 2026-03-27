@@ -47,7 +47,9 @@
     "unlink": "Délier",
     "send": "Envoyer",
     "connect": "Connecter",
-    "disconnect": "Déconnecter"
+    "disconnect": "Déconnecter",
+    "more": "Plus d'actions",
+    "clear": "Effacer"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -765,5 +767,36 @@
     "channelSettings": "Paramètres des canaux",
     "channelSettingsLocal": "Canaux visibles",
     "eventType": "Type d'événement"
+  },
+  "portal": {
+    "clientPortal": "Portail client",
+    "loginDescription": "Connectez-vous pour consulter vos dossiers, audiences et factures.",
+    "dashboard": "Tableau de bord portail",
+    "dashboardDescription": "Suivez vos dossiers actifs, audiences à venir et le statut des factures.",
+    "activeCases": "Dossiers actifs",
+    "invoices": "Factures",
+    "overdueInvoices": "Factures en retard",
+    "myCases": "Mes dossiers",
+    "due": "Échéance",
+    "backToDashboard": "Retour au tableau de bord",
+    "assignedLawyers": "Juristes assignés",
+    "hearings": "Audiences",
+    "firmId": "ID du cabinet",
+    "firmIdHint": "Utilisez l'identifiant cabinet fourni dans votre invitation.",
+    "acceptInvite": "Accepter l'invitation",
+    "setPasswordHint": "Définissez un mot de passe sécurisé pour activer votre accès portail.",
+    "setPassword": "Définir le mot de passe",
+    "passwordSet": "Mot de passe défini avec succès."
+  },
+  "messages": {
+    "clientCreated": "Client créé avec succès.",
+    "caseCreated": "Dossier créé avec succès.",
+    "taskCreated": "Tâche créée avec succès.",
+    "invoiceCreated": "Facture créée avec succès.",
+    "paymentRecorded": "Paiement enregistré avec succès.",
+    "notificationMarkedRead": "Notification marquée comme lue.",
+    "notificationsUpdated": "Notifications mises à jour.",
+    "invoiceIssued": "Facture émise avec succès.",
+    "invoiceVoided": "Facture annulée avec succès."
   }
 }

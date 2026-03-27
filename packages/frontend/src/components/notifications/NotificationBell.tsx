@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { NotificationListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useAccessibleOverlay } from "../shared/useAccessibleOverlay";
+import { formatDate } from "../../routes/app/ui";
 
 export function NotificationBell() {
   const { t } = useTranslation("app");
@@ -123,7 +124,7 @@ export function NotificationBell() {
                   <p className={`text-sm ${!n.isRead ? "font-semibold" : ""}`}>{n.title}</p>
                   <p className="mt-0.5 text-xs text-slate-500">{n.body}</p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {new Date(n.createdAt).toLocaleDateString()}
+                    {formatDate(n.createdAt)}
                   </p>
                   {!n.isRead && (
                     <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-accent" />

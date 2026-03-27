@@ -4,13 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ClientListResponseDto, CreateCaseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
-import { Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { Field, FormAlert, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
 
 export function CaseCreatePage() {
   const { t } = useTranslation("app");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const feedback = useMutationFeedback();
 
   const [form, setForm] = useState<CreateCaseDto>({
     clientId: "",
@@ -35,6 +37,7 @@ export function CaseCreatePage() {
         body: JSON.stringify(payload)
       }),
     onSuccess: async () => {
+      feedback.success("messages.caseCreated");
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
       void navigate({ to: "/app/cases" });
     }
@@ -104,9 +107,7 @@ export function CaseCreatePage() {
           />
           <p className="text-sm text-slate-500">{t("cases.courtNoteAfterCreate")}</p>
           <PrimaryButton type="submit">{t("actions.createCase")}</PrimaryButton>
-          {createMutation.error ? (
-            <p className="text-sm text-red-600">{(createMutation.error as Error).message}</p>
-          ) : null}
+          {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
         </form>
       </SectionCard>
     </div>

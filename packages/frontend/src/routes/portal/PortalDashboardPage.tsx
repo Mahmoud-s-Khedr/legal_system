@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { Briefcase, FileText, Calendar } from "lucide-react";
-import { ErrorState, SectionCard, formatCurrency } from "../app/ui";
+import { EmptyState, PageHeader, SectionCard, StatCard, ErrorState, formatCurrency, formatDate } from "../app/ui";
 
 interface PortalCase {
   id: string;
@@ -46,39 +46,30 @@ export function PortalDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">{t("portal.dashboard")}</h1>
-        <p className="mt-1 text-slate-500">{t("portal.dashboardDescription")}</p>
-      </div>
+      <PageHeader
+        title={t("portal.dashboard")}
+        description={t("portal.dashboardDescription")}
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50">
-            <Briefcase className="size-5 text-blue-600" />
+        <div className="relative">
+          <div className="absolute end-4 top-4 rounded-xl bg-blue-50 p-2 text-blue-600">
+            <Briefcase className="size-4" />
           </div>
-          <div>
-            <p className="text-2xl font-bold">{cases.length}</p>
-            <p className="text-sm text-slate-500">{t("portal.activeCases")}</p>
-          </div>
+          <StatCard label={t("portal.activeCases")} value={cases.length} />
         </div>
-        <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-amber-50">
-            <FileText className="size-5 text-amber-600" />
+        <div className="relative">
+          <div className="absolute end-4 top-4 rounded-xl bg-amber-50 p-2 text-amber-600">
+            <FileText className="size-4" />
           </div>
-          <div>
-            <p className="text-2xl font-bold">{invoices.length}</p>
-            <p className="text-sm text-slate-500">{t("portal.invoices")}</p>
-          </div>
+          <StatCard label={t("portal.invoices")} value={invoices.length} />
         </div>
-        <div className="flex items-center gap-4 rounded-2xl border border-red-100 bg-red-50 px-5 py-4">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-red-100">
-            <FileText className="size-5 text-red-600" />
+        <div className="relative">
+          <div className="absolute end-4 top-4 rounded-xl bg-red-100 p-2 text-red-600">
+            <FileText className="size-4" />
           </div>
-          <div>
-            <p className="text-2xl font-bold text-red-600">{overdueInvoices.length}</p>
-            <p className="text-sm text-red-500">{t("portal.overdueInvoices")}</p>
-          </div>
+          <StatCard label={t("portal.overdueInvoices")} value={overdueInvoices.length} />
         </div>
       </div>
 
@@ -92,7 +83,7 @@ export function PortalDashboardPage() {
             onRetry={() => void casesQuery.refetch()}
           />
         ) : !cases.length ? (
-          <p className="text-sm text-slate-400">{t("empty.noCases")}</p>
+          <EmptyState title={t("empty.noCases")} description={t("empty.noCasesHelp")} />
         ) : (
           <div className="space-y-2">
             {cases.map((c) => (
@@ -109,7 +100,7 @@ export function PortalDashboardPage() {
                 {c.nextHearing && (
                   <div className="flex items-center gap-1.5 text-sm text-slate-400">
                     <Calendar className="size-4" />
-                    {new Date(c.nextHearing).toLocaleDateString()}
+                    {formatDate(c.nextHearing)}
                   </div>
                 )}
               </Link>
@@ -128,14 +119,17 @@ export function PortalDashboardPage() {
             onRetry={() => void invoicesQuery.refetch()}
           />
         ) : !invoices.length ? (
-          <p className="text-sm text-slate-400">{t("empty.noInvoices")}</p>
+          <EmptyState title={t("empty.noInvoices")} description={t("empty.noInvoicesHelp")} />
         ) : (
           <div className="space-y-2">
             {invoices.slice(0, 5).map((inv) => (
               <div key={inv.id} className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <div className="flex-1">
                   <p className="font-semibold">{inv.invoiceNumber}</p>
-                  <p className="text-sm text-slate-500">{inv.status}{inv.dueDate && ` · ${t("portal.due")} ${new Date(inv.dueDate).toLocaleDateString()}`}</p>
+                  <p className="text-sm text-slate-500">
+                    {inv.status}
+                    {inv.dueDate && ` · ${t("portal.due")} ${formatDate(inv.dueDate)}`}
+                  </p>
                 </div>
                 <p className="font-semibold">{formatCurrency(inv.totalAmount)}</p>
               </div>

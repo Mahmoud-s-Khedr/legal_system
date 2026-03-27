@@ -48,7 +48,9 @@
     "unlink": "إلغاء الربط",
     "send": "إرسال",
     "connect": "ربط",
-    "disconnect": "فصل"
+    "disconnect": "فصل",
+    "more": "إجراءات إضافية",
+    "clear": "مسح"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -808,5 +810,36 @@
     "channelSettings": "إعدادات القنوات",
     "channelSettingsLocal": "القنوات الظاهرة",
     "eventType": "نوع الحدث"
+  },
+  "portal": {
+    "clientPortal": "بوابة العملاء",
+    "loginDescription": "سجّل الدخول لمراجعة قضاياك وجلساتك وفواتيرك.",
+    "dashboard": "لوحة بوابة العميل",
+    "dashboardDescription": "تابع القضايا النشطة والجلسات القادمة وحالة الفواتير.",
+    "activeCases": "القضايا النشطة",
+    "invoices": "الفواتير",
+    "overdueInvoices": "الفواتير المتأخرة",
+    "myCases": "قضاياي",
+    "due": "الاستحقاق",
+    "backToDashboard": "العودة إلى اللوحة",
+    "assignedLawyers": "المحامون المكلّفون",
+    "hearings": "الجلسات",
+    "firmId": "معرّف المكتب",
+    "firmIdHint": "استخدم معرّف المكتب المرسل ضمن الدعوة.",
+    "acceptInvite": "قبول الدعوة",
+    "setPasswordHint": "عيّن كلمة مرور آمنة لتفعيل دخولك للبوابة.",
+    "setPassword": "تعيين كلمة المرور",
+    "passwordSet": "تم تعيين كلمة المرور بنجاح."
+  },
+  "messages": {
+    "clientCreated": "تم إنشاء العميل بنجاح.",
+    "caseCreated": "تم إنشاء القضية بنجاح.",
+    "taskCreated": "تم إنشاء المهمة بنجاح.",
+    "invoiceCreated": "تم إنشاء الفاتورة بنجاح.",
+    "paymentRecorded": "تم تسجيل الدفعة بنجاح.",
+    "notificationMarkedRead": "تم تحديد الإشعار كمقروء.",
+    "notificationsUpdated": "تم تحديث الإشعارات.",
+    "invoiceIssued": "تم إصدار الفاتورة بنجاح.",
+    "invoiceVoided": "تم إلغاء الفاتورة بنجاح."
   }
 }

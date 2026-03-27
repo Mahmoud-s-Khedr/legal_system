@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { useMutationFeedback } from "../../lib/feedback";
 import { useCreateInvoice } from "../../lib/billing";
-import { PageHeader, SectionCard } from "./ui";
+import { Field, FormAlert, PageHeader, SectionCard } from "./ui";
 
 interface ItemRow {
   description: string;
@@ -13,6 +14,7 @@ interface ItemRow {
 export function InvoiceCreatePage() {
   const { t } = useTranslation("app");
   const navigate = useNavigate();
+  const feedback = useMutationFeedback();
   const createInvoice = useCreateInvoice();
 
   const [caseId, setCaseId] = useState("");
@@ -53,6 +55,7 @@ export function InvoiceCreatePage() {
           unitPrice: item.unitPrice
         }))
       });
+      feedback.success("messages.invoiceCreated");
       await navigate({ to: "/app/invoices/$invoiceId", params: { invoiceId: invoice.id } });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.fallback"));
@@ -99,15 +102,13 @@ export function InvoiceCreatePage() {
                 <option value="CONTINGENCY">{t("billing.feeTypeContingency")}</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium">{t("billing.dueDate")}</label>
-              <input
-                type="date"
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-            </div>
+            <Field
+              label={t("billing.dueDate")}
+              type="date"
+              commitMode="blur"
+              value={dueDate}
+              onChange={setDueDate}
+            />
             <div>
               <label className="block text-sm font-medium">{t("billing.tax")}</label>
               <input
@@ -188,7 +189,7 @@ export function InvoiceCreatePage() {
           </button>
         </SectionCard>
 
-        {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+        {error ? <FormAlert message={error} /> : null}
 
         <div className="flex gap-3">
           <button

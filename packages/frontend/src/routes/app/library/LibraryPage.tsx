@@ -61,6 +61,22 @@ export function LibraryPage() {
     return category.nameEn;
   }
 
+  function findCategoryName(nodes: CategoryNode[], targetId: string | undefined): string | null {
+    if (!targetId) return null;
+    for (const node of nodes) {
+      if (node.id === targetId) {
+        return localizeCategoryName(node);
+      }
+      const nested = findCategoryName(node.children, targetId);
+      if (nested) {
+        return nested;
+      }
+    }
+    return null;
+  }
+
+  const selectedCategoryName = findCategoryName(categoriesQuery.data ?? [], selectedCategoryId);
+
   function CategoryTree({ nodes, depth = 0 }: { nodes: CategoryNode[]; depth?: number }) {
     return (
       <ul className={depth > 0 ? "ms-4 border-s border-slate-200 ps-3" : ""}>
@@ -102,9 +118,9 @@ export function LibraryPage() {
         }
       />
 
-      <div className="flex gap-6">
+      <div className="flex flex-col gap-6 lg:flex-row">
         {/* Category Sidebar */}
-        <aside aria-label={t("library.categories")} className="w-56 shrink-0">
+        <aside aria-label={t("library.categories")} className="w-full shrink-0 lg:w-64">
           <SectionCard title={t("library.categories")}>
             {categoriesQuery.isLoading ? (
               <p className="text-sm text-slate-500">{t("common.loading")}</p>
@@ -123,7 +139,9 @@ export function LibraryPage() {
                 >
                   {t("library.allDocuments")}
                 </button>
-                <CategoryTree nodes={categoriesQuery.data ?? []} />
+                <div className="max-h-80 overflow-auto pe-1">
+                  <CategoryTree nodes={categoriesQuery.data ?? []} />
+                </div>
               </>
             )}
           </SectionCard>
@@ -141,6 +159,23 @@ export function LibraryPage() {
               onChange={(e) => { setSearchQ(e.target.value); setPage(1); }}
             />
           </div>
+          {selectedCategoryName ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-accent">
+                {selectedCategoryName}
+              </span>
+              <button
+                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                onClick={() => {
+                  setSelectedCategoryId(undefined);
+                  setPage(1);
+                }}
+                type="button"
+              >
+                {t("actions.clear")}
+              </button>
+            </div>
+          ) : null}
 
           {documentsQuery.isLoading ? (
             <p className="text-sm text-slate-500">{t("common.loading")}</p>

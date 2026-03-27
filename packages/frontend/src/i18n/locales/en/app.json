@@ -47,7 +47,9 @@
     "unlink": "Unlink",
     "send": "Send",
     "connect": "Connect",
-    "disconnect": "Disconnect"
+    "disconnect": "Disconnect",
+    "more": "More actions",
+    "clear": "Clear"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -765,5 +767,36 @@
     "channelSettings": "Channel Settings",
     "channelSettingsLocal": "Visible Channels",
     "eventType": "Event Type"
+  },
+  "portal": {
+    "clientPortal": "Client Portal",
+    "loginDescription": "Sign in to review your cases, hearings, and invoices.",
+    "dashboard": "Portal dashboard",
+    "dashboardDescription": "Track your active cases, upcoming hearings, and latest invoice status.",
+    "activeCases": "Active cases",
+    "invoices": "Invoices",
+    "overdueInvoices": "Overdue invoices",
+    "myCases": "My cases",
+    "due": "Due",
+    "backToDashboard": "Back to dashboard",
+    "assignedLawyers": "Assigned lawyers",
+    "hearings": "Hearings",
+    "firmId": "Firm ID",
+    "firmIdHint": "Use the firm identifier provided in your invitation.",
+    "acceptInvite": "Accept invitation",
+    "setPasswordHint": "Set a secure password to activate your portal access.",
+    "setPassword": "Set password",
+    "passwordSet": "Password set successfully."
+  },
+  "messages": {
+    "clientCreated": "Client created successfully.",
+    "caseCreated": "Case created successfully.",
+    "taskCreated": "Task created successfully.",
+    "invoiceCreated": "Invoice created successfully.",
+    "paymentRecorded": "Payment recorded successfully.",
+    "notificationMarkedRead": "Notification marked as read.",
+    "notificationsUpdated": "Notifications updated.",
+    "invoiceIssued": "Invoice issued successfully.",
+    "invoiceVoided": "Invoice voided successfully."
   }
 }

@@ -9,6 +9,7 @@
     "dev:desktop": "vite --host 127.0.0.1 --port 5173",
     "build": "tsc -p tsconfig.json && vite build",
     "lint": "eslint src --ext .ts,.tsx",
+    "lint:tokens": "node ./scripts/check-tailwind-tokens.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --passWithNoTests",

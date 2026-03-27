@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2, MessageSquare } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, PageHeader, PrimaryButton, SectionCard } from "../ui";
+import { EmptyState, PageHeader, PrimaryButton, SectionCard, formatDate } from "../ui";
 
 interface SessionSummary {
   id: string;
@@ -111,7 +111,7 @@ export function ResearchPage() {
                   {session.title ?? t("research.untitledSession")}
                 </Link>
                 <span className="text-xs text-slate-400">
-                  {new Date(session.updatedAt).toLocaleDateString()}
+                  {formatDate(session.updatedAt)}
                 </span>
                 <button
                   aria-label={t("actions.delete")}

@@ -3,8 +3,9 @@ import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { InvoiceStatus } from "@elms/shared";
 import { useInvoice, useIssueInvoice, useVoidInvoice, useAddPayment } from "../../lib/billing";
-import { ErrorState, PageHeader, SectionCard, formatCurrency } from "./ui";
+import { ErrorState, FormAlert, PageHeader, SectionCard, formatCurrency, formatDate } from "./ui";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { useToastStore } from "../../store/toastStore";
 
 export function InvoiceDetailPage() {
   const { invoiceId } = useParams({ from: "/app/invoices/$invoiceId" });
@@ -19,6 +20,7 @@ export function InvoiceDetailPage() {
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentError, setPaymentError] = useState("");
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const addToast = useToastStore((state) => state.addToast);
 
   if (isLoading) return <p className="p-8 text-slate-500">{t("labels.loading")}</p>;
   if (isError) {
@@ -40,6 +42,7 @@ export function InvoiceDetailPage() {
     setPaymentError("");
     try {
       await addPayment.mutateAsync({ amount: paymentAmount, method: paymentMethod });
+      addToast(t("messages.paymentRecorded"), "success");
       setPaymentAmount("");
       setShowPaymentForm(false);
     } catch (err) {
@@ -71,7 +74,10 @@ export function InvoiceDetailPage() {
             </a>
             {canIssue && (
               <button
-                onClick={() => void issueInvoice.mutateAsync()}
+                onClick={async () => {
+                  await issueInvoice.mutateAsync();
+                  addToast(t("messages.invoiceIssued"), "success");
+                }}
                 disabled={issueInvoice.isPending}
                 className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
@@ -88,7 +94,10 @@ export function InvoiceDetailPage() {
             )}
             {canVoid && (
               <button
-                onClick={() => void voidInvoice.mutateAsync()}
+                onClick={async () => {
+                  await voidInvoice.mutateAsync();
+                  addToast(t("messages.invoiceVoided"), "success");
+                }}
                 disabled={voidInvoice.isPending}
                 className="rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
               >
@@ -146,7 +155,7 @@ export function InvoiceDetailPage() {
           <div className="space-y-2">
             {invoice.payments.map((payment) => (
               <div key={payment.id} className="flex justify-between text-sm">
-                <span>{payment.method} — {new Date(payment.paidAt).toLocaleDateString()}</span>
+                <span>{payment.method} — {formatDate(payment.paidAt)}</span>
                 <span className="font-semibold text-emerald-700">+{formatCurrency(payment.amount)}</span>
               </div>
             ))}
@@ -181,9 +190,7 @@ export function InvoiceDetailPage() {
                 />
               </div>
             </div>
-            {paymentError && (
-              <p className="text-sm text-red-600">{paymentError}</p>
-            )}
+            {paymentError ? <FormAlert message={paymentError} /> : null}
             <div className="flex gap-2">
               <button
                 type="submit"

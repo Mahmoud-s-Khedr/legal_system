@@ -27,6 +27,7 @@ import { GlobalSearchBar } from "../../components/search/GlobalSearchBar";
 import { NotificationBell } from "../../components/notifications/NotificationBell";
 import { useAccessibleOverlay } from "../../components/shared/useAccessibleOverlay";
 import { useAuthBootstrap } from "../../store/authStore";
+import { resolveBreadcrumbLabelKey } from "./breadcrumbs";
 
 interface NavItem {
   icon: LucideIcon;
@@ -78,20 +79,19 @@ function getNavSections(t: (key: string) => string): NavSection[] {
   ];
 }
 
-/** UUID pattern — filters out raw IDs from breadcrumbs */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/** Numeric-only IDs */
-const NUMERIC_ID_PATTERN = /^\d+$/;
-
 export function AppLayout() {
   const { t, i18n } = useTranslation("app");
   const { user, mode, logout } = useAuthBootstrap();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
+  const headerMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const matches = useMatches();
   const isRtl = i18n.resolvedLanguage === "ar";
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  const closeHeaderMenu = useCallback(() => setHeaderMenuOpen(false), []);
 
   useAccessibleOverlay({
     open: drawerOpen,
@@ -99,6 +99,13 @@ export function AppLayout() {
     contentRef: drawerRef,
     triggerRef: drawerTriggerRef,
     onClose: closeDrawer
+  });
+  useAccessibleOverlay({
+    open: headerMenuOpen,
+    mode: "popover",
+    contentRef: headerMenuRef,
+    triggerRef: headerMenuTriggerRef,
+    onClose: closeHeaderMenu
   });
 
   const navSections = getNavSections(t).map((section) => ({
@@ -110,22 +117,15 @@ export function AppLayout() {
     )
   })).filter((section) => section.items.length > 0);
 
-  // Build breadcrumbs from route matches — skip UUIDs and numeric IDs
   const breadcrumbSegments = matches
-    .filter((m) => m.pathname !== "/" && m.pathname !== "/app")
-    .flatMap((m) =>
-      m.pathname
-        .split("/")
-        .filter((seg) =>
-          seg.length > 0 &&
-          seg !== "app" &&
-          !UUID_PATTERN.test(seg) &&
-          !NUMERIC_ID_PATTERN.test(seg)
-        )
-        .map((seg) => ({ path: m.pathname, label: seg }))
-    )
-    // Deduplicate consecutive identical labels
-    .filter((seg, i, arr) => i === 0 || seg.label !== arr[i - 1].label);
+    .map((match) => match.pathname)
+    .filter((pathname, index, arr) => pathname.startsWith("/app") && pathname !== "/app" && arr.indexOf(pathname) === index)
+    .map((pathname) => {
+      const labelKey = resolveBreadcrumbLabelKey(pathname);
+      if (!labelKey) return null;
+      return { path: pathname, label: t(labelKey) };
+    })
+    .filter((segment): segment is { path: string; label: string } => Boolean(segment));
 
   const userInitials = user?.fullName
     ? user.fullName
@@ -229,15 +229,19 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <GlobalSearchBar />
+            <div className="hidden md:block">
+              <GlobalSearchBar />
+            </div>
             <NotificationBell />
-            <span className="hidden rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-emerald-900 sm:inline-flex">
+            <span className="hidden rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-emerald-900 lg:inline-flex">
               {mode === AuthMode.LOCAL ? t("modes.local") : t("modes.cloud")}
             </span>
-            <LanguageSwitcher />
+            <div className="hidden sm:block">
+              <LanguageSwitcher />
+            </div>
             {/* User avatar */}
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-xs font-bold text-white"
+              className="hidden h-9 w-9 items-center justify-center rounded-full bg-accent text-xs font-bold text-white sm:flex"
               aria-label={user?.fullName ?? userInitials}
               role="img"
             >
@@ -252,6 +256,50 @@ export function AppLayout() {
             >
               <LogOut size={18} />
             </button>
+            <div className="relative lg:hidden">
+              <button
+                ref={headerMenuTriggerRef}
+                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
+                onClick={() => setHeaderMenuOpen((value) => !value)}
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={headerMenuOpen}
+                aria-controls="header-actions-menu"
+                aria-label={t("actions.more")}
+              >
+                <Menu size={18} />
+              </button>
+              {headerMenuOpen && (
+                <div
+                  id="header-actions-menu"
+                  ref={headerMenuRef}
+                  className="absolute end-0 top-full z-40 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-3 shadow-elevated"
+                  role="dialog"
+                  aria-label={t("actions.more")}
+                >
+                  <div className="space-y-3">
+                    <GlobalSearchBar />
+                    <div className="border-t border-slate-100 pt-3">
+                      <LanguageSwitcher />
+                    </div>
+                    <div className="rounded-xl bg-accentSoft px-3 py-2 text-xs font-semibold text-emerald-900">
+                      {mode === AuthMode.LOCAL ? t("modes.local") : t("modes.cloud")}
+                    </div>
+                    <button
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
+                        void logout();
+                      }}
+                      type="button"
+                    >
+                      <LogOut size={16} />
+                      {t("actions.logout")}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
