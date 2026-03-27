@@ -870,6 +870,9 @@
   "calendar": {
     "title": "Calendrier unifié",
     "description": "Voir audiences, tâches et factures dans une seule chronologie.",
+    "mobileAgenda": "Agenda",
+    "mobileTimeline": "Chronologie",
+    "confirmMoveTitle": "Confirmer la modification",
     "eventTypes": {
       "hearing": "Audience",
       "task": "Tâche",

@@ -476,6 +476,9 @@
   "calendar": {
     "title": "التقويم الموحد",
     "description": "عرض الجلسات والفواتير والمهام في مخطط زمني واحد.",
+    "mobileAgenda": "الأجندة",
+    "mobileTimeline": "الخط الزمني",
+    "confirmMoveTitle": "تأكيد تعديل الموعد",
     "eventTypes": {
       "hearing": "جلسة",
       "task": "مهمة",

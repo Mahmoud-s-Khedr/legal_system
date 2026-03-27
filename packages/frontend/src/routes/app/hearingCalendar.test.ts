@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getVisibleRange,
+  resolveWeekStartIndex,
   shiftFocusDate,
   slotDateTime,
   toDateTimeLocalValue
@@ -8,7 +9,7 @@ import {
 
 describe("hearingCalendar", () => {
   it("expands month view to whole weeks", () => {
-    const range = getVisibleRange("month", new Date("2026-03-18T10:00:00.000Z"));
+    const range = getVisibleRange("month", new Date("2026-03-18T10:00:00.000Z"), 0);
 
     expect(range.from.getFullYear()).toBe(2026);
     expect(range.from.getMonth()).toBe(2);
@@ -27,6 +28,12 @@ describe("hearingCalendar", () => {
     expect(weekShift.getDate()).toBe(11);
     expect(monthShift.getMonth()).toBe(3);
     expect(monthShift.getDate()).toBe(1);
+  });
+
+  it("resolves locale week starts", () => {
+    expect(resolveWeekStartIndex("ar")).toBe(6);
+    expect(resolveWeekStartIndex("fr-FR")).toBe(1);
+    expect(resolveWeekStartIndex("en-US")).toBe(0);
   });
 
   it("formats ISO strings for datetime-local inputs", () => {

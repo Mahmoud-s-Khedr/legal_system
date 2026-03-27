@@ -14,15 +14,26 @@ export function addDays(date: Date, amount: number) {
   return next;
 }
 
-export function startOfWeek(date: Date) {
+export function resolveWeekStartIndex(locale: string) {
+  const value = locale.toLowerCase();
+  if (value.startsWith("ar")) {
+    return 6; // Saturday in Arabic locales.
+  }
+  if (value.startsWith("fr")) {
+    return 1; // Monday for French locales.
+  }
+  return 0; // Sunday default.
+}
+
+export function startOfWeek(date: Date, weekStartsOn = 0) {
   const start = startOfDay(date);
-  // Sunday-start (Egypt): Sunday = 0, no shift needed; other days shift back to Sunday
-  const offset = -start.getDay();
+  const day = start.getDay();
+  const offset = -((day - weekStartsOn + 7) % 7);
   return addDays(start, offset);
 }
 
-export function endOfWeek(date: Date) {
-  return endOfDay(addDays(startOfWeek(date), 6));
+export function endOfWeek(date: Date, weekStartsOn = 0) {
+  return endOfDay(addDays(startOfWeek(date, weekStartsOn), 6));
 }
 
 export function startOfMonth(date: Date) {
@@ -33,7 +44,7 @@ export function endOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
 }
 
-export function getVisibleRange(view: CalendarView, focusDate: Date) {
+export function getVisibleRange(view: CalendarView, focusDate: Date, weekStartsOn = 0) {
   if (view === "day") {
     return {
       from: startOfDay(focusDate),
@@ -43,24 +54,24 @@ export function getVisibleRange(view: CalendarView, focusDate: Date) {
 
   if (view === "week") {
     return {
-      from: startOfWeek(focusDate),
-      to: endOfWeek(focusDate)
+      from: startOfWeek(focusDate, weekStartsOn),
+      to: endOfWeek(focusDate, weekStartsOn)
     };
   }
 
   return {
-    from: startOfWeek(startOfMonth(focusDate)),
-    to: endOfWeek(endOfMonth(focusDate))
+    from: startOfWeek(startOfMonth(focusDate), weekStartsOn),
+    to: endOfWeek(endOfMonth(focusDate), weekStartsOn)
   };
 }
 
-export function getMonthGridDays(focusDate: Date) {
-  const { from, to } = getVisibleRange("month", focusDate);
+export function getMonthGridDays(focusDate: Date, weekStartsOn = 0) {
+  const { from, to } = getVisibleRange("month", focusDate, weekStartsOn);
   return buildDayRange(from, to);
 }
 
-export function getWeekDays(focusDate: Date) {
-  const { from, to } = getVisibleRange("week", focusDate);
+export function getWeekDays(focusDate: Date, weekStartsOn = 0) {
+  const { from, to } = getVisibleRange("week", focusDate, weekStartsOn);
   return buildDayRange(from, to);
 }
 
@@ -112,4 +123,29 @@ export function shiftFocusDate(view: CalendarView, focusDate: Date, direction: -
   }
 
   return new Date(focusDate.getFullYear(), focusDate.getMonth() + direction, 1);
+}
+
+export function startOfHour(date: Date) {
+  const next = new Date(date);
+  next.setMinutes(0, 0, 0);
+  return next;
+}
+
+export function addMinutes(date: Date, amount: number) {
+  const next = new Date(date);
+  next.setMinutes(next.getMinutes() + amount);
+  return next;
+}
+
+export function isSameDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+export function hourSlots(day: Date) {
+  const start = startOfDay(day);
+  return Array.from({ length: 24 }, (_, index) => addMinutes(start, index * 60));
 }

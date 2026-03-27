@@ -417,6 +417,9 @@
   "calendar": {
     "title": "Unified Calendar",
     "description": "View hearings, invoices, and tasks in one planning timeline.",
+    "mobileAgenda": "Agenda",
+    "mobileTimeline": "Timeline",
+    "confirmMoveTitle": "Confirm schedule change",
     "eventTypes": {
       "hearing": "Hearing",
       "task": "Task",
