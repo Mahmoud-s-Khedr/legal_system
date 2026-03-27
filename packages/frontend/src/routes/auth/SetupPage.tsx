@@ -14,16 +14,21 @@ export function SetupPage() {
   const [email, setEmail] = useState(import.meta.env.VITE_SETUP_EMAIL as string ?? "");
   const [password, setPassword] = useState(import.meta.env.VITE_SETUP_PASSWORD as string ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
     setError(null);
+    setIsSubmitting(true);
 
     try {
       await setup({ firmName, fullName, email, password });
       await navigate({ to: "/app/dashboard" });
     } catch (submitError) {
       setError((submitError as Error).message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -35,7 +40,11 @@ export function SetupPage() {
         <Field id="setup-email" label={t("email")} type="email" value={email} onChange={setEmail} required />
         <Field id="setup-password" label={t("password")} type="password" value={password} onChange={setPassword} required />
         {error ? <FormAlert message={error} /> : null}
-        <button className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white" type="submit">
+        <button
+          className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          type="submit"
+          disabled={isSubmitting}
+        >
           {t("completeSetup")}
         </button>
         <Link

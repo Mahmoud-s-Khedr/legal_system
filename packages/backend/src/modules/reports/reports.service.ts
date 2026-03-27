@@ -24,9 +24,9 @@ export async function caseStatusDistribution(
     const rows = await tx.$queryRaw<Array<{ status: string; count: bigint }>>`
       SELECT status, COUNT(*) AS count
       FROM "Case"
-      WHERE firm_id = ${actor.firmId}::uuid
-        AND (${filter.dateFrom ?? null}::timestamptz IS NULL OR created_at >= ${filter.dateFrom ?? null}::timestamptz)
-        AND (${filter.dateTo ?? null}::timestamptz IS NULL OR created_at <= ${filter.dateTo ?? null}::timestamptz)
+      WHERE "firmId" = ${actor.firmId}::uuid
+        AND (${filter.dateFrom ?? null}::timestamptz IS NULL OR "createdAt" >= ${filter.dateFrom ?? null}::timestamptz)
+        AND (${filter.dateTo ?? null}::timestamptz IS NULL OR "createdAt" <= ${filter.dateTo ?? null}::timestamptz)
       GROUP BY status
       ORDER BY count DESC
     `;
@@ -48,10 +48,15 @@ export async function hearingOutcomes(
   return withTenant(prisma, actor.firmId, async (tx) => {
     const rows = await tx.$queryRaw<Array<{ outcome: string | null; count: bigint }>>`
       SELECT outcome, COUNT(*) AS count
-      FROM "Hearing"
-      WHERE firm_id = ${actor.firmId}::uuid
-        AND (${filter.dateFrom ?? null}::timestamptz IS NULL OR session_datetime >= ${filter.dateFrom ?? null}::timestamptz)
-        AND (${filter.dateTo ?? null}::timestamptz IS NULL OR session_datetime <= ${filter.dateTo ?? null}::timestamptz)
+      FROM "CaseSession"
+      WHERE (${filter.dateFrom ?? null}::timestamptz IS NULL OR "sessionDatetime" >= ${filter.dateFrom ?? null}::timestamptz)
+        AND (${filter.dateTo ?? null}::timestamptz IS NULL OR "sessionDatetime" <= ${filter.dateTo ?? null}::timestamptz)
+        AND EXISTS (
+          SELECT 1
+          FROM "Case" c
+          WHERE c.id = "CaseSession"."caseId"
+            AND c."firmId" = ${actor.firmId}::uuid
+        )
       GROUP BY outcome
       ORDER BY count DESC
     `;
@@ -133,17 +138,17 @@ export async function revenueReport(
   return withTenant(prisma, actor.firmId, async (tx) => {
     const rows = await tx.$queryRaw<Array<{ month: string; invoiced: string; paid: string }>>`
       SELECT
-        TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month,
-        SUM(total_amount)::text AS invoiced,
+        TO_CHAR(DATE_TRUNC('month', "createdAt"), 'YYYY-MM') AS month,
+        SUM("totalAmount")::text AS invoiced,
         SUM(CASE WHEN status IN ('PAID','PARTIALLY_PAID')
-          THEN (SELECT COALESCE(SUM(amount), 0) FROM "Payment" p WHERE p.invoice_id = "Invoice".id)
+          THEN (SELECT COALESCE(SUM(amount), 0) FROM "Payment" p WHERE p."invoiceId" = "Invoice".id)
           ELSE 0 END)::text AS paid
       FROM "Invoice"
-      WHERE firm_id = ${actor.firmId}::uuid
+      WHERE "firmId" = ${actor.firmId}::uuid
         AND status != 'VOID'
-        AND (${filter.dateFrom ?? null}::timestamptz IS NULL OR created_at >= ${filter.dateFrom ?? null}::timestamptz)
-        AND (${filter.dateTo ?? null}::timestamptz IS NULL OR created_at <= ${filter.dateTo ?? null}::timestamptz)
-      GROUP BY month
+        AND (${filter.dateFrom ?? null}::timestamptz IS NULL OR "createdAt" >= ${filter.dateFrom ?? null}::timestamptz)
+        AND (${filter.dateTo ?? null}::timestamptz IS NULL OR "createdAt" <= ${filter.dateTo ?? null}::timestamptz)
+      GROUP BY DATE_TRUNC('month', "createdAt")
       ORDER BY month ASC
     `;
     return rows;

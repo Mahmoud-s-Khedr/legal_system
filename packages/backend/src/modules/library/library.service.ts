@@ -579,25 +579,25 @@ export async function searchLibrary(
       d.title,
       d.summary,
       d.scope,
-      d.category_id AS "categoryId",
+      d."categoryId" AS "categoryId",
       la.id AS article_id,
-      la.article_number,
+      la."articleNumber" AS article_number,
       la.body AS article_body,
       ts_rank(
-        to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d.content_text,'') || ' ' || coalesce(la.body,'')),
+        to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,'')),
         websearch_to_tsquery('simple', ${query})
       ) AS rank
     FROM "LibraryDocument" d
-    LEFT JOIN "LegislationArticle" la ON la.document_id = d.id
-    WHERE d.deleted_at IS NULL
-      AND (d.scope = 'SYSTEM' OR d.firm_id = ${actor.firmId}::uuid)
+    LEFT JOIN "LegislationArticle" la ON la."documentId" = d.id
+    WHERE d."deletedAt" IS NULL
+      AND (d.scope = 'SYSTEM' OR d."firmId" = ${actor.firmId}::uuid)
       AND (
-        to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d.content_text,'') || ' ' || coalesce(la.body,''))
+        to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,''))
         @@ websearch_to_tsquery('simple', ${query})
       )
       ${filter.type ? Prisma.sql`AND d.type = ${filter.type}` : Prisma.empty}
       ${filter.scope ? Prisma.sql`AND d.scope = ${filter.scope}` : Prisma.empty}
-      ${filter.categoryId ? Prisma.sql`AND d.category_id = ${filter.categoryId}::uuid` : Prisma.empty}
+      ${filter.categoryId ? Prisma.sql`AND d."categoryId" = ${filter.categoryId}::uuid` : Prisma.empty}
     ORDER BY rank DESC
     LIMIT ${limit}
   `;

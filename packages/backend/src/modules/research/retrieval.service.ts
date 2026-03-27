@@ -34,17 +34,17 @@ export async function retrieveRelevantExcerpts(
       d.id              AS document_id,
       a.id              AS article_id,
       d.title           AS document_title,
-      a.number          AS article_number,
-      COALESCE(a.body, d.description, d.title) AS excerpt,
+      a."articleNumber" AS article_number,
+      COALESCE(a.body, d.summary, d.title) AS excerpt,
       ts_rank(
         to_tsvector('simple', COALESCE(a.body, '') || ' ' || COALESCE(a.title, '') || ' ' || d.title),
         websearch_to_tsquery('simple', ${query})
       ) AS rank
-    FROM library_documents d
-    LEFT JOIN legislation_articles a ON a.document_id = d.id
+    FROM "LibraryDocument" d
+    LEFT JOIN "LegislationArticle" a ON a."documentId" = d.id
     WHERE
-      d.deleted_at IS NULL
-      AND (d.scope = 'SYSTEM' OR d.firm_id = ${firmId}::uuid)
+      d."deletedAt" IS NULL
+      AND (d.scope = 'SYSTEM' OR d."firmId" = ${firmId}::uuid)
       AND to_tsvector('simple', COALESCE(a.body, '') || ' ' || COALESCE(a.title, '') || ' ' || d.title)
           @@ websearch_to_tsquery('simple', ${query})
     ORDER BY rank DESC

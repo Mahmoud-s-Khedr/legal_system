@@ -1,5 +1,5 @@
 import { AuthMode, type AuthResponseDto, type LoginDto, type SetupDto } from "@elms/shared";
-import { Language, UserStatus } from "@prisma/client";
+import { Language, Prisma, UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import type { AppEnv } from "../../config/env.js";
 import { LOCAL_SESSION_COOKIE, SYSTEM_ROLE_KEYS } from "../../config/constants.js";
@@ -15,6 +15,39 @@ function httpError(message: string, statusCode: number): Error & { statusCode: n
   return err;
 }
 
+function isP2002Error(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code === "P2002";
+  }
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  );
+}
+
+function p2002TargetsFirmSlug(error: unknown): boolean {
+  if (
+    typeof error !== "object" ||
+    error === null ||
+    !("meta" in error) ||
+    typeof (error as { meta?: unknown }).meta !== "object" ||
+    (error as { meta?: unknown }).meta === null
+  ) {
+    return false;
+  }
+
+  const target = (error as { meta?: { target?: unknown } }).meta?.target;
+  if (Array.isArray(target)) {
+    return target.some((entry) => String(entry).toLowerCase().includes("slug"));
+  }
+  if (typeof target === "string") {
+    return target.toLowerCase().includes("slug");
+  }
+  return false;
+}
+
 export function createLocalAuthService(_env: AppEnv): AuthService {
   void _env;
   return {
@@ -28,30 +61,42 @@ export function createLocalAuthService(_env: AppEnv): AuthService {
       const [adminRole] = await ensureSystemRoles();
       const passwordHash = await bcrypt.hash(payload.password, 12);
 
-      const firm = await prisma.firm.create({
-        data: {
-          name: payload.firmName,
-          slug: slugify(payload.firmName),
-          defaultLanguage: Language.AR,
-          users: {
-            create: {
-              email: payload.email,
-              fullName: payload.fullName,
-              passwordHash,
-              preferredLanguage: Language.AR,
-              roleId: adminRole.id,
-              status: UserStatus.ACTIVE
+      const slug = slugify(payload.firmName);
+      let firm: { users: Array<{ id: string }> };
+      try {
+        firm = await prisma.firm.create({
+          data: {
+            name: payload.firmName,
+            slug,
+            defaultLanguage: Language.AR,
+            users: {
+              create: {
+                email: payload.email,
+                fullName: payload.fullName,
+                passwordHash,
+                preferredLanguage: Language.AR,
+                roleId: adminRole.id,
+                status: UserStatus.ACTIVE
+              }
+            },
+            settings: {
+              create: {
+                preferredLanguage: Language.AR,
+                timezone: "Africa/Cairo"
+              }
             }
           },
-          settings: {
-            create: {
-              preferredLanguage: Language.AR,
-              timezone: "Africa/Cairo"
-            }
+          select: { users: { select: { id: true } } }
+        });
+      } catch (error) {
+        if (isP2002Error(error) && p2002TargetsFirmSlug(error)) {
+          const alreadyExists = await prisma.firm.findFirst({ where: { slug } });
+          if (alreadyExists) {
+            throw httpError("Desktop setup already completed", 409);
           }
-        },
-        select: { users: { select: { id: true } } }
-      });
+        }
+        throw error;
+      }
 
       const userId = firm.users[0].id;
       const user = await getUserWithRoleAndPermissions(prisma, userId);
