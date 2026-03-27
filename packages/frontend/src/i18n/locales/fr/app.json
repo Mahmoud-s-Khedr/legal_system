@@ -72,6 +72,7 @@
     "mainNavigation": "Navigation principale",
     "openMenu": "Ouvrir le menu de navigation",
     "closeMenu": "Fermer le menu de navigation",
+    "noItems": "Aucun élément de navigation disponible",
     "groups": {
       "finance": "Finance",
       "tools": "Analyses & Outils",

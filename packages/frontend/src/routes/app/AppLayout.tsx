@@ -1,84 +1,16 @@
-import { Link, Outlet, useMatches } from "@tanstack/react-router";
-import { useCallback, useRef, useState } from "react";
+import { Outlet, useMatches } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AuthMode } from "@elms/shared";
-import {
-  LayoutDashboard,
-  Users,
-  Briefcase,
-  Scale,
-  FileText,
-  CheckSquare,
-  Settings,
-  Menu,
-  X,
-  LogOut,
-  ChevronRight,
-  ChevronLeft,
-  Receipt,
-  FileCode,
-  BarChart2,
-  Library,
-  Wallet
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Menu, X, LogOut, ChevronRight, ChevronLeft } from "lucide-react";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { GlobalSearchBar } from "../../components/search/GlobalSearchBar";
 import { NotificationBell } from "../../components/notifications/NotificationBell";
 import { useAccessibleOverlay } from "../../components/shared/useAccessibleOverlay";
 import { useAuthBootstrap } from "../../store/authStore";
 import { resolveBreadcrumbLabelKey } from "./breadcrumbs";
-
-interface NavItem {
-  icon: LucideIcon;
-  label: string;
-  to: string;
-  cloudOnly?: boolean;
-  requiredPermission?: string;
-}
-
-interface NavSection {
-  label?: string;
-  items: NavItem[];
-}
-
-function getNavSections(t: (key: string) => string): NavSection[] {
-  return [
-    {
-      items: [
-        { icon: LayoutDashboard, label: t("nav.dashboard"), to: "/app/dashboard" },
-        { icon: Users, label: t("nav.clients"), to: "/app/clients" },
-        { icon: Briefcase, label: t("nav.cases"), to: "/app/cases" },
-        { icon: Scale, label: t("nav.calendar"), to: "/app/calendar" },
-        { icon: Scale, label: t("nav.hearings"), to: "/app/hearings" },
-        { icon: CheckSquare, label: t("nav.tasks"), to: "/app/tasks" },
-        { icon: FileText, label: t("nav.documents"), to: "/app/documents" }
-      ]
-    },
-    {
-      label: t("nav.groups.finance"),
-      items: [
-        { icon: Receipt, label: t("nav.invoices"), to: "/app/invoices", requiredPermission: "invoices:read" },
-        { icon: Wallet, label: t("nav.expenses"), to: "/app/expenses", requiredPermission: "invoices:read" }
-      ]
-    },
-    {
-      label: t("nav.groups.tools"),
-      items: [
-        { icon: BarChart2, label: t("nav.reports"), to: "/app/reports", requiredPermission: "reports:read" },
-        { icon: FileCode, label: t("nav.templates"), to: "/app/templates", requiredPermission: "templates:read" },
-        { icon: Library, label: t("nav.library"), to: "/app/library", requiredPermission: "library:read" }
-      ]
-    },
-    {
-      label: t("nav.groups.administration"),
-      items: [
-        { icon: Users, label: t("nav.users"), to: "/app/users", requiredPermission: "users:read" },
-        { icon: Settings, label: t("nav.settings"), to: "/app/settings", requiredPermission: "settings:read" }
-      ]
-    }
-  ];
-}
+import { SidebarNav } from "./SidebarNav";
+import { buildSidebarNavSections } from "./navConfig";
 
 export function AppLayout() {
   const { t, i18n } = useTranslation("app");
@@ -109,14 +41,20 @@ export function AppLayout() {
     onClose: closeHeaderMenu
   });
 
-  const navSections = getNavSections(t).map((section) => ({
-    ...section,
-    items: section.items.filter(
-      (item) =>
-        (!item.cloudOnly || mode === AuthMode.CLOUD) &&
-        (!item.requiredPermission || (user?.permissions.includes(item.requiredPermission) ?? false))
-    )
-  })).filter((section) => section.items.length > 0);
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [drawerOpen]);
+
+  const navSections = buildSidebarNavSections({
+    t,
+    mode,
+    permissions: user?.permissions ?? []
+  });
 
   const breadcrumbSegments = matches
     .map((match) => match.pathname)
@@ -140,28 +78,13 @@ export function AppLayout() {
   const SeparatorIcon = isRtl ? ChevronLeft : ChevronRight;
 
   const navContent = (
-    <nav aria-label={t("nav.mainNavigation")} className="space-y-4">
-      {navSections.map((section, si) => (
-        <div key={si}>
-          {section.label && (
-            <p className="mb-1 px-4 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
-              {section.label}
-            </p>
-          )}
-          <div className="space-y-0.5">
-            {section.items.map((item) => (
-              <NavLink
-                key={item.to}
-                icon={item.icon}
-                label={item.label}
-                to={item.to}
-                onClick={() => setDrawerOpen(false)}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
-    </nav>
+    <SidebarNav
+      ariaLabel={t("nav.mainNavigation")}
+      sections={navSections}
+      language={i18n.resolvedLanguage ?? i18n.language ?? "en"}
+      emptyLabel={t("nav.noItems")}
+      onItemClick={() => setDrawerOpen(false)}
+    />
   );
 
   const userStrip = (
@@ -322,12 +245,12 @@ export function AppLayout() {
           <aside
             ref={drawerRef}
             tabIndex={-1}
-            className="absolute inset-y-0 flex w-72 flex-col bg-white p-4 shadow-elevated animate-fade-in start-0"
+            className="absolute inset-y-0 flex w-72 flex-col border-e border-slate-200 bg-[var(--sidebar-bg)] p-4 shadow-elevated animate-fade-in start-0"
           >
             <div className="mb-4 flex items-center justify-between">
               <p id="mobile-nav-title" className="font-heading text-lg font-bold text-accent">ELMS</p>
               <button
-                className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
                 onClick={() => setDrawerOpen(false)}
                 type="button"
                 aria-label={t("nav.closeMenu")}
@@ -346,7 +269,10 @@ export function AppLayout() {
       {/* ── Main grid ── */}
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[260px_1fr] lg:px-6">
         {/* Desktop sidebar */}
-        <aside className="hidden rounded-3xl bg-white p-4 shadow-card lg:flex lg:flex-col" aria-label={t("nav.mainNavigation")}>
+        <aside
+          className="hidden rounded-3xl border border-slate-200 bg-[var(--sidebar-bg)] p-4 shadow-card lg:flex lg:flex-col"
+          aria-label={t("nav.mainNavigation")}
+        >
           <div className="flex-1 overflow-y-auto">
             {navContent}
           </div>
@@ -357,29 +283,5 @@ export function AppLayout() {
         </main>
       </div>
     </div>
-  );
-}
-
-function NavLink({
-  to,
-  label,
-  icon: Icon,
-  onClick
-}: {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-  onClick?: () => void;
-}) {
-  return (
-    <Link
-      activeProps={{ className: "bg-accent text-white shadow-sm", "aria-current": "page" }}
-      className="flex items-center gap-3 rtl:flex-row-reverse rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition-all duration-fast hover:bg-accentSoft"
-      to={to}
-      onClick={onClick}
-    >
-      <Icon size={18} aria-hidden="true" />
-      <span>{label}</span>
-    </Link>
   );
 }

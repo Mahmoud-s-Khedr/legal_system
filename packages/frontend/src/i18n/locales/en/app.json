@@ -73,6 +73,7 @@
     "mainNavigation": "Main navigation",
     "openMenu": "Open navigation menu",
     "closeMenu": "Close navigation menu",
+    "noItems": "No navigation items available",
     "groups": {
       "finance": "Finance",
       "tools": "Analytics & Tools",

@@ -14,6 +14,11 @@
   --color-sand-warm: #f8edd8;
   --color-sand-deep: #ede4d3;
   --color-ink: #1f2937;
+  --sidebar-bg: #ffffff;
+  --sidebar-item-hover: #e8f7ef;
+  --sidebar-item-active: #0f766e;
+  --sidebar-heading: #64748b;
+  --sidebar-item-text: #334155;
 
   /* Radius */
   --radius-md: 0.75rem;
