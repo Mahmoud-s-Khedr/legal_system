@@ -2,13 +2,13 @@
 
 ## Overview
 
-ELMS uses an edition-based feature model to serve both individual practitioners and multi-user law firms across offline desktop and online cloud deployment targets. The edition system controls feature availability, seat limits, AI usage caps, and trial eligibility. Firm lifecycle state (ACTIVE, GRACE, SUSPENDED, PENDING_DELETION, DATA_DELETION_PENDING, LICENSED) is maintained by a nightly scheduler and enforced by global write guard middleware.
+ELMS uses an edition-based feature model for local/on-prem deployment, serving both individual practitioners and multi-user law firms. The edition system controls feature availability, seat limits, AI usage caps, and trial eligibility. Firm lifecycle state (ACTIVE, GRACE, SUSPENDED, PENDING_DELETION, DATA_DELETION_PENDING, LICENSED) is maintained by a nightly scheduler and enforced by global write guard middleware.
 
 ---
 
 ## Edition Tiers
 
-Five editions are defined by the `EditionKey` enum:
+Four self-serve editions are defined by the `EditionKey` enum:
 
 ### `solo_offline`
 
@@ -26,9 +26,9 @@ Designed for a solo practitioner working entirely offline. No internet connectiv
 
 | Property | Value |
 |---|---|
-| Deployment | Cloud |
+| Deployment | Local |
 | Users (seats) | 1 |
-| Features | All online features (email, SMS, WhatsApp notifications, Google Calendar sync, Google Vision OCR, AI research, cloud backup, online payments) |
+| Features | Optional internet-backed features (email, SMS, WhatsApp notifications, Google Calendar sync, Google Vision OCR, AI research, online payments) |
 | AI monthly limit | 500 messages/month |
 | Trial | Disabled |
 
@@ -50,7 +50,7 @@ Multi-user firm running on a local network without internet. Seats are unlimited
 
 | Property | Value |
 |---|---|
-| Deployment | Cloud |
+| Deployment | Local |
 | Users (seats) | Unlimited |
 | Features | `multi_user` + all online features |
 | AI monthly limit | 2,000 messages/month |
@@ -58,17 +58,7 @@ Multi-user firm running on a local network without internet. Seats are unlimited
 
 The standard multi-user subscription. Combines unlimited seats with the full cloud feature set and a higher AI usage cap.
 
-### `enterprise`
-
-| Property | Value |
-|---|---|
-| Deployment | Cloud |
-| Users (seats) | Unlimited |
-| Features | `multi_user` + all online features + `pwa_browser_access` |
-| AI monthly limit | 0 (unlimited) |
-| Trial | Disabled |
-
-Enterprise adds Progressive Web App browser access and removes all AI usage restrictions. Intended for large firms with high research volume.
+`enterprise` onboarding is contract/manual and outside self-serve key activation.
 
 ### Online Feature Set
 
@@ -80,10 +70,9 @@ The following features are available on all online-capable editions:
 - `google_calendar_sync`
 - `google_vision_ocr`
 - `ai_research`
-- `cloud_backup_sync`
 - `payments_online`
 
-`pwa_browser_access` is exclusive to `enterprise`. `multi_user` is available on all editions except `solo_offline` and `solo_online`.
+`multi_user` is available on all editions except `solo_offline` and `solo_online`.
 
 ---
 
@@ -158,7 +147,7 @@ The scheduler runs at **02:05 daily** (`cron: "5 2 * * *"`), calling `runFirmLif
 
 The sweep returns a `LifecycleSweepResult` with counts for each transition type, written to the server log.
 
-Desktop mode uses `node-cron`; cloud mode uses a BullMQ repeating job on the `edition-lifecycle-scan` queue.
+The scheduler runs locally via `node-cron` in supported deployments.
 
 ---
 
@@ -327,4 +316,3 @@ Cloud subscriptions use the lifecycle state machine for trial, grace, and suspen
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

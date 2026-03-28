@@ -1,7 +1,6 @@
 import { Outlet, useMatches } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AuthMode } from "@elms/shared";
 import { Menu, X, LogOut, ChevronRight, ChevronLeft } from "lucide-react";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { GlobalSearchBar } from "../../components/search/GlobalSearchBar";
@@ -14,7 +13,7 @@ import { buildSidebarNavSections } from "./navConfig";
 
 export function AppLayout() {
   const { t, i18n } = useTranslation("app");
-  const { user, mode, logout } = useAuthBootstrap();
+  const { user, logout } = useAuthBootstrap();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
@@ -52,7 +51,6 @@ export function AppLayout() {
 
   const navSections = buildSidebarNavSections({
     t,
-    mode,
     permissions: user?.permissions ?? []
   });
 
@@ -158,7 +156,7 @@ export function AppLayout() {
             </div>
             <NotificationBell />
             <span className="hidden rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-emerald-900 lg:inline-flex">
-              {mode === AuthMode.LOCAL ? t("modes.local") : t("modes.cloud")}
+              {t("modes.local")}
             </span>
             <div className="hidden sm:block">
               <LanguageSwitcher />
@@ -207,7 +205,7 @@ export function AppLayout() {
                       <LanguageSwitcher />
                     </div>
                     <div className="rounded-xl bg-accentSoft px-3 py-2 text-xs font-semibold text-emerald-900">
-                      {mode === AuthMode.LOCAL ? t("modes.local") : t("modes.cloud")}
+                      {t("modes.local")}
                     </div>
                     <button
                       className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"

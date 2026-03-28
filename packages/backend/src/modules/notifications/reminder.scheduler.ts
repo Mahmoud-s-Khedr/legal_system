@@ -1,13 +1,10 @@
 /**
- * Reminder scheduler.
- *
- * Cloud mode  — uses BullMQ delayed jobs (requires Redis).
- * Desktop mode — uses node-cron to poll and dispatch reminders locally.
+ * Reminder scheduler for local deployments.
  *
  * Call startReminderScheduler(env) once at server startup.
  */
 
-import { AuthMode, NotificationType } from "@elms/shared";
+import { NotificationType } from "@elms/shared";
 import type { AppEnv } from "../../config/env.js";
 import { prisma } from "../../db/prisma.js";
 import { dispatchNotification } from "./notification.service.js";
@@ -159,45 +156,14 @@ async function startDesktopScheduler(env: AppEnv) {
   console.info("[reminder-scheduler] desktop cron scheduler started");
 }
 
-// ── Cloud scheduler (BullMQ) ──────────────────────────────────────────────────
-
-async function startCloudScheduler(env: AppEnv) {
-  const { Queue, Worker } = await import("bullmq");
-
-  const reminderQueue = new Queue("reminder-scan", {
-    connection: { url: env.REDIS_URL },
-    defaultJobOptions: { removeOnComplete: 10, removeOnFail: 10 }
-  });
-
-  // Enqueue a daily scan job if none is pending
-  const waiting = await reminderQueue.getWaiting();
-  if (waiting.length === 0) {
-    await reminderQueue.add("daily-scan", {}, { repeat: { pattern: "0 8 * * *" } });
-  }
-
-  new Worker(
-    "reminder-scan",
-    async () => {
-      await scanHearingReminders(env);
-      await scanOverdueTasks(env);
-      await scanOverdueInvoices(env);
-      await scanDailyTaskDigest(env);
-    },
-    { connection: { url: env.REDIS_URL }, concurrency: 1 }
-  );
-
-  console.info("[reminder-scheduler] cloud BullMQ scheduler started");
-}
-
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 export async function startReminderScheduler(env: AppEnv): Promise<void> {
   try {
-    if (env.AUTH_MODE === AuthMode.LOCAL) {
-      await startDesktopScheduler(env);
-    } else {
-      await startCloudScheduler(env);
+    if (env.AUTH_MODE !== "local") {
+      console.warn("[reminder-scheduler] cloud scheduler is deprecated; forcing local scheduler");
     }
+    await startDesktopScheduler(env);
   } catch (err) {
     console.error("[reminder-scheduler] failed to start — notifications will not fire:", err);
   }

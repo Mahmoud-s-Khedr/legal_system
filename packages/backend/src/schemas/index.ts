@@ -15,7 +15,7 @@ export const successSchema = {
 
 export const errorSchema = {
   type: "object",
-  properties: { message: { type: "string" } },
+  properties: { message: { type: "string" }, code: { type: "string" } },
   required: ["message"],
   additionalProperties: false
 } as const;

@@ -5,8 +5,6 @@
   "packageManager": "pnpm@10.27.0",
   "scripts": {
     "dev": "pnpm dev:tauri",
-    "dev:full": "concurrently \"pnpm dev:web\" \"pnpm dev:tauri\"",
-    "dev:web": "concurrently \"pnpm --filter @elms/backend dev:cloud\" \"pnpm --filter @elms/frontend dev --port 5174\"",
     "dev:desktop": "concurrently \"pnpm --filter @elms/backend dev:local\" \"pnpm --filter @elms/frontend dev:desktop\"",
     "dev:tauri": "pnpm --filter @elms/desktop tauri:dev",
     "build": "pnpm compile",
@@ -30,9 +28,7 @@
     "check:desktop:packaging-host": "bash ./scripts/check-desktop-packaging-host.sh",
     "release:desktop:linux": "DESKTOP_RELEASE_TARGETS=linux bash ./scripts/release-desktop-local.sh",
     "release:desktop:local": "bash ./scripts/release-desktop-local.sh",
-    "release:web": "pnpm --filter @elms/web docker:build:backend && pnpm --filter @elms/web docker:build:frontend",
     "seed:dev": "NODE_ENV=development pnpm --filter @elms/backend seed:dev",
-    "seed:dev:cloud": "DATABASE_URL=postgresql://elms:elms@127.0.0.1:5432/elms_cloud?schema=public NODE_ENV=development pnpm --filter @elms/backend seed:dev:cloud",
     "i18n:check": "pnpm --filter @elms/frontend i18n:check",
     "docs:verify": "node ./scripts/docs/verify-docs-truth.mjs"
   },

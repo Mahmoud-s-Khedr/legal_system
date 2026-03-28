@@ -1,4 +1,3 @@
-import { AuthMode, type AppAuthMode } from "@elms/shared";
 import {
   BarChart2,
   Briefcase,
@@ -25,7 +24,6 @@ export interface NavConfigItem {
   icon: LucideIcon;
   group: NavGroup;
   order: number;
-  cloudOnly?: boolean;
   requiredPermission?: string;
 }
 
@@ -125,23 +123,20 @@ export const navConfig: NavConfigItem[] = [
 
 const GROUP_ORDER: NavGroup[] = ["core", "finance", "tools", "administration"];
 
-function canAccessNavItem(item: NavConfigItem, mode: AppAuthMode | null, permissions: string[]): boolean {
-  if (item.cloudOnly && mode !== AuthMode.CLOUD) return false;
+function canAccessNavItem(item: NavConfigItem, permissions: string[]): boolean {
   if (item.requiredPermission && !permissions.includes(item.requiredPermission)) return false;
   return true;
 }
 
 export function buildSidebarNavSections({
   t,
-  mode,
   permissions
 }: {
   t: (key: string) => string;
-  mode: AppAuthMode | null;
   permissions: string[];
 }): SidebarNavSection[] {
   const visibleItems = navConfig
-    .filter((item) => canAccessNavItem(item, mode, permissions))
+    .filter((item) => canAccessNavItem(item, permissions))
     .sort((a, b) => a.order - b.order);
 
   const sections: SidebarNavSection[] = [];

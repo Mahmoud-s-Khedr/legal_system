@@ -12,7 +12,6 @@ This guide walks you through cloning the ELMS monorepo, installing dependencies,
 | pnpm | 10.27.0 | Package manager (workspaces) |
 | Rust + Cargo | stable (latest) | Required only for the Tauri desktop build |
 | PostgreSQL | 16.x | Primary datastore |
-| Redis | 7.x | Session store, BullMQ queue, rate-limit state |
 
 Install pnpm globally if you do not already have it:
 
@@ -52,7 +51,7 @@ cp .env.example .env
 At minimum, set `DATABASE_URL` to point at your local PostgreSQL instance. The example uses:
 
 ```
-DATABASE_URL=postgresql://elms:elms@127.0.0.1:5432/elms_cloud?schema=public
+DATABASE_URL=postgresql://elms:elms@127.0.0.1:5432/elms_local?schema=public
 ```
 
 All other variables have sensible defaults for local development. See [Environment Variables](./03-environment-variables.md) for the full reference.
@@ -89,13 +88,7 @@ pnpm --filter @elms/backend exec prisma migrate deploy
 
 ## 6. Seed development data
 
-To seed the **cloud** (multi-tenant) database:
-
-```bash
-pnpm seed:dev:cloud
-```
-
-To seed the **desktop** (local, single-tenant) database (uses `apps/desktop/.env.desktop`):
+To seed the **desktop/local** database (uses `apps/desktop/.env.desktop`):
 
 ```bash
 pnpm seed:dev
@@ -106,21 +99,6 @@ Both commands run `packages/backend/prisma/seed.ts` via `tsx`.
 ---
 
 ## 7. Start the development server
-
-### Cloud / web mode
-
-Starts the Fastify backend (cloud env) and the Vite frontend simultaneously:
-
-```bash
-pnpm dev:web
-```
-
-| Service | Default URL |
-|---|---|
-| Backend API | `http://localhost:7854` |
-| Frontend SPA | `http://localhost:5174` |
-
-The frontend Vite dev server proxies all `/api/` requests to the backend.
 
 ### Desktop / Tauri mode
 
@@ -145,9 +123,10 @@ A healthy response looks like:
 ```json
 {
   "status": "ok",
-  "db": "ok",
-  "redis": "ok",
-  "queue": { "waiting": 0, "active": 0 }
+  "checks": {
+    "db": "ok",
+    "deployment": "local-only"
+  }
 }
 ```
 
@@ -180,4 +159,3 @@ bash scripts/bundle-linux-deps.sh
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

@@ -15,8 +15,9 @@ packages:
 ```
 legal_system/
 ├── apps/
-│   ├── web/               # Docker + Nginx cloud deployment wrapper
 │   └── desktop/           # Tauri 2 desktop application (Rust)
+├── archive/
+│   └── cloud/             # Archived cloud/SaaS deployment assets (reference only)
 ├── packages/
 │   ├── backend/           # Fastify REST API (Node.js 22, TypeScript ESM)
 │   ├── frontend/          # React 18 SPA (Vite, TanStack Router)
@@ -39,9 +40,9 @@ legal_system/
 
 ## Package descriptions
 
-### `apps/web`
+### `archive/cloud`
 
-Contains Docker and Nginx configuration for the cloud SaaS deployment. It provides the `.env.cloud` file that is passed to the backend when running `pnpm dev:web`. It does not contain application source code — that lives in `packages/frontend` and `packages/backend`.
+Contains archived cloud/SaaS deployment artifacts (former `apps/web` and cloud deployment scripts). These assets are preserved for historical reference and are not part of active local-only workflows.
 
 ### `apps/desktop`
 
@@ -53,8 +54,7 @@ The Fastify REST API. Written in TypeScript (ESM), compiled with `tsup`, and run
 
 - HTTP server with 23 route modules (see [API Reference](./06-api-reference.md))
 - Prisma ORM with PostgreSQL
-- BullMQ task queue backed by Redis
-- JWT authentication (cloud) and in-memory local session store (desktop)
+- Local session authentication
 - OCR pipeline (Tesseract or Google Vision)
 - AI research assistant (Anthropic Claude)
 - Background schedulers for reminders and firm lifecycle management
@@ -141,4 +141,3 @@ At build time Turborepo ensures `@elms/shared` is compiled first so the emitted 
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

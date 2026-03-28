@@ -4,7 +4,7 @@ import { AuthMode } from "@elms/shared";
 
 const baseSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  AUTH_MODE: z.nativeEnum(AuthMode).default(AuthMode.CLOUD),
+  AUTH_MODE: z.nativeEnum(AuthMode).default(AuthMode.LOCAL),
   STORAGE_DRIVER: z.string().default("local"),
   HOST: z.string().default("0.0.0.0"),
   BACKEND_PORT: z.coerce.number().default(7854),
@@ -63,6 +63,7 @@ export type AppEnv = z.infer<typeof baseSchema> & {
 };
 
 let cachedEnv: AppEnv | null = null;
+let warnedAboutCloudAuthMode = false;
 
 function getDevelopmentKeys() {
   const pair = generateKeyPairSync("rsa", {
@@ -83,16 +84,26 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   }
 
   const parsed = baseSchema.parse(source);
+  const normalizedAuthMode = parsed.AUTH_MODE === AuthMode.CLOUD ? AuthMode.LOCAL : parsed.AUTH_MODE;
+
+  if (parsed.AUTH_MODE === AuthMode.CLOUD && !warnedAboutCloudAuthMode) {
+    console.warn("[backend-startup] AUTH_MODE=cloud is deprecated and non-operational; forcing LOCAL mode");
+    warnedAboutCloudAuthMode = true;
+  }
 
   if (parsed.NODE_ENV === "production") {
     if (!parsed.JWT_PRIVATE_KEY || !parsed.JWT_PUBLIC_KEY) {
       throw new Error("JWT_PRIVATE_KEY and JWT_PUBLIC_KEY must be set in production");
     }
-    cachedEnv = parsed as AppEnv;
+    cachedEnv = {
+      ...parsed,
+      AUTH_MODE: normalizedAuthMode
+    } as AppEnv;
   } else {
     const generatedKeys = getDevelopmentKeys();
     cachedEnv = {
       ...parsed,
+      AUTH_MODE: normalizedAuthMode,
       JWT_PRIVATE_KEY: parsed.JWT_PRIVATE_KEY || generatedKeys.JWT_PRIVATE_KEY,
       JWT_PUBLIC_KEY: parsed.JWT_PUBLIC_KEY || generatedKeys.JWT_PUBLIC_KEY
     };

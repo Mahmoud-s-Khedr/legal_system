@@ -3,10 +3,8 @@ import type {
   AppAuthMode,
   AuthResponseDto,
   LoginDto,
-  RegisterDto,
   SessionUser,
-  SetupDto,
-  AcceptInviteDto
+  SetupDto
 } from "@elms/shared";
 import { AuthMode } from "@elms/shared";
 import { apiFetch, clearDesktopLocalSessionToken, persistDesktopLocalSessionToken } from "../lib/api";
@@ -18,9 +16,7 @@ interface AuthState {
   isBootstrapped: boolean;
   bootstrap: () => Promise<void>;
   login: (payload: LoginDto) => Promise<void>;
-  register: (payload: RegisterDto) => Promise<void>;
   setup: (payload: SetupDto) => Promise<void>;
-  acceptInvite: (payload: AcceptInviteDto) => Promise<void>;
   refreshSession: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -83,20 +79,6 @@ const useAuthStore = create<AuthState>((set, get) => ({
       isBootstrapped: true
     });
   },
-  async register(payload) {
-    const response = await apiFetch<AuthResponseDto>("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    persistDesktopLocalSessionToken(response.localSessionToken);
-
-    set({
-      mode: response.session.mode,
-      user: response.session.user,
-      isBootstrapped: true
-    });
-  },
   async setup(payload) {
     const response = await apiFetch<AuthResponseDto>("/api/auth/setup", {
       method: "POST",
@@ -109,20 +91,6 @@ const useAuthStore = create<AuthState>((set, get) => ({
       mode: response.session.mode,
       user: response.session.user,
       needsSetup: false,
-      isBootstrapped: true
-    });
-  },
-  async acceptInvite(payload) {
-    const response = await apiFetch<AuthResponseDto>("/api/auth/accept-invite", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    persistDesktopLocalSessionToken(response.localSessionToken);
-
-    set({
-      mode: response.session.mode,
-      user: response.session.user,
       isBootstrapped: true
     });
   },

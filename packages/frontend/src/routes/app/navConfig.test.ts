@@ -1,4 +1,3 @@
-import { AuthMode } from "@elms/shared";
 import { describe, expect, it } from "vitest";
 import { buildSidebarNavSections } from "./navConfig";
 
@@ -6,7 +5,6 @@ describe("buildSidebarNavSections", () => {
   it("keeps core navigation available with no permissions", () => {
     const sections = buildSidebarNavSections({
       t: (key) => key,
-      mode: AuthMode.LOCAL,
       permissions: []
     });
 
@@ -27,7 +25,6 @@ describe("buildSidebarNavSections", () => {
   it("filters and orders permission-gated sections", () => {
     const sections = buildSidebarNavSections({
       t: (key) => key,
-      mode: AuthMode.CLOUD,
       permissions: ["invoices:read", "reports:read", "users:read"]
     });
 

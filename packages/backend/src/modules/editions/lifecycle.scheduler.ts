@@ -21,37 +21,12 @@ async function startDesktopScheduler() {
   console.info("[edition-lifecycle] desktop scheduler started");
 }
 
-async function startCloudScheduler(env: AppEnv) {
-  const { Queue, Worker } = await import("bullmq");
-
-  const queue = new Queue("edition-lifecycle-scan", {
-    connection: { url: env.REDIS_URL },
-    defaultJobOptions: { removeOnComplete: 10, removeOnFail: 10 }
-  });
-
-  const waiting = await queue.getWaiting();
-  if (waiting.length === 0) {
-    await queue.add("daily-sweep", {}, { repeat: { pattern: "5 2 * * *" } });
-  }
-
-  new Worker(
-    "edition-lifecycle-scan",
-    async () => {
-      await runSweepWithLogging();
-    },
-    { connection: { url: env.REDIS_URL }, concurrency: 1 }
-  );
-
-  console.info("[edition-lifecycle] cloud scheduler started");
-}
-
 export async function startEditionLifecycleScheduler(env: AppEnv): Promise<void> {
   try {
-    if (env.AUTH_MODE === AuthMode.LOCAL) {
-      await startDesktopScheduler();
-    } else {
-      await startCloudScheduler(env);
+    if (env.AUTH_MODE !== AuthMode.LOCAL) {
+      console.warn("[edition-lifecycle] cloud scheduler is deprecated; forcing local scheduler");
     }
+    await startDesktopScheduler();
   } catch (error) {
     console.error("[edition-lifecycle] failed to start scheduler", error);
   }

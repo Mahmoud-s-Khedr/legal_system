@@ -9,7 +9,6 @@ import {
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LoginPage } from "./routes/auth/LoginPage";
-import { RegisterPage } from "./routes/auth/RegisterPage";
 import { SetupPage } from "./routes/auth/SetupPage";
 import { DashboardPage } from "./routes/app/DashboardPage";
 import { AppLayout } from "./routes/app/AppLayout";
@@ -144,25 +143,10 @@ const loginRoute = createRoute({
   component: LoginPage
 });
 
-const registerRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/register",
-  component: RegisterPage
-});
-
 const setupRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/setup",
   component: SetupPage
-});
-
-const acceptInviteRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/accept-invite",
-  beforeLoad: () => {
-    throw redirect({ to: "/login", replace: true });
-  },
-  component: DisabledUiRoute
 });
 
 const appRoute = createRoute({
@@ -506,15 +490,6 @@ const portalLoginRoute = createRoute({
   component: PortalLoginPage
 });
 
-const portalAcceptInviteRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/portal/accept-invite",
-  beforeLoad: () => {
-    throw redirect({ to: "/portal/login", replace: true });
-  },
-  component: DisabledUiRoute
-});
-
 const portalDashboardRoute = createRoute({
   getParentRoute: () => portalRoute,
   path: "/dashboard",
@@ -530,11 +505,8 @@ const portalCaseRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
-  registerRoute,
   setupRoute,
-  acceptInviteRoute,
   portalLoginRoute,
-  portalAcceptInviteRoute,
   portalRoute.addChildren([
     portalDashboardRoute,
     portalCaseRoute

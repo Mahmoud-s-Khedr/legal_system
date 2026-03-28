@@ -39,7 +39,6 @@ import { registerLicenseRoutes } from "./modules/editions/license.routes.js";
 import { createStorageAdapter } from "./storage/index.js";
 import { initializeBackendMonitoring } from "./monitoring/sentry.js";
 import { prisma } from "./db/prisma.js";
-import { getExtractionQueue } from "./jobs/extractionQueue.js";
 
 export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   const app = Fastify({
@@ -106,40 +105,14 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
       overallStatus = "error";
     }
 
-    // Redis check (cloud mode only)
-    if (env.AUTH_MODE === "cloud" && env.REDIS_URL) {
-      try {
-        const { Redis } = await import("ioredis");
-        const redis = new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 3000 });
-        await redis.connect();
-        await redis.ping();
-        await redis.quit();
-        checks.redis = "ok";
-      } catch {
-        checks.redis = "error";
-        if (overallStatus === "ok") overallStatus = "degraded";
-      }
-    }
-
-    // BullMQ queue depth check (cloud mode only)
-    if (env.AUTH_MODE === "cloud" && env.REDIS_URL) {
-      try {
-        const queue = getExtractionQueue(env);
-        const waitingCount = await queue.getWaitingCount();
-        checks.extractionQueue = { depth: waitingCount, status: waitingCount > 100 ? "degraded" : "ok" };
-        if (waitingCount > 100 && overallStatus === "ok") overallStatus = "degraded";
-      } catch {
-        checks.extractionQueue = { status: "error" };
-        if (overallStatus === "ok") overallStatus = "degraded";
-      }
-    }
+    checks.deployment = "local-only";
 
     const statusCode = overallStatus === "error" ? 503 : 200;
 
     return reply.status(statusCode).send({
       ok: overallStatus !== "error",
       status: overallStatus,
-      mode: env.AUTH_MODE,
+      mode: "local",
       timestamp: new Date().toISOString(),
       checks,
       ...(desktopBootstrapToken ? { desktopBootstrapToken } : {})

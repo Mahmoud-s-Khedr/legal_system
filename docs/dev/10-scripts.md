@@ -2,11 +2,10 @@
 
 All scripts live in the `scripts/` directory at the repository root. This document describes every script, when to use it, required environment variables, and usage examples.
 
+Cloud deployment scripts were archived on 2026-03-28 under [`archive/cloud/`](../../archive/cloud/README.md) and are no longer part of active workflows.
+
 ## Table of Contents
 
-- [backup-postgres.sh](#backup-postgressh)
-- [restore-postgres.sh](#restore-postgressh)
-- [deploy-cloud.sh](#deploy-cloudsh)
 - [bundle-linux-deps.sh](#bundle-linux-depssh)
 - [bundle-windows-deps.ps1](#bundle-windows-depsps1)
 - [check-lockfile.sh](#check-lockfilesh)
@@ -480,4 +479,3 @@ Related: [Desktop Build](./11-desktop-build.md) | [i18n](./12-i18n.md) | [Contri
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-
