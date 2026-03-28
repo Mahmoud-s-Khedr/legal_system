@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Upload, AlertCircle, CheckCircle2, XCircle, Loader2, Download } from "lucide-react";
 import { apiFetch, apiFormFetch } from "../../lib/api";
+import { saveTextToDownloads } from "../../lib/desktopDownloads";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { Field, PageHeader, SectionCard, PrimaryButton, SelectField, TablePagination, TableToolbar } from "./ui";
 
@@ -65,15 +66,9 @@ async function executeFromPreview(
   }
 }
 
-function downloadErrorReport(errors: RowError[]) {
+async function downloadErrorReport(errors: RowError[]) {
   const csv = "Row,Error\n" + errors.map((e) => `${e.rowNumber},"${e.error.replace(/"/g, '""')}"`).join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "import-errors.csv";
-  a.click();
-  URL.revokeObjectURL(url);
+  await saveTextToDownloads(csv, "import-errors.csv", "text/csv;charset=utf-8");
 }
 
 export function ImportPage() {
@@ -216,13 +211,11 @@ export function ImportPage() {
                   const headers = entityType === "clients"
                     ? "name,type,phone,email,nationalId,governorate"
                     : "title,caseNumber,type,status,internalReference,judicialYear,client_id";
-                  const blob = new Blob([headers + "\n"], { type: "text/csv" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `${entityType}-import-template.csv`;
-                  a.click();
-                  URL.revokeObjectURL(url);
+                  void saveTextToDownloads(
+                    `${headers}\n`,
+                    `${entityType}-import-template.csv`,
+                    "text/csv;charset=utf-8"
+                  );
                 }}
               >
                 {t("import.downloadTemplate")}
@@ -344,7 +337,9 @@ export function ImportPage() {
                   <p className="text-sm font-semibold text-slate-600">{t("import.failedRows")}</p>
                   <button
                     className="flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:text-accent"
-                    onClick={() => downloadErrorReport(result.errors)}
+                    onClick={() => {
+                      void downloadErrorReport(result.errors);
+                    }}
                   >
                     <Download className="size-3" />
                     {t("import.downloadErrors")}

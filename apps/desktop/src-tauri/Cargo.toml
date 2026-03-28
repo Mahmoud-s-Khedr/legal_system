@@ -19,6 +19,11 @@ log = "0.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = { version = "2.0.2", features = ["v2_6"] }
+cairo-rs = { version = "0.18.5", features = ["png"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+base64 = "0.22"
+webview2-com = "0.38.2"
 
 [features]
 default = ["custom-protocol"]

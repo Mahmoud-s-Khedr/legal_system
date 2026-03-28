@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
-import { apiFetch } from "../../lib/api";
+import { apiDownload, apiFetch } from "../../lib/api";
+import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { DataTable, EmptyState, ErrorState, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableWrapper } from "../../routes/app/ui";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
@@ -58,10 +59,12 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
   });
 
   const handleDownload = async (doc: DocumentDto) => {
-    const { url } = await apiFetch<{ url: string; expiresAt: string | null }>(
-      `/api/documents/${doc.id}/download`
-    );
-    window.open(url, "_blank", "noopener,noreferrer");
+    try {
+      const { blob, filename } = await apiDownload(`/api/documents/${doc.id}/stream`);
+      await saveBlobToDownloads(blob, filename ?? doc.fileName);
+    } catch {
+      window.alert(t("errors.fallback"));
+    }
   };
 
   if (docsQuery.isLoading) {

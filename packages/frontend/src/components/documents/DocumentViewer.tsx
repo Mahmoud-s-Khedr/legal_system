@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DocumentDto } from "@elms/shared";
-import { apiFetch } from "../../lib/api";
+import { apiDownload, apiFetch } from "../../lib/api";
+import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { VersionHistory } from "./VersionHistory";
 import { PdfViewer } from "./PdfViewer";
@@ -16,6 +17,7 @@ interface DocumentViewerProps {
 export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: DocumentViewerProps) {
   const { t } = useTranslation("app");
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     apiFetch<{ url: string; expiresAt: string | null }>(`/api/documents/${doc.id}/download`)
@@ -25,6 +27,18 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
 
   const isPdf = doc.mimeType === "application/pdf";
   const isImage = doc.mimeType.startsWith("image/");
+
+  async function handleDownload() {
+    try {
+      setIsDownloading(true);
+      const { blob, filename } = await apiDownload(`/api/documents/${doc.id}/stream`);
+      await saveBlobToDownloads(blob, filename ?? doc.fileName);
+    } catch {
+      window.alert(t("errors.fallback"));
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   return (
     <div
@@ -47,15 +61,16 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
           </div>
           <div className="ms-4 flex shrink-0 gap-2">
             {downloadUrl ? (
-              <a
+              <button
                 className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                download
-                href={downloadUrl}
-                rel="noopener noreferrer"
-                target="_blank"
+                disabled={isDownloading}
+                onClick={() => {
+                  void handleDownload();
+                }}
+                type="button"
               >
                 {t("actions.downloadDocument")}
-              </a>
+              </button>
             ) : null}
             <button
               className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"

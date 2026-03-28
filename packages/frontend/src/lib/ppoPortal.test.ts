@@ -84,6 +84,17 @@ describe("navigatePpoPortal", () => {
     expect(result).toEqual({ ok: true, action: "get_state", url: "https://ppo.gov.eg/some/page" });
   });
 
+  it("supports screenshot action responses", async () => {
+    const invokeNav = vi
+      .fn()
+      .mockResolvedValue({ ok: true, action: "screenshot", url: "/home/user/Downloads/ppo.png" });
+
+    const result = await navigatePpoPortal("screenshot", { invokeNav });
+
+    expect(invokeNav).toHaveBeenCalledWith("screenshot");
+    expect(result).toEqual({ ok: true, action: "screenshot", url: "/home/user/Downloads/ppo.png" });
+  });
+
   it("passes PPO_WINDOW_NOT_OPEN error code through", async () => {
     const invokeNav = vi
       .fn()

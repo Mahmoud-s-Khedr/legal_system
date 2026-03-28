@@ -1,3 +1,4 @@
+mod desktop_downloads;
 mod ppo_portal;
 mod sidecar;
 
@@ -13,6 +14,10 @@ fn main() {
             sidecar::retry_bootstrap,
             sidecar::repair_bootstrap_migrations,
             sidecar::reset_local_database,
+            desktop_downloads::desktop_get_download_settings,
+            desktop_downloads::desktop_choose_download_directory,
+            desktop_downloads::desktop_reset_download_directory,
+            desktop_downloads::desktop_save_download_file,
             ppo_portal::open_ppo_portal_window,
             ppo_portal::ppo_portal_navigate
         ])

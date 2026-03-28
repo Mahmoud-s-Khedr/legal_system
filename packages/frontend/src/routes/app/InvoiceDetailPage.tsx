@@ -3,6 +3,8 @@ import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { InvoiceStatus } from "@elms/shared";
 import { useInvoice, useIssueInvoice, useVoidInvoice, useAddPayment } from "../../lib/billing";
+import { apiDownload } from "../../lib/api";
+import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { ErrorState, FormAlert, PageHeader, SectionCard, formatCurrency, formatDate } from "./ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useToastStore } from "../../store/toastStore";
@@ -20,6 +22,7 @@ export function InvoiceDetailPage() {
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentError, setPaymentError] = useState("");
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
 
   if (isLoading) return <p className="p-8 text-slate-500">{t("labels.loading")}</p>;
@@ -36,6 +39,7 @@ export function InvoiceDetailPage() {
     );
   }
   if (!invoice) return <p className="p-8 text-red-500">{t("errors.notFound")}</p>;
+  const currentInvoice = invoice;
 
   async function handleAddPayment(e: React.FormEvent) {
     e.preventDefault();
@@ -56,22 +60,37 @@ export function InvoiceDetailPage() {
 
   const pdfUrl = `/api/invoices/${invoiceId}/pdf`;
 
+  async function handleDownloadPdf() {
+    try {
+      setIsDownloadingPdf(true);
+      const { blob, filename } = await apiDownload(pdfUrl);
+      await saveBlobToDownloads(blob, filename ?? `invoice-${currentInvoice.invoiceNumber}.pdf`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("errors.fallback");
+      addToast(message, "error");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow={invoice.invoiceNumber}
-        title={invoice.clientName ?? invoice.caseTitle ?? t("billing.invoice")}
-        description={`${t("billing.status")}: ${getEnumLabel(t, "InvoiceStatus", invoice.status)}`}
+        title={currentInvoice.clientName ?? currentInvoice.caseTitle ?? t("billing.invoice")}
+        description={`${t("billing.status")}: ${getEnumLabel(t, "InvoiceStatus", currentInvoice.status)}`}
         actions={
           <div className="flex flex-wrap gap-2">
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              disabled={isDownloadingPdf}
+              onClick={() => {
+                void handleDownloadPdf();
+              }}
               className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold"
             >
               {t("billing.downloadPdf")}
-            </a>
+            </button>
             {canIssue && (
               <button
                 onClick={async () => {
@@ -111,10 +130,10 @@ export function InvoiceDetailPage() {
       {/* Totals */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { label: t("billing.subtotal"), value: invoice.subtotalAmount },
-          { label: t("billing.tax"), value: invoice.taxAmount },
-          { label: t("billing.discount"), value: invoice.discountAmount },
-          { label: t("billing.total"), value: invoice.totalAmount }
+          { label: t("billing.subtotal"), value: currentInvoice.subtotalAmount },
+          { label: t("billing.tax"), value: currentInvoice.taxAmount },
+          { label: t("billing.discount"), value: currentInvoice.discountAmount },
+          { label: t("billing.total"), value: currentInvoice.totalAmount }
         ].map(({ label, value }) => (
           <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-xs text-slate-500">{label}</p>
@@ -135,7 +154,7 @@ export function InvoiceDetailPage() {
             </tr>
           </thead>
           <tbody>
-            {invoice.items.map((item) => (
+            {currentInvoice.items.map((item) => (
               <tr key={item.id} className="border-t border-slate-100">
                 <td className="py-2">{item.description}</td>
                 <td className="py-2 text-center">{item.quantity}</td>
@@ -149,11 +168,11 @@ export function InvoiceDetailPage() {
 
       {/* Payments */}
       <SectionCard title={t("billing.payments")}>
-        {invoice.payments.length === 0 ? (
+        {currentInvoice.payments.length === 0 ? (
           <p className="text-sm text-slate-500">{t("billing.noPayments")}</p>
         ) : (
           <div className="space-y-2">
-            {invoice.payments.map((payment) => (
+            {currentInvoice.payments.map((payment) => (
               <div key={payment.id} className="flex justify-between text-sm">
                 <span>{payment.method} — {formatDate(payment.paidAt)}</span>
                 <span className="font-semibold text-emerald-700">+{formatCurrency(payment.amount)}</span>

@@ -91,6 +91,7 @@ export type PpoPortalNavAction =
   | "reload"
   | "home"
   | "open_external"
+  | "screenshot"
   | "get_state";
 
 export type PpoPortalNavErrorCode =

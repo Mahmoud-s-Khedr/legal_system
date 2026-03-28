@@ -4,12 +4,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Language, type ChangeOwnPasswordDto, type FirmMeResponseDto, type UpdateUserDto, type UserDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import {
+  chooseDesktopDownloadDirectory,
+  getDesktopDownloadSettings,
+  isDesktopDownloadsEnabled,
+  resetDesktopDownloadDirectory
+} from "../../lib/desktopDownloads";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
 import { Badge, EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
 
 export function SettingsPage() {
   const { t } = useTranslation("app");
+  const isDesktopShell = isDesktopDownloadsEnabled();
   const { user, refreshSession } = useAuthBootstrap();
   const queryClient = useQueryClient();
   const firmQuery = useQuery({
@@ -20,6 +27,11 @@ export function SettingsPage() {
     queryKey: ["user", user?.id],
     queryFn: () => apiFetch<UserDto>(`/api/users/${user?.id}`),
     enabled: Boolean(user?.id)
+  });
+  const desktopDownloadSettingsQuery = useQuery({
+    queryKey: ["desktop-download-settings"],
+    queryFn: () => getDesktopDownloadSettings(),
+    enabled: isDesktopShell
   });
 
   const [profileForm, setProfileForm] = useState({
@@ -67,6 +79,18 @@ export function SettingsPage() {
         currentPassword: "",
         newPassword: ""
       });
+    }
+  });
+  const chooseDownloadDirectoryMutation = useMutation({
+    mutationFn: () => chooseDesktopDownloadDirectory(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["desktop-download-settings"] });
+    }
+  });
+  const resetDownloadDirectoryMutation = useMutation({
+    mutationFn: () => resetDesktopDownloadDirectory(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["desktop-download-settings"] });
     }
   });
 
@@ -129,6 +153,44 @@ export function SettingsPage() {
           {t("notifications.channelSettings")}
         </Link>
       </SectionCard>
+      {isDesktopShell ? (
+        <SectionCard title={t("settings.downloadsTitle")} description={t("settings.downloadsHelp")}>
+          <div className="space-y-3">
+            <Detail
+              label={t("settings.downloadsCurrent")}
+              value={desktopDownloadSettingsQuery.data?.effectivePath ?? t("labels.loading")}
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
+                disabled={chooseDownloadDirectoryMutation.isPending || resetDownloadDirectoryMutation.isPending}
+                onClick={() => {
+                  void chooseDownloadDirectoryMutation.mutateAsync();
+                }}
+                type="button"
+              >
+                {t("settings.chooseDownloadFolder")}
+              </button>
+              <button
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
+                disabled={chooseDownloadDirectoryMutation.isPending || resetDownloadDirectoryMutation.isPending}
+                onClick={() => {
+                  void resetDownloadDirectoryMutation.mutateAsync();
+                }}
+                type="button"
+              >
+                {t("settings.resetDownloadFolder")}
+              </button>
+            </div>
+            {chooseDownloadDirectoryMutation.error ? (
+              <p className="text-sm text-red-600">{(chooseDownloadDirectoryMutation.error as Error).message}</p>
+            ) : null}
+            {resetDownloadDirectoryMutation.error ? (
+              <p className="text-sm text-red-600">{(resetDownloadDirectoryMutation.error as Error).message}</p>
+            ) : null}
+          </div>
+        </SectionCard>
+      ) : null}
       {(user.permissions.includes("lookups:manage") || user.permissions.includes("roles:read")) ? (
         <SectionCard title={t("settings.administration")} description={t("settings.administrationHelp")}>
           <div className="flex flex-wrap gap-3">
