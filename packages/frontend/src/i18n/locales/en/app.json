@@ -51,7 +51,9 @@
     "more": "More actions",
     "clear": "Clear",
     "close": "Close",
-    "uploadAnother": "Upload another"
+    "uploadAnother": "Upload another",
+    "showIndexedText": "Show indexed text",
+    "copyText": "Copy text"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -651,7 +653,11 @@
     "chooseFile": "Choose file",
     "noFileSelected": "No file selected",
     "loadingPdf": "Loading PDF...",
-    "pdfRenderFailed": "Failed to render PDF"
+    "pdfRenderFailed": "Failed to render PDF",
+    "indexedTextTitle": "Indexed text — {{title}}",
+    "indexedTextTitleFallback": "Indexed text",
+    "indexedTextDescription": "Searchable extracted text from this document.",
+    "indexedTextUnavailable": "Indexed text is not available for this document."
   },
   "search": {
     "eyebrow": "Full-text search",
@@ -920,7 +926,9 @@
     "notificationMarkedRead": "Notification marked as read.",
     "notificationsUpdated": "Notifications updated.",
     "invoiceIssued": "Invoice issued successfully.",
-    "invoiceVoided": "Invoice voided successfully."
+    "invoiceVoided": "Invoice voided successfully.",
+    "indexedTextCopied": "Indexed text copied.",
+    "indexedTextCopyFailed": "Failed to copy indexed text."
   },
   "import": {
     "eyebrow": "Bulk import",

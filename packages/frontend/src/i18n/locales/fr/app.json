@@ -51,7 +51,9 @@
     "more": "Plus d'actions",
     "clear": "Effacer",
     "close": "Fermer",
-    "uploadAnother": "Téléverser un autre"
+    "uploadAnother": "Téléverser un autre",
+    "showIndexedText": "Afficher le texte indexé",
+    "copyText": "Copier le texte"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -639,7 +641,11 @@
     "chooseFile": "Choisir un fichier",
     "noFileSelected": "Aucun fichier sélectionné",
     "loadingPdf": "Chargement du PDF...",
-    "pdfRenderFailed": "Échec du rendu du PDF"
+    "pdfRenderFailed": "Échec du rendu du PDF",
+    "indexedTextTitle": "Texte indexé — {{title}}",
+    "indexedTextTitleFallback": "Texte indexé",
+    "indexedTextDescription": "Texte extrait consultable de ce document.",
+    "indexedTextUnavailable": "Le texte indexé n'est pas disponible pour ce document."
   },
   "search": {
     "eyebrow": "Recherche plein texte",
@@ -907,7 +913,9 @@
     "notificationMarkedRead": "Notification marquée comme lue.",
     "notificationsUpdated": "Notifications mises à jour.",
     "invoiceIssued": "Facture émise avec succès.",
-    "invoiceVoided": "Facture annulée avec succès."
+    "invoiceVoided": "Facture annulée avec succès.",
+    "indexedTextCopied": "Texte indexé copié.",
+    "indexedTextCopyFailed": "Échec de la copie du texte indexé."
   },
   "calendar": {
     "title": "Calendrier unifié",

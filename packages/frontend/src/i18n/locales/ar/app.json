@@ -52,7 +52,9 @@
     "more": "إجراءات إضافية",
     "clear": "مسح",
     "close": "إغلاق",
-    "uploadAnother": "رفع ملف آخر"
+    "uploadAnother": "رفع ملف آخر",
+    "showIndexedText": "عرض النص المفهرس",
+    "copyText": "نسخ النص"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -662,7 +664,11 @@
     "noFileSelected": "لم يُختَر ملف",
     "searchPlaceholder": "ابحث بالعنوان أو نوع الملف",
     "loadingPdf": "جارٍ تحميل ملف PDF...",
-    "pdfRenderFailed": "تعذر عرض ملف PDF"
+    "pdfRenderFailed": "تعذر عرض ملف PDF",
+    "indexedTextTitle": "النص المفهرس — {{title}}",
+    "indexedTextTitleFallback": "النص المفهرس",
+    "indexedTextDescription": "النص المستخرج القابل للبحث من هذا المستند.",
+    "indexedTextUnavailable": "النص المفهرس غير متاح لهذا المستند."
   },
   "search": {
     "eyebrow": "البحث الشامل",
@@ -960,7 +966,9 @@
     "notificationMarkedRead": "تم تحديد الإشعار كمقروء.",
     "notificationsUpdated": "تم تحديث الإشعارات.",
     "invoiceIssued": "تم إصدار الفاتورة بنجاح.",
-    "invoiceVoided": "تم إلغاء الفاتورة بنجاح."
+    "invoiceVoided": "تم إلغاء الفاتورة بنجاح.",
+    "indexedTextCopied": "تم نسخ النص المفهرس.",
+    "indexedTextCopyFailed": "تعذر نسخ النص المفهرس."
   },
   "import": {
     "eyebrow": "استيراد جماعي",

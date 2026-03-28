@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
+import { Modal } from "antd";
 import { apiDownload, apiFetch } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { DataTable, EmptyState, ErrorState, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableWrapper } from "../../routes/app/ui";
+import { useToastStore } from "../../store/toastStore";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { DocumentViewer } from "./DocumentViewer";
@@ -22,10 +24,16 @@ interface DocumentListProps {
   };
 }
 
+export function canShowIndexedText(doc: DocumentDto) {
+  return doc.extractionStatus === "INDEXED" && Boolean(doc.contentText?.trim().length);
+}
+
 export function DocumentList({ caseId, clientId, queryKey, queryParams, pagination }: DocumentListProps) {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
+  const addToast = useToastStore((state) => state.addToast);
   const [viewingDoc, setViewingDoc] = useState<DocumentDto | null>(null);
+  const [showingIndexedDoc, setShowingIndexedDoc] = useState<DocumentDto | null>(null);
 
   const params = new URLSearchParams();
   if (caseId) params.set("caseId", caseId);
@@ -64,6 +72,21 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
       await saveBlobToDownloads(blob, filename ?? doc.fileName);
     } catch {
       window.alert(t("errors.fallback"));
+    }
+  };
+
+  const handleCopyIndexedText = async () => {
+    const text = showingIndexedDoc?.contentText?.trim();
+    if (!text) {
+      addToast(t("documents.indexedTextUnavailable"), "error");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      addToast(t("messages.indexedTextCopied"), "success");
+    } catch {
+      addToast(t("messages.indexedTextCopyFailed"), "error");
     }
   };
 
@@ -134,6 +157,16 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
                     >
                       {t("actions.downloadDocument")}
                     </button>
+                    {canShowIndexedText(doc) ? (
+                      <button
+                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                        onClick={() => setShowingIndexedDoc(doc)}
+                        type="button"
+                        aria-label={`${t("actions.showIndexedText")} ${doc.title}`}
+                      >
+                        {t("actions.showIndexedText")}
+                      </button>
+                    ) : null}
                     <button
                       className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                       onClick={() => {
@@ -174,6 +207,34 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
           }}
         />
       ) : null}
+      <Modal
+        title={showingIndexedDoc ? t("documents.indexedTextTitle", { title: showingIndexedDoc.title }) : t("documents.indexedTextTitleFallback")}
+        open={Boolean(showingIndexedDoc)}
+        onCancel={() => setShowingIndexedDoc(null)}
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+              onClick={handleCopyIndexedText}
+              type="button"
+            >
+              {t("actions.copyText")}
+            </button>
+            <button
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+              onClick={() => setShowingIndexedDoc(null)}
+              type="button"
+            >
+              {t("actions.close")}
+            </button>
+          </div>
+        }
+      >
+        <p className="mb-3 text-sm text-slate-500">{t("documents.indexedTextDescription")}</p>
+        <pre className="max-h-[48vh] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">
+          {showingIndexedDoc?.contentText?.trim() || t("documents.indexedTextUnavailable")}
+        </pre>
+      </Modal>
     </>
   );
 }
