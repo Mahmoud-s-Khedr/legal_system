@@ -122,3 +122,8 @@ The document is processed and becomes searchable within a few minutes. It is vis
 
 - [AI Research Assistant](./13-ai-research.md) — the AI Research assistant uses your law library as its source material
 - [Document Upload Errors](../troubleshooting/22-document-upload-errors.md) — if a firm document fails to upload or process
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

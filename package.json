@@ -33,7 +33,8 @@
     "release:web": "pnpm --filter @elms/web docker:build:backend && pnpm --filter @elms/web docker:build:frontend",
     "seed:dev": "NODE_ENV=development pnpm --filter @elms/backend seed:dev",
     "seed:dev:cloud": "DATABASE_URL=postgresql://elms:elms@127.0.0.1:5432/elms_cloud?schema=public NODE_ENV=development pnpm --filter @elms/backend seed:dev:cloud",
-    "i18n:check": "pnpm --filter @elms/frontend i18n:check"
+    "i18n:check": "pnpm --filter @elms/frontend i18n:check",
+    "docs:verify": "node ./scripts/docs/verify-docs-truth.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

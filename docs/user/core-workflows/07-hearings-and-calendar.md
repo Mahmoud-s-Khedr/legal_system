@@ -93,3 +93,8 @@ You can see upcoming hearings in two places:
 - [Managing Cases](./06-managing-cases.md) — setting up court stages before scheduling sessions
 - [Tasks and Deadlines](./08-tasks-and-deadlines.md) — creating preparation tasks linked to a case
 - [Notifications](./11-notifications.md) — configuring how and where hearing reminders are delivered
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

@@ -82,3 +82,8 @@ Now that your firm is set up, here are the most important things to do next:
 
 > [!NOTE]
 > Invite-based team onboarding is not exposed in the current frontend UI, so this setup guide focuses on the screens that are currently available after first launch.
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

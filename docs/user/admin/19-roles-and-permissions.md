@@ -107,4 +107,8 @@ A custom role can only be deleted when no users are currently assigned to it.
 
 - [Team Management](../advanced/15-team-management.md) — inviting users and changing their roles
 - [Firm Settings](./18-firm-settings.md) — other administrator configuration options
-- [FAQ — Team & Access](../troubleshooting/24-faq.md#team--access)
+- [FAQ — Team & Access](../troubleshooting/24-faq.md#team-and-access)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`

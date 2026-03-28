@@ -78,4 +78,8 @@ If you cannot remember the email address associated with your account:
 ## Related Topics
 
 - [Team Management](../advanced/15-team-management.md) — how administrators manage users and roles
-- [FAQ — Team & Access](./24-faq.md#team--access)
+- [FAQ — Team & Access](./24-faq.md#team-and-access)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`

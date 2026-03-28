@@ -156,3 +156,8 @@ You can combine multiple filters at once.
 - [Tasks and Deadlines](./08-tasks-and-deadlines.md) — create tasks linked to a case
 - [Documents](./09-documents.md) — upload and manage case documents
 - [Billing and Invoicing](./10-billing-and-invoicing.md) — issue invoices for a case
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

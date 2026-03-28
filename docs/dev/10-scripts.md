@@ -476,3 +476,8 @@ node scripts/verify-windows-installer.mjs apps/desktop/src-tauri/target/x86_64-p
 ---
 
 Related: [Desktop Build](./11-desktop-build.md) | [i18n](./12-i18n.md) | [Contributing](./09-contributing.md)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

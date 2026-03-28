@@ -137,3 +137,8 @@ At build time Turborepo ensures `@elms/shared` is compiled first so the emitted 
 - [Architecture Internals](./04-architecture-internals.md)
 - [Database](./05-database.md)
 - [API Reference](./06-api-reference.md)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

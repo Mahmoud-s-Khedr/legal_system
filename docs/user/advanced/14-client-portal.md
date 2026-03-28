@@ -74,4 +74,8 @@ When the client logs in:
 ## Related Topics
 
 - [Team Management](./15-team-management.md) — managing firm users and their access
-- [FAQ — Cases & Clients](../troubleshooting/24-faq.md#cases--clients)
+- [FAQ — Cases & Clients](../troubleshooting/24-faq.md#cases-and-clients)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`

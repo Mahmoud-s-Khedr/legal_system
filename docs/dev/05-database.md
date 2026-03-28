@@ -219,3 +219,8 @@ The backend in desktop mode connects to this embedded instance using a `DATABASE
 - [Getting Started](./01-getting-started.md) — migration and seeding commands
 - [Environment Variables](./03-environment-variables.md) — `DATABASE_URL`, `DESKTOP_POSTGRES_PORT`
 - [Architecture Internals](./04-architecture-internals.md) — multi-tenancy enforcement in service layer
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

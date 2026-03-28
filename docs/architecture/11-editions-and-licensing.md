@@ -323,3 +323,8 @@ Cloud subscriptions use the lifecycle state machine for trial, grace, and suspen
 - [10 — Notification System](./10-notification-system.md) — email/SMS reminders gated by edition features
 - [08 — AI Research Pipeline](./08-ai-research-pipeline.md) — `ai_research` feature gate and `aiMonthlyLimit`
 - [12 — CI/CD Pipeline](./12-cicd-pipeline.md) — installer build workflows and remaining signing secrets
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

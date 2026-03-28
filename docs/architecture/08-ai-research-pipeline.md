@@ -227,3 +227,8 @@ Firms without the `ai_research` edition feature cannot create sessions or send m
 - [Database — Prisma Schema](../dev/05-database.md) — ResearchSession, ResearchMessage, ResearchSessionSource entity definitions
 - [11 — Editions and Licensing](./11-editions-and-licensing.md) — feature gating and `aiMonthlyLimit` by edition
 - [07 — Document Pipeline](./07-document-pipeline.md) — LibraryDocument and LegislationArticle indexing (same extraction pipeline)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

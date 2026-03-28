@@ -109,3 +109,8 @@ Common error causes:
 
 - [Firm Settings](../admin/18-firm-settings.md) — set up your firm profile before importing
 - [Team Management](./15-team-management.md) — ensure all lawyers referenced in case data are already in the system before importing
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

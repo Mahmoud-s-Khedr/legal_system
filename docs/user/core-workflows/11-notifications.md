@@ -100,3 +100,8 @@ You can re-enable it at any time by toggling it back on.
 - [Tasks and Deadlines](./08-tasks-and-deadlines.md) — task overdue notifications explained
 - [Billing and Invoicing](./10-billing-and-invoicing.md) — invoice overdue notifications explained
 - [Documents](./09-documents.md) — document indexed notifications explained
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

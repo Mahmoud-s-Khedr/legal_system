@@ -116,3 +116,8 @@ You can act on multiple tasks at once from the Tasks list:
 - [Managing Cases](./06-managing-cases.md) — linking tasks to a case
 - [Hearings and Calendar](./07-hearings-and-calendar.md) — scheduling court sessions (a related type of deadline)
 - [Notifications](./11-notifications.md) — configuring how overdue task alerts are delivered
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

@@ -197,3 +197,8 @@ planned for upcoming phases are listed as _planned_.
 - [03-data-flow.md](./03-data-flow.md) — Authenticated request lifecycle
 - [06-deployment-topologies.md](./06-deployment-topologies.md) — Full environment-variable and service configuration per topology
 - [08-product-roadmap.md](../business/08-product-roadmap.md) — Phase-by-phase implementation plan
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

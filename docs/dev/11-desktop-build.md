@@ -384,3 +384,8 @@ bash scripts/verify-desktop-runtime.sh
 ---
 
 Related: [Scripts Reference](./10-scripts.md) | [Environment Variables](./03-environment-variables.md) | [Auth Internals](./07-auth-internals.md)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

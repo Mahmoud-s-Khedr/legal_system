@@ -175,3 +175,8 @@ Under the default configuration (1 backend instance, PostgreSQL pool 10, no work
 | [docs/architecture/09-async-jobs.md](./09-async-jobs.md) | BullMQ worker architecture |
 | [packages/backend/src/jobs/extractionWorker.ts](../../packages/backend/src/jobs/extractionWorker.ts) | Worker process entry point |
 | [apps/web/docker-compose.prod.yml](../../apps/web/docker-compose.prod.yml) | Production Docker configuration |
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

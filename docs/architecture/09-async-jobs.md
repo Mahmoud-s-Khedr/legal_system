@@ -200,3 +200,8 @@ The queue is marked **degraded** if more than 100 jobs are waiting. This thresho
 - [07 — Document Pipeline](./07-document-pipeline.md) — storage drivers, file retrieval, and OCR integration
 - [10 — Notification System](./10-notification-system.md) — `DOCUMENT_INDEXED` notification triggered after extraction
 - [13 — Scalability and Limits](./13-scalability-and-limits.md) — BullMQ horizontal scaling path
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

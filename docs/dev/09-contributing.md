@@ -317,7 +317,7 @@ pnpm tsx scripts/i18n-audit.ts
 | Tool | Config file | Run |
 |------|------------|-----|
 | ESLint | `eslint.config.mjs` (flat config) | `pnpm lint` |
-| Prettier | `.prettierrc.json` | `pnpm format` |
+| Prettier | `.prettierrc.json` | `pnpm format:check` |
 | TypeScript | `tsconfig.base.json` + per-package `tsconfig.json` | `pnpm typecheck` |
 | Turbo | `turbo.json` | `pnpm build` |
 
@@ -332,3 +332,7 @@ Key style rules:
 ---
 
 Related: [Testing](./08-testing.md) | [Scripts](./10-scripts.md) | [i18n](./12-i18n.md)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`

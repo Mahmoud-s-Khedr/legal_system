@@ -112,3 +112,8 @@ Google Calendar integration exists at the backend level, but the connect/disconn
 - [Roles & Permissions](./19-roles-and-permissions.md) — who can access and modify firm settings
 - [Backup & Restore](./20-backup-and-restore.md) — protecting your firm's data (desktop edition)
 - [Team Management](../advanced/15-team-management.md) — managing users and roles in the current frontend
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

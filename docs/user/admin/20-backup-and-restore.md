@@ -124,3 +124,8 @@ Use this procedure to restore your data from a backup file — for example, afte
 
 - [Firm Settings](./18-firm-settings.md) — other administrator options
 - [Desktop Connectivity](../troubleshooting/23-desktop-connectivity.md) — if the desktop app is not starting correctly
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

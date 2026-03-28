@@ -321,3 +321,8 @@ In CLOUD mode this entire shape is encoded directly in the JWT claims. In LOCAL 
 ---
 
 Related: [Environment Variables](./03-environment-variables.md) | [Testing](./08-testing.md)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

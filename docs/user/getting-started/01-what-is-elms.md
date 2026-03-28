@@ -82,3 +82,8 @@ You can switch the display language at any time from your profile settings.
 - **Installing the desktop app** — see [Desktop Installation](./02-desktop-installation.md)
 - **Logging in to the cloud app** — see [Cloud Access](./04-cloud-access.md)
 - **Setting up your firm for the first time** — see [First-Time Setup](./03-first-time-setup.md)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

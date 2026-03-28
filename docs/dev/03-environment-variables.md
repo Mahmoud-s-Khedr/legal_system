@@ -155,3 +155,8 @@ The frontend reads `VITE_SENTRY_DSN` (a Vite env variable set at build time) ind
 The `@elms/web` package build script runs a Docker Compose config validation check. During this validation step, variables are loaded from `apps/web/.env.production.example` so required interpolations (for example `POSTGRES_PASSWORD`) are present in local and CI builds.
 
 This behavior only validates compose configuration rendering. It does not replace production secret management.
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

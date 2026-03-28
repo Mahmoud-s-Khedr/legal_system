@@ -229,3 +229,8 @@ sequenceDiagram
 - [01-system-overview.md](./01-system-overview.md) — Container diagram showing Nginx → Backend → PostgreSQL
 - [04-auth-and-security.md](./04-auth-and-security.md) — JWT keys, cookie settings, RBAC model
 - [05-multi-tenancy.md](./05-multi-tenancy.md) — firmId enforcement and lifecycle guard detail
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

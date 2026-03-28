@@ -311,3 +311,8 @@ To run E2E tests in CI against a preview deployment, set `PLAYWRIGHT_BASE_URL` a
 ---
 
 Related: [Auth Internals](./07-auth-internals.md) | [Contributing](./09-contributing.md)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

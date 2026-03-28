@@ -127,3 +127,8 @@ Templates allow you to create reusable document structures — for example, a st
 - [Managing Cases](./06-managing-cases.md) — linking documents to cases
 - [Managing Clients](./05-managing-clients.md) — linking documents to client records
 - [Tasks and Deadlines](./08-tasks-and-deadlines.md) — assigning document preparation as a task
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

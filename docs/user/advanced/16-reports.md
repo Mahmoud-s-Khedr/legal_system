@@ -93,3 +93,8 @@ Dashboard widgets update in real time as your team works.
 
 - [Firm Settings](../admin/18-firm-settings.md) — configure currency and firm details that appear in reports
 - [Roles & Permissions](../admin/19-roles-and-permissions.md) — who can access reports
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

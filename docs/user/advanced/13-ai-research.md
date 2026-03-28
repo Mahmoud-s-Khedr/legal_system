@@ -97,3 +97,8 @@ Your research questions and your firm's library content are never shared with ot
 
 - [Law Library](./12-law-library.md) — managing the source material the AI uses
 - [FAQ — AI Research](../troubleshooting/24-faq.md#ai-research)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

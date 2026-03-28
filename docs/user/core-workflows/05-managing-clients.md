@@ -125,3 +125,8 @@ If your firm holds a power of attorney (PoA) on behalf of a client, you can reco
 - [Managing Cases](./06-managing-cases.md) — opening a case and linking it to a client
 - [Billing and Invoicing](./10-billing-and-invoicing.md) — creating invoices for clients
 - [Client Portal](../advanced/14-client-portal.md) — current portal-access behavior and limitations
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

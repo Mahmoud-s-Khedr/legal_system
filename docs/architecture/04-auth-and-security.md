@@ -296,3 +296,8 @@ Both the frontend (`@elms/frontend`) and the backend (`@elms/backend`) initialis
 - [03-data-flow.md](./03-data-flow.md) — How auth plugins fit into the request lifecycle
 - [05-multi-tenancy.md](./05-multi-tenancy.md) — firmId injection, firm lifecycle, write guard detail
 - [06-deployment-topologies.md](./06-deployment-topologies.md) — Environment variables for JWT keys, CORS, cookie domain per topology
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

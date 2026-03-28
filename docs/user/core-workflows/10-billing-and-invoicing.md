@@ -142,3 +142,8 @@ Generate a summary of your firm's financial activity over any date range.
 - [Managing Cases](./06-managing-cases.md) — linking invoices to cases
 - [Documents](./09-documents.md) — attaching receipts and supporting documents to expenses
 - [Notifications](./11-notifications.md) — configuring overdue invoice alerts
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

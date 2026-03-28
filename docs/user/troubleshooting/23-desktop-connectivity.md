@@ -94,3 +94,8 @@ The desktop app checks for updates automatically when it starts, using the updat
 - [Backup & Restore](../admin/20-backup-and-restore.md) — how to protect and recover your desktop data
 - [Document Upload Errors](./22-document-upload-errors.md) — if documents are stuck processing
 - [FAQ](./24-faq.md) — general questions about offline use and editions
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

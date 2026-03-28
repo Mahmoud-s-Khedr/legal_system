@@ -215,3 +215,8 @@ The update mode is `autoUpdate`, so the service worker is replaced silently. The
 - [Environment Variables](./03-environment-variables.md) — `AUTH_MODE`, JWT key configuration
 - [Database](./05-database.md) — Prisma schema and multi-tenancy
 - [API Reference](./06-api-reference.md) — route modules and endpoint details
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

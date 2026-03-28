@@ -300,3 +300,8 @@ The cloud `ci.yml` workflow runs: `lint → typecheck → test → coverage → 
 - [01-system-overview.md](./01-system-overview.md) — C4 container diagrams for both topologies
 - [04-auth-and-security.md](./04-auth-and-security.md) — JWT keys, cookie domain, CORS per environment
 - [07-document-pipeline.md](./07-document-pipeline.md) — Storage adapter selection and extraction dispatch differences
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

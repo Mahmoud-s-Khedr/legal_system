@@ -99,3 +99,8 @@ Desktop releases are distributed as full installers. To upgrade ELMS, download a
 
 - Complete your firm profile in the setup wizard — see [First-Time Setup](./03-first-time-setup.md)
 - Review your users and roles after setup via **Users** and **Settings → Roles**
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

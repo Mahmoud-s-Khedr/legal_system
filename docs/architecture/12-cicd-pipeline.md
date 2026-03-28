@@ -272,3 +272,8 @@ Typical cloud deployment steps performed by this script:
 - [01 — System Overview](./01-system-overview.md) — Docker cloud vs. Tauri desktop targets
 - [11 — Editions and Licensing](./11-editions-and-licensing.md) — desktop licensing model and installer-based release context
 - [13 — Scalability and Limits](./13-scalability-and-limits.md) — horizontal scaling of the cloud backend
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

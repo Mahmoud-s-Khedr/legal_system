@@ -134,4 +134,8 @@ When building a custom role, permissions are grouped into the following categori
 
 - [Roles & Permissions](../admin/19-roles-and-permissions.md) — full permission reference for each built-in role
 - [Login Issues](../troubleshooting/21-login-issues.md) — what to do if a user cannot log in
-- [FAQ — Team & Access](../troubleshooting/24-faq.md#team--access)
+- [FAQ — Team & Access](../troubleshooting/24-faq.md#team-and-access)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`

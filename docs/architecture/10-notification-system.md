@@ -239,4 +239,8 @@ All channel implementations catch and log errors internally. A failure in any si
 
 - [09 — Async Jobs](./09-async-jobs.md) — `DOCUMENT_INDEXED` notification triggered from extraction worker
 - [11 — Editions and Licensing](./11-editions-and-licensing.md) — feature gating for `email_reminders` and `sms_reminders`
-- [04 — Data Model](./04-data-model.md) — Notification, NotificationPreference schemas
+- [05 — Database](../dev/05-database.md) — Notification and preference persistence model
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`

@@ -41,3 +41,8 @@ Do not include:
 - `docs/architecture/08-ai-research-pipeline.md`
 - `docs/architecture/10-notification-system.md`
 - `docs/dev/03-environment-variables.md`
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

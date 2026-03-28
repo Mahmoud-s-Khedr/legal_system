@@ -130,3 +130,8 @@ A: No. Each firm's data — including library content, research sessions, and cl
 - [Team Management](../advanced/15-team-management.md)
 - [AI Research Assistant](../advanced/13-ai-research.md)
 - [Backup & Restore](../admin/20-backup-and-restore.md)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

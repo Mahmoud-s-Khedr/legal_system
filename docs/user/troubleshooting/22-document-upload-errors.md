@@ -95,3 +95,8 @@ If you uploaded a document and can find it by its title but keyword search does 
 - [Desktop Connectivity](./23-desktop-connectivity.md) — if the desktop app is not responding
 - [Law Library](../advanced/12-law-library.md) — uploading documents to the firm library
 - [FAQ — Documents](./24-faq.md#documents)
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

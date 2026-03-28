@@ -241,3 +241,8 @@ The table below summarises where tenancy isolation is enforced:
 - [03-data-flow.md](./03-data-flow.md) — Detailed sequence showing injectTenant in the request chain
 - [04-auth-and-security.md](./04-auth-and-security.md) — JWT claims, session decode, firmLifecycleWriteGuard
 - [06-deployment-topologies.md](./06-deployment-topologies.md) — Cloud vs desktop environment variables
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

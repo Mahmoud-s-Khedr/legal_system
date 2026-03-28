@@ -174,3 +174,8 @@ Every major technology choice in ELMS was made deliberately. This document recor
 - [01-system-overview.md](./01-system-overview.md) — System context and container diagrams
 - [03-data-flow.md](./03-data-flow.md) — How the plugin stack processes a live request
 - [04-auth-and-security.md](./04-auth-and-security.md) — JWT, RBAC, and security architecture
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

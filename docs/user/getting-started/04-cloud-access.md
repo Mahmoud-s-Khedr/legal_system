@@ -100,3 +100,8 @@ If you use ELMS frequently, you can install it on your computer or phone as an a
 - [First-Time Setup](./03-first-time-setup.md) — setting up your firm for the first time
 - [Desktop Installation](./02-desktop-installation.md) — if you prefer the offline desktop app
 - [Notifications](../core-workflows/11-notifications.md) — configuring the notification channels visible in the current frontend
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+

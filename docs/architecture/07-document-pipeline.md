@@ -199,3 +199,8 @@ Status becomes `"degraded"` when queue depth exceeds 100 jobs.
 | [packages/backend/src/jobs/extractionDispatcher.ts](../../packages/backend/src/jobs/extractionDispatcher.ts) | Synchronous dispatch for LOCAL mode |
 | [packages/backend/src/storage/](../../packages/backend/src/storage/) | Storage adapter interface and implementations |
 | [docs/architecture/09-async-jobs.md](./09-async-jobs.md) | BullMQ architecture overview |
+
+## Source of truth
+
+- `docs/_inventory/source-of-truth.md`
+
