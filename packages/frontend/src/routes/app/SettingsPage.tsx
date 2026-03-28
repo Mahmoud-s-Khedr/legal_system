@@ -208,9 +208,17 @@ export function SettingsPage() {
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               {t("settings.licenseRequiredWarning")}
             </p>
-          ) : (
+          ) : firm.isLicensed ? (
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
               {t("settings.licenseActive")}
+            </p>
+          ) : firm.trialEnabled ? (
+            <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+              {t("settings.trialActive")}
+            </p>
+          ) : (
+            <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              {t("settings.licenseUnknown")}
             </p>
           )}
           {canSelfServeLicense ? (

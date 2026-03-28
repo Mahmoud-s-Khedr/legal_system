@@ -583,7 +583,9 @@
     "calendarActive": "متصل — تتزامن الجلسات تلقائيًا",
     "calendarNotConnected": "غير متصل",
     "calendarConnected": "تم ربط تقويم Google بنجاح.",
-    "calendarError": "خطأ في ربط التقويم"
+    "calendarError": "خطأ في ربط التقويم",
+    "trialActive": "الفترة التجريبية مفعلة.",
+    "licenseUnknown": "حالة الترخيص غير معروفة."
   },
   "ppo": {
     "eyebrow": "الخدمات الحكومية",

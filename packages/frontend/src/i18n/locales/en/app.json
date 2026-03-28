@@ -524,7 +524,9 @@
     "calendarActive": "Connected — hearings sync automatically",
     "calendarNotConnected": "Not connected",
     "calendarConnected": "Google Calendar connected successfully.",
-    "calendarError": "Calendar connection error"
+    "calendarError": "Calendar connection error",
+    "trialActive": "Trial is active.",
+    "licenseUnknown": "License state is unknown."
   },
   "ppo": {
     "eyebrow": "Government Services",

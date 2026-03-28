@@ -560,7 +560,9 @@
     "calendarActive": "Connecté — les audiences se synchronisent automatiquement",
     "calendarNotConnected": "Non connecté",
     "calendarConnected": "Google Agenda connecté avec succès.",
-    "calendarError": "Erreur de connexion au calendrier"
+    "calendarError": "Erreur de connexion au calendrier",
+    "trialActive": "La période d'essai est active.",
+    "licenseUnknown": "L'état de la licence est inconnu."
   },
   "ppo": {
     "eyebrow": "Services gouvernementaux",
