@@ -12,6 +12,7 @@ import "./i18n";
 import { DirectionProvider } from "./components/shared/DirectionProvider";
 import { DesktopBootstrapGate } from "./components/shared/DesktopBootstrapGate";
 import { ToastContainer } from "./components/shared/Toast";
+import { PpoScreenshotEventBridge } from "./components/shared/PpoScreenshotEventBridge";
 import { OfflineBanner } from "./pwa/offlineBanner";
 import { startSyncQueueReplay } from "./pwa/syncQueue";
 import { ErrorFallback } from "./components/ErrorFallback";
@@ -161,6 +162,7 @@ ReactDOM.createRoot(rootElement).render(
           <DirectionProvider>
             <DesktopBootstrapGate>
               <ToastContainer />
+              <PpoScreenshotEventBridge />
               <OfflineBanner />
               <RouterProvider router={router} />
             </DesktopBootstrapGate>

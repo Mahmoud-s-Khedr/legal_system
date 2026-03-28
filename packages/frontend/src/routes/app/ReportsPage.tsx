@@ -89,6 +89,10 @@ export function ReportsPage() {
         `/api/reports/${reportType}/export?${exportQs.toString()}`,
         fallbackFilename
       );
+      addToast(
+        t("reports.exportReady", { format: format === "pdf" ? "PDF" : "Excel" }),
+        "success"
+      );
     } catch (error) {
       const message = (error as Error)?.message ?? t("errors.fallback");
       setExportError(message);

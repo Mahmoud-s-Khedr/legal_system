@@ -260,7 +260,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
 
   app.post(
     "/api/library/documents/upload",
-    { preHandler: [requireAuth, requirePermission("library:manage")] },
+    { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
       const actor = request.sessionUser!;
 
@@ -272,7 +272,12 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
       const fields = data.fields as Record<string, { value: string }>;
       const title    = fields.title?.value ?? data.filename;
       const type     = fields.type?.value ?? "LEGISLATION";
-      const scope    = (fields.scope?.value ?? "FIRM") as "SYSTEM" | "FIRM";
+      const requestedScope = (fields.scope?.value ?? "FIRM") as "SYSTEM" | "FIRM";
+      const canManageLibrary = actor.permissions.includes("library:manage");
+      if (!canManageLibrary && requestedScope === "SYSTEM") {
+        return reply.status(403).send({ message: "Only library managers can upload system library documents" });
+      }
+      const scope = canManageLibrary ? requestedScope : "FIRM";
       const categoryId   = fields.categoryId?.value || undefined;
       const lawNumber    = fields.lawNumber?.value || undefined;
       const lawYear      = fields.lawYear?.value ? Number(fields.lawYear.value) : undefined;

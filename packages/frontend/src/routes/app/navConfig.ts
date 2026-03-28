@@ -1,6 +1,7 @@
 import {
   BarChart2,
   Briefcase,
+  CalendarDays,
   CheckSquare,
   FileCode,
   FileText,
@@ -44,7 +45,7 @@ export const navConfig: NavConfigItem[] = [
   { id: "dashboard", labelKey: "nav.dashboard", to: "/app/dashboard", icon: LayoutDashboard, group: "core", order: 10 },
   { id: "clients", labelKey: "nav.clients", to: "/app/clients", icon: Users, group: "core", order: 20 },
   { id: "cases", labelKey: "nav.cases", to: "/app/cases", icon: Briefcase, group: "core", order: 30 },
-  { id: "calendar", labelKey: "nav.calendar", to: "/app/calendar", icon: Scale, group: "core", order: 40 },
+  { id: "calendar", labelKey: "nav.calendar", to: "/app/calendar", icon: CalendarDays, group: "core", order: 40 },
   { id: "hearings", labelKey: "nav.hearings", to: "/app/hearings", icon: Scale, group: "core", order: 50 },
   { id: "tasks", labelKey: "nav.tasks", to: "/app/tasks", icon: CheckSquare, group: "core", order: 60 },
   { id: "documents", labelKey: "nav.documents", to: "/app/documents", icon: FileText, group: "core", order: 70 },

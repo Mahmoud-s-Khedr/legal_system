@@ -1,12 +1,13 @@
 use crate::desktop_downloads;
 use serde::Serialize;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tauri::{webview::PageLoadEvent, AppHandle, Manager, Url, WebviewUrl};
+use tauri::{webview::PageLoadEvent, AppHandle, Emitter, Manager, Url, WebviewUrl};
 
 const PPO_PORTAL_URL: &str = "https://ppo.gov.eg/ppo/r/ppoportal/ppoportal/home";
 const PPO_WINDOW_LABEL: &str = "ppo-portal";
 const PPO_WINDOW_TITLE: &str = "PPO Portal";
 const PPO_TOOLBAR_SCHEME: &str = "elms-ppo";
+const PPO_SCREENSHOT_EVENT: &str = "ppo://screenshot-result";
 
 #[cfg(target_os = "macos")]
 const PPO_TLS_BYPASS_UNSUPPORTED_MACOS: &str = "PPO_TLS_BYPASS_UNSUPPORTED_MACOS";
@@ -24,6 +25,83 @@ const PPO_WINDOWS_ADDITIONAL_BROWSER_ARGS: &str =
 
 const PPO_TOOLBAR_INJECTION_SCRIPT: &str = r#"
 (() => {
+  const ensureToastApi = () => {
+    if (typeof window.__elmsPpoShowToast === 'function') {
+      return;
+    }
+
+    let container = document.getElementById('__elms_ppo_toast_container');
+    if (!(container instanceof HTMLDivElement)) {
+      container = document.createElement('div');
+      container.id = '__elms_ppo_toast_container';
+      container.style.position = 'fixed';
+      container.style.top = '16px';
+      container.style.right = '16px';
+      container.style.zIndex = '2147483647';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.gap = '8px';
+      container.style.pointerEvents = 'none';
+      container.style.maxWidth = 'min(460px, calc(100vw - 24px))';
+    }
+
+    if (document.body && !document.getElementById('__elms_ppo_toast_container')) {
+      document.body.appendChild(container);
+    }
+
+    window.__elmsPpoShowToast = (message, variant = 'info') => {
+      const host = document.getElementById('__elms_ppo_toast_container');
+      if (!(host instanceof HTMLDivElement)) {
+        return;
+      }
+
+      const toast = document.createElement('div');
+      toast.style.padding = '10px 12px';
+      toast.style.borderRadius = '10px';
+      toast.style.boxShadow = '0 10px 30px rgba(15, 23, 42, 0.18)';
+      toast.style.fontFamily = 'sans-serif';
+      toast.style.fontSize = '13px';
+      toast.style.lineHeight = '1.4';
+      toast.style.fontWeight = '600';
+      toast.style.pointerEvents = 'auto';
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-6px)';
+      toast.style.transition = 'opacity 180ms ease, transform 180ms ease';
+
+      if (variant === 'success') {
+        toast.style.background = '#065f46';
+        toast.style.color = '#ecfdf5';
+        toast.style.border = '1px solid #047857';
+      } else if (variant === 'error') {
+        toast.style.background = '#991b1b';
+        toast.style.color = '#fef2f2';
+        toast.style.border = '1px solid #b91c1c';
+      } else {
+        toast.style.background = '#0f172a';
+        toast.style.color = '#f8fafc';
+        toast.style.border = '1px solid #1e293b';
+      }
+
+      toast.textContent = String(message);
+      host.appendChild(toast);
+
+      window.requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+      });
+
+      window.setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-6px)';
+        window.setTimeout(() => {
+          toast.remove();
+        }, 220);
+      }, 3600);
+    };
+  };
+
+  ensureToastApi();
+
   if (document.getElementById('__elms_ppo_toolbar')) {
     return;
   }
@@ -171,6 +249,20 @@ pub struct PpoPortalNavigateError {
     code: &'static str,
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PpoScreenshotEventPayload {
+    ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    code: Option<&'static str>,
+}
+
+fn emit_ppo_screenshot_result(app: &AppHandle, payload: PpoScreenshotEventPayload) {
+    let _ = app.emit(PPO_SCREENSHOT_EVENT, payload);
+}
+
 impl PpoPortalNavigateResult {
     fn success(action: impl Into<String>, url: Option<String>) -> Self {
         Self::Success(PpoPortalNavigateSuccess {
@@ -215,6 +307,37 @@ fn parse_toolbar_action(url: &Url) -> Option<String> {
 
 fn inject_toolbar(window: &tauri::WebviewWindow) {
     let _ = window.eval(PPO_TOOLBAR_INJECTION_SCRIPT);
+}
+
+fn ppo_screenshot_error_message(code: &'static str) -> &'static str {
+    match code {
+        PPO_WINDOW_NOT_OPEN => "PPO window is not open.",
+        PPO_SCREENSHOT_CAPTURE_FAILED => "Could not capture screenshot.",
+        PPO_SCREENSHOT_SAVE_FAILED => "Could not save screenshot.",
+        _ => "Screenshot failed.",
+    }
+}
+
+fn build_ppo_toast_eval_script(message: &str, variant: &str) -> Result<String, serde_json::Error> {
+    let message_literal = serde_json::to_string(message)?;
+    let variant_literal = serde_json::to_string(variant)?;
+    Ok(format!(
+        "if (typeof window.__elmsPpoShowToast === 'function') {{ window.__elmsPpoShowToast({message_literal}, {variant_literal}); }}"
+    ))
+}
+
+fn show_ppo_toast(window: &tauri::WebviewWindow, message: &str, variant: &str) {
+    let script = match build_ppo_toast_eval_script(message, variant) {
+        Ok(script) => script,
+        Err(error) => {
+            eprintln!("[ppo] failed to serialize in-window toast payload: {error}");
+            return;
+        }
+    };
+
+    if let Err(error) = window.eval(&script) {
+        eprintln!("[ppo] failed to show in-window toast: {error}");
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -435,8 +558,30 @@ fn execute_portal_action(app: &AppHandle, action: &str) -> PpoPortalNavigateResu
             PpoPortalNavigateResult::success("get_state", Some(url))
         }
         "screenshot" => match capture_and_save_ppo_screenshot(app, &window) {
-            Ok(path) => PpoPortalNavigateResult::success("screenshot", Some(path)),
-            Err(code) => PpoPortalNavigateResult::error(code),
+            Ok(path) => {
+                show_ppo_toast(&window, &format!("Screenshot saved to {path}"), "success");
+                emit_ppo_screenshot_result(
+                    app,
+                    PpoScreenshotEventPayload {
+                        ok: true,
+                        path: Some(path.clone()),
+                        code: None,
+                    },
+                );
+                PpoPortalNavigateResult::success("screenshot", Some(path))
+            }
+            Err(code) => {
+                show_ppo_toast(&window, ppo_screenshot_error_message(code), "error");
+                emit_ppo_screenshot_result(
+                    app,
+                    PpoScreenshotEventPayload {
+                        ok: false,
+                        path: None,
+                        code: Some(code),
+                    },
+                );
+                PpoPortalNavigateResult::error(code)
+            }
         },
         _ => PpoPortalNavigateResult::error(PPO_NAVIGATION_FAILED),
     }
@@ -521,4 +666,40 @@ pub async fn open_ppo_portal_window(app: AppHandle) -> OpenPpoPortalWindowResult
 #[tauri::command]
 pub async fn ppo_portal_navigate(app: AppHandle, action: String) -> PpoPortalNavigateResult {
     execute_portal_action(&app, &action)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_ppo_screenshot_error_messages() {
+        assert_eq!(
+            ppo_screenshot_error_message(PPO_SCREENSHOT_CAPTURE_FAILED),
+            "Could not capture screenshot."
+        );
+        assert_eq!(
+            ppo_screenshot_error_message(PPO_SCREENSHOT_SAVE_FAILED),
+            "Could not save screenshot."
+        );
+        assert_eq!(
+            ppo_screenshot_error_message(PPO_WINDOW_NOT_OPEN),
+            "PPO window is not open."
+        );
+        assert_eq!(ppo_screenshot_error_message("UNKNOWN"), "Screenshot failed.");
+    }
+
+    #[test]
+    fn builds_safe_toast_eval_script() {
+        let script = build_ppo_toast_eval_script(
+            "Saved to C:\\Users\\mk\\Downloads\\ppo \"shot\".png",
+            "success",
+        )
+        .expect("script should serialize");
+
+        assert!(script.contains("window.__elmsPpoShowToast("));
+        assert!(script.contains("\\\\"));
+        assert!(script.contains("\\\"shot\\\""));
+        assert!(script.contains("\"success\""));
+    }
 }

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { BookOpen, ChevronRight, ChevronLeft, Search } from "lucide-react";
+import { BookOpen, ChevronRight, ChevronLeft, Search, Upload } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
+import { useHasPermission } from "../../../store/authStore";
 import { EmptyState, ErrorState, PageHeader, SectionCard } from "../ui";
 
 interface CategoryNode {
@@ -33,6 +34,7 @@ interface DocumentsResponse {
 
 export function LibraryPage() {
   const { t, i18n } = useTranslation("app");
+  const canUploadLibraryDocuments = useHasPermission("library:read");
   const isRtl = i18n.resolvedLanguage === "ar";
   const isFrench = i18n.resolvedLanguage === "fr";
   const ChevronIcon = isRtl ? ChevronLeft : ChevronRight;
@@ -108,13 +110,24 @@ export function LibraryPage() {
         eyebrow={t("library.eyebrow")}
         title={t("library.title")}
         actions={
-          <Link
-            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold transition hover:border-accent"
-            to="/app/library/search"
-          >
-            <Search aria-hidden="true" className="size-4" />
-            {t("library.advancedSearch")}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {canUploadLibraryDocuments ? (
+              <Link
+                className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold transition hover:border-accent"
+                to="/app/library/upload"
+              >
+                <Upload aria-hidden="true" className="size-4" />
+                {t("library.upload")}
+              </Link>
+            ) : null}
+            <Link
+              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold transition hover:border-accent"
+              to="/app/library/search"
+            >
+              <Search aria-hidden="true" className="size-4" />
+              {t("library.advancedSearch")}
+            </Link>
+          </div>
         }
       />
 

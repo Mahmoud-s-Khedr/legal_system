@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ClientType, Language, type CreateClientDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
 import { Field, FormAlert, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
@@ -35,7 +36,7 @@ function normalizePayload(form: ClientFormState): CreateClientDto {
 }
 
 export function ClientCreatePage() {
-  const { t } = useTranslation("app");
+  const { t, i18n } = useTranslation("app");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const feedback = useMutationFeedback();
@@ -48,6 +49,7 @@ export function ClientCreatePage() {
     value: v,
     label: getEnumLabel(t, "Language", v)
   }));
+  const governorateOptions = getEgyptGovernorateOptions(i18n.resolvedLanguage ?? i18n.language ?? "en");
 
   const [form, setForm] = useState<ClientFormState>({
     name: "",
@@ -128,9 +130,13 @@ export function ClientCreatePage() {
                 />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Field
+                <SelectField
                   label={t("labels.governorate")}
                   onChange={(value) => setForm({ ...form, governorate: value })}
+                  options={[
+                    { value: "", label: "-" },
+                    ...governorateOptions
+                  ]}
                   value={form.governorate ?? ""}
                 />
                 <SelectField

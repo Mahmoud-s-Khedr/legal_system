@@ -455,7 +455,7 @@ const libraryAdminRoute = createRoute({
 const libraryUploadRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/library/upload",
-  component: () => <PermissionGate permission="library:manage"><LibraryUploadPage /></PermissionGate>
+  component: () => <PermissionGate permission="library:read"><LibraryUploadPage /></PermissionGate>
 });
 
 // Import

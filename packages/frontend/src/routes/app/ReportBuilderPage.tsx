@@ -104,6 +104,7 @@ export function ReportBuilderPage() {
         `/api/reports/custom/${id}/export?format=excel`,
         `custom-report-${id}.xlsx`
       );
+      addToast(t("reports.exportReady", { format: "Excel" }), "success");
     } catch (error) {
       const message = (error as Error)?.message ?? t("errors.fallback");
       setExportError(message);

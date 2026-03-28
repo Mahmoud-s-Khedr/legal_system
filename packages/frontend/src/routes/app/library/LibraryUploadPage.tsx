@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { apiFetch, apiFormFetch } from "../../../lib/api";
+import { useHasPermission } from "../../../store/authStore";
 import { Field, PageHeader, SectionCard, PrimaryButton, SelectField } from "../ui";
 
 interface CategoryNode {
@@ -57,6 +58,7 @@ type UploadResult = { id: string; extractionStatus: string };
 export function LibraryUploadPage() {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
+  const canManageLibrary = useHasPermission("library:manage");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -72,9 +74,12 @@ export function LibraryUploadPage() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error(t("documents.noFileSelected"));
+      const effectiveScope = canManageLibrary ? form.scope : "FIRM";
       const fd = new FormData();
       fd.append("file", file);
-      Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
+      Object.entries({ ...form, scope: effectiveScope }).forEach(([k, v]) => {
+        if (v) fd.append(k, v);
+      });
       return apiFormFetch<UploadResult>("/api/library/documents/upload", {
         method: "POST",
         body: fd
@@ -164,22 +169,24 @@ export function LibraryUploadPage() {
           </div>
 
           {/* Type + Scope + Category */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className={`grid grid-cols-1 gap-3 ${canManageLibrary ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
             <SelectField
               label={t("library.type")}
               value={form.type}
               onChange={(value) => setForm({ ...form, type: value })}
               options={DOCUMENT_TYPES.map((dt) => ({ value: dt, label: dt }))}
             />
-            <SelectField
-              label={t("library.scope")}
-              value={form.scope}
-              onChange={(value) => setForm({ ...form, scope: value })}
-              options={[
-                { value: "FIRM", label: t("library.scopeFirm") },
-                { value: "SYSTEM", label: t("library.scopeSystem") }
-              ]}
-            />
+            {canManageLibrary ? (
+              <SelectField
+                label={t("library.scope")}
+                value={form.scope}
+                onChange={(value) => setForm({ ...form, scope: value })}
+                options={[
+                  { value: "FIRM", label: t("library.scopeFirm") },
+                  { value: "SYSTEM", label: t("library.scopeSystem") }
+                ]}
+              />
+            ) : null}
             <SelectField
               label={t("library.category")}
               value={form.categoryId}

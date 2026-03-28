@@ -28,6 +28,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
+
   if (root) {
     act(() => {
       root?.unmount();
@@ -104,5 +106,29 @@ describe("PpoPortalPage", () => {
     expect(view.querySelector("[data-action='open_external']")).toBeNull();
     expect(view.querySelector("[data-action='screenshot']")).toBeNull();
     expect(navigatePpoPortalMock).not.toHaveBeenCalled();
+  });
+
+  it("renders screenshot action in desktop mode and triggers screenshot navigation", async () => {
+    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
+    navigatePpoPortalMock.mockResolvedValue({ ok: true, action: "screenshot", url: "/tmp/screenshot.png" });
+
+    const view = render(<PpoPortalPage />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const screenshotButton = view.querySelector("[data-action='screenshot']");
+    expect(screenshotButton).not.toBeNull();
+
+    act(() => {
+      screenshotButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(navigatePpoPortalMock).toHaveBeenCalledWith("screenshot");
   });
 });

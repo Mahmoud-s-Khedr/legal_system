@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   launchPpoPortal,
+  navigatePpoPortal,
   type PpoPortalLaunchErrorCode,
   type PpoPortalLaunchResult
 } from "../../lib/ppoPortal";
@@ -39,8 +40,10 @@ function resolveStatusMessage(t: (key: string) => string, state: LaunchState): s
 
 export function PpoPortalPage() {
   const { t } = useTranslation("app");
+  const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
   const [launchState, setLaunchState] = useState<LaunchState>({ status: "idle" });
   const [hasOpenedAtLeastOnce, setHasOpenedAtLeastOnce] = useState(false);
+  const [isTakingScreenshot, setIsTakingScreenshot] = useState(false);
 
   const openPortal = useCallback(async () => {
     setLaunchState({ status: "launching" });
@@ -60,6 +63,15 @@ export function PpoPortalPage() {
   }, [openPortal]);
 
   const statusMessage = useMemo(() => resolveStatusMessage(t, launchState), [launchState, t]);
+
+  const handleScreenshot = useCallback(async () => {
+    setIsTakingScreenshot(true);
+    try {
+      await navigatePpoPortal("screenshot");
+    } finally {
+      setIsTakingScreenshot(false);
+    }
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -90,6 +102,20 @@ export function PpoPortalPage() {
           >
             {hasOpenedAtLeastOnce ? t("ppo.reopenAction") : t("ppo.openAction")}
           </button>
+
+          {isDesktopShell ? (
+            <button
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isTakingScreenshot}
+              onClick={() => {
+                void handleScreenshot();
+              }}
+              type="button"
+              data-action="screenshot"
+            >
+              {isTakingScreenshot ? t("ppo.status.navigating") : t("ppo.nav.screenshot")}
+            </button>
+          ) : null}
         </div>
       </SectionCard>
     </div>

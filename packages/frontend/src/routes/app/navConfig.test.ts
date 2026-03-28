@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildSidebarNavSections } from "./navConfig";
+import { CalendarDays, Scale } from "lucide-react";
+import { buildSidebarNavSections, navConfig } from "./navConfig";
 
 describe("buildSidebarNavSections", () => {
   it("keeps core navigation available with no permissions", () => {
@@ -38,5 +39,14 @@ describe("buildSidebarNavSections", () => {
       "ppoPortal"
     ]);
     expect(sections.find((section) => section.id === "administration")?.items.map((item) => item.id)).toEqual(["users"]);
+  });
+
+  it("uses distinct icons for calendar and hearings", () => {
+    const calendarItem = navConfig.find((item) => item.id === "calendar");
+    const hearingsItem = navConfig.find((item) => item.id === "hearings");
+
+    expect(calendarItem?.icon).toBe(CalendarDays);
+    expect(hearingsItem?.icon).toBe(Scale);
+    expect(calendarItem?.icon).not.toBe(hearingsItem?.icon);
   });
 });
