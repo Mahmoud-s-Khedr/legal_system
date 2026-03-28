@@ -11,6 +11,7 @@ import {
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { isTrialEnabled } from "../editions/editionPolicy.js";
+import { resolveTrialDates } from "../editions/trialDates.js";
 
 const SELF_SERVE_EDITION_CHANGE_TARGETS = new Set<EditionKey>([
   EditionKey.SOLO_OFFLINE,
@@ -28,6 +29,13 @@ export async function getCurrentFirm(actor: SessionUser): Promise<FirmMeResponse
       }
     });
 
+    const trialEndsAt = getTrialEndsAtIsoOrNull({
+      trialEnabled: isTrialEnabled(firm.editionKey),
+      createdAt: firm.createdAt,
+      trialStartedAt: firm.trialStartedAt,
+      trialEndsAt: firm.trialEndsAt
+    });
+
     return {
       firm: {
         id: firm.id,
@@ -42,7 +50,7 @@ export async function getCurrentFirm(actor: SessionUser): Promise<FirmMeResponse
         licenseRequired:
           (firm.pendingEditionKey != null || !isTrialEnabled(firm.editionKey)) &&
           firm.lifecycleStatus !== FirmLifecycleStatus.LICENSED,
-        trialEndsAt: firm.trialEndsAt?.toISOString() ?? null,
+        trialEndsAt,
         graceEndsAt: firm.graceEndsAt?.toISOString() ?? null,
         dataDeletionDueAt: firm.deletionDueAt?.toISOString() ?? null,
         defaultLanguage: firm.defaultLanguage as Language
@@ -63,6 +71,8 @@ export async function getCurrentFirmSubscription(actor: SessionUser): Promise<Fi
     const firm = await tx.firm.findUniqueOrThrow({
       where: { id: actor.firmId },
       select: {
+        createdAt: true,
+        trialStartedAt: true,
         editionKey: true,
         pendingEditionKey: true,
         lifecycleStatus: true,
@@ -70,6 +80,13 @@ export async function getCurrentFirmSubscription(actor: SessionUser): Promise<Fi
         graceEndsAt: true,
         deletionDueAt: true
       }
+    });
+
+    const trialEndsAt = getTrialEndsAtIsoOrNull({
+      trialEnabled: isTrialEnabled(firm.editionKey),
+      createdAt: firm.createdAt,
+      trialStartedAt: firm.trialStartedAt,
+      trialEndsAt: firm.trialEndsAt
     });
 
     return {
@@ -81,7 +98,7 @@ export async function getCurrentFirmSubscription(actor: SessionUser): Promise<Fi
       licenseRequired:
         (firm.pendingEditionKey != null || !isTrialEnabled(firm.editionKey)) &&
         firm.lifecycleStatus !== FirmLifecycleStatus.LICENSED,
-      trialEndsAt: firm.trialEndsAt?.toISOString() ?? null,
+      trialEndsAt,
       graceEndsAt: firm.graceEndsAt?.toISOString() ?? null,
       dataDeletionDueAt: firm.deletionDueAt?.toISOString() ?? null
     };
@@ -128,6 +145,8 @@ export async function requestEditionChange(
     const firm = await tx.firm.findUniqueOrThrow({
       where: { id: actor.firmId },
       select: {
+        createdAt: true,
+        trialStartedAt: true,
         editionKey: true,
         pendingEditionKey: true,
         lifecycleStatus: true,
@@ -135,6 +154,13 @@ export async function requestEditionChange(
         graceEndsAt: true,
         deletionDueAt: true
       }
+    });
+
+    const trialEndsAt = getTrialEndsAtIsoOrNull({
+      trialEnabled: isTrialEnabled(firm.editionKey),
+      createdAt: firm.createdAt,
+      trialStartedAt: firm.trialStartedAt,
+      trialEndsAt: firm.trialEndsAt
     });
 
     return {
@@ -146,9 +172,26 @@ export async function requestEditionChange(
       licenseRequired:
         (firm.pendingEditionKey != null || !isTrialEnabled(firm.editionKey)) &&
         firm.lifecycleStatus !== FirmLifecycleStatus.LICENSED,
-      trialEndsAt: firm.trialEndsAt?.toISOString() ?? null,
+      trialEndsAt,
       graceEndsAt: firm.graceEndsAt?.toISOString() ?? null,
       dataDeletionDueAt: firm.deletionDueAt?.toISOString() ?? null
     };
   });
+}
+
+function getTrialEndsAtIsoOrNull(input: {
+  trialEnabled: boolean;
+  createdAt: Date;
+  trialStartedAt: Date | null;
+  trialEndsAt: Date | null;
+}): string | null {
+  if (!input.trialEnabled) {
+    return input.trialEndsAt?.toISOString() ?? null;
+  }
+
+  return resolveTrialDates({
+    createdAt: input.createdAt,
+    trialStartedAt: input.trialStartedAt,
+    trialEndsAt: input.trialEndsAt
+  }).trialEndsAt.toISOString();
 }

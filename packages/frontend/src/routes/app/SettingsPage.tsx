@@ -22,7 +22,7 @@ import {
 } from "../../lib/desktopDownloads";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
-import { Badge, EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { Badge, EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField, formatDate } from "./ui";
 
 export function SettingsPage() {
   const { t } = useTranslation("app");
@@ -149,6 +149,29 @@ export function SettingsPage() {
     EditionKey.LOCAL_FIRM_OFFLINE,
     EditionKey.LOCAL_FIRM_ONLINE
   ];
+  const trialEndsAtDate = firm.trialEndsAt ? new Date(firm.trialEndsAt) : null;
+  const hasValidTrialEndDate = Boolean(trialEndsAtDate && !Number.isNaN(trialEndsAtDate.getTime()));
+  const trialCountdownText = (() => {
+    if (!firm.trialEnabled || !hasValidTrialEndDate || !trialEndsAtDate) {
+      return null;
+    }
+    const millisPerDay = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const trialEndDay = new Date(
+      trialEndsAtDate.getFullYear(),
+      trialEndsAtDate.getMonth(),
+      trialEndsAtDate.getDate()
+    );
+    const daysRemaining = Math.max(
+      0,
+      Math.ceil((trialEndDay.getTime() - startOfToday.getTime()) / millisPerDay)
+    );
+    return t("settings.trialActiveWithCountdown", {
+      count: daysRemaining,
+      endDate: formatDate(firm.trialEndsAt)
+    });
+  })();
 
   return (
     <div className="space-y-6">
@@ -214,7 +237,7 @@ export function SettingsPage() {
             </p>
           ) : firm.trialEnabled ? (
             <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-              {t("settings.trialActive")}
+              {trialCountdownText ?? t("settings.trialActive")}
             </p>
           ) : (
             <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">

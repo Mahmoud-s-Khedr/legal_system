@@ -526,6 +526,7 @@
     "calendarConnected": "Google Calendar connected successfully.",
     "calendarError": "Calendar connection error",
     "trialActive": "Trial is active.",
+    "trialActiveWithCountdown": "Trial is active. {{count}} day(s) remaining (until {{endDate}}).",
     "licenseUnknown": "License state is unknown."
   },
   "ppo": {

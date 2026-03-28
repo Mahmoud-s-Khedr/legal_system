@@ -562,6 +562,7 @@
     "calendarConnected": "Google Agenda connecté avec succès.",
     "calendarError": "Erreur de connexion au calendrier",
     "trialActive": "La période d'essai est active.",
+    "trialActiveWithCountdown": "La période d'essai est active. {{count}} jour(s) restants (jusqu'au {{endDate}}).",
     "licenseUnknown": "L'état de la licence est inconnu."
   },
   "ppo": {

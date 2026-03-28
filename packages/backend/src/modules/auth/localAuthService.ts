@@ -5,6 +5,8 @@ import type { AppEnv } from "../../config/env.js";
 import { LOCAL_SESSION_COOKIE, SYSTEM_ROLE_KEYS } from "../../config/constants.js";
 import { prisma } from "../../db/prisma.js";
 import { ensureSystemSecurityModel } from "../../security/bootstrap.js";
+import { isTrialEnabled } from "../editions/editionPolicy.js";
+import { resolveTrialDates } from "../editions/trialDates.js";
 import type { AuthService } from "./auth.types.js";
 import { localSessionStore } from "./localSessionStore.js";
 import { getUserWithRoleAndPermissions, toSessionUser } from "./sessionUser.js";
@@ -60,6 +62,9 @@ export function createLocalAuthService(_env: AppEnv): AuthService {
 
       const [adminRole] = await ensureSystemRoles();
       const passwordHash = await bcrypt.hash(payload.password, 12);
+      const trialDates = isTrialEnabled(payload.editionKey)
+        ? resolveTrialDates({ createdAt: new Date() })
+        : null;
 
       const slug = slugify(payload.firmName);
       let firm: { users: Array<{ id: string }> };
@@ -70,6 +75,10 @@ export function createLocalAuthService(_env: AppEnv): AuthService {
             slug,
             editionKey: payload.editionKey,
             defaultLanguage: Language.AR,
+            trialStartedAt: trialDates?.trialStartedAt,
+            trialEndsAt: trialDates?.trialEndsAt,
+            graceEndsAt: trialDates?.graceEndsAt,
+            deletionDueAt: trialDates?.deletionDueAt,
             users: {
               create: {
                 email: payload.email,

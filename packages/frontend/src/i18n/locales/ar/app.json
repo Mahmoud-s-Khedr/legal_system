@@ -585,6 +585,7 @@
     "calendarConnected": "تم ربط تقويم Google بنجاح.",
     "calendarError": "خطأ في ربط التقويم",
     "trialActive": "الفترة التجريبية مفعلة.",
+    "trialActiveWithCountdown": "الفترة التجريبية مفعلة. متبقّي {{count}} يوم (حتى {{endDate}}).",
     "licenseUnknown": "حالة الترخيص غير معروفة."
   },
   "ppo": {

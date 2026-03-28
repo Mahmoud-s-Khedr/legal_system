@@ -1,20 +1,7 @@
 import { FirmLifecycleStatus, type EditionKey } from "@elms/shared";
 import { prisma } from "../../db/prisma.js";
 import { isTrialEnabled } from "./editionPolicy.js";
-
-const TRIAL_DAYS = 30;
-const GRACE_DAYS = 14;
-// After grace ends the firm has 24 hours (DATA_DELETION_PENDING) before
-// the actual data wipe occurs on the next sweep cycle.
-const DATA_DELETION_DELAY_HOURS = 24;
-
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-function addHours(date: Date, hours: number): Date {
-  return new Date(date.getTime() + hours * 60 * 60 * 1000);
-}
+import { resolveTrialDates } from "./trialDates.js";
 
 export interface LifecycleSweepResult {
   scanned: number;
@@ -68,11 +55,13 @@ export async function runFirmLifecycleSweep(now = new Date()): Promise<Lifecycle
 
     const patch: Record<string, Date | FirmLifecycleStatus | null> = {};
 
-    const trialStartedAt = firm.trialStartedAt ?? firm.createdAt;
-    const trialEndsAt = firm.trialEndsAt ?? addDays(trialStartedAt, TRIAL_DAYS);
-    const graceEndsAt = firm.graceEndsAt ?? addDays(trialEndsAt, GRACE_DAYS);
-    // deletionDueAt = 24h after grace ends (DATA_DELETION_PENDING window)
-    const deletionDueAt = firm.deletionDueAt ?? addHours(graceEndsAt, DATA_DELETION_DELAY_HOURS);
+    const { trialStartedAt, trialEndsAt, graceEndsAt, deletionDueAt } = resolveTrialDates({
+      createdAt: firm.createdAt,
+      trialStartedAt: firm.trialStartedAt,
+      trialEndsAt: firm.trialEndsAt,
+      graceEndsAt: firm.graceEndsAt,
+      deletionDueAt: firm.deletionDueAt
+    });
 
     if (!firm.trialStartedAt) {
       patch.trialStartedAt = trialStartedAt;

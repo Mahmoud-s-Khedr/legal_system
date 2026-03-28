@@ -100,7 +100,42 @@ describe("local auth setup", () => {
     expect(mockPrisma.firm.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          editionKey: EditionKey.SOLO_OFFLINE
+          editionKey: EditionKey.SOLO_OFFLINE,
+          trialStartedAt: expect.any(Date),
+          trialEndsAt: expect.any(Date),
+          graceEndsAt: expect.any(Date),
+          deletionDueAt: expect.any(Date)
+        })
+      })
+    );
+  });
+
+  it("does not initialize trial dates for non-trial editions", async () => {
+    const authService = createLocalAuthService({} as never);
+    const setup = authService.setup;
+    if (!setup) {
+      throw new Error("Expected local auth setup implementation");
+    }
+
+    mockPrisma.firm.findFirst.mockResolvedValueOnce(null);
+    mockPrisma.firm.create.mockResolvedValue({ users: [{ id: "user-1" }] });
+
+    await setup({
+      firmName: "ELMS Online Firm",
+      fullName: "Desktop Admin",
+      email: "admin@elms.local",
+      password: "secret123",
+      editionKey: EditionKey.SOLO_ONLINE
+    });
+
+    expect(mockPrisma.firm.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          editionKey: EditionKey.SOLO_ONLINE,
+          trialStartedAt: undefined,
+          trialEndsAt: undefined,
+          graceEndsAt: undefined,
+          deletionDueAt: undefined
         })
       })
     );
