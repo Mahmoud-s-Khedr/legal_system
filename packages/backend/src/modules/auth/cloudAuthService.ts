@@ -41,6 +41,7 @@ export function createCloudAuthService(app: FastifyInstance, env: AppEnv): AuthS
         sub: sessionUser.id,
         firmId: sessionUser.firmId,
         editionKey: sessionUser.editionKey,
+        pendingEditionKey: sessionUser.pendingEditionKey,
         lifecycleStatus: sessionUser.lifecycleStatus,
         trialEndsAt: sessionUser.trialEndsAt,
         graceEndsAt: sessionUser.graceEndsAt,

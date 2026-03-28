@@ -1,5 +1,8 @@
 import {
+  EditionKey,
+  FirmLifecycleStatus,
   type FirmMeResponseDto,
+  type RequestEditionChangeDto,
   type FirmSubscriptionDto,
   type FirmType,
   type Language,
@@ -8,6 +11,13 @@ import {
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { isTrialEnabled } from "../editions/editionPolicy.js";
+
+const SELF_SERVE_EDITION_CHANGE_TARGETS = new Set<EditionKey>([
+  EditionKey.SOLO_OFFLINE,
+  EditionKey.SOLO_ONLINE,
+  EditionKey.LOCAL_FIRM_OFFLINE,
+  EditionKey.LOCAL_FIRM_ONLINE
+]);
 
 export async function getCurrentFirm(actor: SessionUser): Promise<FirmMeResponseDto> {
   return withTenant(prisma, actor.firmId, async (tx) => {
@@ -25,8 +35,13 @@ export async function getCurrentFirm(actor: SessionUser): Promise<FirmMeResponse
         slug: firm.slug,
         type: firm.type as FirmType,
         editionKey: firm.editionKey as FirmMeResponseDto["firm"]["editionKey"],
+        pendingEditionKey: firm.pendingEditionKey as FirmMeResponseDto["firm"]["pendingEditionKey"],
         trialEnabled: isTrialEnabled(firm.editionKey),
         lifecycleStatus: firm.lifecycleStatus as FirmMeResponseDto["firm"]["lifecycleStatus"],
+        isLicensed: firm.lifecycleStatus === FirmLifecycleStatus.LICENSED,
+        licenseRequired:
+          (firm.pendingEditionKey != null || !isTrialEnabled(firm.editionKey)) &&
+          firm.lifecycleStatus !== FirmLifecycleStatus.LICENSED,
         trialEndsAt: firm.trialEndsAt?.toISOString() ?? null,
         graceEndsAt: firm.graceEndsAt?.toISOString() ?? null,
         dataDeletionDueAt: firm.deletionDueAt?.toISOString() ?? null,
@@ -49,6 +64,7 @@ export async function getCurrentFirmSubscription(actor: SessionUser): Promise<Fi
       where: { id: actor.firmId },
       select: {
         editionKey: true,
+        pendingEditionKey: true,
         lifecycleStatus: true,
         trialEndsAt: true,
         graceEndsAt: true,
@@ -58,8 +74,78 @@ export async function getCurrentFirmSubscription(actor: SessionUser): Promise<Fi
 
     return {
       editionKey: firm.editionKey as FirmSubscriptionDto["editionKey"],
+      pendingEditionKey: firm.pendingEditionKey as FirmSubscriptionDto["pendingEditionKey"],
       trialEnabled: isTrialEnabled(firm.editionKey),
       lifecycleStatus: firm.lifecycleStatus as FirmSubscriptionDto["lifecycleStatus"],
+      isLicensed: firm.lifecycleStatus === FirmLifecycleStatus.LICENSED,
+      licenseRequired:
+        (firm.pendingEditionKey != null || !isTrialEnabled(firm.editionKey)) &&
+        firm.lifecycleStatus !== FirmLifecycleStatus.LICENSED,
+      trialEndsAt: firm.trialEndsAt?.toISOString() ?? null,
+      graceEndsAt: firm.graceEndsAt?.toISOString() ?? null,
+      dataDeletionDueAt: firm.deletionDueAt?.toISOString() ?? null
+    };
+  });
+}
+
+function makeHttpError(message: string, statusCode: number) {
+  const error = new Error(message) as Error & { statusCode: number };
+  error.statusCode = statusCode;
+  return error;
+}
+
+export async function requestEditionChange(
+  actor: SessionUser,
+  payload: RequestEditionChangeDto
+): Promise<FirmSubscriptionDto> {
+  if (!SELF_SERVE_EDITION_CHANGE_TARGETS.has(payload.editionKey)) {
+    throw makeHttpError("Edition change target is not supported for self-serve", 400);
+  }
+
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    await tx.firmSettings.upsert({
+      where: { firmId: actor.firmId },
+      create: {
+        firmId: actor.firmId,
+        timezone: "Africa/Cairo",
+        licenseKeyHash: null,
+        licenseActivatedAt: null
+      },
+      update: {
+        licenseKeyHash: null,
+        licenseActivatedAt: null
+      }
+    });
+    await tx.firm.update({
+      where: { id: actor.firmId },
+      data: {
+        pendingEditionKey: payload.editionKey,
+        lifecycleStatus: FirmLifecycleStatus.ACTIVE,
+        suspendedAt: null
+      }
+    });
+
+    const firm = await tx.firm.findUniqueOrThrow({
+      where: { id: actor.firmId },
+      select: {
+        editionKey: true,
+        pendingEditionKey: true,
+        lifecycleStatus: true,
+        trialEndsAt: true,
+        graceEndsAt: true,
+        deletionDueAt: true
+      }
+    });
+
+    return {
+      editionKey: firm.editionKey as FirmSubscriptionDto["editionKey"],
+      pendingEditionKey: firm.pendingEditionKey as FirmSubscriptionDto["pendingEditionKey"],
+      trialEnabled: isTrialEnabled(firm.editionKey),
+      lifecycleStatus: firm.lifecycleStatus as FirmSubscriptionDto["lifecycleStatus"],
+      isLicensed: firm.lifecycleStatus === FirmLifecycleStatus.LICENSED,
+      licenseRequired:
+        (firm.pendingEditionKey != null || !isTrialEnabled(firm.editionKey)) &&
+        firm.lifecycleStatus !== FirmLifecycleStatus.LICENSED,
       trialEndsAt: firm.trialEndsAt?.toISOString() ?? null,
       graceEndsAt: firm.graceEndsAt?.toISOString() ?? null,
       dataDeletionDueAt: firm.deletionDueAt?.toISOString() ?? null

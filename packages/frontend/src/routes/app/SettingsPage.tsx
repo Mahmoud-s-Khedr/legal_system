@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Language, type ChangeOwnPasswordDto, type FirmMeResponseDto, type UpdateUserDto, type UserDto } from "@elms/shared";
+import {
+  EditionKey,
+  Language,
+  type ActivateLicenseDto,
+  type ChangeOwnPasswordDto,
+  type FirmMeResponseDto,
+  type LicenseActivationResponseDto,
+  type RequestEditionChangeDto,
+  type UpdateUserDto,
+  type UserDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import {
@@ -43,6 +53,8 @@ export function SettingsPage() {
     currentPassword: "",
     newPassword: ""
   });
+  const [activationKey, setActivationKey] = useState("");
+  const [editionChangeTarget, setEditionChangeTarget] = useState<EditionKey>(EditionKey.SOLO_OFFLINE);
 
   useEffect(() => {
     if (!selfQuery.data) {
@@ -55,6 +67,14 @@ export function SettingsPage() {
       preferredLanguage: selfQuery.data.preferredLanguage as Language
     });
   }, [selfQuery.data]);
+
+  useEffect(() => {
+    const target = firmQuery.data?.firm.pendingEditionKey ?? firmQuery.data?.firm.editionKey;
+    if (!target || target === EditionKey.ENTERPRISE) {
+      return;
+    }
+    setEditionChangeTarget(target);
+  }, [firmQuery.data?.firm.editionKey, firmQuery.data?.firm.pendingEditionKey]);
 
   const updateProfileMutation = useMutation({
     mutationFn: (payload: UpdateUserDto) =>
@@ -93,10 +113,42 @@ export function SettingsPage() {
       await queryClient.invalidateQueries({ queryKey: ["desktop-download-settings"] });
     }
   });
+  const activateLicenseMutation = useMutation({
+    mutationFn: (payload: ActivateLicenseDto) =>
+      apiFetch<LicenseActivationResponseDto>("/api/licenses/activate", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: async () => {
+      setActivationKey("");
+      await queryClient.invalidateQueries({ queryKey: ["firm-me"] });
+      await refreshSession();
+    }
+  });
+  const editionChangeMutation = useMutation({
+    mutationFn: (payload: RequestEditionChangeDto) =>
+      apiFetch("/api/firms/me/edition-change-request", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["firm-me"] });
+      await refreshSession();
+    }
+  });
 
   if (!firmQuery.data || !user) {
     return <EmptyState title={t("empty.noSettings")} description={t("empty.noSettingsHelp")} />;
   }
+
+  const firm = firmQuery.data.firm;
+  const canSelfServeLicense = firm.editionKey !== EditionKey.ENTERPRISE;
+  const selectableEditions = [
+    EditionKey.SOLO_OFFLINE,
+    EditionKey.SOLO_ONLINE,
+    EditionKey.LOCAL_FIRM_OFFLINE,
+    EditionKey.LOCAL_FIRM_ONLINE
+  ];
 
   return (
     <div className="space-y-6">
@@ -108,10 +160,15 @@ export function SettingsPage() {
       <div className="grid gap-4 xl:grid-cols-3">
         <SectionCard title={t("settings.firm")} description={t("settings.firmHelp")}>
           <dl className="space-y-3 text-sm">
-            <Detail label={t("labels.name")} value={firmQuery.data.firm.name} />
-            <Detail label={t("labels.slug")} value={firmQuery.data.firm.slug} />
-            <Detail label={t("labels.type")} value={getEnumLabel(t, "FirmType", firmQuery.data.firm.type)} />
-            <Detail label={t("labels.language")} value={getEnumLabel(t, "Language", firmQuery.data.firm.defaultLanguage)} />
+            <Detail label={t("labels.name")} value={firm.name} />
+            <Detail label={t("labels.slug")} value={firm.slug} />
+            <Detail label={t("labels.type")} value={getEnumLabel(t, "FirmType", firm.type)} />
+            <Detail label={t("labels.language")} value={getEnumLabel(t, "Language", firm.defaultLanguage)} />
+            <Detail label={t("settings.firmId")} value={firm.id} />
+            <Detail label={t("settings.edition")} value={firm.pendingEditionKey ?? firm.editionKey} />
+            {firm.pendingEditionKey ? (
+              <Detail label={t("settings.pendingEdition")} value={firm.pendingEditionKey} />
+            ) : null}
           </dl>
         </SectionCard>
         <SectionCard title={t("settings.session")} description={t("settings.sessionHelp")}>
@@ -145,6 +202,63 @@ export function SettingsPage() {
           </div>
         </SectionCard>
       </div>
+      <SectionCard title={t("settings.licensingTitle")} description={t("settings.licensingHelp")}>
+        <div className="space-y-4">
+          {firm.licenseRequired ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {t("settings.licenseRequiredWarning")}
+            </p>
+          ) : (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              {t("settings.licenseActive")}
+            </p>
+          )}
+          {canSelfServeLicense ? (
+            <>
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!activationKey.trim()) return;
+                  activateLicenseMutation.mutate({ activationKey: activationKey.trim() });
+                }}
+              >
+                <Field
+                  id="activation-key"
+                  label={t("settings.activationKey")}
+                  onChange={setActivationKey}
+                  value={activationKey}
+                />
+                <PrimaryButton type="submit">{t("settings.activateLicense")}</PrimaryButton>
+                {activateLicenseMutation.error ? (
+                  <p className="text-sm text-red-600">{(activateLicenseMutation.error as Error).message}</p>
+                ) : null}
+              </form>
+              <form
+                className="space-y-3 border-t border-slate-200 pt-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  editionChangeMutation.mutate({ editionKey: editionChangeTarget });
+                }}
+              >
+                <SelectField
+                  id="edition-change-target"
+                  label={t("settings.changeEdition")}
+                  onChange={(value) => setEditionChangeTarget(value as EditionKey)}
+                  options={selectableEditions.map((value) => ({ value, label: value }))}
+                  value={editionChangeTarget}
+                />
+                <PrimaryButton type="submit">{t("settings.requestEditionChange")}</PrimaryButton>
+                {editionChangeMutation.error ? (
+                  <p className="text-sm text-red-600">{(editionChangeMutation.error as Error).message}</p>
+                ) : null}
+              </form>
+            </>
+          ) : (
+            <p className="text-sm text-slate-600">{t("settings.enterpriseContractOnly")}</p>
+          )}
+        </div>
+      </SectionCard>
       <SectionCard title={t("notifications.preferences")} description={t("notifications.preferencesDescription")}>
         <Link
           className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition"
@@ -250,8 +364,8 @@ export function SettingsPage() {
                 setProfileForm({ ...profileForm, preferredLanguage: value as Language })
               }
               options={Object.values(Language).map((value) => ({
-                value,
-                label: getEnumLabel(t, "Language", value)
+                value: value as string,
+                label: getEnumLabel(t, "Language", value as string)
               }))}
               value={profileForm.preferredLanguage}
             />

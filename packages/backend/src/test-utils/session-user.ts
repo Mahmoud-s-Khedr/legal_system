@@ -5,6 +5,7 @@ export function makeSessionUser(overrides: Partial<SessionUser> = {}): SessionUs
     id: "user-1",
     firmId: "firm-1",
     editionKey: EditionKey.ENTERPRISE,
+    pendingEditionKey: null,
     lifecycleStatus: FirmLifecycleStatus.ACTIVE,
     trialEndsAt: null,
     graceEndsAt: null,

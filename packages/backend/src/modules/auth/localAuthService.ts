@@ -68,6 +68,7 @@ export function createLocalAuthService(_env: AppEnv): AuthService {
           data: {
             name: payload.firmName,
             slug,
+            editionKey: payload.editionKey,
             defaultLanguage: Language.AR,
             users: {
               create: {

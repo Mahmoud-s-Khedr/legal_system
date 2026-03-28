@@ -28,6 +28,7 @@ export const sessionUserSchema = {
     id: { type: "string" },
     firmId: { type: "string" },
     editionKey: { type: "string" },
+    pendingEditionKey: { type: ["string", "null"] },
     lifecycleStatus: { type: "string" },
     trialEndsAt: { type: ["string", "null"] },
     graceEndsAt: { type: ["string", "null"] },
@@ -38,7 +39,7 @@ export const sessionUserSchema = {
     preferredLanguage: { type: "string" },
     permissions: { type: "array", items: { type: "string" } }
   },
-  required: ["id", "firmId", "editionKey", "lifecycleStatus", "trialEndsAt", "graceEndsAt", "roleId", "roleKey", "email", "fullName", "preferredLanguage", "permissions"],
+  required: ["id", "firmId", "editionKey", "pendingEditionKey", "lifecycleStatus", "trialEndsAt", "graceEndsAt", "roleId", "roleKey", "email", "fullName", "preferredLanguage", "permissions"],
   additionalProperties: false
 } as const;
 

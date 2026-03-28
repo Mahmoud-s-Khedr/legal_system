@@ -11,6 +11,7 @@ export interface SessionUser {
   id: string;
   firmId: string;
   editionKey: EditionKey;
+  pendingEditionKey: EditionKey | null;
   lifecycleStatus: FirmLifecycleStatus;
   trialEndsAt: string | null;
   graceEndsAt: string | null;
@@ -43,6 +44,7 @@ export interface AccessTokenClaims {
   sub: string;
   firmId: string;
   editionKey: EditionKey;
+  pendingEditionKey: EditionKey | null;
   lifecycleStatus: FirmLifecycleStatus;
   trialEndsAt: string | null;
   graceEndsAt: string | null;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { AuthMode } from "@elms/shared";
+import { AuthMode, EditionKey } from "@elms/shared";
 import { loadEnv } from "../../config/env.js";
 
 const mockPrisma = {
@@ -71,7 +71,8 @@ describe("local auth setup", () => {
         firmName: "ELMS Desktop Firm",
         fullName: "Desktop Admin",
         email: "admin@elms.local",
-        password: "secret123"
+        password: "secret123",
+        editionKey: EditionKey.SOLO_OFFLINE
       })
     ).rejects.toMatchObject({ statusCode: 409, message: "Desktop setup already completed" });
   });
@@ -90,11 +91,18 @@ describe("local auth setup", () => {
       firmName: "ELMS Desktop Firm",
       fullName: "Desktop Admin",
       email: "admin@elms.local",
-      password: "secret123"
+      password: "secret123",
+      editionKey: EditionKey.SOLO_OFFLINE
     });
 
     expect(result.session.mode).toBe(AuthMode.LOCAL);
     expect(localSessionCreate).toHaveBeenCalledWith("user-1");
-    expect(mockPrisma.firm.create).toHaveBeenCalled();
+    expect(mockPrisma.firm.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          editionKey: EditionKey.SOLO_OFFLINE
+        })
+      })
+    );
   });
 });

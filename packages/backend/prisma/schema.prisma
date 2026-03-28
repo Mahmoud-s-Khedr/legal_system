@@ -200,6 +200,7 @@ model Firm {
   slug            String              @unique
   type            FirmType            @default(SOLO)
   editionKey      EditionKey          @default(solo_online)
+  pendingEditionKey EditionKey?
   lifecycleStatus FirmLifecycleStatus @default(ACTIVE)
   trialStartedAt  DateTime?
   trialEndsAt     DateTime?

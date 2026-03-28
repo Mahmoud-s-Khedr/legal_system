@@ -1,9 +1,10 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { EditionKey } from "@elms/shared";
 import { AuthShell } from "./AuthShell";
 import { useAuthBootstrap } from "../../store/authStore";
-import { Field, FormAlert } from "../app/ui";
+import { Field, FormAlert, SelectField } from "../app/ui";
 
 export function SetupPage() {
   const { t } = useTranslation("auth");
@@ -13,6 +14,7 @@ export function SetupPage() {
   const [fullName, setFullName] = useState("Desktop Admin");
   const [email, setEmail] = useState(import.meta.env.VITE_SETUP_EMAIL as string ?? "");
   const [password, setPassword] = useState(import.meta.env.VITE_SETUP_PASSWORD as string ?? "");
+  const [editionKey, setEditionKey] = useState<EditionKey>(EditionKey.SOLO_OFFLINE);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -23,7 +25,7 @@ export function SetupPage() {
     setIsSubmitting(true);
 
     try {
-      await setup({ firmName, fullName, email, password });
+      await setup({ firmName, fullName, email, password, editionKey });
       await navigate({ to: "/app/dashboard" });
     } catch (submitError) {
       setError((submitError as Error).message);
@@ -39,6 +41,18 @@ export function SetupPage() {
         <Field id="setup-full-name" label={t("fullName")} value={fullName} onChange={setFullName} required />
         <Field id="setup-email" label={t("email")} type="email" value={email} onChange={setEmail} required />
         <Field id="setup-password" label={t("password")} type="password" value={password} onChange={setPassword} required />
+        <SelectField
+          id="setup-edition"
+          label={t("editionLabel")}
+          onChange={(value) => setEditionKey(value as EditionKey)}
+          options={[
+            { value: EditionKey.SOLO_OFFLINE, label: t("editionOptions.solo_offline") },
+            { value: EditionKey.SOLO_ONLINE, label: t("editionOptions.solo_online") },
+            { value: EditionKey.LOCAL_FIRM_OFFLINE, label: t("editionOptions.local_firm_offline") },
+            { value: EditionKey.LOCAL_FIRM_ONLINE, label: t("editionOptions.local_firm_online") }
+          ]}
+          value={editionKey}
+        />
         {error ? <FormAlert message={error} /> : null}
         <button
           className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"

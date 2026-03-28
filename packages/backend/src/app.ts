@@ -10,6 +10,7 @@ import { registerJwtPlugin } from "./plugins/auth.js";
 import { registerSessionContext } from "./plugins/sessionContext.js";
 import { registerInjectTenantHook } from "./middleware/injectTenant.js";
 import { registerFirmLifecycleWriteGuard } from "./middleware/firmLifecycleWriteGuard.js";
+import { registerLicenseAccessGuard } from "./middleware/licenseAccessGuard.js";
 import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 import { registerFirmRoutes } from "./modules/firms/firms.routes.js";
 import { registerRoleRoutes } from "./modules/roles/roles.routes.js";
@@ -34,6 +35,7 @@ import { registerPortalAuthRoutes } from "./modules/portal/portal-auth.routes.js
 import { registerPortalRoutes } from "./modules/portal/portal.routes.js";
 import { registerGoogleCalendarRoutes } from "./modules/integrations/google-calendar.routes.js";
 import { registerPowersRoutes } from "./modules/powers/powers.routes.js";
+import { registerLicenseRoutes } from "./modules/editions/license.routes.js";
 import { createStorageAdapter } from "./storage/index.js";
 import { initializeBackendMonitoring } from "./monitoring/sentry.js";
 import { prisma } from "./db/prisma.js";
@@ -84,6 +86,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   await registerMultipartPlugin(app, env);
   await registerJwtPlugin(app, env);
   registerSessionContext(app, env);
+  registerLicenseAccessGuard(app);
   registerFirmLifecycleWriteGuard(app);
   registerErrorHandler(app);
   registerInjectTenantHook(app);
@@ -144,6 +147,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   });
 
   await registerAuthRoutes(app, env);
+  await registerLicenseRoutes(app);
   await registerFirmRoutes(app);
   await registerRoleRoutes(app);
   await registerUserRoutes(app, env);

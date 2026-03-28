@@ -12,8 +12,11 @@ export interface FirmSummaryDto {
   slug: string;
   type: FirmType;
   editionKey: EditionKey;
+  pendingEditionKey: EditionKey | null;
   trialEnabled: boolean;
   lifecycleStatus: FirmLifecycleStatus;
+  isLicensed: boolean;
+  licenseRequired: boolean;
   trialEndsAt: string | null;
   graceEndsAt: string | null;
   dataDeletionDueAt: string | null;
@@ -22,11 +25,29 @@ export interface FirmSummaryDto {
 
 export interface FirmSubscriptionDto {
   editionKey: EditionKey;
+  pendingEditionKey: EditionKey | null;
   trialEnabled: boolean;
   lifecycleStatus: FirmLifecycleStatus;
+  isLicensed: boolean;
+  licenseRequired: boolean;
   trialEndsAt: string | null;
   graceEndsAt: string | null;
   dataDeletionDueAt: string | null;
+}
+
+export interface ActivateLicenseDto {
+  activationKey: string;
+}
+
+export interface LicenseActivationResponseDto {
+  editionKey: EditionKey;
+  expiresAt: string;
+  firmName: string;
+  status: "activated" | "already_activated";
+}
+
+export interface RequestEditionChangeDto {
+  editionKey: EditionKey;
 }
 
 export interface FirmMeResponseDto {

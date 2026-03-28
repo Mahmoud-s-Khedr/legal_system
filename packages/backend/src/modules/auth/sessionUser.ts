@@ -5,6 +5,7 @@ export const userWithRoleInclude = {
   firm: {
     select: {
       editionKey: true,
+      pendingEditionKey: true,
       lifecycleStatus: true,
       trialEndsAt: true,
       graceEndsAt: true
@@ -40,6 +41,7 @@ export function toSessionUser(user: UserWithRole): SessionUser {
     id: user.id,
     firmId: user.firmId,
     editionKey: user.firm.editionKey as SessionUser["editionKey"],
+    pendingEditionKey: user.firm.pendingEditionKey as SessionUser["pendingEditionKey"],
     lifecycleStatus: user.firm.lifecycleStatus as SessionUser["lifecycleStatus"],
     trialEndsAt: user.firm.trialEndsAt?.toISOString() ?? null,
     graceEndsAt: user.firm.graceEndsAt?.toISOString() ?? null,

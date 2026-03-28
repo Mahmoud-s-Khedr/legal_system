@@ -1,4 +1,4 @@
-import { Language } from "../enums/index";
+import { EditionKey, Language } from "../enums/index";
 import type { AppSession } from "../types/auth";
 
 export interface LoginDto {
@@ -14,6 +14,7 @@ export interface RegisterDto extends LoginDto {
 export interface SetupDto extends LoginDto {
   firmName: string;
   fullName: string;
+  editionKey: EditionKey;
 }
 
 export interface AcceptInviteDto {

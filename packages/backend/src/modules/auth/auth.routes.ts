@@ -6,6 +6,7 @@ import { newPasswordSchema } from "../../utils/passwordPolicy.js";
 import { authResponseSchema, errorSchema, successSchema } from "../../schemas/index.js";
 import { prisma } from "../../db/prisma.js";
 import { LOCAL_SESSION_COOKIE } from "../../config/constants.js";
+import { EditionKey } from "@elms/shared";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -18,7 +19,12 @@ const registerSchema = loginSchema.extend({
   password: newPasswordSchema
 });
 
-const setupSchema = registerSchema;
+const setupSchema = loginSchema.extend({
+  firmName: z.string().min(2),
+  fullName: z.string().min(2),
+  password: newPasswordSchema,
+  editionKey: z.nativeEnum(EditionKey)
+});
 
 const acceptInviteSchema = z.object({
   token: z.string().min(10),
