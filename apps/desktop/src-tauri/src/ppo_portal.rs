@@ -290,9 +290,8 @@ fn capture_ppo_window_png(window: &tauri::WebviewWindow) -> Result<Vec<u8>, &'st
             })
             .map_err(|_| PPO_SCREENSHOT_CAPTURE_FAILED)?;
 
-        return rx
-            .recv_timeout(Duration::from_secs(10))
-            .unwrap_or(Err(PPO_SCREENSHOT_CAPTURE_FAILED));
+        rx.recv_timeout(Duration::from_secs(10))
+            .unwrap_or(Err(PPO_SCREENSHOT_CAPTURE_FAILED))
     }
 
     #[cfg(windows)]
@@ -300,6 +299,7 @@ fn capture_ppo_window_png(window: &tauri::WebviewWindow) -> Result<Vec<u8>, &'st
         use base64::Engine as _;
         use std::sync::mpsc;
         use webview2_com::CallDevToolsProtocolMethodCompletedHandler;
+        use windows_core::HSTRING;
 
         let (tx, rx) = mpsc::channel::<Result<Vec<u8>, &'static str>>();
 
@@ -342,20 +342,19 @@ fn capture_ppo_window_png(window: &tauri::WebviewWindow) -> Result<Vec<u8>, &'st
                         Ok(())
                     },
                 ));
+                let method = HSTRING::from("Page.captureScreenshot");
+                let params = HSTRING::from("{}");
 
-                if unsafe {
-                    webview.CallDevToolsProtocolMethod("Page.captureScreenshot", "{}", &callback)
-                }
-                .is_err()
+                if unsafe { webview.CallDevToolsProtocolMethod(&method, &params, &callback) }
+                    .is_err()
                 {
                     let _ = tx.send(Err(PPO_SCREENSHOT_CAPTURE_FAILED));
                 }
             })
             .map_err(|_| PPO_SCREENSHOT_CAPTURE_FAILED)?;
 
-        return rx
-            .recv_timeout(Duration::from_secs(10))
-            .unwrap_or(Err(PPO_SCREENSHOT_CAPTURE_FAILED));
+        rx.recv_timeout(Duration::from_secs(10))
+            .unwrap_or(Err(PPO_SCREENSHOT_CAPTURE_FAILED))
     }
 
     #[cfg(not(any(target_os = "linux", windows)))]

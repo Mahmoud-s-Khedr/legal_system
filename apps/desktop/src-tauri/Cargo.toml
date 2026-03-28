@@ -24,6 +24,7 @@ cairo-rs = { version = "0.18.5", features = ["png"] }
 [target.'cfg(target_os = "windows")'.dependencies]
 base64 = "0.22"
 webview2-com = "0.38.2"
+windows-core = "0.61"
 
 [features]
 default = ["custom-protocol"]
