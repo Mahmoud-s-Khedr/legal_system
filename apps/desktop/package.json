@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "compile": "pnpm cargo:check",
-    "cargo:check": "bash -lc 'mkdir -p ../../packages/backend/dist/desktop ../../packages/frontend/dist && cargo check --manifest-path src-tauri/Cargo.toml'",
-    "lint": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && bash -lc 'mkdir -p ../../packages/backend/dist/desktop ../../packages/frontend/dist && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings'",
+    "cargo:check": "node ./scripts/cargo-runner.mjs check",
+    "lint": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && node ./scripts/cargo-runner.mjs clippy",
     "typecheck": "pnpm cargo:check",
-    "test": "bash -lc 'mkdir -p ../../packages/backend/dist/desktop ../../packages/frontend/dist && cargo test --manifest-path src-tauri/Cargo.toml'",
+    "test": "node ./scripts/cargo-runner.mjs test",
     "tauri": "node ./scripts/tauri-wrapper.mjs",
     "tauri:dev": "tauri dev",
     "tauri:dev:dummy": "DESKTOP_RUNTIME_VARIANT=dummy tauri dev -c src-tauri/tauri.dummy.conf.json",
