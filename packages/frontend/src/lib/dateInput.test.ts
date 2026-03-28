@@ -1,16 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { isValidDateTimeInput, toIsoOrEmpty } from "./dateInput";
+import {
+  fromDatePickerValue,
+  toDatePickerValue
+} from "./dateInput";
 
-describe("date input helpers", () => {
-  it("validates datetime-local style values", () => {
-    expect(isValidDateTimeInput("2026-03-18T08:09")).toBe(true);
-    expect(isValidDateTimeInput("")).toBe(false);
-    expect(isValidDateTimeInput("invalid")).toBe(false);
+describe("dateInput date picker helpers", () => {
+  it("converts date strings to/from picker value", () => {
+    const parsed = toDatePickerValue("2026-03-28", "date");
+    expect(parsed?.format("YYYY-MM-DD")).toBe("2026-03-28");
+    expect(fromDatePickerValue(parsed ?? null, "date")).toBe("2026-03-28");
   });
 
-  it("converts valid values to ISO and ignores invalid values", () => {
-    expect(toIsoOrEmpty("2026-03-18T08:09")).toContain("2026-03-18T");
-    expect(toIsoOrEmpty("invalid")).toBe("");
-    expect(toIsoOrEmpty("")).toBe("");
+  it("converts datetime-local strings to/from picker value", () => {
+    const parsed = toDatePickerValue("2026-03-28T09:00", "datetime-local");
+    expect(parsed?.format("YYYY-MM-DDTHH:mm")).toBe("2026-03-28T09:00");
+    expect(fromDatePickerValue(parsed ?? null, "datetime-local")).toBe("2026-03-28T09:00");
+  });
+
+  it("returns null/empty for invalid or empty inputs", () => {
+    expect(toDatePickerValue("", "date")).toBeNull();
+    expect(toDatePickerValue(null, "datetime-local")).toBeNull();
+    expect(toDatePickerValue("not-a-date", "date")).toBeNull();
+    expect(fromDatePickerValue(null, "date")).toBe("");
   });
 });

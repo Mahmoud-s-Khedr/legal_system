@@ -1,7 +1,13 @@
 import { useEffect, useId, useState, type PropsWithChildren, type ReactNode } from "react";
-import { Select } from "antd";
+import { DatePicker, Select } from "antd";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
+import {
+  DATE_PICKER_DATETIME_FORMAT,
+  DATE_PICKER_DATE_FORMAT,
+  fromDatePickerValue,
+  toDatePickerValue
+} from "../../lib/dateInput";
 
 export function PageHeader({
   eyebrow,
@@ -321,6 +327,7 @@ export function Field({
   const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
   const [draftValue, setDraftValue] = useState(value);
   const isBlurCommit = commitMode === "blur";
+  const isDateField = type === "date" || type === "datetime-local";
 
   useEffect(() => {
     if (isBlurCommit) {
@@ -334,32 +341,73 @@ export function Field({
         {label}
         {required && <span className="text-red-500 ms-1" aria-hidden="true">*</span>}
       </label>
-      <input
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
-        id={fieldId}
-        dir={dir}
-        onChange={(event) => {
-          if (isBlurCommit) {
-            setDraftValue(event.target.value);
-            return;
-          }
-          onChange(event.target.value);
-        }}
-        onBlur={() => {
-          if (isBlurCommit && draftValue !== value) {
-            onChange(draftValue);
-          }
-        }}
-        placeholder={placeholder}
-        type={type}
-        autoComplete={autoComplete}
-        minLength={minLength}
-        maxLength={maxLength}
-        value={isBlurCommit ? draftValue : value}
-        aria-invalid={Boolean(error)}
-        aria-describedby={describedBy}
-        required={required}
-      />
+      {isDateField ? (
+        <DatePicker
+          id={fieldId}
+          className="elms-date-picker"
+          classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
+          format={type === "date" ? DATE_PICKER_DATE_FORMAT : DATE_PICKER_DATETIME_FORMAT}
+          value={toDatePickerValue(isBlurCommit ? draftValue : value, type)}
+          onChange={(nextValue) => {
+            const normalized = fromDatePickerValue(nextValue, type);
+            if (isBlurCommit) {
+              setDraftValue(normalized);
+              return;
+            }
+            onChange(normalized);
+          }}
+          onBlur={() => {
+            if (isBlurCommit && draftValue !== value) {
+              onChange(draftValue);
+            }
+          }}
+          placeholder={placeholder}
+          showTime={type === "datetime-local" ? { format: "HH:mm" } : false}
+          needConfirm={false}
+          style={dir && dir !== "auto" ? { direction: dir } : undefined}
+          aria-required={required}
+          aria-invalid={Boolean(error)}
+          aria-describedby={describedBy}
+        />
+      ) : (
+        <input
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+          id={fieldId}
+          dir={dir}
+          onChange={(event) => {
+            if (isBlurCommit) {
+              setDraftValue(event.target.value);
+              return;
+            }
+            onChange(event.target.value);
+          }}
+          onBlur={() => {
+            if (isBlurCommit && draftValue !== value) {
+              onChange(draftValue);
+            }
+          }}
+          placeholder={placeholder}
+          type={type}
+          autoComplete={autoComplete}
+          minLength={minLength}
+          maxLength={maxLength}
+          value={isBlurCommit ? draftValue : value}
+          aria-invalid={Boolean(error)}
+          aria-describedby={describedBy}
+          required={required}
+        />
+      )}
+      {isDateField ? (
+        <input
+          className="sr-only"
+          id={`${fieldId}-required-proxy`}
+          tabIndex={-1}
+          readOnly
+          value={isBlurCommit ? draftValue : value}
+          required={required}
+          aria-hidden="true"
+        />
+      ) : null}
       {hint ? (
         <p className="text-xs text-slate-500" id={hintId}>
           {hint}

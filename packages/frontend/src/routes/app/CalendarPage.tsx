@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import {
   Badge,
   Button,
+  DatePicker,
   Drawer,
   Form,
   Modal,
@@ -37,6 +38,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { apiFetch } from "../../lib/api";
 import { useInvoices } from "../../lib/billing";
+import {
+  DATE_PICKER_DATETIME_FORMAT,
+  fromDatePickerValue,
+  toDatePickerValue
+} from "../../lib/dateInput";
 import {
   EmptyState,
   ErrorState,
@@ -540,12 +546,20 @@ export function CalendarPage() {
             />
           </Form.Item>
           <Form.Item label={t("labels.dueDate")} required>
-            <input
-              className="calendar-input"
-              type="datetime-local"
-              value={toDateTimeLocalValue(quickTaskForm.dueAt ?? "")}
-              onChange={(event) => setQuickTaskForm((current) => ({ ...current, dueAt: event.target.value }))}
-              dir="ltr"
+            <DatePicker
+              className="elms-date-picker"
+              classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
+              showTime={{ format: "HH:mm" }}
+              format={DATE_PICKER_DATETIME_FORMAT}
+              value={toDatePickerValue(toDateTimeLocalValue(quickTaskForm.dueAt ?? ""), "datetime-local")}
+              onChange={(nextValue) =>
+                setQuickTaskForm((current) => ({
+                  ...current,
+                  dueAt: fromDatePickerValue(nextValue, "datetime-local")
+                }))
+              }
+              style={{ direction: "ltr", width: "100%" }}
+              needConfirm={false}
             />
           </Form.Item>
           <Space>
@@ -568,17 +582,20 @@ export function CalendarPage() {
             />
           </Form.Item>
           <Form.Item label={t("labels.sessionDatetime")} required>
-            <input
-              className="calendar-input"
-              type="datetime-local"
-              value={toDateTimeLocalValue(quickHearingForm.sessionDatetime)}
-              onChange={(event) =>
+            <DatePicker
+              className="elms-date-picker"
+              classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
+              showTime={{ format: "HH:mm" }}
+              format={DATE_PICKER_DATETIME_FORMAT}
+              value={toDatePickerValue(toDateTimeLocalValue(quickHearingForm.sessionDatetime), "datetime-local")}
+              onChange={(nextValue) =>
                 setQuickHearingForm((current) => ({
                   ...current,
-                  sessionDatetime: event.target.value
+                  sessionDatetime: fromDatePickerValue(nextValue, "datetime-local")
                 }))
               }
-              dir="ltr"
+              style={{ direction: "ltr", width: "100%" }}
+              needConfirm={false}
             />
           </Form.Item>
           <Space>
@@ -863,17 +880,20 @@ export function CalendarPage() {
               />
             </Form.Item>
             <Form.Item label={t("labels.sessionDatetime")} required>
-              <input
-                className="calendar-input"
-                type="datetime-local"
-                value={toDateTimeLocalValue(quickHearingForm.sessionDatetime)}
-                onChange={(event) =>
+              <DatePicker
+                className="elms-date-picker"
+                classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
+                showTime={{ format: "HH:mm" }}
+                format={DATE_PICKER_DATETIME_FORMAT}
+                value={toDatePickerValue(toDateTimeLocalValue(quickHearingForm.sessionDatetime), "datetime-local")}
+                onChange={(nextValue) =>
                   setQuickHearingForm((current) => ({
                     ...current,
-                    sessionDatetime: event.target.value
+                    sessionDatetime: fromDatePickerValue(nextValue, "datetime-local")
                   }))
                 }
-                dir="ltr"
+                style={{ direction: "ltr", width: "100%" }}
+                needConfirm={false}
               />
             </Form.Item>
             <Form.Item>
@@ -905,12 +925,20 @@ export function CalendarPage() {
               />
             </Form.Item>
             <Form.Item label={t("labels.dueDate")} required>
-              <input
-                className="calendar-input"
-                type="datetime-local"
-                value={toDateTimeLocalValue(quickTaskForm.dueAt ?? "")}
-                onChange={(event) => setQuickTaskForm((current) => ({ ...current, dueAt: event.target.value }))}
-                dir="ltr"
+              <DatePicker
+                className="elms-date-picker"
+                classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
+                showTime={{ format: "HH:mm" }}
+                format={DATE_PICKER_DATETIME_FORMAT}
+                value={toDatePickerValue(toDateTimeLocalValue(quickTaskForm.dueAt ?? ""), "datetime-local")}
+                onChange={(nextValue) =>
+                  setQuickTaskForm((current) => ({
+                    ...current,
+                    dueAt: fromDatePickerValue(nextValue, "datetime-local")
+                  }))
+                }
+                style={{ direction: "ltr", width: "100%" }}
+                needConfirm={false}
               />
             </Form.Item>
             <Form.Item>
