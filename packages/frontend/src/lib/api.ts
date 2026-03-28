@@ -1,6 +1,20 @@
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
+const desktopRuntimeVariant = (import.meta.env.VITE_DESKTOP_RUNTIME_VARIANT as string | undefined) ?? "embedded";
 const LOCAL_SESSION_STORAGE_KEY = "elms.localSessionToken";
+const DESKTOP_BACKEND_BASE_URL_CACHE_KEY = "elms.desktopBackendBaseUrl";
+
+interface DesktopBackendConnection {
+  baseUrl: string | null;
+}
+
+interface DesktopSetBackendConnectionResult {
+  ok: boolean;
+  code?: string | null;
+}
+
+let desktopApiBaseUrlOverride = readDesktopBackendBaseUrlCache();
+let desktopBackendConnectionPromise: Promise<void> | null = null;
 
 export class ApiError extends Error {
   status: number;
@@ -66,12 +80,134 @@ export function clearDesktopLocalSessionToken() {
   persistDesktopLocalSessionToken(null);
 }
 
+function normalizeBaseUrl(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!parsed.host) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function readDesktopBackendBaseUrlCache() {
+  if (!isDesktopShell) {
+    return null;
+  }
+
+  try {
+    return normalizeBaseUrl(window.localStorage.getItem(DESKTOP_BACKEND_BASE_URL_CACHE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function writeDesktopBackendBaseUrlCache(value: string | null) {
+  if (!isDesktopShell) {
+    return;
+  }
+
+  try {
+    if (!value) {
+      window.localStorage.removeItem(DESKTOP_BACKEND_BASE_URL_CACHE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(DESKTOP_BACKEND_BASE_URL_CACHE_KEY, value);
+  } catch {
+    // Ignore storage failures in desktop/webview.
+  }
+}
+
+async function invokeDesktop<T>(command: string, args?: Record<string, unknown>) {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<T>(command, args);
+}
+
+async function loadDesktopBackendConnection() {
+  if (!isDesktopShell) {
+    return;
+  }
+
+  try {
+    const result = await invokeDesktop<DesktopBackendConnection>("desktop_get_backend_connection");
+    desktopApiBaseUrlOverride = normalizeBaseUrl(result.baseUrl);
+    writeDesktopBackendBaseUrlCache(desktopApiBaseUrlOverride);
+  } catch {
+    // Keep cached or fallback value on command failure.
+  }
+}
+
+async function ensureDesktopBackendConnectionLoaded() {
+  if (!isDesktopShell) {
+    return;
+  }
+
+  if (!desktopBackendConnectionPromise) {
+    desktopBackendConnectionPromise = loadDesktopBackendConnection().finally(() => {
+      desktopBackendConnectionPromise = null;
+    });
+  }
+
+  await desktopBackendConnectionPromise;
+}
+
+export async function getEffectiveApiBaseUrl() {
+  await ensureDesktopBackendConnectionLoaded();
+  return desktopApiBaseUrlOverride ?? apiBaseUrl;
+}
+
+export async function setApiBaseUrlOverride(baseUrl: string | null) {
+  const normalized = normalizeBaseUrl(baseUrl);
+
+  if (isDesktopShell) {
+    const result = await invokeDesktop<DesktopSetBackendConnectionResult>(
+      "desktop_set_backend_connection",
+      { baseUrl: normalized }
+    );
+
+    if (!result.ok) {
+      const code = result.code ?? "BACKEND_URL_INVALID";
+      throw new ApiError(code, 400, { code });
+    }
+  }
+
+  desktopApiBaseUrlOverride = normalized;
+  writeDesktopBackendBaseUrlCache(normalized);
+  return normalized;
+}
+
+export function isDummyDesktopRuntime() {
+  return isDesktopShell && desktopRuntimeVariant === "dummy";
+}
+
 export function resolveApiUrl(input: string) {
-  if (!apiBaseUrl || /^https?:\/\//.test(input)) {
+  if (/^https?:\/\//.test(input)) {
     return input;
   }
 
-  return `${apiBaseUrl}${input.startsWith("/") ? input : `/${input}`}`;
+  const baseUrl = desktopApiBaseUrlOverride ?? apiBaseUrl;
+  if (!baseUrl) {
+    return input;
+  }
+
+  return `${baseUrl}${input.startsWith("/") ? input : `/${input}`}`;
 }
 
 function buildAuthHeaders(initHeaders?: HeadersInit) {
@@ -125,6 +261,7 @@ export async function apiFetch<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
+  await ensureDesktopBackendConnectionLoaded();
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
   const shouldSetJsonContentType =
@@ -153,6 +290,7 @@ export async function apiFormFetch<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
+  await ensureDesktopBackendConnectionLoaded();
   const { signal, headers: initHeaders, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
 
@@ -174,6 +312,7 @@ export async function apiDownload(
   input: string,
   init?: RequestInit
 ): Promise<ApiDownloadResult> {
+  await ensureDesktopBackendConnectionLoaded();
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
 

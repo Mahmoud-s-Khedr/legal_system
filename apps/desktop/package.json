@@ -10,7 +10,9 @@
     "test": "bash -lc 'mkdir -p ../../packages/backend/dist/desktop ../../packages/frontend/dist && cargo test --manifest-path src-tauri/Cargo.toml'",
     "tauri": "node ./scripts/tauri-wrapper.mjs",
     "tauri:dev": "tauri dev",
+    "tauri:dev:dummy": "DESKTOP_RUNTIME_VARIANT=dummy tauri dev -c src-tauri/tauri.dummy.conf.json",
     "package:binary": "pnpm tauri build --no-bundle --ci",
+    "package:binary:dummy": "DESKTOP_RUNTIME_VARIANT=dummy tauri build --no-bundle --ci -c src-tauri/tauri.dummy.conf.json",
     "package:linux": "bash ../../scripts/package-desktop-linux.sh",
     "package:windows:cross": "bash ../../scripts/package-desktop-windows-cross.sh"
   },

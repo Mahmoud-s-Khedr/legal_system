@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { Briefcase, FileText, Calendar } from "lucide-react";
 import { EmptyState, PageHeader, SectionCard, StatCard, ErrorState, formatCurrency, formatDate } from "../app/ui";
+import { resolveApiUrl } from "../../lib/api";
 
 interface PortalCase {
   id: string;
@@ -21,7 +22,7 @@ interface PortalInvoice {
 }
 
 async function portalFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "include" });
+  const res = await fetch(resolveApiUrl(url), { credentials: "include" });
   if (!res.ok) throw new Error("request_failed");
   return res.json() as Promise<T>;
 }

@@ -1,5 +1,6 @@
 import { PropsWithChildren, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isDummyDesktopRuntime } from "../../lib/api";
 
 interface BootstrapStatus {
   phase: "starting" | "ready" | "recovering" | "failed";
@@ -32,7 +33,7 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
   }, [status.phase]);
 
   useEffect(() => {
-    if (!isDesktopShell) {
+    if (!isDesktopShell || isDummyDesktopRuntime()) {
       return undefined;
     }
 
@@ -78,7 +79,7 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
     status.phase === "failed" &&
     (failureMessage.includes("P3009") || failureMessage.toLowerCase().includes("migration failed"));
 
-  if (!isDesktopShell || status.phase === "ready") {
+  if (!isDesktopShell || isDummyDesktopRuntime() || status.phase === "ready") {
     return <>{children}</>;
   }
 

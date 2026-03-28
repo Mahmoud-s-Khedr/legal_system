@@ -13,7 +13,7 @@ function run(command, args, options = {}) {
       cwd: options.cwd ?? repoRoot,
       env: options.env ?? process.env,
       stdio: "inherit",
-      shell: options.shell ?? (command === pnpmBin && process.platform === "win32"),
+      shell: options.shell ?? (command === pnpmBin && process.platform === "win32")
     });
 
     child.on("error", rejectRun);
@@ -33,8 +33,6 @@ function run(command, args, options = {}) {
   });
 }
 
-await run(pnpmBin, ["--filter", "@elms/backend", "build:desktop"]);
-await run("node", [resolve(repoRoot, "scripts/verify-desktop-resources.mjs")]);
 await run(
   pnpmBin,
   ["--filter", "@elms/frontend", "build"],
@@ -42,8 +40,8 @@ await run(
     env: {
       ...process.env,
       VITE_DESKTOP_SHELL: "true",
-      VITE_DESKTOP_RUNTIME_VARIANT: "embedded",
-      VITE_API_BASE_URL: "http://127.0.0.1:7854",
-    },
+      VITE_DESKTOP_RUNTIME_VARIANT: "dummy",
+      VITE_API_BASE_URL: ""
+    }
   }
 );

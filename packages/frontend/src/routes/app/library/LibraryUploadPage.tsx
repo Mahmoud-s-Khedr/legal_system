@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import { apiFetch } from "../../../lib/api";
+import { apiFetch, apiFormFetch } from "../../../lib/api";
 import { Field, PageHeader, SectionCard, PrimaryButton, SelectField } from "../ui";
 
 interface CategoryNode {
@@ -75,16 +75,10 @@ export function LibraryUploadPage() {
       const fd = new FormData();
       fd.append("file", file);
       Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
-      const res = await fetch("/api/library/documents/upload", {
+      return apiFormFetch<UploadResult>("/api/library/documents/upload", {
         method: "POST",
-        body: fd,
-        credentials: "include"
+        body: fd
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: t("errors.fallback") }));
-        throw new Error((err as { message?: string }).message ?? t("errors.fallback"));
-      }
-      return res.json() as Promise<UploadResult>;
     },
     onSuccess: (data) => {
       setResult(data);

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { resolveApiUrl } from "../lib/api";
 
 interface PortalUser {
   clientId: string;
@@ -20,7 +21,7 @@ export const usePortalAuthStore = create<PortalAuthState>((set) => ({
 
   bootstrap: async () => {
     try {
-      const res = await fetch("/api/portal/auth/me", { credentials: "include" });
+      const res = await fetch(resolveApiUrl("/api/portal/auth/me"), { credentials: "include" });
       if (res.ok) {
         const data = await res.json() as PortalUser;
         set({ user: data, isBootstrapped: true });
@@ -33,7 +34,7 @@ export const usePortalAuthStore = create<PortalAuthState>((set) => ({
   },
 
   login: async (email: string, firmId: string, password: string) => {
-    const res = await fetch("/api/portal/auth/login", {
+    const res = await fetch(resolveApiUrl("/api/portal/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -48,7 +49,7 @@ export const usePortalAuthStore = create<PortalAuthState>((set) => ({
   },
 
   logout: async () => {
-    await fetch("/api/portal/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
+    await fetch(resolveApiUrl("/api/portal/auth/logout"), { method: "POST", credentials: "include" }).catch(() => {});
     set({ user: null });
   }
 }));

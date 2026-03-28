@@ -9,6 +9,7 @@ import {
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LoginPage } from "./routes/auth/LoginPage";
+import { BackendConnectionPage } from "./routes/auth/BackendConnectionPage";
 import { SetupPage } from "./routes/auth/SetupPage";
 import { DashboardPage } from "./routes/app/DashboardPage";
 import { AppLayout } from "./routes/app/AppLayout";
@@ -141,6 +142,12 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: LoginPage
+});
+
+const backendConnectionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/connection",
+  component: BackendConnectionPage
 });
 
 const setupRoute = createRoute({
@@ -505,6 +512,7 @@ const portalCaseRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
+  backendConnectionRoute,
   setupRoute,
   portalLoginRoute,
   portalRoute.addChildren([

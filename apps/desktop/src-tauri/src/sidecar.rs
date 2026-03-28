@@ -862,6 +862,10 @@ fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir)
 }
 
+pub fn resolve_desktop_app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    resolve_app_data_dir(app)
+}
+
 fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
     let use_workspace_runtime = should_use_workspace_runtime();
     let isolate_workspace_runtime = use_workspace_runtime && workspace_dev_isolation_enabled();

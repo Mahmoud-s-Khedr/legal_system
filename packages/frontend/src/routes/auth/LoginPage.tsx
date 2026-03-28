@@ -79,7 +79,8 @@ export function LoginPage() {
           {loading ? "…" : t("login")}
         </button>
         {error ? <p id="login-form-error" className="sr-only">{error}</p> : null}
-        <div className="flex justify-end text-sm text-slate-600">
+        <div className="flex justify-between text-sm text-slate-600">
+          <Link className="transition hover:text-accent" to="/connection">{t("backendConnection.link")}</Link>
           <Link className="transition hover:text-accent" to="/setup">{t("desktopSetupLink")}</Link>
         </div>
       </form>

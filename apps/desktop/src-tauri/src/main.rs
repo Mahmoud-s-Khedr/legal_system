@@ -1,8 +1,38 @@
+mod backend_connection;
 mod desktop_downloads;
 mod ppo_portal;
 mod sidecar;
 
 use tauri::Manager;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DesktopRuntimeVariant {
+    Embedded,
+    Dummy,
+}
+
+fn runtime_variant_from_identifier(identifier: &str) -> DesktopRuntimeVariant {
+    if identifier.ends_with(".dummy") {
+        return DesktopRuntimeVariant::Dummy;
+    }
+
+    DesktopRuntimeVariant::Embedded
+}
+
+fn runtime_variant() -> DesktopRuntimeVariant {
+    if let Some(value) = std::env::var("DESKTOP_RUNTIME_VARIANT")
+        .ok()
+        .map(|value| value.trim().to_ascii_lowercase())
+    {
+        return if value == "dummy" {
+            DesktopRuntimeVariant::Dummy
+        } else {
+            DesktopRuntimeVariant::Embedded
+        };
+    }
+
+    runtime_variant_from_identifier("com.elms.desktop")
+}
 
 fn main() {
     tauri::Builder::default()
@@ -14,6 +44,8 @@ fn main() {
             sidecar::retry_bootstrap,
             sidecar::repair_bootstrap_migrations,
             sidecar::reset_local_database,
+            backend_connection::desktop_get_backend_connection,
+            backend_connection::desktop_set_backend_connection,
             desktop_downloads::desktop_get_download_settings,
             desktop_downloads::desktop_choose_download_directory,
             desktop_downloads::desktop_reset_download_directory,
@@ -22,13 +54,25 @@ fn main() {
             ppo_portal::ppo_portal_navigate
         ])
         .setup(|app| {
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                sidecar::start_runtime_bootstrap(&handle);
-            });
+            let app_identifier = app.config().identifier.clone();
+            let variant = match runtime_variant() {
+                DesktopRuntimeVariant::Dummy => DesktopRuntimeVariant::Dummy,
+                DesktopRuntimeVariant::Embedded => runtime_variant_from_identifier(&app_identifier),
+            };
+
+            if variant == DesktopRuntimeVariant::Embedded {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    sidecar::start_runtime_bootstrap(&handle);
+                });
+            }
 
             if let Some(window) = app.get_webview_window("main") {
-                window.set_title("ELMS")?;
+                if variant == DesktopRuntimeVariant::Dummy {
+                    window.set_title("ELMS Dummy Client")?;
+                } else {
+                    window.set_title("ELMS")?;
+                }
             }
 
             Ok(())
@@ -37,7 +81,15 @@ fn main() {
         .expect("failed to build ELMS desktop shell")
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
-                sidecar::shutdown_runtime(app);
+                let variant = match runtime_variant() {
+                    DesktopRuntimeVariant::Dummy => DesktopRuntimeVariant::Dummy,
+                    DesktopRuntimeVariant::Embedded => {
+                        runtime_variant_from_identifier(&app.config().identifier)
+                    }
+                };
+                if variant == DesktopRuntimeVariant::Embedded {
+                    sidecar::shutdown_runtime(app);
+                }
             }
         });
 }
