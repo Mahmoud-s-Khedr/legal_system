@@ -50,19 +50,19 @@ const EDITION_CAPABILITIES: Record<EditionKey, EditionCapability> = {
     features: ONLINE_FEATURES,
     seatLimit: 1,
     aiMonthlyLimit: 500,
-    trialEnabled: false
+    trialEnabled: true
   },
   [EditionKey.LOCAL_FIRM_OFFLINE]: {
     features: new Set<EditionFeature>(["multi_user"]),
     seatLimit: null,
     aiMonthlyLimit: null,
-    trialEnabled: false
+    trialEnabled: true
   },
   [EditionKey.LOCAL_FIRM_ONLINE]: {
     features: new Set<EditionFeature>(["multi_user", ...ONLINE_FEATURES]),
     seatLimit: null,
     aiMonthlyLimit: 2_000,
-    trialEnabled: false
+    trialEnabled: true
   },
   [EditionKey.ENTERPRISE]: {
     features: new Set<EditionFeature>([
