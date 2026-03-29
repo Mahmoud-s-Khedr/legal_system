@@ -31,10 +31,9 @@ export function registerLicenseAccessGuard(app: FastifyInstance) {
       return;
     }
 
-    const hasPendingEdition = actor.pendingEditionKey != null;
     const trialEnabled = isTrialEnabled(actor.editionKey);
 
-    if (!hasPendingEdition && trialEnabled) {
+    if (trialEnabled) {
       return;
     }
 

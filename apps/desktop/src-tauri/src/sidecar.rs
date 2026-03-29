@@ -20,6 +20,10 @@ const MAX_BACKEND_RESTARTS: u8 = 3;
 const BACKEND_SHUTDOWN_GRACE_PERIOD: Duration = Duration::from_secs(5);
 const POSTGRES_COMMAND_TIMEOUT: Duration = Duration::from_secs(30);
 const PRISMA_ENGINE_RECURSIVE_SEARCH_DEPTH: usize = 6;
+/// Name of the latest migration in prisma/migrations. Update this whenever a
+/// new migration is added — the marker file written after a successful run lets
+/// the next startup skip the Prisma CLI spawn entirely.
+const LATEST_MIGRATION_NAME: &str = "0013_pending_edition_key";
 const PRISMA_QUERY_ENGINE_PREFIXES: &[&str] = &["libquery_engine", "query_engine"];
 
 const PRISMA_RUNTIME_PACKAGES: &[&str] = &[
@@ -509,21 +513,37 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     )?;
 
     inner.set_status("starting", Some("Applying database migrations".to_string()));
-    let skip_migrations = desktop_env
-        .get("ELMS_SKIP_MIGRATIONS")
-        .map(|value| parse_truthy(value))
-        .unwrap_or_else(|| {
-            std::env::var("ELMS_SKIP_MIGRATIONS")
-                .ok()
-                .map(|value| parse_truthy(&value))
-                .unwrap_or(false)
-        });
+    let migration_version_file = app_data_dir.join("migration_version");
+    let schema_already_current = !allow_migration_repair
+        && fs::read_to_string(&migration_version_file)
+            .map(|v| v.trim() == LATEST_MIGRATION_NAME)
+            .unwrap_or(false);
+
+    let skip_migrations = schema_already_current
+        || desktop_env
+            .get("ELMS_SKIP_MIGRATIONS")
+            .map(|value| parse_truthy(value))
+            .unwrap_or_else(|| {
+                std::env::var("ELMS_SKIP_MIGRATIONS")
+                    .ok()
+                    .map(|value| parse_truthy(&value))
+                    .unwrap_or(false)
+            });
 
     if skip_migrations {
-        log_startup_diagnostic(
-            &bootstrap_log_file,
-            "Skipping database migrations (ELMS_SKIP_MIGRATIONS=1)",
-        );
+        if schema_already_current {
+            log_startup_diagnostic(
+                &bootstrap_log_file,
+                &format!(
+                    "Skipping database migrations (schema is current: {LATEST_MIGRATION_NAME})"
+                ),
+            );
+        } else {
+            log_startup_diagnostic(
+                &bootstrap_log_file,
+                "Skipping database migrations (ELMS_SKIP_MIGRATIONS=1)",
+            );
+        }
     } else {
         log_startup_diagnostic(&bootstrap_log_file, "Applying database migrations");
         run_db_migration(
@@ -539,6 +559,18 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             );
             error
         })?;
+        // Write a version marker so the next startup can skip this step.
+        if let Err(e) = fs::write(&migration_version_file, LATEST_MIGRATION_NAME) {
+            append_bootstrap_log_line(
+                &bootstrap_log_file,
+                &format!("Warning: could not write migration version marker: {e}"),
+            );
+        } else {
+            log_startup_diagnostic(
+                &bootstrap_log_file,
+                &format!("Migration version marker written: {LATEST_MIGRATION_NAME}"),
+            );
+        }
     }
 
     let backend_port = desktop_env
@@ -571,9 +603,16 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     }
 
     if is_local_port_listening(backend_port) {
-        return Err(format!(
-            "Desktop backend port 127.0.0.1:{backend_port} is already in use by another process that did not present a valid desktop bootstrap token"
-        ));
+        append_bootstrap_log_line(
+            &bootstrap_log_file,
+            &format!("Port {backend_port} is occupied by a stale process; attempting to free it"),
+        );
+        if !try_free_port(backend_port) {
+            return Err(format!(
+                "Desktop backend port 127.0.0.1:{backend_port} is already in use by another process that did not present a valid desktop bootstrap token"
+            ));
+        }
+        log_startup_diagnostic(&bootstrap_log_file, &format!("Port {backend_port} freed successfully"));
     }
 
     inner.set_status("starting", Some("Launching local backend".to_string()));
@@ -802,10 +841,12 @@ fn recover_backend(
             .unwrap_or(7854);
 
         if is_local_port_listening(backend_port) {
-            last_error = format!(
-                "Desktop backend port 127.0.0.1:{backend_port} is already in use by another process that did not present a valid desktop bootstrap token"
-            );
-            break;
+            if !try_free_port(backend_port) {
+                last_error = format!(
+                    "Desktop backend port 127.0.0.1:{backend_port} is already in use by another process that did not present a valid desktop bootstrap token"
+                );
+                break;
+            }
         }
 
         match spawn_backend(&launch).and_then(|child| {
@@ -1407,7 +1448,7 @@ fn wait_for_postgres(
             return Err("Embedded PostgreSQL failed to become ready".to_string());
         }
 
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(100));
     }
 }
 
@@ -2017,6 +2058,69 @@ fn health_request(port: u16, expected_bootstrap_token: Option<&str>) -> Result<b
 fn is_local_port_listening(port: u16) -> bool {
     let address = SocketAddr::from(([127, 0, 0, 1], port));
     TcpStream::connect_timeout(&address, Duration::from_millis(250)).is_ok()
+}
+
+/// Attempt to kill whatever process is holding `port` and wait up to 1 s for
+/// the port to be released. Returns `true` if the port is free afterwards.
+fn try_free_port(port: u16) -> bool {
+    #[cfg(windows)]
+    {
+        // netstat -ano lists TCP connections with their owning PIDs.
+        let output = Command::new("netstat")
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .args(["-a", "-n", "-o", "-p", "TCP"])
+            .output();
+
+        if let Ok(output) = output {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let needle = format!(":{port}");
+            for line in stdout.lines() {
+                // Only match lines where our port appears in the local address
+                // column and the connection is in LISTENING state.
+                let upper = line.to_ascii_uppercase();
+                if !upper.contains("LISTENING") {
+                    continue;
+                }
+                // Columns: Proto  Local  Foreign  State  PID
+                let cols: Vec<&str> = line.split_whitespace().collect();
+                if cols.len() < 5 {
+                    continue;
+                }
+                // cols[1] is the local address (e.g. "0.0.0.0:7854")
+                if !cols[1].ends_with(&needle) {
+                    continue;
+                }
+                if let Ok(pid) = cols[4].parse::<u32>() {
+                    if pid > 0 {
+                        let _ = Command::new("taskkill")
+                            .creation_flags(0x08000000)
+                            .args(["/PID", &pid.to_string(), "/F"])
+                            .status();
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    {
+        // fuser -k <port>/tcp sends SIGKILL to every process bound to the port.
+        let _ = Command::new("fuser")
+            .args(["-k", &format!("{port}/tcp")])
+            .status();
+    }
+
+    // Give the OS up to 1 s to reclaim the port.
+    let deadline = Instant::now() + Duration::from_secs(1);
+    loop {
+        if !is_local_port_listening(port) {
+            return true;
+        }
+        if Instant::now() >= deadline {
+            return false;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
 }
 
 fn show_main_window(app: &AppHandle) -> Result<(), String> {

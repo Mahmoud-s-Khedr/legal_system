@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 mod backend_connection;
 mod desktop_downloads;
 mod ppo_portal;

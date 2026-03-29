@@ -48,7 +48,7 @@ export async function getCurrentFirm(actor: SessionUser): Promise<FirmMeResponse
         lifecycleStatus: firm.lifecycleStatus as FirmMeResponseDto["firm"]["lifecycleStatus"],
         isLicensed: firm.lifecycleStatus === FirmLifecycleStatus.LICENSED,
         licenseRequired:
-          (firm.pendingEditionKey != null || !isTrialEnabled(firm.editionKey)) &&
+          !isTrialEnabled(firm.editionKey) &&
           firm.lifecycleStatus !== FirmLifecycleStatus.LICENSED,
         trialEndsAt,
         graceEndsAt: firm.graceEndsAt?.toISOString() ?? null,
