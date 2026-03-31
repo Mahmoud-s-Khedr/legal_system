@@ -333,12 +333,10 @@ pub fn start_runtime_bootstrap(app: &AppHandle) {
         match result {
             Ok(()) => {
                 inner.set_status("ready", Some("Desktop runtime ready".to_string()));
-                let _ = show_main_window(&app_handle);
                 start_monitor_loop(app_handle, inner);
             }
             Err(error) => {
                 inner.set_status("failed", Some(error));
-                let _ = show_main_window(&app_handle);
             }
         }
     });
@@ -370,6 +368,7 @@ pub fn shutdown_runtime(app: &AppHandle) {
 
 fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<(), String> {
     bootstrap_log("Starting runtime bootstrap sequence");
+    let bootstrap_started_at = Instant::now();
 
     shutdown_existing_runtime(app, inner)?;
 
@@ -512,6 +511,14 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         },
     )?;
 
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "PostgreSQL ready after {}ms",
+            bootstrap_started_at.elapsed().as_millis()
+        ),
+    );
+
     inner.set_status("starting", Some("Applying database migrations".to_string()));
     let migration_version_file = app_data_dir.join("migration_version");
     let schema_already_current = !allow_migration_repair
@@ -572,6 +579,14 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             );
         }
     }
+
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Migrations complete after {}ms",
+            bootstrap_started_at.elapsed().as_millis()
+        ),
+    );
 
     let backend_port = desktop_env
         .get("BACKEND_PORT")
@@ -689,7 +704,20 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         &format!("port={backend_port}"),
     );
 
-    log_startup_diagnostic(&bootstrap_log_file, "Desktop runtime bootstrap completed");
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Backend healthy after {}ms",
+            bootstrap_started_at.elapsed().as_millis()
+        ),
+    );
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Desktop runtime bootstrap completed in {}ms total",
+            bootstrap_started_at.elapsed().as_millis()
+        ),
+    );
 
     let mut runtime = inner
         .runtime
@@ -2023,7 +2051,7 @@ fn wait_for_backend_health(env: &HashMap<String, String>) -> Result<(), String> 
             ));
         }
 
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(100));
     }
 }
 

@@ -9,8 +9,17 @@ interface BootstrapStatus {
 
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
 
+let tauriCorePromise: Promise<typeof import("@tauri-apps/api/core")> | null = null;
+
+function getTauriCore() {
+  if (!tauriCorePromise) {
+    tauriCorePromise = import("@tauri-apps/api/core");
+  }
+  return tauriCorePromise;
+}
+
 async function invokeDesktopCommand<T>(command: string): Promise<T> {
-  const { invoke } = await import("@tauri-apps/api/core");
+  const { invoke } = await getTauriCore();
   return invoke<T>(command);
 }
 

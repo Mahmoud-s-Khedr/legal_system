@@ -19,7 +19,8 @@
         "width": 1440,
         "height": 960,
         "resizable": true,
-        "visible": false
+        "visible": true,
+        "backgroundColor": "#f7f3ec"
       }
     ]
   },
