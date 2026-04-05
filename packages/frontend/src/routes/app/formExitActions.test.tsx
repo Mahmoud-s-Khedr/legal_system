@@ -3,8 +3,13 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FormExitActions } from "./ui";
 
+type MockLinkProps = {
+  to: string;
+  children: React.ReactNode;
+} & Omit<React.ComponentPropsWithoutRef<"a">, "href">;
+
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ to, children, ...props }: { to: string; children: any }) => (
+  Link: ({ to, children, ...props }: MockLinkProps) => (
     <a href={to} {...props}>{children}</a>
   )
 }));
