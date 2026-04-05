@@ -686,7 +686,10 @@ mod tests {
             ppo_screenshot_error_message(PPO_WINDOW_NOT_OPEN),
             "PPO window is not open."
         );
-        assert_eq!(ppo_screenshot_error_message("UNKNOWN"), "Screenshot failed.");
+        assert_eq!(
+            ppo_screenshot_error_message("UNKNOWN"),
+            "Screenshot failed."
+        );
     }
 
     #[test]

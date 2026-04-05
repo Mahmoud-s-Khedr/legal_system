@@ -627,7 +627,10 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
                 "Desktop backend port 127.0.0.1:{backend_port} is already in use by another process that did not present a valid desktop bootstrap token"
             ));
         }
-        log_startup_diagnostic(&bootstrap_log_file, &format!("Port {backend_port} freed successfully"));
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            &format!("Port {backend_port} freed successfully"),
+        );
     }
 
     inner.set_status("starting", Some("Launching local backend".to_string()));
@@ -868,13 +871,11 @@ fn recover_backend(
             .and_then(|value| value.parse::<u16>().ok())
             .unwrap_or(7854);
 
-        if is_local_port_listening(backend_port) {
-            if !try_free_port(backend_port) {
-                last_error = format!(
-                    "Desktop backend port 127.0.0.1:{backend_port} is already in use by another process that did not present a valid desktop bootstrap token"
-                );
-                break;
-            }
+        if is_local_port_listening(backend_port) && !try_free_port(backend_port) {
+            last_error = format!(
+                "Desktop backend port 127.0.0.1:{backend_port} is already in use by another process that did not present a valid desktop bootstrap token"
+            );
+            break;
         }
 
         match spawn_backend(&launch).and_then(|child| {
