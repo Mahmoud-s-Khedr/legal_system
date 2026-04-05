@@ -55,7 +55,7 @@ Copy `.env.example` to `.env` and fill in the values relevant to your deployment
 |---|---|---|---|---|
 | `STORAGE_DRIVER` | string | `local` | No | Set to `r2` to use Cloudflare R2 for document storage |
 | `MAX_UPLOAD_BYTES` | number | `52428800` | No | Maximum allowed file upload size in bytes (default 50 MB) |
-| `LOCAL_STORAGE_PATH` | string | `./uploads` | No | Filesystem path for locally-stored uploads when `STORAGE_DRIVER=local` |
+| `LOCAL_STORAGE_PATH` | string | `./uploads` | No | Filesystem path for locally-stored uploads when `STORAGE_DRIVER=local`. In packaged desktop releases, this is forced to `<app-data>/uploads` to avoid install-directory writes. |
 | `R2_ACCOUNT_ID` | string | — | R2 only | Cloudflare account ID |
 | `R2_ACCESS_KEY_ID` | string | — | R2 only | R2 access key |
 | `R2_SECRET_ACCESS_KEY` | string | — | R2 only | R2 secret key |
@@ -159,4 +159,3 @@ This behavior only validates compose configuration rendering. It does not replac
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

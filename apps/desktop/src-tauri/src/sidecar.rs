@@ -451,7 +451,8 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
     }
 
-    if !should_use_workspace_runtime() {
+    let use_workspace_runtime = should_use_workspace_runtime();
+    if !use_workspace_runtime {
         validate_packaged_runtime_resources(app, &bootstrap_log_file)?;
     }
 
@@ -461,9 +462,11 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         "ELMS_DESKTOP_BOOTSTRAP_TOKEN".to_string(),
         bootstrap_token.clone(),
     );
-    desktop_env
-        .entry("LOCAL_STORAGE_PATH".to_string())
-        .or_insert_with(|| app_data_dir.join("uploads").to_string_lossy().into_owned());
+    let storage_path_forced = apply_desktop_storage_path_policy(
+        &mut desktop_env,
+        &app_data_dir,
+        use_workspace_runtime,
+    );
     desktop_env
         .entry("LOCAL_SESSION_STORE_PATH".to_string())
         .or_insert_with(|| {
@@ -473,6 +476,17 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
                 .to_string_lossy()
                 .into_owned()
         });
+    if let Some(local_storage_path) = desktop_env.get("LOCAL_STORAGE_PATH") {
+        let source = if storage_path_forced {
+            "forced-app-data (packaged)"
+        } else {
+            "env/default (workspace)"
+        };
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            &format!("Effective LOCAL_STORAGE_PATH: {local_storage_path} (source={source})"),
+        );
+    }
     log_startup_diagnostic(
         &bootstrap_log_file,
         "Configured desktop bootstrap token for backend identity verification",
@@ -934,6 +948,24 @@ fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 
 pub fn resolve_desktop_app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     resolve_app_data_dir(app)
+}
+
+fn apply_desktop_storage_path_policy(
+    env: &mut HashMap<String, String>,
+    app_data_dir: &Path,
+    use_workspace_runtime: bool,
+) -> bool {
+    let app_data_uploads_dir = app_data_dir.join("uploads").to_string_lossy().into_owned();
+
+    if use_workspace_runtime {
+        env.entry("LOCAL_STORAGE_PATH".to_string())
+            .or_insert(app_data_uploads_dir);
+        return false;
+    }
+
+    // Packaged runtime must never write under the install/resource directory.
+    env.insert("LOCAL_STORAGE_PATH".to_string(), app_data_uploads_dir);
+    true
 }
 
 fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
@@ -2870,6 +2902,7 @@ pub(crate) fn strip_unc_prefix(path: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    use super::apply_desktop_storage_path_policy;
     use super::workspace_backend_launch;
     use std::collections::HashMap;
     use std::path::Path;
@@ -2916,6 +2949,40 @@ mod tests {
                 .iter()
                 .any(|arg| arg == "pnpm" || arg == "@elms/backend" || arg == "dev:local"),
             "workspace launch should not go through pnpm"
+        );
+    }
+
+    #[test]
+    fn packaged_runtime_forces_local_storage_path_to_app_data() {
+        let app_data_dir = PathBuf::from("/tmp/elms-app-data");
+        let mut env = HashMap::from([(
+            "LOCAL_STORAGE_PATH".to_string(),
+            "./uploads".to_string(),
+        )]);
+
+        let forced = apply_desktop_storage_path_policy(&mut env, &app_data_dir, false);
+
+        assert!(forced);
+        assert_eq!(
+            env.get("LOCAL_STORAGE_PATH"),
+            Some(&app_data_dir.join("uploads").to_string_lossy().into_owned())
+        );
+    }
+
+    #[test]
+    fn workspace_runtime_keeps_existing_local_storage_path() {
+        let app_data_dir = PathBuf::from("/tmp/elms-app-data");
+        let mut env = HashMap::from([(
+            "LOCAL_STORAGE_PATH".to_string(),
+            "./uploads".to_string(),
+        )]);
+
+        let forced = apply_desktop_storage_path_policy(&mut env, &app_data_dir, true);
+
+        assert!(!forced);
+        assert_eq!(
+            env.get("LOCAL_STORAGE_PATH"),
+            Some(&"./uploads".to_string())
         );
     }
 }
