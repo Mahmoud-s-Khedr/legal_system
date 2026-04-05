@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import type { HearingListResponseDto } from "@elms/shared";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { SessionOutcome, type HearingListResponseDto, type HearingDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import {
   DataTable,
@@ -22,6 +23,42 @@ import {
   TableWrapper,
   formatDateTime
 } from "./ui";
+
+function OutcomeCell({ hearing }: { hearing: HearingDto }) {
+  const { t } = useTranslation("app");
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (outcome: SessionOutcome | null) =>
+      apiFetch(`/api/hearings/${hearing.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          caseId: hearing.caseId,
+          assignedLawyerId: hearing.assignedLawyerId,
+          sessionDatetime: hearing.sessionDatetime,
+          nextSessionAt: hearing.nextSessionAt,
+          outcome,
+          notes: hearing.notes
+        })
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hearings-management"] })
+  });
+
+  return (
+    <select
+      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 focus:border-accent focus:outline-none disabled:opacity-50"
+      disabled={mutation.isPending}
+      onChange={(e) => mutation.mutate((e.target.value || null) as SessionOutcome | null)}
+      value={hearing.outcome ?? ""}
+    >
+      <option value="">—</option>
+      {Object.values(SessionOutcome).map((v) => (
+        <option key={v} value={v}>
+          {getEnumLabel(t, "SessionOutcome", v)}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export function HearingsPage() {
   const { t } = useTranslation("app");
@@ -104,7 +141,7 @@ export function HearingsPage() {
                       <TableCell>{hearing.caseTitle}</TableCell>
                       <TableCell>{formatDateTime(hearing.sessionDatetime)}</TableCell>
                       <TableCell>{hearing.assignedLawyerName ?? t("labels.unassigned")}</TableCell>
-                      <TableCell>{hearing.outcome ?? "—"}</TableCell>
+                      <TableCell><OutcomeCell hearing={hearing} /></TableCell>
                       <TableCell align="end">
                         <Link
                           className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"

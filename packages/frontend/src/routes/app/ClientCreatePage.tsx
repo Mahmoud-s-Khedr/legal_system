@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ClientType, Language, type CreateClientDto } from "@elms/shared";
+import { ClientType, Language, type ClientListResponseDto, type CreateClientDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
@@ -64,6 +65,26 @@ export function ClientCreatePage() {
     contacts: []
   });
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  useUnsavedChanges(form.name !== "" || form.type !== "");
+
+  const dupCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const checkDuplicate = useCallback(async (q: string) => {
+    if (!q.trim()) return;
+    const result = await apiFetch<ClientListResponseDto>(`/api/clients?q=${encodeURIComponent(q.trim())}&limit=1`);
+    if (result.items.length > 0) {
+      setDuplicateWarning(t("clients.duplicateWarning", { name: result.items[0].name }));
+    } else {
+      setDuplicateWarning(null);
+    }
+  }, [t]);
+
+  function scheduleCheck(q: string) {
+    if (dupCheckTimer.current) clearTimeout(dupCheckTimer.current);
+    setDuplicateWarning(null);
+    dupCheckTimer.current = setTimeout(() => { void checkDuplicate(q); }, 500);
+  }
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateClientDto) =>
@@ -118,7 +139,7 @@ export function ClientCreatePage() {
                 <Field
                   dir="ltr"
                   label={t("labels.email")}
-                  onChange={(value) => setForm({ ...form, email: value })}
+                  onChange={(value) => { setForm({ ...form, email: value }); scheduleCheck(value); }}
                   type="email"
                   value={form.email ?? ""}
                 />
@@ -150,7 +171,7 @@ export function ClientCreatePage() {
                 <Field
                   dir="ltr"
                   label={t("labels.nationalId")}
-                  onChange={(value) => setForm({ ...form, nationalId: value })}
+                  onChange={(value) => { setForm({ ...form, nationalId: value }); scheduleCheck(value); }}
                   value={form.nationalId ?? ""}
                 />
               ) : null}
@@ -171,6 +192,19 @@ export function ClientCreatePage() {
                 </div>
               ) : null}
             </>
+          ) : null}
+          {duplicateWarning ? (
+            <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <span>{duplicateWarning}</span>
+              <button
+                type="button"
+                className="shrink-0 text-amber-500 hover:text-amber-700"
+                onClick={() => setDuplicateWarning(null)}
+                aria-label={t("actions.dismiss")}
+              >
+                ✕
+              </button>
+            </div>
           ) : null}
           <PrimaryButton type="submit">{t("actions.createClient")}</PrimaryButton>
           {validationMessage ? <FormAlert message={validationMessage} /> : null}

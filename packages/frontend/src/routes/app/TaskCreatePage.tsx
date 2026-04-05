@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   TaskPriority,
@@ -30,6 +31,8 @@ export function TaskCreatePage() {
     assignedToId: "",
     dueAt: ""
   });
+
+  useUnsavedChanges(form.title !== "");
 
   const casesQuery = useQuery({
     queryKey: ["cases"],

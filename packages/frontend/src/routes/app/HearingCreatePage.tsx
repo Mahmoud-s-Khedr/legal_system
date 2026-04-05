@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   SessionOutcome,
@@ -38,6 +39,8 @@ export function HearingCreatePage() {
     outcome: null,
     notes: ""
   });
+  useUnsavedChanges(!!form.notes || form.outcome !== null);
+
   const [debouncedConflictInput, setDebouncedConflictInput] = useState({
     assignedLawyerId: "",
     sessionDatetime: ""

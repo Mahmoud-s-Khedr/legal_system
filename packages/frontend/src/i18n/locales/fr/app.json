@@ -1,4 +1,7 @@
 {
+  "unsavedChanges": {
+    "confirmLeave": "Vous avez des modifications non sauvegardées. Quitter et les abandonner ?"
+  },
   "errors": {
     "title": "Une erreur s'est produite",
     "fallback": "Une erreur inattendue s'est produite. Veuillez réessayer.",
@@ -29,6 +32,7 @@
     "saveChanges": "Enregistrer les modifications",
     "newClient": "Nouveau client",
     "newCase": "Nouveau dossier",
+    "quickIntake": "Saisie rapide",
     "newHearing": "Nouvelle audience",
     "newTask": "Nouvelle tâche",
     "newUser": "Nouvel utilisateur",
@@ -53,7 +57,8 @@
     "close": "Fermer",
     "uploadAnother": "Téléverser un autre",
     "showIndexedText": "Afficher le texte indexé",
-    "copyText": "Copier le texte"
+    "copyText": "Copier le texte",
+    "markDone": "Marquer comme fait"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -106,6 +111,7 @@
     "title": "Titre",
     "caseNumber": "Numéro du dossier",
     "internalReference": "Référence interne",
+    "judicialYear": "Année judiciaire",
     "caseType": "Type de dossier",
     "courtLevel": "Niveau du tribunal",
     "courtName": "Nom du tribunal",
@@ -126,6 +132,7 @@
     "nextSession": "Audience suivante",
     "outcome": "Résultat",
     "notes": "Notes",
+    "advancedOptions": "Options avancées",
     "none": "Aucun",
     "all": "Tous",
     "description": "Description",
@@ -151,7 +158,10 @@
     "caseIdPlaceholder": "Collez l'UUID du dossier (optionnel)",
     "clientId": "ID du client",
     "clientIdPlaceholder": "Collez l'UUID du client (optionnel)",
-    "sort": "Trier"
+    "sort": "Trier",
+    "lawyer": "Avocat",
+    "from": "Du",
+    "to": "Au"
   },
   "empty": {
     "noHearings": "Aucune audience",
@@ -341,7 +351,8 @@
     "contacts": "Contacts secondaires",
     "contactsHelp": "Personnes liées à cette fiche client.",
     "editTitle": "Modifier le client",
-    "editHelp": "Mettez à jour les informations d'identité et de contact du client."
+    "editHelp": "Mettez à jour les informations d'identité et de contact du client.",
+    "duplicateWarning": "Un client avec ces informations existe déjà : {{name}}"
   },
   "cases": {
     "eyebrow": "Gestion des dossiers",
@@ -386,7 +397,59 @@
     "relatedHearingsHelp": "Audiences enregistrées pour ce dossier.",
     "relatedTasks": "Tâches liées",
     "relatedTasksHelp": "Tâches ouvertes rattachées à ce dossier.",
-    "searchPlaceholder": "Rechercher par titre ou numéro de dossier"
+    "searchPlaceholder": "Rechercher par titre ou numéro de dossier",
+    "assignedToMe": "Assigné à moi"
+  },
+  "quickIntake": {
+    "title": "Saisie rapide de dossier",
+    "description": "Sélectionnez ou créez un client, puis créez le dossier sur une seule page.",
+    "clientStepTitle": "Étape 1 — Client",
+    "clientStepHelp": "Utilisez un client existant ou créez-en un en ligne avant de créer le dossier.",
+    "caseStepTitle": "Étape 2 — Dossier",
+    "caseStepHelp": "Renseignez les informations essentielles pour ouvrir le dossier.",
+    "useExistingClient": "Utiliser un client existant",
+    "createClientInline": "Créer un nouveau client",
+    "submit": "Créer le dossier",
+    "submitAll": "Créer le dossier et enregistrer toutes les sections",
+    "reviewTitle": "Revue finale",
+    "reviewHelp": "Le client et la fiche dossier sont obligatoires. Les autres sections sont facultatives et seront enregistrées si remplies.",
+    "requiredStatus": "Champs obligatoires",
+    "requiredReady": "Prêt",
+    "requiredMissing": "Champs obligatoires manquants",
+    "optionalSummary": "Entrées facultatives en attente — Juridictions : {{courts}}, Parties : {{parties}}, Assignations : {{assignments}}, Audiences : {{hearings}}, Tâches : {{tasks}}, Documents : {{documents}}",
+    "savedWithIssues": "Le dossier a été créé, mais certaines sections ont échoué : {{sections}}",
+    "openCreatedCase": "Ouvrir le dossier créé",
+    "courtsHelp": "Ajoutez une ou plusieurs étapes de juridiction (optionnel).",
+    "partiesHelp": "Ajoutez les parties et les informations du conseil adverse (optionnel).",
+    "assignmentsHelp": "Assignez des membres de l'équipe au dossier (optionnel).",
+    "statusHelp": "Définissez un statut non par défaut et une note facultative (optionnel).",
+    "hearingsHelp": "Ajoutez des audiences initiales liées à ce dossier (optionnel).",
+    "tasksHelp": "Ajoutez des tâches de suivi liées à ce dossier (optionnel).",
+    "documentsHelp": "Préparez les fichiers à téléverser après création du dossier (optionnel).",
+    "addCourt": "Ajouter une étape de juridiction",
+    "addParty": "Ajouter une partie",
+    "addAssignment": "Ajouter une assignation",
+    "addHearing": "Ajouter une audience",
+    "addTask": "Ajouter une tâche",
+    "addDocument": "Ajouter un document",
+    "noCasePermission": "Vous n'avez pas la permission de créer des dossiers.",
+    "noClientReadPermission": "Vous n'avez pas la permission de sélectionner des clients existants.",
+    "noClientCreatePermission": "Vous n'avez pas la permission de créer des clients.",
+    "section": {
+      "client": "Client",
+      "case": "Fiche dossier",
+      "courts": "Étapes judiciaires",
+      "parties": "Parties",
+      "assignments": "Assignations d'équipe",
+      "status": "Statut actuel",
+      "hearings": "Audiences",
+      "tasks": "Tâches",
+      "documents": "Documents"
+    },
+    "validation": {
+      "clientRequired": "Veuillez sélectionner un client.",
+      "caseRequired": "Le titre, le numéro et le type du dossier sont obligatoires."
+    }
   },
   "lookups": {
     "title": "Options de listes",
@@ -672,7 +735,13 @@
     "placeholder": "Rechercher des documents en arabe, anglais ou français",
     "noResults": "Aucun résultat",
     "noResultsHelp": "Essayez une autre requête ou téléversez et indexez davantage de documents.",
-    "rankLabel": "résultats"
+    "rankLabel": "résultats",
+    "commandPlaceholder": "Rechercher ou saisir une commande…",
+    "quickActions": "Actions rapides",
+    "navigate": "naviguer",
+    "select": "sélectionner",
+    "dismiss": "fermer",
+    "advancedSearch": "Recherche avancée"
   },
   "enums": {
     "TaskStatus": {

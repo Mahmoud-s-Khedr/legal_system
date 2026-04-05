@@ -11,6 +11,7 @@ const BREADCRUMB_META: BreadcrumbMeta[] = [
   { pattern: /^\/app\/clients\/[^/]+\/edit$/, labelKey: "actions.edit" },
   { pattern: /^\/app\/cases$/, labelKey: "nav.cases" },
   { pattern: /^\/app\/cases\/new$/, labelKey: "actions.newCase" },
+  { pattern: /^\/app\/cases\/quick-new$/, labelKey: "actions.quickIntake" },
   { pattern: /^\/app\/cases\/[^/]+$/, labelKey: "nav.cases" },
   { pattern: /^\/app\/calendar$/, labelKey: "nav.calendar" },
   { pattern: /^\/app\/hearings$/, labelKey: "nav.hearings" },

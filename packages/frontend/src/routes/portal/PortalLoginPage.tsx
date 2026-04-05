@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { usePortalAuthStore } from "../../store/portalAuthStore";
@@ -8,8 +8,9 @@ import { Field, FormAlert, PrimaryButton, SectionCard } from "../app/ui";
 export function PortalLoginPage() {
   const { t } = useTranslation(["app", "auth"]);
   const navigate = useNavigate();
+  const { firmId } = useParams({ from: "/portal/$firmId/login" });
   const login = usePortalAuthStore((s) => s.login);
-  const [form, setForm] = useState({ email: "", firmId: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +19,7 @@ export function PortalLoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await login(form.email, form.firmId, form.password);
+      await login(form.email, firmId, form.password);
       void navigate({ to: "/portal/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.fallback"));
@@ -39,13 +40,6 @@ export function PortalLoginPage() {
               type="email"
               value={form.email}
               onChange={(value) => setForm((current) => ({ ...current, email: value }))}
-            />
-            <Field
-              hint={t("portal.firmIdHint")}
-              label={t("portal.firmId")}
-              required
-              value={form.firmId}
-              onChange={(value) => setForm((current) => ({ ...current, firmId: value }))}
             />
             <Field
               autoComplete="current-password"

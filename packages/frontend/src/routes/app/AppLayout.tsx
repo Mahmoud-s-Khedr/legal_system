@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Menu, X, LogOut, ChevronRight, ChevronLeft } from "lucide-react";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { GlobalSearchBar } from "../../components/search/GlobalSearchBar";
+import { CommandPalette } from "../../components/search/CommandPalette";
 import { NotificationBell } from "../../components/notifications/NotificationBell";
 import { useAccessibleOverlay } from "../../components/shared/useAccessibleOverlay";
 import { useAuthBootstrap } from "../../store/authStore";
@@ -16,6 +17,18 @@ export function AppLayout() {
   const { user, logout } = useAuthBootstrap();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
   const drawerRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
   const headerMenuRef = useRef<HTMLDivElement>(null);
@@ -112,6 +125,7 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-sand text-ink">
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {/* ── Skip to main content (keyboard / screen reader) ── */}
       <a
         href="#main-content"
@@ -152,7 +166,7 @@ export function AppLayout() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden md:block">
-              <GlobalSearchBar />
+              <GlobalSearchBar onOpenPalette={() => setPaletteOpen(true)} />
             </div>
             <NotificationBell />
             <span className="hidden rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-emerald-900 lg:inline-flex">
@@ -200,7 +214,7 @@ export function AppLayout() {
                   aria-label={t("actions.more")}
                 >
                   <div className="space-y-3">
-                    <GlobalSearchBar />
+                    <GlobalSearchBar onOpenPalette={() => setPaletteOpen(true)} />
                     <div className="border-t border-slate-100 pt-3">
                       <LanguageSwitcher />
                     </div>

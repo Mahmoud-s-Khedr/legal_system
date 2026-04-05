@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { InlineHearingForm } from "./InlineHearingForm";
+import { InlineTaskForm } from "./InlineTaskForm";
+import { InlineEditField } from "../../components/InlineEditField";
 import { Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CaseRoleOnCase, type CaseCourtDto, type CaseDto, type ClientDto, type CreateCaseAssignmentDto, type CreateCaseCourtDto, type CreateCasePartyDto, type HearingListResponseDto, type TaskListResponseDto, type UpdateCaseCourtDto, type UserListResponseDto } from "@elms/shared";
+import { CaseRoleOnCase, CaseStatus, type CaseCourtDto, type CaseDto, type ClientDto, type CreateCaseAssignmentDto, type CreateCaseCourtDto, type CreateCasePartyDto, type HearingListResponseDto, type TaskListResponseDto, type UpdateCaseCourtDto, type UserListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
@@ -43,6 +46,8 @@ export function CaseDetailPage() {
     roleOnCase: CaseRoleOnCase.LEAD
   });
   const [courtFormResetToken, setCourtFormResetToken] = useState(0);
+  const [showInlineHearingForm, setShowInlineHearingForm] = useState(false);
+  const [showInlineTaskForm, setShowInlineTaskForm] = useState(false);
 
   const caseQuery = useQuery({
     queryKey: ["case", caseId],
@@ -190,6 +195,38 @@ export function CaseDetailPage() {
       {activeTab === "overview" ? (
         <SectionCard title={t("cases.overview")} description={t("cases.overviewHelp")}>
           <dl className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div>
+              <dt className="text-xs font-medium text-slate-500">{t("labels.title")}</dt>
+              <dd className="mt-0.5">
+                <InlineEditField
+                  onSave={async (v) => {
+                    await apiFetch(`/api/cases/${caseId}`, {
+                      method: "PUT",
+                      body: JSON.stringify({ title: v, caseNumber: caseItem.caseNumber, internalReference: caseItem.internalReference, judicialYear: caseItem.judicialYear, type: caseItem.type, clientId: caseItem.clientId })
+                    });
+                    await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+                  }}
+                  value={caseItem.title}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-slate-500">{t("labels.status")}</dt>
+              <dd className="mt-0.5">
+                <InlineEditField
+                  onSave={async (v) => {
+                    await apiFetch(`/api/cases/${caseId}/status`, {
+                      method: "PATCH",
+                      body: JSON.stringify({ status: v })
+                    });
+                    await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+                  }}
+                  options={Object.values(CaseStatus).map((v) => ({ value: v, label: getEnumLabel(t, "CaseStatus", v) }))}
+                  type="select"
+                  value={caseItem.status}
+                />
+              </dd>
+            </div>
             <Detail label={t("labels.caseType")} value={caseTypeLabel} />
             <Detail label={t("labels.client")} value={clientDisplayName} />
             <Detail label={t("labels.hearings")} value={String(caseItem.hearingCount)} />
@@ -443,15 +480,24 @@ export function CaseDetailPage() {
       ) : null}
       {activeTab === "hearings" ? (
         <SectionCard title={t("cases.relatedHearings")} description={t("cases.relatedHearingsHelp")}>
-          <div className="mb-4 flex justify-end">
-            <Link
+          <div className="mb-4 flex justify-end gap-3">
+            <button
               className="rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white"
-              to="/app/hearings/new"
-              search={{ caseId }}
+              onClick={() => setShowInlineHearingForm((v) => !v)}
+              type="button"
             >
-              {t("actions.newHearing")}
-            </Link>
+              {showInlineHearingForm ? t("actions.cancel") : t("actions.newHearing")}
+            </button>
           </div>
+          {showInlineHearingForm && (
+            <InlineHearingForm
+              caseId={caseId}
+              onSuccess={() => {
+                setShowInlineHearingForm(false);
+                void queryClient.invalidateQueries({ queryKey: ["case-hearings", caseId] });
+              }}
+            />
+          )}
           {!hearingsQuery.data?.items.length ? (
             <EmptyState title={t("empty.noHearings")} description={t("empty.noHearingsHelp")} />
           ) : (
@@ -478,15 +524,24 @@ export function CaseDetailPage() {
       ) : null}
       {activeTab === "tasks" ? (
         <SectionCard title={t("cases.relatedTasks")} description={t("cases.relatedTasksHelp")}>
-          <div className="mb-4 flex justify-end">
-            <Link
+          <div className="mb-4 flex justify-end gap-3">
+            <button
               className="rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white"
-              to="/app/tasks/new"
-              search={{ caseId }}
+              onClick={() => setShowInlineTaskForm((v) => !v)}
+              type="button"
             >
-              {t("actions.newTask")}
-            </Link>
+              {showInlineTaskForm ? t("actions.cancel") : t("actions.newTask")}
+            </button>
           </div>
+          {showInlineTaskForm && (
+            <InlineTaskForm
+              caseId={caseId}
+              onSuccess={() => {
+                setShowInlineTaskForm(false);
+                void queryClient.invalidateQueries({ queryKey: ["case-tasks", caseId] });
+              }}
+            />
+          )}
           {!tasksQuery.data?.items.length ? (
             <EmptyState title={t("empty.noTasks")} description={t("empty.noTasksHelp")} />
           ) : (

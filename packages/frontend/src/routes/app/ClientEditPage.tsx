@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClientType, Language, type ClientDto, type CreateClientDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
@@ -62,6 +63,9 @@ export function ClientEditPage() {
     taxNumber: "",
     contacts: []
   });
+  const loadedFormRef = useRef<CreateClientDto | null>(null);
+  useUnsavedChanges(loadedFormRef.current !== null && JSON.stringify(form) !== JSON.stringify(loadedFormRef.current));
+
   const governorateOptions = withLegacyGovernorateOption(
     getEgyptGovernorateOptions(i18n.resolvedLanguage ?? i18n.language ?? "en"),
     form.governorate
@@ -70,7 +74,7 @@ export function ClientEditPage() {
   useEffect(() => {
     if (clientQuery.data) {
       const c = clientQuery.data;
-      setForm({
+      const loaded: CreateClientDto = {
         name: c.name,
         type: c.type,
         phone: c.phone ?? "",
@@ -81,7 +85,9 @@ export function ClientEditPage() {
         commercialRegister: c.commercialRegister ?? "",
         taxNumber: c.taxNumber ?? "",
         contacts: c.contacts ?? []
-      });
+      };
+      setForm(loaded);
+      if (!loadedFormRef.current) loadedFormRef.current = loaded;
     }
   }, [clientQuery.data]);
 

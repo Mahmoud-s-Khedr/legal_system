@@ -151,6 +151,9 @@ export async function registerCaseRoutes(app: FastifyInstance) {
         q?: string;
         status?: string;
         type?: string;
+        assignedLawyerId?: string;
+        createdFrom?: string;
+        createdTo?: string;
         sortBy?: string;
         sortDir?: "asc" | "desc";
         page?: string;
@@ -161,6 +164,9 @@ export async function registerCaseRoutes(app: FastifyInstance) {
         q: query.q,
         status: query.status,
         type: query.type,
+        assignedLawyerId: query.assignedLawyerId,
+        createdFrom: query.createdFrom,
+        createdTo: query.createdTo,
         sortBy: query.sortBy,
         sortDir: query.sortDir,
         page,

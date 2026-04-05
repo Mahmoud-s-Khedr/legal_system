@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -38,9 +38,18 @@ export function LibraryPage() {
   const isRtl = i18n.resolvedLanguage === "ar";
   const isFrench = i18n.resolvedLanguage === "fr";
   const ChevronIcon = isRtl ? ChevronLeft : ChevronRight;
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(() => {
+    try { return localStorage.getItem("elms:library:selectedCategoryId") ?? undefined; } catch { return undefined; }
+  });
   const [page, setPage] = useState(1);
   const [searchQ, setSearchQ] = useState("");
+
+  useEffect(() => {
+    try {
+      if (selectedCategoryId) localStorage.setItem("elms:library:selectedCategoryId", selectedCategoryId);
+      else localStorage.removeItem("elms:library:selectedCategoryId");
+    } catch { /* quota exceeded */ }
+  }, [selectedCategoryId]);
 
   const categoriesQuery = useQuery({
     queryKey: ["library-categories"],

@@ -19,6 +19,7 @@ import { ClientDetailPage } from "./routes/app/ClientDetailPage";
 import { ClientEditPage } from "./routes/app/ClientEditPage";
 import { CasesPage } from "./routes/app/CasesPage";
 import { CaseCreatePage } from "./routes/app/CaseCreatePage";
+import { CaseQuickIntakePage } from "./routes/app/CaseQuickIntakePage";
 import { CaseDetailPage } from "./routes/app/CaseDetailPage";
 import { HearingsPage } from "./routes/app/HearingsPage";
 import { CalendarPage } from "./routes/app/CalendarPage";
@@ -204,6 +205,12 @@ const caseCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/cases/new",
   component: CaseCreatePage
+});
+
+const caseQuickIntakeRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/cases/quick-new",
+  component: CaseQuickIntakePage
 });
 
 const caseDetailRoute = createRoute({
@@ -493,7 +500,7 @@ const portalRoute = createRoute({
 
 const portalLoginRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/portal/login",
+  path: "/portal/$firmId/login",
   component: PortalLoginPage
 });
 
@@ -527,6 +534,7 @@ const routeTree = rootRoute.addChildren([
     clientEditRoute,
     casesRoute,
     caseCreateRoute,
+    caseQuickIntakeRoute,
     caseDetailRoute,
     calendarRoute,
     hearingsRoute,

@@ -1,4 +1,7 @@
 {
+  "unsavedChanges": {
+    "confirmLeave": "You have unsaved changes. Leave and discard them?"
+  },
   "errors": {
     "title": "Something went wrong",
     "fallback": "An unexpected error occurred. Please try again.",
@@ -29,6 +32,7 @@
     "saveChanges": "Save changes",
     "newClient": "New client",
     "newCase": "New case",
+    "quickIntake": "Quick intake",
     "newHearing": "New hearing",
     "newTask": "New task",
     "newUser": "New user",
@@ -53,7 +57,8 @@
     "close": "Close",
     "uploadAnother": "Upload another",
     "showIndexedText": "Show indexed text",
-    "copyText": "Copy text"
+    "copyText": "Copy text",
+    "markDone": "Mark as done"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -112,6 +117,7 @@
     "title": "Title",
     "caseNumber": "Case number",
     "internalReference": "Internal reference",
+    "judicialYear": "Judicial year",
     "caseType": "Case type",
     "courtLevel": "Court level",
     "courtName": "Court name",
@@ -132,6 +138,7 @@
     "nextSession": "Next session",
     "outcome": "Outcome",
     "notes": "Notes",
+    "advancedOptions": "Advanced options",
     "none": "None",
     "all": "All",
     "description": "Description",
@@ -151,7 +158,10 @@
     "caseIdPlaceholder": "Paste case UUID (optional)",
     "clientId": "Client ID",
     "clientIdPlaceholder": "Paste client UUID (optional)",
-    "sort": "Sort"
+    "sort": "Sort",
+    "lawyer": "Lawyer",
+    "from": "From",
+    "to": "To"
   },
   "empty": {
     "noCourts": "No court stages yet",
@@ -341,7 +351,8 @@
     "contacts": "Secondary contacts",
     "contactsHelp": "People related to this client record.",
     "editTitle": "Edit client",
-    "editHelp": "Update client identity and contact details."
+    "editHelp": "Update client identity and contact details.",
+    "duplicateWarning": "A client with this information already exists: {{name}}"
   },
   "cases": {
     "eyebrow": "Matter management",
@@ -386,7 +397,59 @@
     "relatedHearingsHelp": "Sessions linked to this case.",
     "relatedTasks": "Related tasks",
     "relatedTasksHelp": "Open tasks connected to this matter.",
-    "searchPlaceholder": "Search by title or case number"
+    "searchPlaceholder": "Search by title or case number",
+    "assignedToMe": "Assigned to me"
+  },
+  "quickIntake": {
+    "title": "Quick case intake",
+    "description": "Create or pick a client, then open a case in one guided page.",
+    "clientStepTitle": "Step 1 — Client",
+    "clientStepHelp": "Use an existing client or create one inline before case creation.",
+    "caseStepTitle": "Step 2 — Case",
+    "caseStepHelp": "Capture the core case details to open the matter.",
+    "useExistingClient": "Use existing client",
+    "createClientInline": "Create new client",
+    "submit": "Create case",
+    "submitAll": "Create case and save all sections",
+    "reviewTitle": "Final review",
+    "reviewHelp": "Client and case shell are required. Other sections are optional and will be saved if filled.",
+    "requiredStatus": "Required fields",
+    "requiredReady": "Ready",
+    "requiredMissing": "Missing required fields",
+    "optionalSummary": "Optional entries queued — Courts: {{courts}}, Parties: {{parties}}, Assignments: {{assignments}}, Hearings: {{hearings}}, Tasks: {{tasks}}, Documents: {{documents}}",
+    "savedWithIssues": "Case was created, but some sections failed: {{sections}}",
+    "openCreatedCase": "Open created case",
+    "courtsHelp": "Add one or more court stages (optional).",
+    "partiesHelp": "Add parties and opposing counsel details (optional).",
+    "assignmentsHelp": "Assign team members to the case (optional).",
+    "statusHelp": "Set a non-default status and optional note (optional).",
+    "hearingsHelp": "Add initial hearings linked to this case (optional).",
+    "tasksHelp": "Add follow-up tasks linked to this case (optional).",
+    "documentsHelp": "Queue files to upload after the case is created (optional).",
+    "addCourt": "Add court stage",
+    "addParty": "Add party",
+    "addAssignment": "Add assignment",
+    "addHearing": "Add hearing",
+    "addTask": "Add task",
+    "addDocument": "Add document",
+    "noCasePermission": "You do not have permission to create cases.",
+    "noClientReadPermission": "You do not have permission to select existing clients.",
+    "noClientCreatePermission": "You do not have permission to create clients.",
+    "section": {
+      "client": "Client",
+      "case": "Case shell",
+      "courts": "Court stages",
+      "parties": "Parties",
+      "assignments": "Team assignments",
+      "status": "Current status",
+      "hearings": "Hearings",
+      "tasks": "Tasks",
+      "documents": "Documents"
+    },
+    "validation": {
+      "clientRequired": "Please select a client.",
+      "caseRequired": "Case title, number, and type are required."
+    }
   },
   "hearings": {
     "eyebrow": "Court calendar",
@@ -681,10 +744,16 @@
     "eyebrow": "Full-text search",
     "title": "Search results",
     "description": "Searching across titles and extracted document content.",
-    "placeholder": "Search documents in Arabic, English, or French",
+    "placeholder": "Search…",
+    "commandPlaceholder": "Search or type a command…",
     "noResults": "No results found",
     "noResultsHelp": "Try a different query or upload and index more documents.",
-    "rankLabel": "results"
+    "rankLabel": "results",
+    "quickActions": "Quick actions",
+    "navigate": "navigate",
+    "select": "select",
+    "dismiss": "dismiss",
+    "advancedSearch": "Advanced search"
   },
   "enums": {
     "TaskStatus": {

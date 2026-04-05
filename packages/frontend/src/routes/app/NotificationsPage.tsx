@@ -1,13 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { NotificationType, type NotificationListResponseDto } from "@elms/shared";
+import { NotificationType, type NotificationDto, type NotificationListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper, formatDateTime } from "./ui";
 
+function resolveNotificationPath(n: NotificationDto): string | null {
+  const id = n.entityId;
+  if (!id) return null;
+  switch (n.type) {
+    case NotificationType.HEARING_7_DAYS:
+    case NotificationType.HEARING_TOMORROW:
+    case NotificationType.HEARING_TODAY:
+      return `/app/hearings/${id}/edit`;
+    case NotificationType.TASK_OVERDUE:
+    case NotificationType.TASK_DAILY_DIGEST:
+      return `/app/tasks/${id}`;
+    case NotificationType.INVOICE_OVERDUE:
+    case NotificationType.CHEQUE_MATURITY_DUE:
+      return `/app/invoices/${id}`;
+    case NotificationType.DOCUMENT_INDEXED:
+    case NotificationType.RESEARCH_COMPLETE:
+      return `/app/documents/${id}`;
+    default:
+      return null;
+  }
+}
+
 export function NotificationsPage() {
   const { t } = useTranslation("app");
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const feedback = useMutationFeedback();
   const table = useTableQueryState({
@@ -115,10 +139,22 @@ export function NotificationsPage() {
                   </tr>
                 </TableHead>
                 <TableBody>
-                  {data.items.map((n) => (
+                  {data.items.map((n) => {
+                    const path = resolveNotificationPath(n);
+                    return (
                     <TableRow key={n.id}>
                       <TableCell>
-                        <span className={!n.isRead ? "font-semibold" : ""}>{n.title}</span>
+                        {path ? (
+                          <button
+                            className={`text-start hover:text-accent hover:underline ${!n.isRead ? "font-semibold" : ""}`}
+                            onClick={() => { void markOne.mutateAsync(n.id); void navigate({ to: path }); }}
+                            type="button"
+                          >
+                            {n.title}
+                          </button>
+                        ) : (
+                          <span className={!n.isRead ? "font-semibold" : ""}>{n.title}</span>
+                        )}
                       </TableCell>
                       <TableCell>{n.body}</TableCell>
                       <TableCell>{formatDateTime(n.createdAt)}</TableCell>
@@ -136,7 +172,8 @@ export function NotificationsPage() {
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </DataTable>
             </TableWrapper>

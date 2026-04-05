@@ -1,8 +1,12 @@
-import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import type { CaseListResponseDto, ClientListResponseDto } from "@elms/shared";
+import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useCreateInvoice } from "../../lib/billing";
+import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import { Field, FormAlert, PageHeader, SectionCard, SelectField } from "./ui";
 
 interface ItemRow {
@@ -16,15 +20,41 @@ export function InvoiceCreatePage() {
   const navigate = useNavigate();
   const feedback = useMutationFeedback();
   const createInvoice = useCreateInvoice();
+  const search = useSearch({ strict: false }) as { clientId?: string };
 
   const [caseId, setCaseId] = useState("");
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(search.clientId ?? "");
   const [feeType, setFeeType] = useState("FIXED");
   const [taxAmount, setTaxAmount] = useState("0");
   const [discountAmount, setDiscountAmount] = useState("0");
   const [dueDate, setDueDate] = useState("");
   const [items, setItems] = useState<ItemRow[]>([{ description: "", quantity: "1", unitPrice: "0" }]);
   const [error, setError] = useState("");
+  useUnsavedChanges(caseId !== "" || clientId !== "" || items.some((i) => i.description !== ""));
+
+  const casesQuery = useQuery({
+    queryKey: ["cases"],
+    queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=200")
+  });
+  const clientsQuery = useQuery({
+    queryKey: ["clients"],
+    queryFn: () => apiFetch<ClientListResponseDto>("/api/clients?limit=200")
+  });
+
+  const caseOptions = useMemo(() => [
+    { value: "", label: `— ${t("labels.optional")} —` },
+    ...(casesQuery.data?.items ?? []).map((c) => ({ value: c.id, label: c.title }))
+  ], [casesQuery.data?.items, t]);
+
+  const clientOptions = useMemo(() => [
+    { value: "", label: `— ${t("labels.optional")} —` },
+    ...(clientsQuery.data?.items ?? []).map((c) => ({ value: c.id, label: c.name }))
+  ], [clientsQuery.data?.items, t]);
+
+  const subtotal = items.reduce((sum, item) => {
+    return sum + (parseFloat(item.unitPrice) || 0) * (parseInt(item.quantity, 10) || 0);
+  }, 0);
+  const totalAmount = Math.max(0, subtotal + (parseFloat(taxAmount) || 0) - (parseFloat(discountAmount) || 0));
 
   function addItem() {
     setItems((prev) => [...prev, { description: "", quantity: "1", unitPrice: "0" }]);
@@ -72,24 +102,18 @@ export function InvoiceCreatePage() {
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <SectionCard title={t("billing.invoiceDetails")}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium">{t("labels.caseId")} ({t("labels.optional")})</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                value={caseId}
-                onChange={(e) => setCaseId(e.target.value)}
-                placeholder={t("labels.caseIdPlaceholder")}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">{t("labels.clientId")} ({t("labels.optional")})</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                placeholder={t("labels.clientIdPlaceholder")}
-              />
-            </div>
+            <SelectField
+              label={`${t("labels.case")} (${t("labels.optional")})`}
+              value={caseId}
+              onChange={setCaseId}
+              options={caseOptions}
+            />
+            <SelectField
+              label={`${t("labels.client")} (${t("labels.optional")})`}
+              value={clientId}
+              onChange={setClientId}
+              options={clientOptions}
+            />
             <SelectField
               label={t("billing.feeType")}
               value={feeType}
@@ -100,13 +124,31 @@ export function InvoiceCreatePage() {
                 { value: "CONTINGENCY", label: t("billing.feeTypeContingency") }
               ]}
             />
-            <Field
-              label={t("billing.dueDate")}
-              type="date"
-              commitMode="blur"
-              value={dueDate}
-              onChange={setDueDate}
-            />
+            <div>
+              <Field
+                label={t("billing.dueDate")}
+                type="date"
+                commitMode="blur"
+                value={dueDate}
+                onChange={setDueDate}
+              />
+              <div className="mt-1 flex gap-2">
+                {[15, 30, 60].map((days) => (
+                  <button
+                    key={days}
+                    type="button"
+                    className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-slate-600 hover:border-accent hover:text-accent"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + days);
+                      setDueDate(d.toISOString().split("T")[0]);
+                    }}
+                  >
+                    +{days}d
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium">{t("billing.tax")}</label>
               <input
@@ -185,6 +227,25 @@ export function InvoiceCreatePage() {
           >
             + {t("billing.addItem")}
           </button>
+
+          <div className="mt-4 space-y-1 border-t border-slate-200 pt-4 text-sm">
+            <div className="flex justify-between text-slate-600">
+              <span>{t("billing.subtotal", "Subtotal")}</span>
+              <span>{subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>{t("billing.tax")}</span>
+              <span>+{(parseFloat(taxAmount) || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>{t("billing.discount")}</span>
+              <span>−{(parseFloat(discountAmount) || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold">
+              <span>{t("billing.total", "Total")}</span>
+              <span>{totalAmount.toFixed(2)}</span>
+            </div>
+          </div>
         </SectionCard>
 
         {error ? <FormAlert message={error} /> : null}

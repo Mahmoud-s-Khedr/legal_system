@@ -1,4 +1,7 @@
 {
+  "unsavedChanges": {
+    "confirmLeave": "لديك تغييرات غير محفوظة. هل تريد المغادرة وتجاهلها؟"
+  },
   "errors": {
     "title": "حدث خطأ غير متوقع",
     "fallback": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
@@ -30,6 +33,7 @@
     "saveChanges": "حفظ التعديلات",
     "newClient": "عميل جديد",
     "newCase": "قضية جديدة",
+    "quickIntake": "إدخال سريع",
     "newHearing": "جلسة جديدة",
     "newTask": "مهمة جديدة",
     "newUser": "مستخدم جديد",
@@ -54,7 +58,8 @@
     "close": "إغلاق",
     "uploadAnother": "رفع ملف آخر",
     "showIndexedText": "عرض النص المفهرس",
-    "copyText": "نسخ النص"
+    "copyText": "نسخ النص",
+    "markDone": "تمييز كمنجز"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -107,6 +112,7 @@
     "title": "العنوان",
     "caseNumber": "رقم القضية",
     "internalReference": "المرجع الداخلي",
+    "judicialYear": "السنة القضائية",
     "caseType": "نوع القضية",
     "courtLevel": "درجة المحكمة",
     "courtName": "اسم المحكمة",
@@ -127,6 +133,7 @@
     "nextSession": "الجلسة التالية",
     "outcome": "النتيجة",
     "notes": "ملاحظات",
+    "advancedOptions": "خيارات متقدمة",
     "none": "لا شيء",
     "all": "الكل",
     "description": "الوصف",
@@ -152,7 +159,10 @@
     "caseIdPlaceholder": "الصق معرّف القضية (اختياري)",
     "clientId": "رقم العميل",
     "clientIdPlaceholder": "الصق معرّف العميل (اختياري)",
-    "sort": "الترتيب"
+    "sort": "الترتيب",
+    "lawyer": "المحامي",
+    "from": "من",
+    "to": "إلى"
   },
   "empty": {
     "noHearings": "لا توجد جلسات بعد",
@@ -342,7 +352,8 @@
     "contacts": "جهات الاتصال الثانوية",
     "contactsHelp": "الأشخاص المرتبطون بهذا العميل.",
     "editTitle": "تعديل العميل",
-    "editHelp": "حدّث بيانات العميل ومعلومات التواصل."
+    "editHelp": "حدّث بيانات العميل ومعلومات التواصل.",
+    "duplicateWarning": "يوجد عميل بهذه المعلومات بالفعل: {{name}}"
   },
   "cases": {
     "eyebrow": "إدارة القضايا",
@@ -387,7 +398,59 @@
     "relatedHearingsHelp": "الجلسات المسجلة لهذه القضية.",
     "relatedTasks": "المهام المرتبطة",
     "relatedTasksHelp": "المهام المفتوحة المرتبطة بهذه القضية.",
-    "searchPlaceholder": "ابحث بالعنوان أو رقم القضية"
+    "searchPlaceholder": "ابحث بالعنوان أو رقم القضية",
+    "assignedToMe": "المسندة إليّ"
+  },
+  "quickIntake": {
+    "title": "إدخال قضية سريع",
+    "description": "اختر عميلًا أو أنشئ عميلًا جديدًا ثم أنشئ القضية من صفحة واحدة.",
+    "clientStepTitle": "الخطوة 1 — العميل",
+    "clientStepHelp": "استخدم عميلًا موجودًا أو أنشئ عميلًا داخل نفس الصفحة قبل إنشاء القضية.",
+    "caseStepTitle": "الخطوة 2 — القضية",
+    "caseStepHelp": "أدخل البيانات الأساسية لفتح ملف القضية.",
+    "useExistingClient": "استخدام عميل موجود",
+    "createClientInline": "إنشاء عميل جديد",
+    "submit": "إنشاء القضية",
+    "submitAll": "إنشاء القضية وحفظ جميع الأقسام",
+    "reviewTitle": "مراجعة نهائية",
+    "reviewHelp": "العميل والبيانات الأساسية للقضية مطلوبان. باقي الأقسام اختيارية وسيتم حفظ المعبأ منها.",
+    "requiredStatus": "الحقول المطلوبة",
+    "requiredReady": "مكتملة",
+    "requiredMissing": "حقول مطلوبة ناقصة",
+    "optionalSummary": "العناصر الاختيارية المجهزة — المحاكم: {{courts}}، الأطراف: {{parties}}، الإسنادات: {{assignments}}، الجلسات: {{hearings}}، المهام: {{tasks}}، المستندات: {{documents}}",
+    "savedWithIssues": "تم إنشاء القضية، لكن تعذر حفظ بعض الأقسام: {{sections}}",
+    "openCreatedCase": "فتح القضية التي تم إنشاؤها",
+    "courtsHelp": "أضف مرحلة أو أكثر من مراحل المحاكم (اختياري).",
+    "partiesHelp": "أضف الأطراف وبيانات محامي الخصم (اختياري).",
+    "assignmentsHelp": "أسند أعضاء الفريق إلى القضية (اختياري).",
+    "statusHelp": "حدّد حالة مختلفة عن الافتراضية مع ملاحظة اختيارية (اختياري).",
+    "hearingsHelp": "أضف جلسات أولية مرتبطة بالقضية (اختياري).",
+    "tasksHelp": "أضف مهام متابعة مرتبطة بالقضية (اختياري).",
+    "documentsHelp": "جهّز ملفات للرفع بعد إنشاء القضية (اختياري).",
+    "addCourt": "إضافة مرحلة محكمة",
+    "addParty": "إضافة طرف",
+    "addAssignment": "إضافة إسناد",
+    "addHearing": "إضافة جلسة",
+    "addTask": "إضافة مهمة",
+    "addDocument": "إضافة مستند",
+    "noCasePermission": "ليس لديك صلاحية إنشاء القضايا.",
+    "noClientReadPermission": "ليس لديك صلاحية اختيار عميل موجود.",
+    "noClientCreatePermission": "ليس لديك صلاحية إنشاء عميل.",
+    "section": {
+      "client": "العميل",
+      "case": "البيانات الأساسية للقضية",
+      "courts": "مراحل المحاكم",
+      "parties": "الأطراف",
+      "assignments": "إسنادات الفريق",
+      "status": "الحالة الحالية",
+      "hearings": "الجلسات",
+      "tasks": "المهام",
+      "documents": "المستندات"
+    },
+    "validation": {
+      "clientRequired": "يرجى اختيار عميل.",
+      "caseRequired": "عنوان القضية ورقمها ونوعها حقول مطلوبة."
+    }
   },
   "lookups": {
     "title": "خيارات القوائم",
@@ -695,7 +758,13 @@
     "placeholder": "ابحث في المستندات بالعربية أو الإنجليزية أو الفرنسية",
     "noResults": "لا توجد نتائج",
     "noResultsHelp": "جرب استعلامًا مختلفًا أو ارفع المزيد من المستندات وفهرسها.",
-    "rankLabel": "نتيجة"
+    "rankLabel": "نتيجة",
+    "commandPlaceholder": "ابحث أو اكتب أمرًا…",
+    "quickActions": "إجراءات سريعة",
+    "navigate": "تنقل",
+    "select": "اختر",
+    "dismiss": "إغلاق",
+    "advancedSearch": "بحث متقدم"
   },
   "enums": {
     "TaskStatus": {

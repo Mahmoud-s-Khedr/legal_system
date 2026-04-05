@@ -1,7 +1,8 @@
 import { useParams, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ClientDto } from "@elms/shared";
 import { InvoiceStatus } from "@elms/shared";
+import { InlineEditField } from "../../components/InlineEditField";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -13,11 +14,32 @@ import { useInvoices } from "../../lib/billing";
 export function ClientDetailPage() {
   const { t } = useTranslation("app");
   const { clientId } = useParams({ from: "/app/clients/$clientId" });
+  const queryClient = useQueryClient();
   const clientQuery = useQuery({
     queryKey: ["client", clientId],
     queryFn: () => apiFetch<ClientDto>(`/api/clients/${clientId}`)
   });
   const invoicesQuery = useInvoices({ clientId });
+
+  async function patchClient(field: "email" | "phone", value: string) {
+    const current = clientQuery.data!;
+    await apiFetch(`/api/clients/${clientId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        name: current.name,
+        type: current.type,
+        phone: field === "phone" ? (value || null) : current.phone,
+        email: field === "email" ? (value || null) : current.email,
+        governorate: current.governorate,
+        preferredLanguage: current.preferredLanguage,
+        nationalId: current.nationalId,
+        commercialRegister: current.commercialRegister,
+        taxNumber: current.taxNumber,
+        contacts: current.contacts ?? []
+      })
+    });
+    await queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+  }
 
   const client = clientQuery.data;
 
@@ -32,8 +54,29 @@ export function ClientDetailPage() {
         title={client.name}
         description={client.email ?? t("labels.noContact")}
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <EnumBadge enumName="ClientType" value={client.type} />
+            <Link
+              className="rounded-2xl border border-accent px-4 py-2.5 text-sm font-semibold text-accent hover:bg-accent/5"
+              search={{ clientId }}
+              to="/app/cases/quick-new"
+            >
+              {t("actions.quickIntake")}
+            </Link>
+            <Link
+              className="rounded-2xl border border-accent px-4 py-2.5 text-sm font-semibold text-accent hover:bg-accent/5"
+              search={{ clientId }}
+              to="/app/cases/new"
+            >
+              {t("actions.newCase")}
+            </Link>
+            <Link
+              className="rounded-2xl border border-accent px-4 py-2.5 text-sm font-semibold text-accent hover:bg-accent/5"
+              search={{ clientId }}
+              to="/app/invoices/new"
+            >
+              {t("actions.newInvoice")}
+            </Link>
             <Link
               className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
               params={{ clientId }}
@@ -47,8 +90,26 @@ export function ClientDetailPage() {
       <div className="grid gap-4 xl:grid-cols-3">
         <SectionCard title={t("clients.profile")} description={t("clients.profileHelp")}>
           <dl className="space-y-3 text-sm">
-            <Detail label={t("labels.email")} value={client.email} />
-            <Detail label={t("labels.phone")} value={client.phone} />
+            <div>
+              <dt className="text-xs font-medium text-slate-500">{t("labels.email")}</dt>
+              <dd className="mt-0.5">
+                <InlineEditField
+                  onSave={(v) => patchClient("email", v)}
+                  placeholder={t("labels.noContact")}
+                  value={client.email}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium text-slate-500">{t("labels.phone")}</dt>
+              <dd className="mt-0.5">
+                <InlineEditField
+                  onSave={(v) => patchClient("phone", v)}
+                  placeholder="—"
+                  value={client.phone}
+                />
+              </dd>
+            </div>
             <Detail label={t("labels.governorate")} value={client.governorate} />
             <Detail label={t("labels.language")} value={getEnumLabel(t, "Language", client.preferredLanguage)} />
           </dl>

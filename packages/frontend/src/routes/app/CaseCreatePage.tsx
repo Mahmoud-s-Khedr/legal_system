@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ClientListResponseDto, CreateCaseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
@@ -13,9 +14,10 @@ export function CaseCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const feedback = useMutationFeedback();
+  const search = useSearch({ strict: false }) as { clientId?: string };
 
   const [form, setForm] = useState<CreateCaseDto>({
-    clientId: "",
+    clientId: search.clientId ?? "",
     title: "",
     caseNumber: "",
     internalReference: "",
@@ -29,6 +31,7 @@ export function CaseCreatePage() {
   });
 
   const caseTypesQuery = useLookupOptions("CaseType");
+  useUnsavedChanges(form.title !== "" || form.clientId !== "");
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateCaseDto) =>

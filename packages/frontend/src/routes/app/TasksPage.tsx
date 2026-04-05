@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TaskStatus, type TaskListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
@@ -13,6 +13,15 @@ type TaskViewMode = "table" | "kanban";
 export function TasksPage() {
   const { t, i18n } = useTranslation("app");
   const [viewMode, setViewMode] = useState<TaskViewMode>("table");
+  const queryClient = useQueryClient();
+  const markDoneMutation = useMutation({
+    mutationFn: (taskId: string) =>
+      apiFetch(`/api/tasks/${taskId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: TaskStatus.DONE })
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] })
+  });
   const table = useTableQueryState({
     defaultSortBy: "dueAt",
     defaultSortDir: "asc",
@@ -111,6 +120,7 @@ export function TasksPage() {
               <DataTable>
                 <TableHead>
                   <tr>
+                    <TableHeadCell />
                     <SortableTableHeadCell label={t("labels.title")} sortKey="title" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
                     <SortableTableHeadCell label={t("labels.status")} sortKey="status" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
                     <SortableTableHeadCell label={t("labels.priority")} sortKey="priority" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
@@ -122,7 +132,21 @@ export function TasksPage() {
                 <TableBody>
                   {tasksQuery.data.items.map((task) => (
                     <TableRow key={task.id}>
-                      <TableCell>{task.title}</TableCell>
+                      <TableCell>
+                        <input
+                          aria-label={t("actions.markDone")}
+                          checked={task.status === TaskStatus.DONE}
+                          className="h-4 w-4 cursor-pointer accent-accent"
+                          disabled={markDoneMutation.isPending}
+                          onChange={() => { if (task.status !== TaskStatus.DONE) markDoneMutation.mutate(task.id); }}
+                          type="checkbox"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <span className={task.status === TaskStatus.DONE ? "line-through text-slate-400" : ""}>
+                          {task.title}
+                        </span>
+                      </TableCell>
                       <TableCell>{getEnumLabel(t, "TaskStatus", task.status)}</TableCell>
                       <TableCell>{getEnumLabel(t, "TaskPriority", task.priority)}</TableCell>
                       <TableCell>{task.assignedToName ?? t("labels.unassigned")}</TableCell>

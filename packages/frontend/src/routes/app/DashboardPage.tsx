@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { DashboardSummaryDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
+import { Link } from "@tanstack/react-router";
 import { apiFetch } from "../../lib/api";
 import { EmptyState, ErrorState, PageHeader, SectionCard, StatCard, formatDateTime } from "./ui";
 import { StatCardSkeleton, SectionCardSkeleton } from "../../components/shared/Skeleton";
@@ -35,6 +36,25 @@ export function DashboardPage() {
         description={t("dashboard.description")}
       />
 
+      {/* ── Quick-add bar ── */}
+      <div className="flex flex-wrap gap-3">
+        <Link className="rounded-2xl border border-accent px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/5" to="/app/cases/quick-new">
+          {t("actions.quickIntake")}
+        </Link>
+        <Link className="rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white" to="/app/cases/new">
+          {t("actions.newCase")}
+        </Link>
+        <Link className="rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white" to="/app/hearings/new">
+          {t("actions.newHearing")}
+        </Link>
+        <Link className="rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white" to="/app/tasks/new">
+          {t("actions.newTask")}
+        </Link>
+        <Link className="rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white" to="/app/invoices/new">
+          {t("actions.newInvoice")}
+        </Link>
+      </div>
+
       {/* ── Stat cards ── */}
       <div className="grid gap-4 md:grid-cols-3">
         {isLoading ? (
@@ -45,8 +65,12 @@ export function DashboardPage() {
           </>
         ) : (
           <>
-            <StatCard label={t("dashboard.cards.hearings")} value={summary?.upcomingHearings.length ?? 0} />
-            <StatCard label={t("dashboard.cards.tasks")} value={summary?.overdueTasks.length ?? 0} />
+            <Link to="/app/hearings">
+              <StatCard label={t("dashboard.cards.hearings")} value={summary?.upcomingHearings.length ?? 0} />
+            </Link>
+            <Link to="/app/tasks">
+              <StatCard label={t("dashboard.cards.tasks")} value={summary?.overdueTasks.length ?? 0} />
+            </Link>
             <StatCard label={t("dashboard.cards.activity")} value={summary?.recentActivity.length ?? 0} />
           </>
         )}
@@ -74,10 +98,12 @@ export function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {summary.upcomingHearings.map((hearing) => (
-                  <article className="rounded-2xl border border-slate-200 p-4 transition hover:border-accent" key={hearing.id}>
-                    <p className="font-semibold">{hearing.caseTitle}</p>
-                    <p className="mt-1 text-sm text-slate-600">{formatDateTime(hearing.sessionDatetime)}</p>
-                  </article>
+                  <Link key={hearing.id} params={{ caseId: hearing.caseId }} to="/app/cases/$caseId">
+                    <article className="rounded-2xl border border-slate-200 p-4 transition hover:border-accent">
+                      <p className="font-semibold">{hearing.caseTitle}</p>
+                      <p className="mt-1 text-sm text-slate-600">{formatDateTime(hearing.sessionDatetime)}</p>
+                    </article>
+                  </Link>
                 ))}
               </div>
             )}
@@ -88,10 +114,12 @@ export function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {summary.overdueTasks.map((task) => (
-                  <article className="rounded-2xl border border-slate-200 p-4 transition hover:border-accent" key={task.id}>
-                    <p className="font-semibold">{task.title}</p>
-                    <p className="mt-1 text-sm text-slate-600">{task.caseTitle ?? t("labels.generalTask")}</p>
-                  </article>
+                  <Link key={task.id} params={{ taskId: task.id }} to="/app/tasks/$taskId">
+                    <article className="rounded-2xl border border-slate-200 p-4 transition hover:border-accent">
+                      <p className="font-semibold">{task.title}</p>
+                      <p className="mt-1 text-sm text-slate-600">{task.caseTitle ?? t("labels.generalTask")}</p>
+                    </article>
+                  </Link>
                 ))}
               </div>
             )}

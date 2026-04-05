@@ -10,6 +10,8 @@ export interface NotificationDto {
   body: string;
   isRead: boolean;
   createdAt: string;
+  entityType?: string | null;
+  entityId?: string | null;
 }
 
 export type NotificationListResponseDto = ApiListResponse<NotificationDto>;

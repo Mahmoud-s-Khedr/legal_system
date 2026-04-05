@@ -234,6 +234,9 @@ export async function listCases(
     q?: string;
     status?: string;
     type?: string;
+    assignedLawyerId?: string;
+    createdFrom?: string;
+    createdTo?: string;
     sortBy?: string;
     sortDir?: SortDir;
     page: number;
@@ -251,6 +254,17 @@ export async function listCases(
       deletedAt: null,
       ...(query.status ? { status: query.status as CaseStatus } : {}),
       ...(query.type ? { type: query.type } : {}),
+      ...(query.assignedLawyerId
+        ? { assignments: { some: { userId: query.assignedLawyerId, unassignedAt: null } } }
+        : {}),
+      ...(query.createdFrom || query.createdTo
+        ? {
+            createdAt: {
+              ...(query.createdFrom ? { gte: new Date(query.createdFrom) } : {}),
+              ...(query.createdTo ? { lte: new Date(query.createdTo) } : {})
+            }
+          }
+        : {}),
       ...(q
         ? {
             OR: [

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   SessionOutcome,
@@ -52,6 +53,9 @@ export function HearingEditPage() {
     outcome: null,
     notes: ""
   });
+  const loadedFormRef = useRef<CreateHearingDto | null>(null);
+  useUnsavedChanges(loadedFormRef.current !== null && JSON.stringify(form) !== JSON.stringify(loadedFormRef.current));
+
   const [debouncedConflictInput, setDebouncedConflictInput] = useState({
     assignedLawyerId: "",
     sessionDatetime: ""
@@ -60,14 +64,16 @@ export function HearingEditPage() {
   useEffect(() => {
     if (hearingQuery.data) {
       const h = hearingQuery.data;
-      setForm({
+      const loaded: CreateHearingDto = {
         caseId: h.caseId,
         assignedLawyerId: h.assignedLawyerId ?? "",
         sessionDatetime: toDateTimeLocalValue(h.sessionDatetime),
         nextSessionAt: toDateTimeLocalValue(h.nextSessionAt),
         outcome: h.outcome,
         notes: h.notes ?? ""
-      });
+      };
+      setForm(loaded);
+      if (!loadedFormRef.current) loadedFormRef.current = loaded;
     }
   }, [hearingQuery.data]);
 
