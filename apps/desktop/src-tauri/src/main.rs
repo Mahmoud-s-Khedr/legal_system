@@ -2,6 +2,7 @@
 
 mod backend_connection;
 mod desktop_downloads;
+mod external_links;
 mod ppo_portal;
 mod sidecar;
 
@@ -52,6 +53,7 @@ fn main() {
             desktop_downloads::desktop_choose_download_directory,
             desktop_downloads::desktop_reset_download_directory,
             desktop_downloads::desktop_save_download_file,
+            external_links::desktop_open_external_url,
             ppo_portal::open_ppo_portal_window,
             ppo_portal::ppo_portal_navigate
         ])

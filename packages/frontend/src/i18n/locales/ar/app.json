@@ -230,7 +230,25 @@
     "navigation": "تنقل سريع",
     "login": "تسجيل الدخول",
     "setup": "الإعداد الأولي",
-    "connection": "الاتصال"
+    "connection": "الاتصال",
+    "about": "من نحن"
+  },
+  "contact": {
+    "builtBy": "تطوير",
+    "builtWithCare": "تم تطويره بعناية في مصر",
+    "developer": "المطور",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "linkedin": "لينكدإن"
+  },
+  "about": {
+    "eyebrow": "حول ELMS",
+    "title": "عن النظام",
+    "description": "ELMS مساحة عمل قانونية تركّز على إدارة القضايا عمليًا، وسير عمل ثنائي اللغة، وتجربة موثوقة بنمط سطح المكتب أولاً.",
+    "developerTitle": "بيانات المطور",
+    "bookCall": "احجز مكالمة",
+    "copy": "نسخ",
+    "copied": "تم النسخ"
   },
   "pagination": {
     "prev": "السابق",

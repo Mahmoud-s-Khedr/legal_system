@@ -5,6 +5,8 @@ import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { ShellFooter } from "../../components/navigation/ShellFooter";
 import { buildAuthShellFooterLinks } from "../../components/navigation/shellFooterLinks";
 import { BackToTopButton } from "../../components/navigation/BackToTopButton";
+import { getDeveloperContact } from "../../lib/developerContact";
+import { handleExternalLinkClick } from "../../lib/externalLinks";
 
 export function AuthShell({
   title,
@@ -12,6 +14,8 @@ export function AuthShell({
   children
 }: PropsWithChildren<{ title: string; subtitle: string }>) {
   const { t } = useTranslation(["auth", "app"]);
+  const contact = getDeveloperContact();
+  const developerName = contact.name || "ELMS";
   const footerLinks = buildAuthShellFooterLinks((key) => t(`app:${key}`));
 
   return (
@@ -32,6 +36,55 @@ export function AuthShell({
           <p className="text-sm text-emerald-100">
             {t("auth:authFootnote")}
           </p>
+          <div className="rounded-xl border border-emerald-300/30 bg-emerald-900/20 px-4 py-3 text-sm text-emerald-50">
+            <p className="font-semibold">
+              {t("app:contact.builtBy")}{" "}
+              <button
+                type="button"
+                className="underline-offset-2 transition hover:underline"
+                onClick={() => void navigator.clipboard.writeText(developerName)}
+                title={t("app:about.copy")}
+              >
+                {developerName}
+              </button>
+            </p>
+            <p className="text-xs text-emerald-100">{t("app:contact.builtWithCare")}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+              {contact.email ? (
+                <a
+                  href={`mailto:${contact.email}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => handleExternalLinkClick(event, `mailto:${contact.email}`, contact.email)}
+                  className="underline-offset-2 hover:underline"
+                >
+                  {t("app:contact.email")}
+                </a>
+              ) : null}
+              {contact.phone ? (
+                <a
+                  href={`tel:${contact.phone}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => handleExternalLinkClick(event, `tel:${contact.phone}`, contact.phone)}
+                  className="underline-offset-2 hover:underline"
+                >
+                  {t("app:contact.phone")}
+                </a>
+              ) : null}
+              {contact.linkedin ? (
+                <a
+                  href={contact.linkedin}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => handleExternalLinkClick(event, contact.linkedin, contact.linkedin)}
+                  className="underline-offset-2 hover:underline"
+                >
+                  {t("app:contact.linkedin")}
+                </a>
+              ) : null}
+            </div>
+          </div>
         </section>
         <section className="flex items-center justify-center p-4 sm:p-6 lg:p-10">{children}</section>
       </div>

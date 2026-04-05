@@ -229,7 +229,25 @@
     "navigation": "Quick navigation",
     "login": "Login",
     "setup": "Setup",
-    "connection": "Connection"
+    "connection": "Connection",
+    "about": "About"
+  },
+  "contact": {
+    "builtBy": "Built by",
+    "builtWithCare": "Built with care in Egypt",
+    "developer": "Developer",
+    "email": "Email",
+    "phone": "Phone",
+    "linkedin": "LinkedIn"
+  },
+  "about": {
+    "eyebrow": "About ELMS",
+    "title": "About This System",
+    "description": "ELMS is a legal workspace focused on practical case operations, bilingual workflows, and reliable desktop-first setup.",
+    "developerTitle": "Developer Contact",
+    "bookCall": "Book a call",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "pagination": {
     "prev": "Previous",

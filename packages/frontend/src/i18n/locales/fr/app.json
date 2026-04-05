@@ -229,7 +229,25 @@
     "navigation": "Navigation rapide",
     "login": "Connexion",
     "setup": "Configuration",
-    "connection": "Connexion backend"
+    "connection": "Connexion backend",
+    "about": "À propos"
+  },
+  "contact": {
+    "builtBy": "Conçu par",
+    "builtWithCare": "Conçu avec soin en Égypte",
+    "developer": "Développeur",
+    "email": "Email",
+    "phone": "Téléphone",
+    "linkedin": "LinkedIn"
+  },
+  "about": {
+    "eyebrow": "À propos d'ELMS",
+    "title": "À propos du système",
+    "description": "ELMS est un espace de travail juridique axé sur les opérations de dossiers, les flux bilingues et une expérience fiable orientée bureau.",
+    "developerTitle": "Contact développeur",
+    "bookCall": "Réserver un appel",
+    "copy": "Copier",
+    "copied": "Copié"
   },
   "pagination": {
     "prev": "Précédent",

@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { LoginPage } from "./routes/auth/LoginPage";
 import { BackendConnectionPage } from "./routes/auth/BackendConnectionPage";
 import { SetupPage } from "./routes/auth/SetupPage";
+import { AboutPage } from "./routes/public/AboutPage";
 import { DashboardPage } from "./routes/app/DashboardPage";
 import { AppLayout } from "./routes/app/AppLayout";
 import { ClientsPage } from "./routes/app/ClientsPage";
@@ -155,6 +156,12 @@ const setupRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/setup",
   component: SetupPage
+});
+
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/about",
+  component: AboutPage
 });
 
 const appRoute = createRoute({
@@ -521,6 +528,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   backendConnectionRoute,
   setupRoute,
+  aboutRoute,
   portalLoginRoute,
   portalRoute.addChildren([
     portalDashboardRoute,
