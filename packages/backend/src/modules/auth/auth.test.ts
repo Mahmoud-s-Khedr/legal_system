@@ -125,13 +125,13 @@ describe("local auth setup", () => {
       fullName: "Desktop Admin",
       email: "admin@elms.local",
       password: "secret123",
-      editionKey: EditionKey.SOLO_ONLINE
+      editionKey: EditionKey.ENTERPRISE
     });
 
     expect(mockPrisma.firm.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          editionKey: EditionKey.SOLO_ONLINE,
+          editionKey: EditionKey.ENTERPRISE,
           trialStartedAt: undefined,
           trialEndsAt: undefined,
           graceEndsAt: undefined,

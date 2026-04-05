@@ -56,7 +56,7 @@ describe("getCurrentFirm", () => {
       name: "Firm",
       slug: "firm",
       type: "SOLO",
-      editionKey: EditionKey.SOLO_ONLINE,
+      editionKey: EditionKey.ENTERPRISE,
       pendingEditionKey: null,
       lifecycleStatus: FirmLifecycleStatus.ACTIVE,
       createdAt,
@@ -68,7 +68,7 @@ describe("getCurrentFirm", () => {
       settings: null
     });
 
-    const result = await getCurrentFirm({ ...actor, editionKey: EditionKey.SOLO_ONLINE });
+    const result = await getCurrentFirm({ ...actor, editionKey: EditionKey.ENTERPRISE });
     expect(result.firm.trialEndsAt).toBeNull();
   });
 });

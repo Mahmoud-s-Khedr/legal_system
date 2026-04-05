@@ -36,7 +36,7 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     return sendLocalOnlyCompatibilityError(reply, "Registration endpoint is unavailable in local-only deployments");
   });
 
-  app.get("/api/auth/setup", async (_request, reply) => {
+  app.get("/api/auth/setup", async () => {
     const firm = await prisma.firm.findFirst({ select: { id: true } });
     return { needsSetup: !firm };
   });
