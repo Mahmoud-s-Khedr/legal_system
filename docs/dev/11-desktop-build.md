@@ -381,6 +381,26 @@ To verify the desktop runtime starts correctly without a full GUI:
 bash scripts/verify-desktop-runtime.sh
 ```
 
+### Compile-time ETXTBSY troubleshooting (Linux)
+
+If desktop compile fails with `Text file busy (os error 26)` while running `pnpm --filter @elms/desktop cargo:check`, it usually means a running desktop/embedded PostgreSQL process still owns one of the bundled executables under `apps/desktop/resources/postgres/bin` (or an extracted target copy).
+
+The desktop cargo runner now adds two protections for `cargo:check`:
+
+1. **Preflight holder detection**: compile fails early with the owning PID and command line when bundled PostgreSQL executables are in use.
+2. **Isolated check target**: `cargo:check` defaults to `apps/desktop/src-tauri/target/check-isolated` unless `CARGO_TARGET_DIR` is already set, reducing contention with active dev/runtime target trees.
+
+If the preflight check fails:
+
+1. Stop running desktop/tauri sessions using bundled PostgreSQL binaries.
+2. Re-run:
+
+```bash
+pnpm --filter @elms/desktop cargo:check
+```
+
+The same behavior applies when invoked through workspace compile (`npm run build` -> `pnpm compile` -> Turbo desktop compile task).
+
 ---
 
 Related: [Scripts Reference](./10-scripts.md) | [Environment Variables](./03-environment-variables.md) | [Auth Internals](./07-auth-internals.md)
