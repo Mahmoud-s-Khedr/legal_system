@@ -462,11 +462,8 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         "ELMS_DESKTOP_BOOTSTRAP_TOKEN".to_string(),
         bootstrap_token.clone(),
     );
-    let storage_path_forced = apply_desktop_storage_path_policy(
-        &mut desktop_env,
-        &app_data_dir,
-        use_workspace_runtime,
-    );
+    let storage_path_forced =
+        apply_desktop_storage_path_policy(&mut desktop_env, &app_data_dir, use_workspace_runtime);
     desktop_env
         .entry("LOCAL_SESSION_STORE_PATH".to_string())
         .or_insert_with(|| {
@@ -2955,10 +2952,7 @@ mod tests {
     #[test]
     fn packaged_runtime_forces_local_storage_path_to_app_data() {
         let app_data_dir = PathBuf::from("/tmp/elms-app-data");
-        let mut env = HashMap::from([(
-            "LOCAL_STORAGE_PATH".to_string(),
-            "./uploads".to_string(),
-        )]);
+        let mut env = HashMap::from([("LOCAL_STORAGE_PATH".to_string(), "./uploads".to_string())]);
 
         let forced = apply_desktop_storage_path_policy(&mut env, &app_data_dir, false);
 
@@ -2972,10 +2966,7 @@ mod tests {
     #[test]
     fn workspace_runtime_keeps_existing_local_storage_path() {
         let app_data_dir = PathBuf::from("/tmp/elms-app-data");
-        let mut env = HashMap::from([(
-            "LOCAL_STORAGE_PATH".to_string(),
-            "./uploads".to_string(),
-        )]);
+        let mut env = HashMap::from([("LOCAL_STORAGE_PATH".to_string(), "./uploads".to_string())]);
 
         let forced = apply_desktop_storage_path_policy(&mut env, &app_data_dir, true);
 

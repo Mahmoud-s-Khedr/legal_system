@@ -12,4 +12,3 @@ pub fn desktop_open_external_url(app: AppHandle, url: String) -> Result<(), Stri
         .open(next_url, None)
         .map_err(|_| "DESKTOP_OPEN_EXTERNAL_FAILED".to_string())
 }
-
