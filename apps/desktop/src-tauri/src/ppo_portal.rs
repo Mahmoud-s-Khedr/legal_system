@@ -543,9 +543,8 @@ fn execute_portal_action(app: &AppHandle, action: &str) -> PpoPortalNavigateResu
                 Ok(u) => u.to_string(),
                 Err(_) => return PpoPortalNavigateResult::error(PPO_URL_UNAVAILABLE),
             };
-            use tauri_plugin_shell::ShellExt;
-            #[allow(deprecated)]
-            if app.shell().open(&url, None).is_err() {
+            use tauri_plugin_opener::OpenerExt;
+            if app.opener().open_url(&url, None::<&str>).is_err() {
                 return PpoPortalNavigateResult::error(PPO_NAVIGATION_FAILED);
             }
             PpoPortalNavigateResult::success("open_external", Some(url))

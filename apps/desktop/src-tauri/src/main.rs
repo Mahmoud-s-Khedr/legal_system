@@ -41,6 +41,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(sidecar::RuntimeState::default())
         .invoke_handler(tauri::generate_handler![
             sidecar::desktop_bootstrap_status,
