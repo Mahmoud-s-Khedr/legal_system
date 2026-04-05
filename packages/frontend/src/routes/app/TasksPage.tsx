@@ -6,7 +6,25 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableWrapper, formatDateTime } from "./ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  ResponsiveDataList,
+  SectionCard,
+  SelectField,
+  SortableTableHeadCell,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableWrapper,
+  formatDateTime
+} from "./ui";
 
 type TaskViewMode = "table" | "kanban";
 
@@ -55,6 +73,7 @@ export function TasksPage() {
         eyebrow={t("tasks.eyebrow")}
         title={t("tasks.title")}
         description={t("tasks.description")}
+        stickyActions
         actions={
           <Link
             className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
@@ -116,7 +135,43 @@ export function TasksPage() {
 
         {!tasksQuery.isError && viewMode === "table" && !!tasksQuery.data?.items.length ? (
           <div className="mt-4">
-            <TableWrapper>
+            <ResponsiveDataList
+              items={tasksQuery.data.items}
+              getItemKey={(item) => item.id}
+              fields={[
+                {
+                  key: "title",
+                  label: t("labels.title"),
+                  render: (item) => <span className={item.status === TaskStatus.DONE ? "line-through text-slate-400" : ""}>{item.title}</span>
+                },
+                { key: "status", label: t("labels.status"), render: (item) => getEnumLabel(t, "TaskStatus", item.status) },
+                { key: "priority", label: t("labels.priority"), render: (item) => getEnumLabel(t, "TaskPriority", item.priority) },
+                { key: "dueAt", label: t("labels.dueDate"), render: (item) => formatDateTime(item.dueAt) }
+              ]}
+              actions={(item) => (
+                <>
+                  <button
+                    aria-label={t("actions.markDone")}
+                    className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    disabled={markDoneMutation.isPending || item.status === TaskStatus.DONE}
+                    onClick={() => {
+                      if (item.status !== TaskStatus.DONE) markDoneMutation.mutate(item.id);
+                    }}
+                    type="button"
+                  >
+                    {t("actions.markDone")}
+                  </button>
+                  <Link
+                    className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    params={{ taskId: item.id }}
+                    to="/app/tasks/$taskId"
+                  >
+                    {t("actions.edit")}
+                  </Link>
+                </>
+              )}
+            />
+            <TableWrapper mobileMode="cards">
               <DataTable>
                 <TableHead>
                   <tr>

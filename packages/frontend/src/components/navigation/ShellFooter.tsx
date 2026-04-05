@@ -15,7 +15,7 @@ export function ShellFooter({
 }) {
   return (
     <footer className="border-t border-slate-200 bg-white/90 py-4">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 lg:px-6">
+      <div className="shell-container flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-slate-500">{ariaLabel}</span>
         <nav className="flex flex-wrap items-center gap-2" aria-label={ariaLabel}>
           {links.map((link) => (

@@ -5,7 +5,19 @@ import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
 import { Modal } from "antd";
 import { apiDownload, apiFetch } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
-import { DataTable, EmptyState, ErrorState, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableWrapper } from "../../routes/app/ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  ResponsiveDataList,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableWrapper
+} from "../../routes/app/ui";
 import { useToastStore } from "../../store/toastStore";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
@@ -118,7 +130,52 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
 
   return (
     <>
-      <TableWrapper>
+      <ResponsiveDataList
+        items={items}
+        getItemKey={(item) => item.id}
+        fields={[
+          {
+            key: "title",
+            label: t("labels.title"),
+            render: (doc) => (
+              <div className="min-w-0">
+                <p className="truncate font-medium">{doc.title}</p>
+                <p className="text-xs text-slate-500">{doc.fileName}</p>
+              </div>
+            )
+          },
+          { key: "type", label: t("documents.fileType"), render: (doc) => <EnumBadge enumName="DocumentType" value={doc.type} /> },
+          { key: "status", label: t("labels.status"), render: (doc) => <ExtractionStatusBadge status={doc.extractionStatus} /> }
+        ]}
+        actions={(doc) => (
+          <>
+            <button
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+              onClick={() => setViewingDoc(doc)}
+              type="button"
+            >
+              {t("actions.viewDocument")}
+            </button>
+            <button
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+              onClick={() => void handleDownload(doc)}
+              type="button"
+            >
+              {t("actions.downloadDocument")}
+            </button>
+            {canShowIndexedText(doc) ? (
+              <button
+                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                onClick={() => setShowingIndexedDoc(doc)}
+                type="button"
+              >
+                {t("actions.showIndexedText")}
+              </button>
+            ) : null}
+          </>
+        )}
+      />
+      <TableWrapper mobileMode="cards">
         <DataTable>
           <TableHead>
             <tr>

@@ -178,7 +178,7 @@ export function CaseDetailPage() {
         description={`${caseItem.caseNumber}${activeCourt ? ` · ${activeCourt.courtName}` : ""}`}
         actions={<EnumBadge enumName="CaseStatus" value={caseItem.status} />}
       />
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="sticky top-[calc(var(--header-height)+8px)] z-10 flex gap-2 overflow-x-auto rounded-xl bg-white/90 pb-1 pt-1 backdrop-blur">
         {caseTabs.map((tab) => (
           <button
             className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium ${
@@ -194,7 +194,7 @@ export function CaseDetailPage() {
       </div>
       {activeTab === "overview" ? (
         <SectionCard title={t("cases.overview")} description={t("cases.overviewHelp")}>
-          <dl className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <dl className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <dt className="text-xs font-medium text-slate-500">{t("labels.title")}</dt>
               <dd className="mt-0.5">
@@ -235,7 +235,7 @@ export function CaseDetailPage() {
         </SectionCard>
       ) : null}
       {activeTab === "courts" ? (
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <SectionCard title={t("cases.courts")} description={t("cases.courtsHelp")}>
             {caseQuery.isError ? (
               <ErrorState
@@ -335,7 +335,7 @@ export function CaseDetailPage() {
         </div>
       ) : null}
       {activeTab === "parties" ? (
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <SectionCard title={t("cases.parties")} description={t("cases.partiesHelp")}>
             {!caseItem.parties.length ? (
               <EmptyState title={t("empty.noParties")} description={t("empty.noPartiesHelp")} />
@@ -417,7 +417,7 @@ export function CaseDetailPage() {
         </div>
       ) : null}
       {activeTab === "assignments" ? (
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <SectionCard title={t("cases.assignments")} description={t("cases.assignmentsHelp")}>
             {!caseItem.assignments.length ? (
               <EmptyState title={t("empty.noAssignments")} description={t("empty.noAssignmentsHelp")} />

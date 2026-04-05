@@ -14,23 +14,38 @@ export function PageHeader({
   eyebrow,
   title,
   description,
-  actions
+  actions,
+  density = "compact",
+  stickyActions = false,
+  actionsWrap = "wrap"
 }: {
   eyebrow?: string;
   title: string;
   description: string;
   actions?: ReactNode;
+  density?: "compact" | "comfortable";
+  stickyActions?: boolean;
+  actionsWrap?: "wrap" | "nowrap";
 }) {
+  const compact = density === "compact";
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between animate-fade-in">
-      <div className="space-y-2">
+    <div className={`flex flex-col ${compact ? "gap-3" : "gap-4"} lg:flex-row lg:items-end lg:justify-between animate-fade-in`}>
+      <div className={compact ? "space-y-1.5" : "space-y-2"}>
         {eyebrow ? (
           <p className="text-sm uppercase tracking-[0.3em] rtl:tracking-normal text-slate-500">{eyebrow}</p>
         ) : null}
-        <h1 className="font-heading text-3xl">{title}</h1>
+        <h1 className={`font-heading ${compact ? "text-2xl lg:text-3xl" : "text-3xl"}`}>{title}</h1>
         <p className="max-w-3xl text-sm text-slate-600">{description}</p>
       </div>
-      {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
+      {actions ? (
+        <div
+          className={`flex ${actionsWrap === "nowrap" ? "flex-nowrap overflow-x-auto" : "flex-wrap"} gap-2.5 ${
+            stickyActions ? "lg:sticky lg:top-[calc(var(--header-height)+8px)] lg:z-10" : ""
+          }`}
+        >
+          {actions}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -38,11 +53,23 @@ export function PageHeader({
 export function SectionCard({
   title,
   description,
-  children
-}: PropsWithChildren<{ title: string; description?: string }>) {
+  children,
+  density = "compact",
+  surface = "muted"
+}: PropsWithChildren<{
+  title: string;
+  description?: string;
+  density?: "compact" | "comfortable";
+  surface?: "muted" | "plain";
+}>) {
+  const compact = density === "compact";
   return (
-    <section className="rounded-3xl border border-slate-200 bg-slate-50 p-5 animate-slide-up">
-      <div className="mb-4">
+    <section
+      className={`rounded-3xl border border-slate-200 ${
+        surface === "plain" ? "bg-white" : "bg-slate-50"
+      } animate-slide-up ${compact ? "p-4 lg:p-[var(--density-card-pad)]" : "p-5 lg:p-6"}`}
+    >
+      <div className={compact ? "mb-3" : "mb-4"}>
         <h2 className="font-heading text-lg">{title}</h2>
         {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
       </div>
@@ -60,12 +87,40 @@ export function StatCard({ label, value }: { label: string; value: number | stri
   );
 }
 
-export function TableWrapper({ children }: PropsWithChildren) {
-  return <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">{children}</div>;
+export function TableWrapper({
+  children,
+  mobileMode = "scroll",
+  breakpoint = "md",
+  className = ""
+}: PropsWithChildren<{
+  mobileMode?: "cards" | "scroll";
+  breakpoint?: "sm" | "md" | "lg";
+  className?: string;
+}>) {
+  const tableHiddenClass = mobileMode === "cards"
+    ? (breakpoint === "sm" ? "hidden sm:block" : breakpoint === "lg" ? "hidden lg:block" : "hidden md:block")
+    : "";
+  return (
+    <div
+      className={`${tableHiddenClass} overflow-x-auto rounded-2xl border border-slate-200 bg-white ${className}`.trim()}
+      data-mobile-mode={mobileMode}
+      data-breakpoint={breakpoint}
+    >
+      {children}
+    </div>
+  );
 }
 
-export function DataTable({ children }: PropsWithChildren) {
-  return <table className="min-w-full text-sm">{children}</table>;
+export function DataTable({
+  children,
+  compact = true,
+  stickyHeader = false
+}: PropsWithChildren<{ compact?: boolean; stickyHeader?: boolean }>) {
+  return (
+    <table className={`min-w-full text-sm ${compact ? "table-fixed" : ""} ${stickyHeader ? "[&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10" : ""}`}>
+      {children}
+    </table>
+  );
 }
 
 export function TableHead({ children }: PropsWithChildren) {
@@ -129,8 +184,83 @@ export function TableCell({
   return <td className={`px-4 py-3 align-top ${alignClass}`}>{children}</td>;
 }
 
-export function TableToolbar({ children }: PropsWithChildren) {
-  return <div className="mb-4 grid gap-3 md:grid-cols-2">{children}</div>;
+export function TableToolbar({
+  children,
+  primaryChildren,
+  secondaryChildren,
+  secondaryLabel
+}: PropsWithChildren<{
+  primaryChildren?: ReactNode;
+  secondaryChildren?: ReactNode;
+  secondaryLabel?: string;
+}>) {
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
+  const primary = primaryChildren ?? children;
+  if (!secondaryChildren) {
+    return <div className="mb-4 grid gap-3 lg:grid-cols-2">{primary}</div>;
+  }
+
+  return (
+    <div className="mb-4 space-y-3">
+      <div className="grid gap-3 lg:grid-cols-2">{primary}</div>
+      <div className="lg:hidden">
+        <button
+          type="button"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+          onClick={() => setSecondaryOpen((value) => !value)}
+          aria-expanded={secondaryOpen}
+        >
+          {secondaryLabel ?? "More filters"}
+        </button>
+      </div>
+      <div className={`grid gap-3 lg:grid-cols-2 ${secondaryOpen ? "" : "hidden lg:grid"}`}>
+        {secondaryChildren}
+      </div>
+    </div>
+  );
+}
+
+export interface ResponsiveDataListField<TItem> {
+  key: string;
+  label: string;
+  render: (item: TItem) => ReactNode;
+}
+
+export interface ResponsiveDataListProps<TItem> {
+  items: TItem[];
+  getItemKey: (item: TItem) => string;
+  fields: ResponsiveDataListField<TItem>[];
+  actions?: (item: TItem) => ReactNode;
+  breakpoint?: "sm" | "md" | "lg";
+  className?: string;
+}
+
+export function ResponsiveDataList<TItem>({
+  items,
+  getItemKey,
+  fields,
+  actions,
+  breakpoint = "md",
+  className = ""
+}: ResponsiveDataListProps<TItem>) {
+  const visibleClass = breakpoint === "sm" ? "sm:hidden" : breakpoint === "lg" ? "lg:hidden" : "md:hidden";
+  return (
+    <div className={`space-y-3 ${visibleClass} ${className}`.trim()}>
+      {items.map((item) => (
+        <article key={getItemKey(item)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <dl className="space-y-2">
+            {fields.map((field) => (
+              <div key={field.key} className="flex items-start justify-between gap-4">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{field.label}</dt>
+                <dd className="min-w-0 text-sm text-slate-800 text-end">{field.render(item)}</dd>
+              </div>
+            ))}
+          </dl>
+          {actions ? <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">{actions(item)}</div> : null}
+        </article>
+      ))}
+    </div>
+  );
 }
 
 export function TablePagination({
@@ -165,7 +295,7 @@ export function TablePagination({
       <p>
         {t("pagination.summary", { from: formattedFrom, to: formattedTo, total: formattedTotal })}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Select<number>
           aria-label={t("pagination.pageSize")}
           className="elms-select elms-select-sm"
@@ -180,18 +310,18 @@ export function TablePagination({
         />
         <button
           type="button"
-          className="rounded-lg border border-slate-200 px-2 py-1 disabled:opacity-50"
+          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium sm:px-2.5 sm:text-sm disabled:opacity-50"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
           {t("pagination.prev")}
         </button>
-        <span>
+        <span className="whitespace-nowrap text-xs sm:text-sm">
           {t("pagination.pageStatus", { page: formattedPage, totalPages: formattedTotalPages })}
         </span>
         <button
           type="button"
-          className="rounded-lg border border-slate-200 px-2 py-1 disabled:opacity-50"
+          className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium sm:px-2.5 sm:text-sm disabled:opacity-50"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >

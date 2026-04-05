@@ -11,6 +11,7 @@ import {
   ErrorState,
   Field,
   PageHeader,
+  ResponsiveDataList,
   SectionCard,
   SelectField,
   SortableTableHeadCell,
@@ -81,6 +82,7 @@ export function HearingsPage() {
         eyebrow={t("hearings.eyebrow")}
         title={t("hearings.title")}
         description={t("hearings.description")}
+        stickyActions
         actions={
           <Link className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white" to="/app/hearings/new">
             {t("hearings.newHearing")}
@@ -124,7 +126,30 @@ export function HearingsPage() {
 
         {!hearingsQuery.isLoading && !hearingsQuery.isError && !!hearingsQuery.data?.items.length ? (
           <>
-            <TableWrapper>
+            <ResponsiveDataList
+              items={hearingsQuery.data.items}
+              getItemKey={(item) => item.id}
+              fields={[
+                { key: "case", label: t("labels.case"), render: (item) => item.caseTitle },
+                { key: "datetime", label: t("labels.sessionDatetime"), render: (item) => formatDateTime(item.sessionDatetime) },
+                { key: "lawyer", label: t("labels.assignedLawyer"), render: (item) => item.assignedLawyerName ?? t("labels.unassigned") },
+                {
+                  key: "outcome",
+                  label: t("labels.outcome"),
+                  render: (item) => (item.outcome ? getEnumLabel(t, "SessionOutcome", item.outcome) : "—")
+                }
+              ]}
+              actions={(item) => (
+                <Link
+                  className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  params={{ hearingId: item.id }}
+                  to="/app/hearings/$hearingId/edit"
+                >
+                  {t("actions.edit")}
+                </Link>
+              )}
+            />
+            <TableWrapper mobileMode="cards">
               <DataTable>
                 <TableHead>
                   <tr>

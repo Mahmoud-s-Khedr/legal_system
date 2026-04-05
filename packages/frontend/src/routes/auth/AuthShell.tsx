@@ -16,7 +16,7 @@ export function AuthShell({
 
   return (
     <div className="min-h-screen bg-sand">
-      <div className="grid min-h-[calc(100vh-124px)] lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid min-h-[calc(100vh-124px)] lg:grid-cols-[1.15fr_0.85fr]">
         <section className="flex flex-col justify-between bg-gradient-to-br from-accent to-emerald-800 p-8 text-white">
           <div className="flex items-center justify-between gap-3">
             <Link to="/" className="font-heading text-xl font-bold tracking-tight text-white transition hover:text-emerald-100">ELMS</Link>
@@ -33,7 +33,7 @@ export function AuthShell({
             {t("auth:authFootnote")}
           </p>
         </section>
-        <section className="flex items-center justify-center p-6 lg:p-10">{children}</section>
+        <section className="flex items-center justify-center p-4 sm:p-6 lg:p-10">{children}</section>
       </div>
       <ShellFooter ariaLabel={t("app:footer.navigation")} links={footerLinks} />
       <BackToTopButton label={t("app:actions.backToTop")} />

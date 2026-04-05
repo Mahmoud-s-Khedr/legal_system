@@ -6,7 +6,25 @@ import { apiFetch } from "../../lib/api";
 import { EnumBadge } from "../../components/shared/EnumBadge";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper } from "./ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  ResponsiveDataList,
+  SectionCard,
+  SelectField,
+  SortableTableHeadCell,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableToolbar,
+  TableWrapper
+} from "./ui";
 
 export function ClientsPage() {
   const { t } = useTranslation("app");
@@ -29,6 +47,7 @@ export function ClientsPage() {
         eyebrow={t("clients.eyebrow")}
         title={t("clients.title")}
         description={t("clients.description")}
+        stickyActions
         actions={
           <Link
             className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
@@ -68,7 +87,26 @@ export function ClientsPage() {
             <EmptyState title={t("empty.noClients")} description={t("empty.noClientsHelp")} />
           ) : (
             <>
-              <TableWrapper>
+              <ResponsiveDataList
+                items={clientsQuery.data.items}
+                getItemKey={(item) => item.id}
+                fields={[
+                  { key: "name", label: t("labels.name"), render: (item) => item.name },
+                  { key: "email", label: t("labels.email"), render: (item) => item.email ?? "—" },
+                  { key: "phone", label: t("labels.phone"), render: (item) => item.phone ?? "—" },
+                  { key: "type", label: t("labels.type"), render: (item) => <EnumBadge enumName="ClientType" value={item.type} /> }
+                ]}
+                actions={(item) => (
+                  <Link
+                    className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    params={{ clientId: item.id }}
+                    to="/app/clients/$clientId"
+                  >
+                    {t("actions.viewDocument")}
+                  </Link>
+                )}
+              />
+              <TableWrapper mobileMode="cards">
                 <DataTable>
                   <TableHead>
                     <tr>

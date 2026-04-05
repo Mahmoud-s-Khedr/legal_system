@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -258,6 +258,14 @@ export function CalendarPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [quickType, setQuickType] = useState<"hearing" | "task">("hearing");
   const [pendingDrag, setPendingDrag] = useState<{ event: CalendarEvent; nextAt: string } | null>(null);
+  const [drawerWidth, setDrawerWidth] = useState<number | string>(440);
+
+  useEffect(() => {
+    const onResize = () => setDrawerWidth(window.innerWidth < 640 ? "100%" : 440);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const [quickTaskForm, setQuickTaskForm] = useState<CreateTaskDto>({
     title: "",
@@ -698,7 +706,7 @@ export function CalendarPage() {
         {!hasError ? (
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             {view === "month" ? (
-              <div className={mobileMode === "timeline" ? "hidden md:block" : "block"}>
+              <div className={mobileMode === "agenda" ? "hidden md:block" : "block"}>
                 <div className="calendar-month-grid">
                   {monthColumns.map((label) => (
                     <div className="calendar-weekday-header" key={label}>
@@ -858,7 +866,7 @@ export function CalendarPage() {
         title={quickType === "hearing" ? t("hearings.createTitle") : t("tasks.createTitle")}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        width={440}
+        width={drawerWidth}
       >
         {quickType === "hearing" ? (
           <Form layout="vertical" onFinish={() => createHearingMutation.mutate(quickHearingForm)}>

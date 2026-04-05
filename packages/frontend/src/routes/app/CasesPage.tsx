@@ -8,7 +8,25 @@ import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { useLookupOptions } from "../../lib/lookups";
 import { useAuthBootstrap } from "../../store/authStore";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper } from "./ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  ResponsiveDataList,
+  SectionCard,
+  SelectField,
+  SortableTableHeadCell,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableToolbar,
+  TableWrapper
+} from "./ui";
 
 export function CasesPage() {
   const { t } = useTranslation("app");
@@ -48,6 +66,7 @@ export function CasesPage() {
         eyebrow={t("cases.eyebrow")}
         title={t("cases.title")}
         description={t("cases.description")}
+        stickyActions
         actions={
           <>
             <Link
@@ -133,7 +152,25 @@ export function CasesPage() {
           <EmptyState title={t("empty.noCases")} description={t("empty.noCasesHelp")} />
         ) : (
           <>
-            <TableWrapper>
+            <ResponsiveDataList
+              items={casesQuery.data.items}
+              getItemKey={(item) => item.id}
+              fields={[
+                { key: "title", label: t("labels.title"), render: (item) => item.title },
+                { key: "caseNumber", label: t("labels.caseNumber"), render: (item) => item.caseNumber },
+                { key: "status", label: t("labels.status"), render: (item) => getEnumLabel(t, "CaseStatus", item.status) }
+              ]}
+              actions={(item) => (
+                <Link
+                  className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  params={{ caseId: item.id }}
+                  to="/app/cases/$caseId"
+                >
+                  {t("actions.viewDocument")}
+                </Link>
+              )}
+            />
+            <TableWrapper mobileMode="cards">
               <DataTable>
                 <TableHead>
                   <tr>

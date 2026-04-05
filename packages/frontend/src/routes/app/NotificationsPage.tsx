@@ -5,7 +5,26 @@ import { NotificationType, type NotificationDto, type NotificationListResponseDt
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper, formatDateTime } from "./ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  ResponsiveDataList,
+  SectionCard,
+  SelectField,
+  SortableTableHeadCell,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableToolbar,
+  TableWrapper,
+  formatDateTime
+} from "./ui";
 
 function resolveNotificationPath(n: NotificationDto): string | null {
   const id = n.entityId;
@@ -70,6 +89,7 @@ export function NotificationsPage() {
       <PageHeader
         title={t("notifications.title")}
         description={t("notifications.description")}
+        stickyActions
         actions={
           unread > 0 ? (
             <button
@@ -84,7 +104,9 @@ export function NotificationsPage() {
       />
 
       <SectionCard title={t("notifications.all")}>
-        <TableToolbar>
+        <TableToolbar
+          primaryChildren={
+            <>
           <Field
             label={t("labels.search")}
             value={table.state.q}
@@ -100,10 +122,12 @@ export function NotificationsPage() {
               ...Object.values(NotificationType).map((value) => ({ value, label: value }))
             ]}
           />
-        </TableToolbar>
-        <div className="mb-4 max-w-xs">
-          <SelectField
-            label={t("labels.status")}
+        </>
+          }
+          secondaryChildren={
+            <div className="max-w-xs">
+              <SelectField
+                label={t("labels.status")}
               value={table.state.filters.isRead ?? ""}
               onChange={(value) => table.setFilter("isRead", value)}
               options={[
@@ -112,7 +136,10 @@ export function NotificationsPage() {
                 { value: "true", label: t("notifications.read") }
               ]}
             />
-        </div>
+            </div>
+          }
+          secondaryLabel={t("actions.more")}
+        />
         {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
         {!isLoading && isError && (
           <ErrorState
@@ -127,7 +154,29 @@ export function NotificationsPage() {
         )}
         {!isLoading && !isError && !!data?.items.length && (
           <>
-            <TableWrapper>
+            <ResponsiveDataList
+              items={data.items}
+              getItemKey={(item) => item.id}
+              fields={[
+                { key: "title", label: t("labels.title"), render: (item) => <span className={!item.isRead ? "font-semibold" : ""}>{item.title}</span> },
+                { key: "description", label: t("labels.description"), render: (item) => item.body },
+                { key: "date", label: t("labels.date"), render: (item) => formatDateTime(item.createdAt) },
+                { key: "status", label: t("labels.status"), render: (item) => (item.isRead ? t("notifications.read") : t("notifications.unread")) }
+              ]}
+              actions={(item) =>
+                !item.isRead ? (
+                  <button
+                    onClick={() => void markOne.mutateAsync(item.id)}
+                    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-accent hover:bg-blue-50"
+                  >
+                    {t("notifications.markRead")}
+                  </button>
+                ) : (
+                  <span className="text-xs text-slate-400">—</span>
+                )
+              }
+            />
+            <TableWrapper mobileMode="cards">
               <DataTable>
                 <TableHead>
                   <tr>

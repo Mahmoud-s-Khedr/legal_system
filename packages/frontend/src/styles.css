@@ -46,6 +46,19 @@
   --calendar-event-invoice: #d97706;
   --calendar-now-line: #ef4444;
 
+  /* Layout shell */
+  --shell-max-width: 1920px;
+  --shell-gutter: 16px;
+  --shell-sidebar-width: 248px;
+  --shell-sidebar-width-wide: 280px;
+  --header-height: 73px;
+  --footer-height: 57px;
+
+  /* Density */
+  --density-card-pad: 20px;
+  --density-card-gap: 16px;
+  --density-input-height: 44px;
+
   color: var(--color-ink);
   background: var(--color-sand);
   font-family: "Cairo", system-ui, sans-serif;
@@ -54,6 +67,22 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-synthesis: none;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --shell-gutter: 24px;
+    --density-card-pad: 18px;
+    --density-card-gap: 12px;
+    --density-input-height: 42px;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --shell-gutter: 32px;
+    --shell-sidebar-width: var(--shell-sidebar-width-wide);
+  }
 }
 
 html {
@@ -68,6 +97,28 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+.shell-container {
+  margin-inline: auto;
+  max-width: var(--shell-max-width);
+  padding-inline: var(--shell-gutter);
+}
+
+.shell-main-grid {
+  display: grid;
+  gap: var(--density-card-gap);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .shell-main-grid {
+    grid-template-columns: var(--shell-sidebar-width) minmax(0, 1fr);
+  }
+}
+
+.shell-main-content {
+  min-height: calc(100dvh - var(--header-height) - var(--footer-height) - 48px);
 }
 
 a {
@@ -435,4 +486,41 @@ textarea {
   border-color: var(--color-accent);
   outline: none;
   box-shadow: 0 0 0 2px rgb(15 118 110 / 0.18);
+}
+
+@media (max-width: 1023px) {
+  .calendar-day-cell {
+    min-height: 112px;
+    padding: 6px;
+  }
+
+  .calendar-time-label {
+    font-size: 10px;
+    padding-inline: 4px;
+  }
+}
+
+@media (max-width: 767px) {
+  .calendar-month-grid {
+    border-radius: 14px;
+  }
+
+  .calendar-day-cell {
+    min-height: 84px;
+  }
+
+  .calendar-event-pill {
+    min-height: 24px;
+    font-size: 11px;
+    gap: 6px;
+    padding-inline: 6px;
+  }
+
+  .calendar-time-label-col {
+    display: none;
+  }
+
+  .calendar-timeline-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

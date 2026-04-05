@@ -12,7 +12,7 @@ export function GlobalSearchBar({ onOpenPalette }: Props) {
     <button
       aria-keyshortcuts="Control+K Meta+K"
       aria-label={t("search.placeholder")}
-      className="flex w-56 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-400 transition hover:border-accent hover:bg-white"
+      className="flex w-48 lg:w-56 xl:w-64 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400 transition hover:border-accent hover:bg-white"
       onClick={onOpenPalette}
       type="button"
     >

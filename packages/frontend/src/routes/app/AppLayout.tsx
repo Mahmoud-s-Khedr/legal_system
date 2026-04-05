@@ -134,7 +134,7 @@ export function AppLayout() {
       </a>
       {/* ── Header ── */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-6">
+        <div className="shell-container flex items-center justify-between py-3">
           <div className="flex items-center gap-3">
             {/* Mobile hamburger */}
             <button
@@ -172,11 +172,20 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden md:block">
+            <div className="hidden xl:flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
+              <Link to="/app/cases/quick-new" className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent">
+                {t("actions.quickIntake")}
+              </Link>
+              <span className="text-slate-300" aria-hidden="true">|</span>
+              <Link to="/app/tasks/new" className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent">
+                {t("actions.newTask")}
+              </Link>
+            </div>
+            <div className="hidden lg:block">
               <GlobalSearchBar onOpenPalette={() => setPaletteOpen(true)} />
             </div>
             <NotificationBell />
-            <span className="hidden rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-emerald-900 lg:inline-flex">
+            <span className="hidden rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold text-emerald-900 xl:inline-flex">
               {t("modes.local")}
             </span>
             <div className="hidden sm:block">
@@ -286,10 +295,10 @@ export function AppLayout() {
       )}
 
       {/* ── Main grid ── */}
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[260px_1fr] lg:px-6">
+      <div className="shell-container shell-main-grid py-4 lg:py-5">
         {/* Desktop sidebar */}
         <aside
-          className="hidden rounded-3xl border border-slate-200 bg-[var(--sidebar-bg)] p-4 shadow-card lg:flex lg:flex-col"
+          className="hidden max-h-[calc(100dvh-var(--header-height)-var(--footer-height)-48px)] rounded-3xl border border-slate-200 bg-[var(--sidebar-bg)] p-3 shadow-card lg:flex lg:flex-col xl:p-4"
           aria-label={t("nav.mainNavigation")}
         >
           <div className="flex-1 overflow-y-auto">
@@ -297,7 +306,10 @@ export function AppLayout() {
           </div>
           {userStrip}
         </aside>
-        <main id="main-content" className="min-w-0 animate-fade-in rounded-3xl bg-white p-5 shadow-card sm:p-6">
+        <main
+          id="main-content"
+          className="shell-main-content min-w-0 overflow-auto animate-fade-in rounded-3xl bg-white p-4 shadow-card sm:p-5 lg:p-[var(--density-card-pad)]"
+        >
           <Outlet />
         </main>
       </div>

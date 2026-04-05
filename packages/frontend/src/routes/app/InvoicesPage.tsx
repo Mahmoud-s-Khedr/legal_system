@@ -6,7 +6,26 @@ import { InvoiceStatus, type CreatePaymentDto, type InvoiceDto } from "@elms/sha
 import { apiFetch } from "../../lib/api";
 import { useInvoices } from "../../lib/billing";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper, formatCurrency } from "./ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  ResponsiveDataList,
+  SectionCard,
+  SelectField,
+  SortableTableHeadCell,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableToolbar,
+  TableWrapper,
+  formatCurrency
+} from "./ui";
 
 export function InvoicesPage() {
   const { t } = useTranslation("app");
@@ -59,6 +78,7 @@ export function InvoicesPage() {
         eyebrow={t("billing.eyebrow")}
         title={t("billing.invoicesTitle")}
         description={t("billing.invoicesDescription")}
+        stickyActions
         actions={
           <Link
             className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
@@ -109,7 +129,37 @@ export function InvoicesPage() {
 
         {!isLoading && !isError && !!data?.items.length && (
           <div className="mt-4">
-            <TableWrapper>
+            <ResponsiveDataList
+              items={data.items}
+              getItemKey={(item) => item.id}
+              fields={[
+                { key: "invoiceNumber", label: t("billing.invoiceNumber"), render: (item) => item.invoiceNumber },
+                { key: "client", label: t("labels.client"), render: (item) => item.clientName ?? item.caseTitle ?? "—" },
+                { key: "status", label: t("labels.status"), render: (item) => item.status },
+                { key: "total", label: t("billing.total"), render: (item) => formatCurrency(item.totalAmount) }
+              ]}
+              actions={(item) => (
+                <>
+                  {(item.status === InvoiceStatus.ISSUED || item.status === InvoiceStatus.PARTIALLY_PAID) && (
+                    <button
+                      className="inline-flex rounded-xl border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                      onClick={() => openPaymentForm(item)}
+                      type="button"
+                    >
+                      {t("billing.recordPayment")}
+                    </button>
+                  )}
+                  <Link
+                    className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    params={{ invoiceId: item.id }}
+                    to="/app/invoices/$invoiceId"
+                  >
+                    {t("actions.viewDocument")}
+                  </Link>
+                </>
+              )}
+            />
+            <TableWrapper mobileMode="cards">
               <DataTable>
                 <TableHead>
                   <tr>
@@ -230,6 +280,71 @@ export function InvoicesPage() {
                 </TableBody>
               </DataTable>
             </TableWrapper>
+            {paymentRowId ? (
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3 md:hidden">
+                <form
+                  className="grid gap-3 sm:grid-cols-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    paymentMutation.mutate({
+                      invoiceId: paymentRowId,
+                      dto: { amount: paymentAmount, method: paymentMethod, referenceNumber: paymentRef || null }
+                    });
+                  }}
+                >
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600">{t("billing.amount")}</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                      min="0.01"
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      required
+                      step="0.01"
+                      type="number"
+                      value={paymentAmount}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600">{t("billing.paymentMethod")}</label>
+                    <select
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      value={paymentMethod}
+                    >
+                      {["CASH", "BANK_TRANSFER", "CHEQUE", "CARD", "OTHER"].map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-slate-600">{t("billing.referenceNumber", "Reference")}</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                      onChange={(e) => setPaymentRef(e.target.value)}
+                      placeholder={t("labels.optional")}
+                      type="text"
+                      value={paymentRef}
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex gap-2">
+                    <button
+                      className="rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                      disabled={paymentMutation.isPending}
+                      type="submit"
+                    >
+                      {paymentMutation.isPending ? t("labels.saving") : t("actions.save")}
+                    </button>
+                    <button
+                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
+                      onClick={() => setPaymentRowId(null)}
+                      type="button"
+                    >
+                      {t("actions.cancel")}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : null}
             <TablePagination
               page={table.state.page}
               pageSize={table.state.limit}
