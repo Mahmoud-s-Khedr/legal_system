@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField, TextAreaField, formatDateTime } from "./ui";
+import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField, TextAreaField, formatDateTime } from "./ui";
 import { toDateTimeLocalValue } from "./hearingCalendar";
 
 function normalizePayload(form: CreateHearingDto): CreateHearingDto {
@@ -231,7 +231,13 @@ export function HearingEditPage() {
           {updateMutation.error ? (
             <p className="text-sm text-red-600">{(updateMutation.error as Error).message}</p>
           ) : null}
-          <PrimaryButton type="submit">{t("hearings.saveChanges")}</PrimaryButton>
+          <FormExitActions
+            cancelTo="/app/hearings"
+            cancelLabel={t("actions.cancel")}
+            submitLabel={t("hearings.saveChanges")}
+            savingLabel={t("labels.saving")}
+            submitting={updateMutation.isPending}
+          />
         </form>
       </SectionCard>
     </div>

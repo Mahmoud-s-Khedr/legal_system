@@ -3,6 +3,11 @@ interface BreadcrumbMeta {
   labelKey: string;
 }
 
+export interface BreadcrumbItem {
+  label: string;
+  to?: string;
+}
+
 const BREADCRUMB_META: BreadcrumbMeta[] = [
   { pattern: /^\/app\/dashboard$/, labelKey: "nav.dashboard" },
   { pattern: /^\/app\/clients$/, labelKey: "nav.clients" },
@@ -54,4 +59,24 @@ const BREADCRUMB_META: BreadcrumbMeta[] = [
 export function resolveBreadcrumbLabelKey(pathname: string): string | null {
   const match = BREADCRUMB_META.find((entry) => entry.pattern.test(pathname));
   return match?.labelKey ?? null;
+}
+
+export function buildAppBreadcrumbItems({
+  paths,
+  t
+}: {
+  paths: string[];
+  t: (key: string) => string;
+}): BreadcrumbItem[] {
+  const uniquePaths = paths.filter((path, index, arr) => path.startsWith("/app") && path !== "/app" && arr.indexOf(path) === index);
+  const items: BreadcrumbItem[] = [{ label: t("nav.home"), to: "/app/dashboard" }];
+
+  for (const path of uniquePaths) {
+    const labelKey = resolveBreadcrumbLabelKey(path);
+    if (!labelKey) continue;
+    items.push({ label: t(labelKey), to: path });
+  }
+
+  const lastIndex = items.length - 1;
+  return items.map((item, index) => (index === lastIndex ? { label: item.label } : item));
 }

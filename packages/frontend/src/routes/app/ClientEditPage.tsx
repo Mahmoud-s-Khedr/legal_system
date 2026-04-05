@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEgyptGovernorateOptions, withLegacyGovernorateOption } from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -192,7 +192,14 @@ export function ClientEditPage() {
               />
             </div>
           ) : null}
-          <PrimaryButton type="submit">{t("actions.saveChanges")}</PrimaryButton>
+          <FormExitActions
+            cancelTo="/app/clients/$clientId"
+            cancelParams={{ clientId }}
+            cancelLabel={t("actions.cancel")}
+            submitLabel={t("actions.saveChanges")}
+            savingLabel={t("labels.saving")}
+            submitting={updateMutation.isPending}
+          />
           {updateMutation.error ? (
             <p className="text-sm text-red-600">{(updateMutation.error as Error).message}</p>
           ) : null}

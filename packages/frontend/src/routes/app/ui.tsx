@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type PropsWithChildren, type ReactNode } from "react";
 import { DatePicker, Select } from "antd";
 import { useTranslation } from "react-i18next";
+import { Link } from "@tanstack/react-router";
 import i18n from "../../i18n";
 import {
   DATE_PICKER_DATETIME_FORMAT,
@@ -570,6 +571,63 @@ export function PrimaryButton({
     >
       {children}
     </button>
+  );
+}
+
+export interface FormExitActionsProps {
+  cancelTo: string;
+  cancelParams?: Record<string, string>;
+  cancelLabel: string;
+  submitLabel: string;
+  submitType?: "button" | "submit";
+  submitting?: boolean;
+  disabled?: boolean;
+  savingLabel?: string;
+  saveAndExitLabel?: string;
+  onSaveAndExit?: () => void;
+  disableSaveAndExit?: boolean;
+}
+
+export function FormExitActions({
+  cancelTo,
+  cancelParams,
+  cancelLabel,
+  submitLabel,
+  submitType = "submit",
+  submitting = false,
+  disabled = false,
+  savingLabel,
+  saveAndExitLabel,
+  onSaveAndExit,
+  disableSaveAndExit = false
+}: FormExitActionsProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Link
+        to={cancelTo as never}
+        params={cancelParams as never}
+        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-accent hover:text-accent"
+      >
+        {cancelLabel}
+      </Link>
+      {onSaveAndExit ? (
+        <button
+          type="button"
+          onClick={onSaveAndExit}
+          disabled={disableSaveAndExit || submitting}
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-accent hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saveAndExitLabel}
+        </button>
+      ) : null}
+      <button
+        className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={disabled || submitting}
+        type={submitType}
+      >
+        {submitting ? (savingLabel ?? submitLabel) : submitLabel}
+      </button>
+    </div>
   );
 }
 

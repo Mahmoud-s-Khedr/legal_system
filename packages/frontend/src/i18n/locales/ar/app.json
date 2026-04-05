@@ -60,9 +60,11 @@
     "uploadAnother": "رفع ملف آخر",
     "showIndexedText": "عرض النص المفهرس",
     "copyText": "نسخ النص",
-    "markDone": "تمييز كمنجز"
+    "markDone": "تمييز كمنجز",
+    "backToTop": "العودة للأعلى"
   },
   "nav": {
+    "home": "الرئيسية",
     "dashboard": "لوحة التحكم",
     "clients": "العملاء",
     "cases": "القضايا",
@@ -223,6 +225,12 @@
   },
   "common": {
     "loading": "جارٍ التحميل…"
+  },
+  "footer": {
+    "navigation": "تنقل سريع",
+    "login": "تسجيل الدخول",
+    "setup": "الإعداد الأولي",
+    "connection": "الاتصال"
   },
   "pagination": {
     "prev": "السابق",
@@ -765,7 +773,14 @@
     "navigate": "تنقل",
     "select": "اختر",
     "dismiss": "إغلاق",
-    "advancedSearch": "بحث متقدم"
+    "advancedSearch": "بحث متقدم",
+    "escape": {
+      "dashboard": "الذهاب إلى لوحة التحكم",
+      "cases": "الذهاب إلى القضايا",
+      "clients": "الذهاب إلى العملاء",
+      "search": "الذهاب إلى البحث",
+      "settings": "الذهاب إلى الإعدادات"
+    }
   },
   "enums": {
     "TaskStatus": {
@@ -1031,6 +1046,7 @@
     "loginDescription": "سجّل الدخول لمراجعة قضاياك وجلساتك وفواتيرك.",
     "dashboard": "لوحة بوابة العميل",
     "dashboardDescription": "تابع القضايا النشطة والجلسات القادمة وحالة الفواتير.",
+    "caseDetails": "تفاصيل القضية",
     "activeCases": "القضايا النشطة",
     "invoices": "الفواتير",
     "overdueInvoices": "الفواتير المتأخرة",

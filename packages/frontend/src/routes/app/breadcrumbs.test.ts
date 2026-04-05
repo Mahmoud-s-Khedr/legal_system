@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveBreadcrumbLabelKey } from "./breadcrumbs";
+import { buildAppBreadcrumbItems, resolveBreadcrumbLabelKey } from "./breadcrumbs";
 
 describe("breadcrumb metadata resolver", () => {
   it("resolves static app routes", () => {
@@ -15,5 +15,16 @@ describe("breadcrumb metadata resolver", () => {
 
   it("returns null for unknown routes", () => {
     expect(resolveBreadcrumbLabelKey("/app/unknown/path")).toBeNull();
+  });
+
+  it("builds clickable ancestors and leaves current item non-clickable", () => {
+    const items = buildAppBreadcrumbItems({
+      paths: ["/app", "/app/cases", "/app/cases/abc-123"],
+      t: (key) => key
+    });
+
+    expect(items[0]).toEqual({ label: "nav.home", to: "/app/dashboard" });
+    expect(items[1]).toEqual({ label: "nav.cases", to: "/app/cases" });
+    expect(items[2]).toEqual({ label: "nav.cases" });
   });
 });

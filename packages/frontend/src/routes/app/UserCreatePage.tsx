@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 export function UserCreatePage() {
   const { t } = useTranslation("app");
@@ -112,7 +112,13 @@ export function UserCreatePage() {
             }))}
             value={form.preferredLanguage ?? Language.AR}
           />
-          <PrimaryButton type="submit">{t("actions.createUser")}</PrimaryButton>
+          <FormExitActions
+            cancelTo="/app/users"
+            cancelLabel={t("actions.cancel")}
+            submitLabel={t("actions.createUser")}
+            savingLabel={t("labels.saving")}
+            submitting={createMutation.isPending}
+          />
           {createMutation.error ? (
             <p className="text-sm text-red-600">
               {(createMutation.error as Error).message?.toLowerCase().includes("seat limit")

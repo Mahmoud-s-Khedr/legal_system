@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { Field, PageHeader, PrimaryButton, SectionCard, SelectField, TextAreaField } from "./ui";
+import { Field, FormExitActions, PageHeader, SectionCard, SelectField, TextAreaField } from "./ui";
 import { slotDateTime } from "./hearingCalendar";
 
 function normalizePayload(form: CreateHearingDto): CreateHearingDto {
@@ -205,7 +205,13 @@ export function HearingCreatePage() {
           {createMutation.error ? (
             <p className="text-sm text-red-600">{(createMutation.error as Error).message}</p>
           ) : null}
-          <PrimaryButton type="submit">{t("actions.scheduleHearing")}</PrimaryButton>
+          <FormExitActions
+            cancelTo="/app/hearings"
+            cancelLabel={t("actions.cancel")}
+            submitLabel={t("actions.scheduleHearing")}
+            savingLabel={t("labels.saving")}
+            submitting={createMutation.isPending}
+          />
         </form>
       </SectionCard>
     </div>

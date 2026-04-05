@@ -59,9 +59,11 @@
     "uploadAnother": "Upload another",
     "showIndexedText": "Show indexed text",
     "copyText": "Copy text",
-    "markDone": "Mark as done"
+    "markDone": "Mark as done",
+    "backToTop": "Back to top"
   },
   "nav": {
+    "home": "Home",
     "dashboard": "Dashboard",
     "clients": "Clients",
     "cases": "Cases",
@@ -222,6 +224,12 @@
   },
   "common": {
     "loading": "Loading…"
+  },
+  "footer": {
+    "navigation": "Quick navigation",
+    "login": "Login",
+    "setup": "Setup",
+    "connection": "Connection"
   },
   "pagination": {
     "prev": "Previous",
@@ -754,7 +762,14 @@
     "navigate": "navigate",
     "select": "select",
     "dismiss": "dismiss",
-    "advancedSearch": "Advanced search"
+    "advancedSearch": "Advanced search",
+    "escape": {
+      "dashboard": "Go to dashboard",
+      "cases": "Go to cases",
+      "clients": "Go to clients",
+      "search": "Go to search",
+      "settings": "Go to settings"
+    }
   },
   "enums": {
     "TaskStatus": {
@@ -991,6 +1006,7 @@
     "loginDescription": "Sign in to review your cases, hearings, and invoices.",
     "dashboard": "Portal dashboard",
     "dashboardDescription": "Track your active cases, upcoming hearings, and latest invoice status.",
+    "caseDetails": "Case details",
     "activeCases": "Active cases",
     "invoices": "Invoices",
     "overdueInvoices": "Overdue invoices",

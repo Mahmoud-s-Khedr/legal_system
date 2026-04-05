@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
-import { Field, FormAlert, PageHeader, PrimaryButton, SectionCard, SelectField, TextAreaField } from "./ui";
+import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField, TextAreaField } from "./ui";
 
 export function TaskCreatePage() {
   const { t } = useTranslation("app");
@@ -164,7 +164,13 @@ export function TaskCreatePage() {
             commitMode="blur"
             value={form.dueAt ?? ""}
           />
-          <PrimaryButton type="submit">{t("actions.createTask")}</PrimaryButton>
+          <FormExitActions
+            cancelTo="/app/tasks"
+            cancelLabel={t("actions.cancel")}
+            submitLabel={t("actions.createTask")}
+            savingLabel={t("labels.saving")}
+            submitting={createMutation.isPending}
+          />
           {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
         </form>
       </SectionCard>

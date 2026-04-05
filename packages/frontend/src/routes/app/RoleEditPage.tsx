@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RoleDto, RoleListResponseDto, SetRolePermissionsDto, UpdateRoleDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard } from "./ui";
+import { EmptyState, Field, FormExitActions, PageHeader, SectionCard } from "./ui";
 import { PermissionChecklist } from "../../components/shared/PermissionChecklist";
 
 export function RoleEditPage() {
@@ -94,9 +94,13 @@ export function RoleEditPage() {
           <PermissionChecklist onChange={setPermissions} selected={permissions} />
         </SectionCard>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <PrimaryButton type="submit">
-          {updateMutation.isPending ? "..." : t("actions.saveChanges")}
-        </PrimaryButton>
+        <FormExitActions
+          cancelTo="/app/settings/roles"
+          cancelLabel={t("actions.cancel")}
+          submitLabel={t("actions.saveChanges")}
+          savingLabel={t("labels.saving")}
+          submitting={updateMutation.isPending}
+        />
       </form>
     </div>
   );

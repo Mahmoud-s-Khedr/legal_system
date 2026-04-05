@@ -8,7 +8,7 @@ import { apiFetch } from "../../lib/api";
 import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
-import { Field, FormAlert, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 type ClientFormState = Omit<CreateClientDto, "type"> & { type: ClientType | "" };
 
@@ -206,7 +206,13 @@ export function ClientCreatePage() {
               </button>
             </div>
           ) : null}
-          <PrimaryButton type="submit">{t("actions.createClient")}</PrimaryButton>
+          <FormExitActions
+            cancelTo="/app/clients"
+            cancelLabel={t("actions.cancel")}
+            submitLabel={t("actions.createClient")}
+            savingLabel={t("labels.saving")}
+            submitting={createMutation.isPending}
+          />
           {validationMessage ? <FormAlert message={validationMessage} /> : null}
           {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
         </form>

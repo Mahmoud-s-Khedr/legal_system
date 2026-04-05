@@ -59,9 +59,11 @@
     "uploadAnother": "Téléverser un autre",
     "showIndexedText": "Afficher le texte indexé",
     "copyText": "Copier le texte",
-    "markDone": "Marquer comme fait"
+    "markDone": "Marquer comme fait",
+    "backToTop": "Haut de page"
   },
   "nav": {
+    "home": "Accueil",
     "dashboard": "Tableau de bord",
     "clients": "Clients",
     "cases": "Dossiers",
@@ -222,6 +224,12 @@
   },
   "common": {
     "loading": "Chargement…"
+  },
+  "footer": {
+    "navigation": "Navigation rapide",
+    "login": "Connexion",
+    "setup": "Configuration",
+    "connection": "Connexion backend"
   },
   "pagination": {
     "prev": "Précédent",
@@ -742,7 +750,14 @@
     "navigate": "naviguer",
     "select": "sélectionner",
     "dismiss": "fermer",
-    "advancedSearch": "Recherche avancée"
+    "advancedSearch": "Recherche avancée",
+    "escape": {
+      "dashboard": "Aller au tableau de bord",
+      "cases": "Aller aux dossiers",
+      "clients": "Aller aux clients",
+      "search": "Aller à la recherche",
+      "settings": "Aller aux paramètres"
+    }
   },
   "enums": {
     "TaskStatus": {
@@ -979,6 +994,7 @@
     "loginDescription": "Connectez-vous pour consulter vos dossiers, audiences et factures.",
     "dashboard": "Tableau de bord portail",
     "dashboardDescription": "Suivez vos dossiers actifs, audiences à venir et le statut des factures.",
+    "caseDetails": "Détails du dossier",
     "activeCases": "Dossiers actifs",
     "invoices": "Factures",
     "overdueInvoices": "Factures en retard",

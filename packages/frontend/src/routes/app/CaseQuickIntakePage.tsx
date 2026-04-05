@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -28,7 +28,7 @@ import { useLookupOptions } from "../../lib/lookups";
 import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useHasPermission } from "../../store/authStore";
-import { Field, FormAlert, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 type ClientMode = "existing" | "new";
 type ClientFormState = Omit<CreateClientDto, "type"> & { type: ClientType | "" };
@@ -93,6 +93,8 @@ type SubmitSection =
   | "tasks"
   | "documents";
 
+const DEFAULT_PARTY_ROLE = "PLAINTIFF";
+
 function makeId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -137,7 +139,7 @@ function emptyParty(): DraftParty {
   return {
     id: makeId("party"),
     name: "",
-    role: "PLAINTIFF",
+    role: DEFAULT_PARTY_ROLE,
     isOurClient: true,
     opposingCounselName: ""
   };
@@ -180,6 +182,44 @@ function emptyDocument(): DraftDocument {
     type: "GENERAL",
     file: null
   };
+}
+
+function hasText(value: string | null | undefined) {
+  return Boolean(value?.trim());
+}
+
+export function isPartyPristine(party: DraftParty): boolean {
+  return (
+    !hasText(party.name) &&
+    party.role === DEFAULT_PARTY_ROLE &&
+    party.isOurClient === true &&
+    !hasText(party.opposingCounselName)
+  );
+}
+
+export function isQuickIntakeDirty(state: {
+  caseForm: Pick<CreateCaseDto, "title" | "caseNumber">;
+  existingClientId: string;
+  clientForm: Pick<ClientFormState, "name">;
+  courts: DraftCourt[];
+  parties: DraftParty[];
+  assignments: DraftAssignment[];
+  hearings: DraftHearing[];
+  tasks: DraftTask[];
+  documents: DraftDocument[];
+}): boolean {
+  return (
+    hasText(state.caseForm.title) ||
+    hasText(state.caseForm.caseNumber) ||
+    hasText(state.existingClientId) ||
+    hasText(state.clientForm.name) ||
+    state.courts.some((court) => hasText(court.courtName) || hasText(court.courtLevel) || hasText(court.caseNumber) || hasText(court.startedAt) || hasText(court.circuit) || hasText(court.notes)) ||
+    state.parties.some((party) => !isPartyPristine(party)) ||
+    state.assignments.some((assignment) => hasText(assignment.userId)) ||
+    state.hearings.some((hearing) => hasText(hearing.sessionDatetime) || hasText(hearing.assignedLawyerId) || hasText(hearing.notes) || hasText(hearing.nextSessionAt)) ||
+    state.tasks.some((task) => hasText(task.title) || hasText(task.description) || hasText(task.assignedToId) || hasText(task.dueAt)) ||
+    state.documents.some((doc) => doc.file !== null || hasText(doc.title))
+  );
 }
 
 export function CaseQuickIntakePage() {
@@ -241,18 +281,19 @@ export function CaseQuickIntakePage() {
   const [tasks, setTasks] = useState<DraftTask[]>([emptyTask()]);
   const [documents, setDocuments] = useState<DraftDocument[]>([emptyDocument()]);
 
-  useUnsavedChanges(
-    caseForm.title !== "" ||
-      caseForm.caseNumber !== "" ||
-      existingClientId !== "" ||
-      clientForm.name !== "" ||
-      courts.some((c) => c.courtName || c.courtLevel || c.caseNumber || c.startedAt || c.circuit || c.notes) ||
-      parties.some((p) => p.name || p.role || p.opposingCounselName) ||
-      assignments.some((a) => a.userId !== "") ||
-      hearings.some((h) => h.sessionDatetime || h.assignedLawyerId || h.notes || h.nextSessionAt) ||
-      tasks.some((task) => task.title || task.description || task.assignedToId || task.dueAt) ||
-      documents.some((doc) => doc.file !== null || doc.title)
-  );
+  const quickIntakeDirty = isQuickIntakeDirty({
+    caseForm,
+    existingClientId,
+    clientForm,
+    courts,
+    parties,
+    assignments,
+    hearings,
+    tasks,
+    documents
+  });
+
+  useUnsavedChanges(quickIntakeDirty);
 
   const clientsQuery = useQuery({
     queryKey: ["clients", "quick-intake"],
@@ -703,6 +744,14 @@ export function CaseQuickIntakePage() {
         eyebrow={t("cases.eyebrow")}
         title={t("quickIntake.title")}
         description={t("quickIntake.description")}
+        actions={(
+          <Link
+            to="/app/cases"
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-accent hover:text-accent"
+          >
+            {t("actions.cancel")}
+          </Link>
+        )}
       />
       <form className="space-y-4" onSubmit={handleSubmit}>
         <SectionCard title={t("quickIntake.clientStepTitle")} description={t("quickIntake.clientStepHelp")}>
@@ -1156,9 +1205,14 @@ export function CaseQuickIntakePage() {
           </div>
 
           <div className="mt-4">
-            <PrimaryButton type="submit" disabled={submitting || !hasRequiredReady}>
-              {submitting ? t("labels.saving") : t("quickIntake.submitAll")}
-            </PrimaryButton>
+            <FormExitActions
+              cancelTo="/app/cases"
+              cancelLabel={t("actions.cancel")}
+              submitLabel={t("quickIntake.submitAll")}
+              savingLabel={t("labels.saving")}
+              submitting={submitting}
+              disabled={!hasRequiredReady}
+            />
           </div>
 
           {validationMessage ? (

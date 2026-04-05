@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import type { TemplateDto, UpdateTemplateDto } from "../../lib/templates";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 import { useTemplateRender } from "../../lib/templates";
 
 const LANGUAGES = ["AR", "EN", "FR"];
@@ -90,9 +90,13 @@ export function TemplateEditPage() {
             />
           </div>
           {!tpl.isSystem && (
-            <PrimaryButton type="submit" disabled={update.isPending}>
-              {update.isPending ? t("labels.saving") : t("actions.saveChanges")}
-            </PrimaryButton>
+            <FormExitActions
+              cancelTo="/app/templates"
+              cancelLabel={t("actions.cancel")}
+              submitLabel={t("actions.saveChanges")}
+              savingLabel={t("labels.saving")}
+              submitting={update.isPending}
+            />
           )}
           {update.error ? (
             <p className="text-sm text-red-600">{(update.error as Error).message}</p>

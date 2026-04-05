@@ -3,6 +3,12 @@ export function ErrorFallback({ error }: { error: Error }) {
   // bootstrap (before the i18n provider is initialized), this component itself
   // would throw an exception, resulting in a completely silent blank white screen.
 
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+  const isAppRoute = pathname.startsWith("/app");
+  const isPortalRoute = pathname.startsWith("/portal");
+  const safeHref = isAppRoute ? "/app/dashboard" : isPortalRoute ? "/portal/dashboard" : "/login";
+  const safeLabel = isAppRoute ? "Go to Dashboard" : isPortalRoute ? "Go to Portal Home" : "Go to Login";
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center animate-fade-in bg-sand text-ink" dir="ltr">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-2">
@@ -12,14 +18,21 @@ export function ErrorFallback({ error }: { error: Error }) {
       <p className="max-w-md text-sm text-slate-600 my-2">
         {error?.message ?? "An unexpected error occurred while starting the application."}
       </p>
-      <button
-        className="rounded-2xl bg-accent px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-hover mt-4"
-        onClick={() => window.location.reload()}
-        type="button"
-      >
-        Reload Application / إعادة تحميل
-      </button>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        <a
+          className="rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-accent hover:text-accent"
+          href={safeHref}
+        >
+          {safeLabel}
+        </a>
+        <button
+          className="rounded-2xl bg-accent px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-hover"
+          onClick={() => window.location.reload()}
+          type="button"
+        >
+          Reload Application / إعادة تحميل
+        </button>
+      </div>
     </div>
   );
 }
-

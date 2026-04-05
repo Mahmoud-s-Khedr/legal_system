@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
-import { Field, FormAlert, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 export function CaseCreatePage() {
   const { t } = useTranslation("app");
@@ -109,7 +109,13 @@ export function CaseCreatePage() {
             value={form.type}
           />
           <p className="text-sm text-slate-500">{t("cases.courtNoteAfterCreate")}</p>
-          <PrimaryButton type="submit">{t("actions.createCase")}</PrimaryButton>
+          <FormExitActions
+            cancelTo="/app/cases"
+            cancelLabel={t("actions.cancel")}
+            submitLabel={t("actions.createCase")}
+            savingLabel={t("labels.saving")}
+            submitting={createMutation.isPending}
+          />
           {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
         </form>
       </SectionCard>

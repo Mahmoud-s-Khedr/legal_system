@@ -7,7 +7,7 @@ import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useCreateInvoice } from "../../lib/billing";
 import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
-import { Field, FormAlert, PageHeader, SectionCard, SelectField } from "./ui";
+import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 interface ItemRow {
   description: string;
@@ -250,15 +250,13 @@ export function InvoiceCreatePage() {
 
         {error ? <FormAlert message={error} /> : null}
 
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={createInvoice.isPending}
-            className="rounded-2xl bg-accent px-6 py-3 font-semibold text-white disabled:opacity-60"
-          >
-            {createInvoice.isPending ? t("labels.saving") : t("billing.createInvoice")}
-          </button>
-        </div>
+        <FormExitActions
+          cancelTo="/app/invoices"
+          cancelLabel={t("actions.cancel")}
+          submitLabel={t("billing.createInvoice")}
+          savingLabel={t("labels.saving")}
+          submitting={createInvoice.isPending}
+        />
       </form>
     </div>
   );

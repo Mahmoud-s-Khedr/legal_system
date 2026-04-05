@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useCreateTemplate, type CreateTemplateDto } from "../../lib/templates";
-import { Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import { Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 const LANGUAGES = ["AR", "EN", "FR"];
 
@@ -55,9 +55,13 @@ export function TemplateCreatePage() {
               onChange={(e) => setForm({ ...form, body: e.target.value })}
             />
           </div>
-          <PrimaryButton type="submit" disabled={create.isPending}>
-            {create.isPending ? t("labels.saving") : t("templates.save")}
-          </PrimaryButton>
+          <FormExitActions
+            cancelTo="/app/templates"
+            cancelLabel={t("actions.cancel")}
+            submitLabel={t("templates.save")}
+            savingLabel={t("labels.saving")}
+            submitting={create.isPending}
+          />
           {create.error ? (
             <p className="text-sm text-red-600">{(create.error as Error).message}</p>
           ) : null}

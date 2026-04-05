@@ -1,4 +1,4 @@
-import { Outlet, useMatches } from "@tanstack/react-router";
+import { Link, Outlet, useMatches } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Menu, X, LogOut, ChevronRight, ChevronLeft } from "lucide-react";
@@ -8,9 +8,12 @@ import { CommandPalette } from "../../components/search/CommandPalette";
 import { NotificationBell } from "../../components/notifications/NotificationBell";
 import { useAccessibleOverlay } from "../../components/shared/useAccessibleOverlay";
 import { useAuthBootstrap } from "../../store/authStore";
-import { resolveBreadcrumbLabelKey } from "./breadcrumbs";
+import { buildAppBreadcrumbItems } from "./breadcrumbs";
 import { SidebarNav } from "./SidebarNav";
 import { buildSidebarNavSections } from "./navConfig";
+import { BackToTopButton } from "../../components/navigation/BackToTopButton";
+import { ShellFooter } from "../../components/navigation/ShellFooter";
+import { buildAppShellFooterLinks } from "../../components/navigation/shellFooterLinks";
 
 export function AppLayout() {
   const { t, i18n } = useTranslation("app");
@@ -67,15 +70,10 @@ export function AppLayout() {
     permissions: user?.permissions ?? []
   });
 
-  const breadcrumbSegments = matches
-    .map((match) => match.pathname)
-    .filter((pathname, index, arr) => pathname.startsWith("/app") && pathname !== "/app" && arr.indexOf(pathname) === index)
-    .map((pathname) => {
-      const labelKey = resolveBreadcrumbLabelKey(pathname);
-      if (!labelKey) return null;
-      return { path: pathname, label: t(labelKey) };
-    })
-    .filter((segment): segment is { path: string; label: string } => Boolean(segment));
+  const breadcrumbItems = buildAppBreadcrumbItems({
+    paths: matches.map((match) => match.pathname),
+    t
+  });
 
   const userInitials = user?.fullName
     ? user.fullName
@@ -87,6 +85,7 @@ export function AppLayout() {
     : "?";
 
   const SeparatorIcon = isRtl ? ChevronLeft : ChevronRight;
+  const footerLinks = buildAppShellFooterLinks(t);
 
   const navContent = (
     <SidebarNav
@@ -150,13 +149,21 @@ export function AppLayout() {
               <Menu size={22} />
             </button>
             <div>
-              <p className="font-heading text-xl font-bold tracking-tight text-accent">ELMS</p>
-              {breadcrumbSegments.length > 0 && (
+              <Link to="/app/dashboard" className="font-heading text-xl font-bold tracking-tight text-accent transition hover:text-accent-hover">
+                ELMS
+              </Link>
+              {breadcrumbItems.length > 0 && (
                 <div className="hidden items-center gap-1 text-xs text-slate-400 md:flex">
-                  {breadcrumbSegments.map((seg, i) => (
-                    <span key={`${seg.path}-${i}`} className="flex items-center gap-1">
+                  {breadcrumbItems.map((item, i) => (
+                    <span key={`${item.label}-${i}`} className="flex items-center gap-1">
                       {i > 0 && <SeparatorIcon size={12} />}
-                      <span className="capitalize">{seg.label}</span>
+                      {item.to ? (
+                        <Link to={item.to} className="capitalize underline-offset-2 transition hover:text-accent hover:underline">
+                          {item.label}
+                        </Link>
+                      ) : (
+                        <span className="capitalize font-semibold text-slate-600">{item.label}</span>
+                      )}
                     </span>
                   ))}
                 </div>
@@ -294,6 +301,8 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <ShellFooter ariaLabel={t("footer.navigation")} links={footerLinks} />
+      <BackToTopButton label={t("actions.backToTop")} />
     </div>
   );
 }

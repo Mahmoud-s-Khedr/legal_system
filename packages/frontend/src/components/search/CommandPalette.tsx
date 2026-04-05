@@ -59,6 +59,36 @@ export function CommandPalette({ open, onClose }: Props) {
 
   const quickActions: PaletteItem[] = useMemo(() => [
     {
+      id: "go-dashboard",
+      label: t("search.escape.dashboard"),
+      icon: <Plus className="h-4 w-4" />,
+      action: () => { void navigate({ to: "/app/dashboard" }); onClose(); }
+    },
+    {
+      id: "go-cases",
+      label: t("search.escape.cases"),
+      icon: <Plus className="h-4 w-4" />,
+      action: () => { void navigate({ to: "/app/cases" }); onClose(); }
+    },
+    {
+      id: "go-clients",
+      label: t("search.escape.clients"),
+      icon: <Plus className="h-4 w-4" />,
+      action: () => { void navigate({ to: "/app/clients" }); onClose(); }
+    },
+    {
+      id: "go-search",
+      label: t("search.escape.search"),
+      icon: <Plus className="h-4 w-4" />,
+      action: () => { void navigate({ to: "/app/search" }); onClose(); }
+    },
+    {
+      id: "go-settings",
+      label: t("search.escape.settings"),
+      icon: <Plus className="h-4 w-4" />,
+      action: () => { void navigate({ to: "/app/settings" }); onClose(); }
+    },
+    {
       id: "quick-intake",
       label: t("actions.quickIntake"),
       icon: <Plus className="h-4 w-4" />,
