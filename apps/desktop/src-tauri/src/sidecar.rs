@@ -760,8 +760,11 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             .map(|v| v.trim() == LATEST_MIGRATION_NAME)
             .unwrap_or(false);
     let env_skip_requested = env_requests_skip_migrations(&desktop_env);
-    let skip_migrations =
-        should_skip_migrations(should_reset_database, schema_already_current, env_skip_requested);
+    let skip_migrations = should_skip_migrations(
+        should_reset_database,
+        schema_already_current,
+        env_skip_requested,
+    );
     if should_reset_database && env_skip_requested {
         log_startup_diagnostic(
             &bootstrap_log_file,
@@ -3303,11 +3306,11 @@ mod tests {
     use super::compute_desktop_env_candidates;
     use super::remove_file_if_present;
     use super::should_skip_migrations;
+    use super::workspace_backend_launch;
     use super::DESKTOP_DB_MARKER_FILE;
     use super::MIGRATION_VERSION_MARKER_FILE;
-    use super::workspace_backend_launch;
-    use std::fs;
     use std::collections::HashMap;
+    use std::fs;
     use std::path::Path;
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
