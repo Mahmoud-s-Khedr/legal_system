@@ -11,6 +11,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
 
@@ -199,10 +200,16 @@ export function UserDetailPage() {
             <button
               className="rounded-2xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600"
               onClick={() => {
-                const confirmed = window.confirm(t("users.deleteConfirm"));
-                if (confirmed) {
-                  void deleteMutation.mutateAsync();
-                }
+                void (async () => {
+                  const approved = await confirmAction({
+                    content: t("users.deleteConfirm"),
+                    okButtonProps: { danger: true }
+                  });
+                  if (!approved) {
+                    return;
+                  }
+                  await deleteMutation.mutateAsync();
+                })();
               }}
               type="button"
             >

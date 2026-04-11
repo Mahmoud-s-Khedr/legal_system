@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useBlocker } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { confirmAction } from "./dialog";
 
 /**
  * Warns the user before leaving a page with unsaved changes.
@@ -17,8 +18,17 @@ export function useUnsavedChanges(isDirty: boolean): void {
 
   // Block in-app navigation
   useBlocker({
-    condition: isDirty,
-    blockerFn: () => window.confirm(message)
+    shouldBlockFn: async () => {
+      if (!isDirty) {
+        return false;
+      }
+
+      const approved = await confirmAction({
+        content: message
+      });
+      return approved;
+    },
+    enableBeforeUnload: isDirty
   });
 
   // Block browser unload / tab close

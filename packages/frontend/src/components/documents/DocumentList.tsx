@@ -5,6 +5,7 @@ import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
 import { Modal } from "antd";
 import { apiDownload, apiFetch } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
+import { confirmAction, showErrorDialog } from "../../lib/dialog";
 import {
   DataTable,
   EmptyState,
@@ -83,7 +84,7 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
       const { blob, filename } = await apiDownload(`/api/documents/${doc.id}/stream`);
       await saveBlobToDownloads(blob, filename ?? doc.fileName);
     } catch {
-      window.alert(t("errors.fallback"));
+      showErrorDialog(t("errors.fallback"));
     }
   };
 
@@ -227,9 +228,16 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
                     <button
                       className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                       onClick={() => {
-                        if (window.confirm(t("actions.delete"))) {
-                          void deleteMutation.mutateAsync(doc.id);
-                        }
+                        void (async () => {
+                          const approved = await confirmAction({
+                            content: t("actions.delete"),
+                            okButtonProps: { danger: true }
+                          });
+                          if (!approved) {
+                            return;
+                          }
+                          await deleteMutation.mutateAsync(doc.id);
+                        })();
                       }}
                       type="button"
                       aria-label={`${t("actions.delete")} ${doc.title}`}

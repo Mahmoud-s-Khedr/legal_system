@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { DocumentDto } from "@elms/shared";
 import { apiDownload, apiFetch } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
+import { showErrorDialog } from "../../lib/dialog";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { VersionHistory } from "./VersionHistory";
 import { PdfViewer } from "./PdfViewer";
@@ -34,7 +35,7 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
       const { blob, filename } = await apiDownload(`/api/documents/${doc.id}/stream`);
       await saveBlobToDownloads(blob, filename ?? doc.fileName);
     } catch {
-      window.alert(t("errors.fallback"));
+      showErrorDialog(t("errors.fallback"));
     } finally {
       setIsDownloading(false);
     }

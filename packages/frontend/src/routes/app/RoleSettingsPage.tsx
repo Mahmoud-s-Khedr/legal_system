@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RoleListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { EmptyState, PageHeader, SectionCard } from "./ui";
 
@@ -68,9 +69,16 @@ export function RoleSettingsPage() {
                   <button
                     className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                     onClick={() => {
-                      if (confirm(t("roles.deleteConfirm"))) {
+                      void (async () => {
+                        const approved = await confirmAction({
+                          content: t("roles.deleteConfirm"),
+                          okButtonProps: { danger: true }
+                        });
+                        if (!approved) {
+                          return;
+                        }
                         deleteMutation.mutate(role.id);
-                      }
+                      })();
                     }}
                     type="button"
                   >

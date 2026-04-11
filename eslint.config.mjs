@@ -27,6 +27,31 @@ export default tseslint.config(
         ...globals.node
       }
     },
-    rules: {}
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        {
+          name: "alert",
+          message: "Use showErrorDialog from src/lib/dialog.ts instead."
+        },
+        {
+          name: "confirm",
+          message: "Use confirmAction from src/lib/dialog.ts instead."
+        }
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "window",
+          property: "alert",
+          message: "Use showErrorDialog from src/lib/dialog.ts instead."
+        },
+        {
+          object: "window",
+          property: "confirm",
+          message: "Use confirmAction from src/lib/dialog.ts instead."
+        }
+      ]
+    }
   }
 );

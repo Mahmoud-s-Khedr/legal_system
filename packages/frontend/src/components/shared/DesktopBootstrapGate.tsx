@@ -1,6 +1,7 @@
 import { PropsWithChildren, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isDummyDesktopRuntime } from "../../lib/api";
+import { confirmAction } from "../../lib/dialog";
 
 interface BootstrapStatus {
   phase: "starting" | "ready" | "recovering" | "failed";
@@ -136,16 +137,21 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
               <button
                 className="rounded-2xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 hover:bg-rose-50"
                 onClick={() => {
-                  const approved = window.confirm(t("desktopBootstrap.resetConfirm"));
-                  if (!approved) {
-                    return;
-                  }
+                  void (async () => {
+                    const approved = await confirmAction({
+                      content: t("desktopBootstrap.resetConfirm"),
+                      okButtonProps: { danger: true }
+                    });
+                    if (!approved) {
+                      return;
+                    }
 
-                  setStatus({
-                    phase: "recovering",
-                    message: t("desktopBootstrap.resetting")
-                  });
-                  void invokeDesktopCommand("reset_local_database");
+                    setStatus({
+                      phase: "recovering",
+                      message: t("desktopBootstrap.resetting")
+                    });
+                    void invokeDesktopCommand("reset_local_database");
+                  })();
                 }}
                 type="button"
               >
