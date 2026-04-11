@@ -3487,14 +3487,8 @@ mod tests {
         let marker = app_data_dir.join("marker");
         fs::write(&marker, "x").expect("marker should be created");
 
-        assert_eq!(
-            remove_file_if_present(&marker).expect("remove should succeed"),
-            true
-        );
-        assert_eq!(
-            remove_file_if_present(&marker).expect("missing should be treated as ok"),
-            false
-        );
+        assert!(remove_file_if_present(&marker).expect("remove should succeed"));
+        assert!(!remove_file_if_present(&marker).expect("missing should be treated as ok"));
         let _ = fs::remove_dir_all(&app_data_dir);
     }
 }
