@@ -20,7 +20,11 @@ const REFERENCE_LANG = "en";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-type JsonValue = string | Record<string, JsonValue>;
+type JsonObject = {
+  [key: string]: JsonValue;
+};
+
+type JsonValue = string | JsonObject;
 
 /** Flatten a nested JSON object into dot-notation keys */
 function flattenKeys(obj: Record<string, JsonValue>, prefix = ""): string[] {

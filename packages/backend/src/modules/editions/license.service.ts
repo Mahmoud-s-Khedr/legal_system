@@ -8,7 +8,7 @@ export interface LicensePayload {
   firmId: string;
   editionKey: EditionKey;
   expiresAt: string; // ISO date
-  firmName: string;
+  firmName?: string;
 }
 
 export class LicenseServiceError extends Error {
@@ -148,7 +148,7 @@ export async function activateLicense(
     return {
       editionKey: payload.editionKey,
       expiresAt: payload.expiresAt,
-      firmName: payload.firmName,
+      firmName: payload.firmName ?? "",
       status: "already_activated"
     };
   }
@@ -182,7 +182,7 @@ export async function activateLicense(
   return {
     editionKey: payload.editionKey,
     expiresAt: payload.expiresAt,
-    firmName: payload.firmName,
+    firmName: payload.firmName ?? "",
     status: "activated"
   };
 }

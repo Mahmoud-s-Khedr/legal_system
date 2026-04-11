@@ -258,46 +258,85 @@ node scripts/desktop-bundle-extras.mjs
 
 ## generate-license.ts
 
-**What it does:** Generates a signed RSA-2048 license file (`elms.license`) for the ELMS desktop application.
+**What it does:** Generates signed activation keys for license activation (`POST /api/licenses/activate`).
 
-**When to use:** When issuing or testing backend licensing artifacts. Desktop startup no longer requires this file.
+**When to use:** Vendor-side issuance/testing of activation keys for firm licensing.
 
 **How it works:**
-1. Accepts `--firm`, `--slug`, and `--expires` arguments to build the license payload: `{ firm, slug, issuedAt, expiresAt, features: ["core"] }`.
-2. Signs the JSON payload using RSA PKCS#1v15 + SHA-256 with the provided `--private-key`. If no key is provided, generates a fresh RSA-2048 key pair and prints the public key to stdout for embedding in `apps/desktop/src-tauri/keys/public.pem`.
-3. Writes the payload + base64 signature to the output file.
-
-The Tauri binary validates the signature at startup using the embedded public key. The canonical field order in the payload JSON must match `LicensePayload` in the Rust code.
+1. Builds payload JSON:
+   `{ firmId, editionKey, expiresAt }`.
+2. Base64-encodes payload JSON to `payloadB64`.
+3. Signs `payloadB64` with RSA-SHA256 using `--private-key` (or generates a fresh key pair if omitted).
+4. Produces activation key format:
+   ``<payloadB64>.<signatureB64>``.
+5. Prints activation key to stdout and optionally writes it to `--out`.
 
 **Arguments:**
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `--firm` | Yes | Display name of the firm |
-| `--slug` | Yes | URL-safe firm slug |
-| `--expires` | Yes | Expiry date in `YYYY-MM-DD` format (UTC midnight) |
+| `--firm-id` | Yes (default mode) | Target firm UUID |
+| `--edition-key` | Yes (default mode) | One of: `solo_offline`, `solo_online`, `local_firm_offline`, `local_firm_online`, `enterprise` |
+| `--expires-at` | Yes (default mode) | Expiry date in `YYYY-MM-DD` format (UTC midnight) |
 | `--private-key` | No | Path to RSA private key PEM. If omitted, a fresh key pair is generated |
-| `--out` | No | Output path (default: `elms.license`) |
+| `--out` | No | Optional output path (otherwise prints key only) |
+| `--legacy-json` | No | Compatibility mode: writes historical JSON `elms.license` payload format |
 
 **Usage:**
 
 ```bash
-# Issue a license using an existing key pair
+# Issue an activation key using an existing private key
 tsx scripts/generate-license.ts \
-  --firm "Al-Rashidi Law Group" \
-  --slug "al-rashidi-law" \
-  --expires 2027-03-20 \
+  --firm-id "1d3f9a20-c840-4f85-a3ba-80b704bf0caf" \
+  --edition-key local_firm_online \
+  --expires-at 2027-03-20 \
   --private-key apps/desktop/src-tauri/keys/private.pem \
-  --out al-rashidi.license
+  --out al-rashidi.activation-key
 
-# Generate a fresh key pair and a license in one step
+# Generate a fresh key pair and print an activation key
 tsx scripts/generate-license.ts \
+  --firm-id "11111111-1111-1111-1111-111111111111" \
+  --edition-key solo_offline \
+  --expires-at 2030-01-01
+
+# Compatibility mode for legacy JSON license artifacts
+tsx scripts/generate-license.ts \
+  --legacy-json \
   --firm "Dev Firm" \
   --slug "dev-firm" \
-  --expires 2030-01-01
+  --expires 2030-01-01 \
+  --out elms.license
 ```
 
-When generating a new key pair, copy the printed public key into `apps/desktop/src-tauri/keys/public.pem` before building the Tauri binary.
+### Key Pair Generation
+
+Use OpenSSL when you want deterministic key files managed outside the script:
+
+```bash
+# 1) Generate a 2048-bit RSA private key (vendor-side only)
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private.pem
+
+# 2) Derive the matching public key
+openssl rsa -pubout -in private.pem -out public.pem
+```
+
+You can also omit `--private-key` when running `generate-license.ts`; it will generate a fresh key pair and print the public key.
+
+Configure backend verification with the public key:
+
+```bash
+# Option A: raw PEM in env var
+DESKTOP_LICENSE_PUBLIC_KEY="$(cat public.pem)"
+
+# Option B: base64-encoded PEM in env var
+DESKTOP_LICENSE_PUBLIC_KEY="$(base64 < public.pem | tr -d '\n')"
+```
+
+Alternatively, place the public key file at one of the backend fallback locations:
+- `resources/elms_pub.pem` (from backend process working directory)
+- `apps/desktop/src-tauri/resources/elms_pub.pem` (repo fallback path)
+
+Security note: keep `private.pem` vendor-side only and never ship it with the desktop app.
 
 ---
 

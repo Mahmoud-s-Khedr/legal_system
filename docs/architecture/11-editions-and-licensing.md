@@ -185,7 +185,7 @@ GRACE status does **not** block writes at the middleware level. However, the sch
 
 ### Trial Tamper Detection
 
-The `solo_offline` trial generates a signed integrity file at first launch:
+The historical design includes a signed `trial.json` integrity file:
 
 ```
 ~/.local/share/com.elms.desktop/trial.json
@@ -201,47 +201,29 @@ Content:
 }
 ```
 
-On every Tauri startup, `lifecycle.service.ts` calls `verifyTrialJson(firmId)`:
-1. Read `trial.json` from the app data directory
-2. Reconstruct the signed payload `{firmId, trialStartedAt}`
-3. Verify the RSA-SHA256 signature using the public key embedded in the Tauri binary at build time (`apps/desktop/src-tauri/resources/elms_pub.pem`)
-4. If missing or invalid → immediately transition firm to `GRACE`
-
-The public key is embedded at build time — never fetched at runtime. The private key is held exclusively by the vendor.
+Current backend/runtime wiring does **not** enforce trial tamper checks from desktop startup. `verifyTrialJson()` exists in code as a helper but is not part of the active startup path. Treat this as a planned/legacy mechanism rather than current enforcement.
 
 ### License Key Activation
 
 Users purchase a license via the ELMS payment page (opened in the system browser via `Tauri open()`, NOT in the Tauri webview). A license key is emailed after payment.
 
-`activateLicense(firmId, licenseKey)` in `lifecycle.service.ts`:
+`activateLicense(firmId, licenseKey)` in `license.service.ts`:
 
-1. Base64-decode the license key
-2. Parse the JSON payload `{ firmId, editionKey, expiresAt, firmName }`
-3. Verify RSA-SHA256 signature against the embedded public key
-4. Assert `payload.firmId === firmId` and `expiresAt > now()`
-5. Hash the key with SHA-256 and store in `FirmSettings.licenseKeyHash`
+1. Split key string on last `.` into `payloadB64` and `signatureB64`
+2. Parse payload JSON from base64 `{ firmId, editionKey, expiresAt }` (optional metadata fields may also be present)
+3. Verify RSA-SHA256 signature over `payloadB64` using backend public key
+4. Assert firm and edition expectations, and `expiresAt > now()`
+5. Hash the raw key with SHA-256 and store in `FirmSettings.licenseKeyHash`
 6. Set `FirmSettings.licenseActivatedAt = now()`
-7. Transition `Firm.lifecycleStatus → LICENSED`
+7. Transition `Firm.lifecycleStatus → LICENSED` and clear pending edition
 
 A `LICENSED` firm is not subject to the trial scheduler sweep.
 
 ### LAN License Grace Mode (Phase 15)
 
-`local_firm_offline` and `local_firm_online` editions use the signed license file for validation.
-On license expiry (`expiresAt` in the past):
-
-- Firm transitions to `GRACE` (30-day read-only window)
-- `licenseGraceGuard` middleware intercepts all non-GET requests and returns:
-  ```json
-  HTTP 403
-  { "code": "LICENSE_GRACE", "message": "License expired — read-only mode active" }
-  ```
-- Frontend detects `LICENSE_GRACE` and:
-  - Shows persistent orange banner with days remaining
-  - Disables all Create / Edit / Delete buttons with tooltip "Renew license to enable"
-- After 30 days: transition to `SUSPENDED` (existing write guard → HTTP 423)
-
-`licenseGraceGuard` is applied after `requireAuth` in the Fastify plugin chain. The only exempt paths are `GET *` and `POST /api/auth/logout`.
+The `licenseGraceGuard`/`LICENSE_GRACE` flow described in earlier phase docs is **not currently wired** in the active Fastify middleware chain. Current access control is enforced by:
+- `licenseAccessGuard` (requires activation outside trial-eligible cases)
+- `firmLifecycleWriteGuard` (blocks writes for suspended/pending-deletion statuses)
 
 ---
 
@@ -255,8 +237,7 @@ The license is an RSA-2048 signed JSON payload:
 {
   "firmId": "uuid",
   "editionKey": "solo_offline",
-  "expiresAt": "2027-01-01T00:00:00Z",
-  "firmName": "Example Law Firm"
+  "expiresAt": "2027-01-01T00:00:00Z"
 }
 ```
 
@@ -277,15 +258,31 @@ Desktop startup no longer validates this file as part of the Rust bootstrap path
 Licenses are generated using `scripts/generate-license.ts`, which requires the private key (held exclusively by the vendor). The private key is never distributed with the application.
 
 ```bash
-# Vendor-side only:
-DESKTOP_LICENSE_PRIVATE_KEY=<base64-private-key> \
-  tsx scripts/generate-license.ts \
-  --firmId <uuid> \
-  --editionKey solo_offline \
-  --expiresAt 2027-01-01
+# Vendor-side only (activation key format for /api/licenses/activate):
+tsx scripts/generate-license.ts \
+  --firm-id <uuid> \
+  --edition-key solo_offline \
+  --expires-at 2027-01-01 \
+  --private-key apps/desktop/src-tauri/keys/private.pem
 ```
 
-The resulting license file can still be delivered to the customer for licensing workflows, but it is not required for the application to boot.
+The script also supports `--legacy-json` for historical `elms.license` compatibility output.
+
+### Key Pair Creation (Vendor-Side)
+
+```bash
+# Generate RSA private key
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private.pem
+
+# Derive matching public key
+openssl rsa -pubout -in private.pem -out public.pem
+```
+
+Wire the public key into backend verification via:
+- `DESKTOP_LICENSE_PUBLIC_KEY` environment variable (raw PEM or base64-encoded PEM), or
+- fallback key file path `resources/elms_pub.pem` (with repo fallback to `apps/desktop/src-tauri/resources/elms_pub.pem`).
+
+The private key is vendor-only material and must never be distributed with desktop builds.
 
 ---
 

@@ -13,10 +13,9 @@
     "resolveJsonModule": true,
     "declaration": true,
     "sourceMap": true,
-    "baseUrl": ".",
     "paths": {
-      "@elms/shared": ["packages/shared/src/index.ts"],
-      "@elms/shared/*": ["packages/shared/src/*"]
+      "@elms/shared": ["./packages/shared/src/index.ts"],
+      "@elms/shared/*": ["./packages/shared/src/*"]
     }
   }
 }
