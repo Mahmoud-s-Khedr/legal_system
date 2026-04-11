@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Component, Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -25,6 +25,10 @@ const PRISMA_ENGINE_RECURSIVE_SEARCH_DEPTH: usize = 6;
 /// the next startup skip the Prisma CLI spawn entirely.
 const LATEST_MIGRATION_NAME: &str = "0013_pending_edition_key";
 const PRISMA_QUERY_ENGINE_PREFIXES: &[&str] = &["libquery_engine", "query_engine"];
+const DESKTOP_JWT_PRIVATE_KEY_FILE: &str = "jwt-private.pem";
+const DESKTOP_JWT_PUBLIC_KEY_FILE: &str = "jwt-public.pem";
+const DESKTOP_DB_MARKER_FILE: &str = "desktop-database-name";
+const MIGRATION_VERSION_MARKER_FILE: &str = "migration_version";
 
 const PRISMA_RUNTIME_PACKAGES: &[&str] = &[
     "@prisma/config",
@@ -79,6 +83,119 @@ fn parse_truthy(value: &str) -> bool {
     )
 }
 
+fn ensure_packaged_jwt_keys(
+    app: &AppHandle,
+    env: &mut HashMap<String, String>,
+    app_data_dir: &Path,
+    log_file: &Path,
+    use_workspace_runtime: bool,
+) -> Result<(), String> {
+    if use_workspace_runtime {
+        return Ok(());
+    }
+
+    if env.contains_key("JWT_PRIVATE_KEY") && env.contains_key("JWT_PUBLIC_KEY") {
+        append_bootstrap_log_line(
+            log_file,
+            "Using JWT keypair from environment for packaged runtime",
+        );
+        return Ok(());
+    }
+
+    let key_dir = app_data_dir.join("keys");
+    fs::create_dir_all(&key_dir).map_err(|error| {
+        format!(
+            "Unable to create desktop key directory {}: {error}",
+            key_dir.display()
+        )
+    })?;
+
+    let private_key_path = key_dir.join(DESKTOP_JWT_PRIVATE_KEY_FILE);
+    let public_key_path = key_dir.join(DESKTOP_JWT_PUBLIC_KEY_FILE);
+
+    let generated = !private_key_path.exists() || !public_key_path.exists();
+    if generated {
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map_err(|error| format!("Unable to resolve resource directory: {error}"))?;
+        let node_exe = resolve_node_binary(&strip_unc_prefix(&resource_dir));
+        let keygen_script = r#"
+const fs = require("node:fs");
+const { generateKeyPairSync } = require("node:crypto");
+const [privatePath, publicPath] = process.argv.slice(1);
+if (!privatePath || !publicPath) {
+  throw new Error("Missing key output paths");
+}
+const { privateKey, publicKey } = generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+  publicKeyEncoding: { type: "spki", format: "pem" },
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+});
+fs.writeFileSync(privatePath, privateKey, { encoding: "utf8", mode: 0o600 });
+fs.writeFileSync(publicPath, publicKey, { encoding: "utf8", mode: 0o644 });
+"#;
+
+        let mut command = Command::new(&node_exe);
+        #[cfg(windows)]
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+        let output = command
+            .arg("-e")
+            .arg(keygen_script)
+            .arg(private_key_path.to_string_lossy().as_ref())
+            .arg(public_key_path.to_string_lossy().as_ref())
+            .output()
+            .map_err(|error| format!("Unable to generate desktop JWT keypair: {error}"))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let detail = if !stderr.is_empty() {
+                stderr
+            } else if !stdout.is_empty() {
+                stdout
+            } else {
+                format!("process exited with status {}", output.status)
+            };
+            return Err(format!("Unable to generate desktop JWT keypair: {detail}"));
+        }
+
+        append_bootstrap_log_line(
+            log_file,
+            &format!(
+                "Generated packaged JWT keypair in {}",
+                key_dir.to_string_lossy()
+            ),
+        );
+    } else {
+        append_bootstrap_log_line(
+            log_file,
+            &format!(
+                "Using existing packaged JWT keypair in {}",
+                key_dir.to_string_lossy()
+            ),
+        );
+    }
+
+    let private_key = fs::read_to_string(&private_key_path).map_err(|error| {
+        format!(
+            "Unable to read packaged JWT private key {}: {error}",
+            private_key_path.display()
+        )
+    })?;
+    let public_key = fs::read_to_string(&public_key_path).map_err(|error| {
+        format!(
+            "Unable to read packaged JWT public key {}: {error}",
+            public_key_path.display()
+        )
+    })?;
+
+    env.insert("JWT_PRIVATE_KEY".to_string(), private_key);
+    env.insert("JWT_PUBLIC_KEY".to_string(), public_key);
+    Ok(())
+}
+
 fn generate_bootstrap_token() -> String {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -86,6 +203,67 @@ fn generate_bootstrap_token() -> String {
         .unwrap_or(0);
 
     format!("{:032x}{:08x}", nanos, std::process::id())
+}
+
+fn remove_file_if_present(path: &Path) -> Result<bool, std::io::Error> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(true),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error),
+    }
+}
+
+fn clear_reset_markers(app_data_dir: &Path, log_file: &Path) {
+    let markers = [
+        ("database marker", app_data_dir.join(DESKTOP_DB_MARKER_FILE)),
+        (
+            "migration version marker",
+            app_data_dir.join(MIGRATION_VERSION_MARKER_FILE),
+        ),
+    ];
+
+    for (label, marker_path) in markers {
+        match remove_file_if_present(&marker_path) {
+            Ok(true) => log_startup_diagnostic(
+                log_file,
+                &format!("Reset cleanup removed {label}: {}", marker_path.display()),
+            ),
+            Ok(false) => log_startup_diagnostic(
+                log_file,
+                &format!("Reset cleanup found no {label}: {}", marker_path.display()),
+            ),
+            Err(error) => append_bootstrap_log_line(
+                log_file,
+                &format!(
+                    "Warning: unable to remove {label} {}: {error}",
+                    marker_path.display()
+                ),
+            ),
+        }
+    }
+}
+
+fn env_requests_skip_migrations(desktop_env: &HashMap<String, String>) -> bool {
+    desktop_env
+        .get("ELMS_SKIP_MIGRATIONS")
+        .map(|value| parse_truthy(value))
+        .unwrap_or_else(|| {
+            std::env::var("ELMS_SKIP_MIGRATIONS")
+                .ok()
+                .map(|value| parse_truthy(&value))
+                .unwrap_or(false)
+        })
+}
+
+fn should_skip_migrations(
+    should_reset_database: bool,
+    schema_already_current: bool,
+    env_skip_requested: bool,
+) -> bool {
+    if should_reset_database {
+        return false;
+    }
+    schema_already_current || env_skip_requested
 }
 
 fn sanitize_node_options(raw: &str) -> (String, usize) {
@@ -369,6 +547,7 @@ pub fn shutdown_runtime(app: &AppHandle) {
 fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<(), String> {
     bootstrap_log("Starting runtime bootstrap sequence");
     let bootstrap_started_at = Instant::now();
+    let use_workspace_runtime = should_use_workspace_runtime();
 
     shutdown_existing_runtime(app, inner)?;
 
@@ -376,15 +555,33 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     let log_dir = app_data_dir.join("logs");
     let postgres_data_dir = app_data_dir.join("postgres");
 
-    let should_reset_database = inner.take_database_reset_request();
-    if should_reset_database && postgres_data_dir.exists() {
-        fs::remove_dir_all(&postgres_data_dir)
-            .map_err(|error| format!("Unable to reset local PostgreSQL data directory: {error}"))?;
-    }
-
     fs::create_dir_all(&log_dir).map_err(|error| error.to_string())?;
-    fs::create_dir_all(&postgres_data_dir).map_err(|error| error.to_string())?;
     let bootstrap_log_file = log_dir.join("desktop-bootstrap.log");
+    let should_reset_database = inner.take_database_reset_request();
+    if should_reset_database {
+        if postgres_data_dir.exists() {
+            fs::remove_dir_all(&postgres_data_dir).map_err(|error| {
+                format!("Unable to reset local PostgreSQL data directory: {error}")
+            })?;
+            log_startup_diagnostic(
+                &bootstrap_log_file,
+                &format!(
+                    "Reset cleanup removed PostgreSQL data directory: {}",
+                    postgres_data_dir.display()
+                ),
+            );
+        } else {
+            log_startup_diagnostic(
+                &bootstrap_log_file,
+                &format!(
+                    "Reset cleanup found no PostgreSQL data directory: {}",
+                    postgres_data_dir.display()
+                ),
+            );
+        }
+        clear_reset_markers(&app_data_dir, &bootstrap_log_file);
+    }
+    fs::create_dir_all(&postgres_data_dir).map_err(|error| error.to_string())?;
 
     append_bootstrap_log_line(
         &bootstrap_log_file,
@@ -398,7 +595,7 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         &bootstrap_log_file,
         &format!("PostgreSQL data directory: {}", postgres_data_dir.display()),
     );
-    let runtime_mode = if should_use_workspace_runtime() {
+    let runtime_mode = if use_workspace_runtime {
         "workspace"
     } else {
         "packaged"
@@ -407,7 +604,7 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         &bootstrap_log_file,
         &format!("Runtime mode: {runtime_mode}"),
     );
-    if should_use_workspace_runtime() {
+    if use_workspace_runtime {
         let isolation = if workspace_dev_isolation_enabled() {
             "enabled"
         } else {
@@ -440,7 +637,7 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
     }
 
-    for candidate in desktop_env_candidates(app) {
+    for candidate in desktop_env_candidates(app, use_workspace_runtime) {
         log_startup_diagnostic(
             &bootstrap_log_file,
             &format!(
@@ -451,12 +648,14 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
     }
 
-    let use_workspace_runtime = should_use_workspace_runtime();
     if !use_workspace_runtime {
         validate_packaged_runtime_resources(app, &bootstrap_log_file)?;
     }
 
-    let mut desktop_env = load_desktop_env(app);
+    let mut desktop_env = load_desktop_env(app, use_workspace_runtime, &bootstrap_log_file);
+    if !use_workspace_runtime {
+        desktop_env.insert("NODE_ENV".to_string(), "production".to_string());
+    }
     let bootstrap_token = generate_bootstrap_token();
     desktop_env.insert(
         "ELMS_DESKTOP_BOOTSTRAP_TOKEN".to_string(),
@@ -488,6 +687,13 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         &bootstrap_log_file,
         "Configured desktop bootstrap token for backend identity verification",
     );
+    ensure_packaged_jwt_keys(
+        app,
+        &mut desktop_env,
+        &app_data_dir,
+        &bootstrap_log_file,
+        use_workspace_runtime,
+    )?;
     prepare_prisma_runtime_env(app, &mut desktop_env, &app_data_dir, &bootstrap_log_file)?;
     if let Some(port) = desktop_env.get("BACKEND_PORT") {
         log_startup_diagnostic(
@@ -512,6 +718,7 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         Some("Initializing embedded PostgreSQL".to_string()),
     );
     log_startup_diagnostic(&bootstrap_log_file, "Initializing embedded PostgreSQL");
+    let postgres_phase_started_at = Instant::now();
     ensure_postgres_ready(app, &postgres_data_dir, &desktop_env, &bootstrap_log_file).map_err(
         |error| {
             append_bootstrap_log_line(
@@ -525,28 +732,42 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     log_startup_diagnostic(
         &bootstrap_log_file,
         &format!(
-            "PostgreSQL ready after {}ms",
+            "PostgreSQL phase ready after {}ms",
+            postgres_phase_started_at.elapsed().as_millis()
+        ),
+    );
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "PostgreSQL phase completed in {}ms",
+            postgres_phase_started_at.elapsed().as_millis()
+        ),
+    );
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Elapsed bootstrap time after PostgreSQL initialization: {}ms",
             bootstrap_started_at.elapsed().as_millis()
         ),
     );
 
     inner.set_status("starting", Some("Applying database migrations".to_string()));
-    let migration_version_file = app_data_dir.join("migration_version");
+    let migration_phase_started_at = Instant::now();
+    let migration_version_file = app_data_dir.join(MIGRATION_VERSION_MARKER_FILE);
     let schema_already_current = !allow_migration_repair
+        && !should_reset_database
         && fs::read_to_string(&migration_version_file)
             .map(|v| v.trim() == LATEST_MIGRATION_NAME)
             .unwrap_or(false);
-
-    let skip_migrations = schema_already_current
-        || desktop_env
-            .get("ELMS_SKIP_MIGRATIONS")
-            .map(|value| parse_truthy(value))
-            .unwrap_or_else(|| {
-                std::env::var("ELMS_SKIP_MIGRATIONS")
-                    .ok()
-                    .map(|value| parse_truthy(&value))
-                    .unwrap_or(false)
-            });
+    let env_skip_requested = env_requests_skip_migrations(&desktop_env);
+    let skip_migrations =
+        should_skip_migrations(should_reset_database, schema_already_current, env_skip_requested);
+    if should_reset_database && env_skip_requested {
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            "Ignoring ELMS_SKIP_MIGRATIONS because reset-local-database was requested",
+        );
+    }
 
     if skip_migrations {
         if schema_already_current {
@@ -594,8 +815,15 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     log_startup_diagnostic(
         &bootstrap_log_file,
         &format!(
-            "Migrations complete after {}ms",
+            "Elapsed bootstrap time after migrations: {}ms",
             bootstrap_started_at.elapsed().as_millis()
+        ),
+    );
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Migration phase completed in {}ms",
+            migration_phase_started_at.elapsed().as_millis()
         ),
     );
 
@@ -646,6 +874,7 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
 
     inner.set_status("starting", Some("Launching local backend".to_string()));
     log_startup_diagnostic(&bootstrap_log_file, "Resolving backend launch command");
+    let backend_phase_started_at = Instant::now();
     let launch = resolve_backend_launch(app, &desktop_env, &log_dir).map_err(|error| {
         append_bootstrap_log_line(
             &bootstrap_log_file,
@@ -675,6 +904,7 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         ),
     );
 
+    let spawn_started_at = Instant::now();
     let child = spawn_backend(&launch).map_err(|error| {
         append_bootstrap_log_line(
             &bootstrap_log_file,
@@ -682,6 +912,13 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
         error
     })?;
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Backend spawn phase completed in {}ms",
+            spawn_started_at.elapsed().as_millis()
+        ),
+    );
 
     log_bootstrap_checkpoint(
         &bootstrap_log_file,
@@ -701,6 +938,7 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         &format!("port={backend_port}"),
     );
 
+    let health_started_at = Instant::now();
     wait_for_backend_health(&desktop_env).map_err(|error| {
         append_bootstrap_log_line(
             &bootstrap_log_file,
@@ -708,6 +946,13 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         );
         error
     })?;
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Backend health phase completed in {}ms",
+            health_started_at.elapsed().as_millis()
+        ),
+    );
 
     log_bootstrap_checkpoint(
         &bootstrap_log_file,
@@ -730,6 +975,13 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         &format!(
             "Desktop runtime bootstrap completed in {}ms total",
             bootstrap_started_at.elapsed().as_millis()
+        ),
+    );
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Backend phase completed in {}ms",
+            backend_phase_started_at.elapsed().as_millis()
         ),
     );
 
@@ -965,8 +1217,50 @@ fn apply_desktop_storage_path_policy(
     true
 }
 
-fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
-    let use_workspace_runtime = should_use_workspace_runtime();
+fn parse_env_file(path: &Path) -> HashMap<String, String> {
+    let mut values = HashMap::new();
+    let Ok(contents) = fs::read_to_string(path) else {
+        return values;
+    };
+
+    for raw_line in contents.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        if let Some((key, value)) = line.split_once('=') {
+            values.insert(key.trim().to_string(), value.trim().to_string());
+        }
+    }
+
+    values
+}
+
+fn compute_desktop_env_candidates(
+    use_workspace_runtime: bool,
+    workspace_root: Option<&Path>,
+    resource_dir: Option<&Path>,
+) -> Vec<PathBuf> {
+    if use_workspace_runtime {
+        if let Some(root) = workspace_root {
+            return workspace_desktop_env_candidates(root);
+        }
+        return Vec::new();
+    }
+
+    let mut candidates = Vec::new();
+    if let Some(resource_dir) = resource_dir {
+        candidates.push(resource_dir.join(".env.desktop"));
+    }
+    candidates
+}
+
+fn load_desktop_env(
+    app: &AppHandle,
+    use_workspace_runtime: bool,
+    log_file: &Path,
+) -> HashMap<String, String> {
     let isolate_workspace_runtime = use_workspace_runtime && workspace_dev_isolation_enabled();
 
     let default_node_env = if use_workspace_runtime {
@@ -994,6 +1288,16 @@ fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
         "postgresql://elms:elms@127.0.0.1:{default_postgres_port}/{default_database_name}?schema=public"
     );
     let default_backend_url = format!("http://127.0.0.1:{default_backend_port}");
+    let workspace_root_opt = if use_workspace_runtime {
+        workspace_root()
+    } else {
+        None
+    };
+    let resource_dir_opt = app
+        .path()
+        .resource_dir()
+        .ok()
+        .map(|path| strip_unc_prefix(&path));
 
     let mut env = HashMap::from([
         ("NODE_ENV".to_string(), default_node_env.to_string()),
@@ -1024,17 +1328,60 @@ fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
             default_postgres_port.to_string(),
         ),
     ]);
+    let mut node_env_source = "default".to_string();
 
-    for candidate in desktop_env_candidates(app) {
-        if let Ok(contents) = fs::read_to_string(candidate) {
-            for raw_line in contents.lines() {
-                let line = raw_line.trim();
-                if line.is_empty() || line.starts_with('#') {
-                    continue;
-                }
+    for candidate in compute_desktop_env_candidates(
+        use_workspace_runtime,
+        workspace_root_opt.as_deref(),
+        resource_dir_opt.as_deref(),
+    ) {
+        if !candidate.exists() {
+            continue;
+        }
+        let values = parse_env_file(&candidate);
+        if values.is_empty() {
+            continue;
+        }
+        if let Some(node_env_value) = values.get("NODE_ENV") {
+            node_env_source = format!(
+                "env-file:{} (NODE_ENV={node_env_value})",
+                candidate.display()
+            );
+        }
+        for (key, value) in values {
+            env.insert(key, value);
+        }
+    }
 
-                if let Some((key, value)) = line.split_once('=') {
-                    env.insert(key.trim().to_string(), value.trim().to_string());
+    if use_workspace_runtime {
+        if let Some(resource_dir) = resource_dir_opt.as_deref() {
+            let resource_env_path = resource_dir.join(".env.desktop");
+            if resource_env_path.exists() {
+                let resource_values = parse_env_file(&resource_env_path);
+                if let Some(resource_node_env) = resource_values.get("NODE_ENV") {
+                    let current_node_env = env
+                        .get("NODE_ENV")
+                        .cloned()
+                        .unwrap_or_else(|| default_node_env.to_string());
+                    if resource_node_env != &current_node_env {
+                        append_bootstrap_log_line(
+                            log_file,
+                            &format!(
+                                "Workspace runtime ignored resource NODE_ENV='{}' from {} to preserve workspace NODE_ENV='{}'",
+                                resource_node_env,
+                                resource_env_path.display(),
+                                current_node_env
+                            ),
+                        );
+                    }
+                } else {
+                    append_bootstrap_log_line(
+                        log_file,
+                        &format!(
+                            "Workspace runtime ignored resource env file {} (no NODE_ENV entry)",
+                            resource_env_path.display()
+                        ),
+                    );
                 }
             }
         }
@@ -1051,6 +1398,17 @@ fn load_desktop_env(app: &AppHandle) -> HashMap<String, String> {
         );
     }
 
+    append_bootstrap_log_line(
+        log_file,
+        &format!(
+            "Effective NODE_ENV={} (source={})",
+            env.get("NODE_ENV")
+                .cloned()
+                .unwrap_or_else(|| default_node_env.to_string()),
+            node_env_source
+        ),
+    );
+
     env
 }
 
@@ -1061,26 +1419,22 @@ fn workspace_dev_isolation_enabled() -> bool {
         .unwrap_or(true)
 }
 
-fn desktop_env_candidates(app: &AppHandle) -> Vec<PathBuf> {
-    let mut candidates = Vec::new();
-    if should_use_workspace_runtime() {
-        if let Some(root) = workspace_root() {
-            candidates.extend(workspace_desktop_env_candidates(&root));
-        }
-        if let Ok(path) = app.path().resource_dir() {
-            let resource_dir = strip_unc_prefix(&path);
-            candidates.push(resource_dir.join(".env.desktop"));
-        }
+fn desktop_env_candidates(app: &AppHandle, use_workspace_runtime: bool) -> Vec<PathBuf> {
+    let workspace_root_opt = if use_workspace_runtime {
+        workspace_root()
     } else {
-        if let Ok(path) = app.path().resource_dir() {
-            let resource_dir = strip_unc_prefix(&path);
-            candidates.push(resource_dir.join(".env.desktop"));
-        }
-        if let Some(root) = workspace_root() {
-            candidates.extend(workspace_desktop_env_candidates(&root));
-        }
-    }
-    candidates
+        None
+    };
+    let resource_dir_opt = app
+        .path()
+        .resource_dir()
+        .ok()
+        .map(|path| strip_unc_prefix(&path));
+    compute_desktop_env_candidates(
+        use_workspace_runtime,
+        workspace_root_opt.as_deref(),
+        resource_dir_opt.as_deref(),
+    )
 }
 
 fn workspace_desktop_env_candidates(root: &Path) -> Vec<PathBuf> {
@@ -1350,7 +1704,7 @@ fn ensure_postgres_ready(
             "ok",
             "server already ready before pg_ctl start",
         );
-        create_desktop_database(app, env, bootstrap_log_file)?;
+        create_desktop_database(app, data_dir, env, bootstrap_log_file)?;
         return Ok(());
     }
 
@@ -1418,7 +1772,7 @@ fn ensure_postgres_ready(
     }
 
     wait_for_postgres(app, env, bootstrap_log_file)?;
-    create_desktop_database(app, env, bootstrap_log_file)?;
+    create_desktop_database(app, data_dir, env, bootstrap_log_file)?;
     log_bootstrap_checkpoint(
         bootstrap_log_file,
         "postgres",
@@ -1512,6 +1866,7 @@ fn wait_for_postgres(
 
 fn create_desktop_database(
     app: &AppHandle,
+    data_dir: &Path,
     env: &HashMap<String, String>,
     bootstrap_log_file: &Path,
 ) -> Result<(), String> {
@@ -1524,6 +1879,21 @@ fn create_desktop_database(
         .get("DESKTOP_POSTGRES_PORT")
         .map(String::as_str)
         .unwrap_or("5433");
+    let app_data_dir = data_dir.parent().unwrap_or(data_dir);
+    let marker_path = app_data_dir.join(DESKTOP_DB_MARKER_FILE);
+    if let Ok(marker_value) = fs::read_to_string(&marker_path) {
+        if marker_value.trim() == database_name {
+            log_bootstrap_checkpoint(
+                bootstrap_log_file,
+                "postgres",
+                "createdb",
+                "skip",
+                "ok",
+                &format!("database={database_name} marker={}", marker_path.display()),
+            );
+            return Ok(());
+        }
+    }
 
     log_bootstrap_checkpoint(
         bootstrap_log_file,
@@ -1534,16 +1904,45 @@ fn create_desktop_database(
         &format!("database={database_name} port={port}"),
     );
 
-    let _ = run_postgres_command(app, "createdb", Some(bootstrap_log_file), |command| {
-        command
-            .arg("-h")
-            .arg("127.0.0.1")
-            .arg("-p")
-            .arg(port)
-            .arg("-U")
-            .arg("elms")
-            .arg(database_name);
-    });
+    let create_result =
+        run_postgres_command(app, "createdb", Some(bootstrap_log_file), |command| {
+            command
+                .arg("-h")
+                .arg("127.0.0.1")
+                .arg("-p")
+                .arg(port)
+                .arg("-U")
+                .arg("elms")
+                .arg(database_name);
+        });
+
+    match create_result {
+        Ok(()) => {}
+        Err(error) if error.contains("already exists") => {
+            log_bootstrap_checkpoint(
+                bootstrap_log_file,
+                "postgres",
+                "createdb",
+                "invoke",
+                "ok",
+                &format!("database={database_name} already existed"),
+            );
+        }
+        Err(error) => return Err(error),
+    }
+
+    if let Err(error) = fs::write(&marker_path, database_name) {
+        if error.kind() != ErrorKind::NotFound {
+            append_bootstrap_log_line(
+                bootstrap_log_file,
+                &format!(
+                    "Warning: unable to write desktop database marker {}: {}",
+                    marker_path.display(),
+                    error
+                ),
+            );
+        }
+    }
 
     log_bootstrap_checkpoint(
         bootstrap_log_file,
@@ -2900,10 +3299,31 @@ pub(crate) fn strip_unc_prefix(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::apply_desktop_storage_path_policy;
+    use super::clear_reset_markers;
+    use super::compute_desktop_env_candidates;
+    use super::remove_file_if_present;
+    use super::should_skip_migrations;
+    use super::DESKTOP_DB_MARKER_FILE;
+    use super::MIGRATION_VERSION_MARKER_FILE;
     use super::workspace_backend_launch;
+    use std::fs;
     use std::collections::HashMap;
     use std::path::Path;
     use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn test_temp_dir(label: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_nanos())
+            .unwrap_or(0);
+        let dir = std::env::temp_dir().join(format!(
+            "elms-sidecar-test-{label}-{}-{nanos}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&dir).expect("test temp dir should be created");
+        dir
+    }
 
     #[test]
     fn workspace_backend_launch_uses_node_dev_launcher_directly() {
@@ -2975,5 +3395,103 @@ mod tests {
             env.get("LOCAL_STORAGE_PATH"),
             Some(&"./uploads".to_string())
         );
+    }
+
+    #[test]
+    fn workspace_env_candidates_do_not_include_resource_env() {
+        let workspace_root = PathBuf::from("/tmp/workspace");
+        let resource_dir = PathBuf::from("/tmp/workspace/apps/desktop/src-tauri/target/debug");
+        let candidates = compute_desktop_env_candidates(
+            true,
+            Some(workspace_root.as_path()),
+            Some(resource_dir.as_path()),
+        );
+
+        assert_eq!(
+            candidates,
+            vec![
+                workspace_root.join("apps/desktop/.env.desktop"),
+                workspace_root.join("apps/desktop/.env.desktop.example")
+            ]
+        );
+    }
+
+    #[test]
+    fn packaged_env_candidates_use_resource_env_only() {
+        let workspace_root = PathBuf::from("/tmp/workspace");
+        let resource_dir = PathBuf::from("/tmp/workspace/apps/desktop/src-tauri/target/debug");
+        let candidates = compute_desktop_env_candidates(
+            false,
+            Some(workspace_root.as_path()),
+            Some(resource_dir.as_path()),
+        );
+
+        assert_eq!(candidates, vec![resource_dir.join(".env.desktop")]);
+    }
+
+    #[test]
+    fn reset_cleanup_removes_db_and_migration_markers_when_present() {
+        let app_data_dir = test_temp_dir("reset-cleanup-remove");
+        let log_file = app_data_dir.join("bootstrap.log");
+        let db_marker = app_data_dir.join(DESKTOP_DB_MARKER_FILE);
+        let migration_marker = app_data_dir.join(MIGRATION_VERSION_MARKER_FILE);
+        fs::write(&db_marker, "elms_desktop").expect("db marker should be created");
+        fs::write(&migration_marker, "0013_pending_edition_key")
+            .expect("migration marker should be created");
+
+        clear_reset_markers(&app_data_dir, &log_file);
+
+        assert!(!db_marker.exists(), "db marker should be removed");
+        assert!(
+            !migration_marker.exists(),
+            "migration marker should be removed"
+        );
+        let _ = fs::remove_dir_all(&app_data_dir);
+    }
+
+    #[test]
+    fn reset_cleanup_is_noop_when_markers_are_absent() {
+        let app_data_dir = test_temp_dir("reset-cleanup-absent");
+        let log_file = app_data_dir.join("bootstrap.log");
+        let db_marker = app_data_dir.join(DESKTOP_DB_MARKER_FILE);
+        let migration_marker = app_data_dir.join(MIGRATION_VERSION_MARKER_FILE);
+
+        clear_reset_markers(&app_data_dir, &log_file);
+
+        assert!(!db_marker.exists(), "db marker should remain absent");
+        assert!(
+            !migration_marker.exists(),
+            "migration marker should remain absent"
+        );
+        let _ = fs::remove_dir_all(&app_data_dir);
+    }
+
+    #[test]
+    fn should_skip_migrations_is_false_after_reset_even_if_schema_is_current() {
+        assert!(
+            !should_skip_migrations(true, true, false),
+            "reset should force migration run when marker is current"
+        );
+        assert!(
+            !should_skip_migrations(true, true, true),
+            "reset should force migration run even if env requested skip"
+        );
+    }
+
+    #[test]
+    fn remove_file_if_present_reports_removed_and_missing() {
+        let app_data_dir = test_temp_dir("remove-marker-helper");
+        let marker = app_data_dir.join("marker");
+        fs::write(&marker, "x").expect("marker should be created");
+
+        assert_eq!(
+            remove_file_if_present(&marker).expect("remove should succeed"),
+            true
+        );
+        assert_eq!(
+            remove_file_if_present(&marker).expect("missing should be treated as ok"),
+            false
+        );
+        let _ = fs::remove_dir_all(&app_data_dir);
     }
 }

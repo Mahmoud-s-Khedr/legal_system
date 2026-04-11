@@ -1,22 +1,62 @@
+import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { watch } from "node:fs";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const backendRoot = resolve(scriptDir, "..");
+const repoRoot = resolve(backendRoot, "../..");
 const schemaPath = resolve(backendRoot, "prisma/schema.prisma");
-const generatedClientPath = resolve(backendRoot, "node_modules/.prisma/client/index.js");
 const envFile = process.argv[2] ?? "../../apps/desktop/.env.desktop";
 const SHUTDOWN_GRACE_MS = 3_000;
+const prismaSchemaStampPath = resolve(backendRoot, ".turbo/prisma/schema.sha256");
+const prismaClientCandidates = [
+  resolve(backendRoot, "node_modules/@prisma/client/index.js"),
+  resolve(repoRoot, "node_modules/@prisma/client/index.js"),
+  resolve(backendRoot, "node_modules/.prisma/client/index.js"),
+  resolve(repoRoot, "node_modules/.prisma/client/index.js"),
+];
+
+function resolveGeneratedClientPath() {
+  return prismaClientCandidates.find((candidate) => existsSync(candidate)) ?? null;
+}
+
+function computeSchemaHash() {
+  if (!existsSync(schemaPath)) {
+    return null;
+  }
+  const content = readFileSync(schemaPath, "utf8");
+  return createHash("sha256").update(content).digest("hex");
+}
+
+function readSchemaStamp() {
+  if (!existsSync(prismaSchemaStampPath)) {
+    return null;
+  }
+  return readFileSync(prismaSchemaStampPath, "utf8").trim() || null;
+}
+
+function writeSchemaStamp(hash) {
+  const stampDir = resolve(prismaSchemaStampPath, "..");
+  mkdirSync(stampDir, { recursive: true });
+  writeFileSync(prismaSchemaStampPath, `${hash}\n`, "utf8");
+}
 
 function needsPrismaGenerate() {
-  if (!existsSync(generatedClientPath)) {
+  const generatedClientPath = resolveGeneratedClientPath();
+  if (!generatedClientPath) {
     return true;
   }
 
-  if (!existsSync(schemaPath)) {
+  const schemaHash = computeSchemaHash();
+  if (!schemaHash) {
+    return false;
+  }
+
+  const savedHash = readSchemaStamp();
+  if (savedHash === schemaHash) {
     return false;
   }
 
@@ -55,6 +95,10 @@ async function main() {
     const prismaCode = await run("pnpm", ["prisma", "generate"]);
     if (prismaCode !== 0) {
       process.exit(prismaCode);
+    }
+    const schemaHash = computeSchemaHash();
+    if (schemaHash) {
+      writeSchemaStamp(schemaHash);
     }
   } else {
     console.log("[backend-dev] prisma client up to date, skipping prisma generate");

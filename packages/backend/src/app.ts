@@ -58,8 +58,8 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   app.decorate("storage", createStorageAdapter(env));
   initializeBackendMonitoring(env, app);
 
-  // OpenAPI / Swagger — only exposed in non-production to avoid leaking schema in prod
-  if (env.NODE_ENV !== "production") {
+  // OpenAPI / Swagger — disabled in packaged production runtime unless explicitly enabled.
+  if (env.NODE_ENV !== "production" || env.ELMS_ENABLE_SWAGGER) {
     const { default: swagger } = await import("@fastify/swagger");
     const { default: swaggerUi } = await import("@fastify/swagger-ui");
     await app.register(swagger, {

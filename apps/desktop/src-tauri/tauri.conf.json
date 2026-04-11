@@ -34,7 +34,7 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../.env.desktop.example": ".env.desktop",
+      "../desktop-env.production.example": ".env.desktop",
       "../../../packages/frontend/dist": "packages/frontend/dist/",
       "../../../packages/backend/dist/desktop": "packages/backend/dist/desktop/",
       "../../../packages/backend/prisma/schema.prisma": "packages/backend/prisma/schema.prisma",

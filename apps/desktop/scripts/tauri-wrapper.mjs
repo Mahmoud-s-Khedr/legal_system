@@ -23,13 +23,13 @@ function resolveDesktopEnvSource() {
     return localEnvPath;
   }
 
-  const exampleEnvPath = resolve(desktopRoot, ".env.desktop.example");
-  if (existsSync(exampleEnvPath)) {
-    return exampleEnvPath;
+  const productionExampleEnvPath = resolve(desktopRoot, "desktop-env.production.example");
+  if (existsSync(productionExampleEnvPath)) {
+    return productionExampleEnvPath;
   }
 
   throw new Error(
-    "Desktop env defaults not found. Expected apps/desktop/.env.desktop or apps/desktop/.env.desktop.example."
+    "Desktop env defaults not found. Expected apps/desktop/.env.desktop or apps/desktop/desktop-env.production.example."
   );
 }
 

@@ -2,6 +2,22 @@ import { generateKeyPairSync } from "node:crypto";
 import { z } from "zod";
 import { AuthMode } from "@elms/shared";
 
+const booleanish = z.preprocess((value) => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["0", "false", "no", "off", ""].includes(normalized)) {
+      return false;
+    }
+  }
+  return value;
+}, z.boolean());
+
 const baseSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   AUTH_MODE: z.nativeEnum(AuthMode).default(AuthMode.LOCAL),
@@ -22,6 +38,7 @@ const baseSchema = z.object({
   DESKTOP_FRONTEND_URL: z.string().default("http://127.0.0.1:5173"),
   DESKTOP_BACKEND_URL: z.string().default("http://127.0.0.1:7854"),
   DESKTOP_POSTGRES_PORT: z.coerce.number().default(5433),
+  ELMS_ENABLE_SWAGGER: booleanish.default(false),
   // Documents / Storage
   MAX_UPLOAD_BYTES: z.coerce.number().default(50 * 1024 * 1024),
   LOCAL_STORAGE_PATH: z.string().default("./uploads"),

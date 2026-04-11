@@ -48,6 +48,20 @@ describe("loadEnv", () => {
     expect(env.JWT_PRIVATE_KEY).toContain("BEGIN PRIVATE KEY");
     expect(env.JWT_PUBLIC_KEY).toContain("BEGIN PUBLIC KEY");
   });
+
+  it("parses ELMS_ENABLE_SWAGGER boolean flag", async () => {
+    vi.resetModules();
+    const { loadEnv: freshLoadEnv } = await import("../../config/env.js");
+    const env = freshLoadEnv({
+      NODE_ENV: "test",
+      AUTH_MODE: "local",
+      STORAGE_DRIVER: "local",
+      DATABASE_URL: "postgresql://example",
+      ELMS_ENABLE_SWAGGER: "1"
+    });
+
+    expect(env.ELMS_ENABLE_SWAGGER).toBe(true);
+  });
 });
 
 describe("local auth setup", () => {
