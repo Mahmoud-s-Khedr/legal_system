@@ -216,7 +216,8 @@ fn load_stored_policy(app: &AppHandle) -> Result<StoredBackupPolicy, String> {
         return Ok(StoredBackupPolicy::default());
     }
 
-    let raw = fs::read_to_string(&path).map_err(|error| format!("Unable to read backup policy: {error}"))?;
+    let raw = fs::read_to_string(&path)
+        .map_err(|error| format!("Unable to read backup policy: {error}"))?;
     let parsed = serde_json::from_str::<StoredBackupPolicy>(&raw)
         .map_err(|error| format!("Unable to parse backup policy: {error}"))?;
     validate_policy(&parsed.policy)?;
@@ -226,8 +227,8 @@ fn load_stored_policy(app: &AppHandle) -> Result<StoredBackupPolicy, String> {
 fn save_stored_policy(app: &AppHandle, policy: &StoredBackupPolicy) -> Result<(), String> {
     validate_policy(&policy.policy)?;
     let path = policy_file_path(app)?;
-    let encoded =
-        serde_json::to_vec_pretty(policy).map_err(|error| format!("Unable to encode backup policy: {error}"))?;
+    let encoded = serde_json::to_vec_pretty(policy)
+        .map_err(|error| format!("Unable to encode backup policy: {error}"))?;
     fs::write(path, encoded).map_err(|error| format!("Unable to save backup policy: {error}"))
 }
 
@@ -247,7 +248,10 @@ fn configured_backup_directory(stored: &StoredBackupPolicy) -> Option<PathBuf> {
     Some(PathBuf::from(configured))
 }
 
-fn effective_backup_directory(app: &AppHandle, stored: &StoredBackupPolicy) -> Result<PathBuf, String> {
+fn effective_backup_directory(
+    app: &AppHandle,
+    stored: &StoredBackupPolicy,
+) -> Result<PathBuf, String> {
     Ok(configured_backup_directory(stored).unwrap_or(default_backup_directory(app)?))
 }
 
@@ -380,7 +384,12 @@ fn apply_postgres_runtime_env(app: &AppHandle, command: &mut Command) {
     }
 }
 
-fn run_pg_dump(app: &AppHandle, output_gzip_path: &Path, port: u16, database: &str) -> Result<(), String> {
+fn run_pg_dump(
+    app: &AppHandle,
+    output_gzip_path: &Path,
+    port: u16,
+    database: &str,
+) -> Result<(), String> {
     let pg_dump = sidecar::resolve_postgres_binary(app, "pg_dump");
     let mut command = Command::new(pg_dump);
     #[cfg(windows)]
@@ -415,10 +424,15 @@ fn run_pg_dump(app: &AppHandle, output_gzip_path: &Path, port: u16, database: &s
         .take()
         .ok_or_else(|| "Unable to capture pg_dump stdout".to_string())?;
 
-    let output_file = File::create(output_gzip_path)
-        .map_err(|error| format!("Unable to create dump file {}: {error}", output_gzip_path.display()))?;
+    let output_file = File::create(output_gzip_path).map_err(|error| {
+        format!(
+            "Unable to create dump file {}: {error}",
+            output_gzip_path.display()
+        )
+    })?;
     let mut gzip = GzEncoder::new(output_file, Compression::default());
-    std::io::copy(&mut stdout, &mut gzip).map_err(|error| format!("Unable to stream pg_dump output: {error}"))?;
+    std::io::copy(&mut stdout, &mut gzip)
+        .map_err(|error| format!("Unable to stream pg_dump output: {error}"))?;
     gzip.finish()
         .map_err(|error| format!("Unable to finalize dump gzip stream: {error}"))?;
 
@@ -442,10 +456,16 @@ fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<(), String> {
         return Ok(());
     }
 
-    fs::create_dir_all(destination)
-        .map_err(|error| format!("Unable to create directory {}: {error}", destination.display()))?;
+    fs::create_dir_all(destination).map_err(|error| {
+        format!(
+            "Unable to create directory {}: {error}",
+            destination.display()
+        )
+    })?;
 
-    for entry in fs::read_dir(source).map_err(|error| format!("Unable to read {}: {error}", source.display()))? {
+    for entry in fs::read_dir(source)
+        .map_err(|error| format!("Unable to read {}: {error}", source.display()))?
+    {
         let entry = entry.map_err(|error| format!("Unable to read directory entry: {error}"))?;
         let source_path = entry.path();
         let dest_path = destination.join(entry.file_name());
@@ -454,8 +474,12 @@ fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<(), String> {
             copy_dir_recursive(&source_path, &dest_path)?;
         } else {
             if let Some(parent) = dest_path.parent() {
-                fs::create_dir_all(parent)
-                    .map_err(|error| format!("Unable to create parent directory {}: {error}", parent.display()))?;
+                fs::create_dir_all(parent).map_err(|error| {
+                    format!(
+                        "Unable to create parent directory {}: {error}",
+                        parent.display()
+                    )
+                })?;
             }
             fs::copy(&source_path, &dest_path).map_err(|error| {
                 format!(
@@ -476,8 +500,12 @@ fn create_backup_archive(
     database_dump_path: &Path,
     uploads_snapshot_path: &Path,
 ) -> Result<(), String> {
-    let archive_file = File::create(output_path)
-        .map_err(|error| format!("Unable to create backup archive {}: {error}", output_path.display()))?;
+    let archive_file = File::create(output_path).map_err(|error| {
+        format!(
+            "Unable to create backup archive {}: {error}",
+            output_path.display()
+        )
+    })?;
     let encoder = GzEncoder::new(archive_file, Compression::default());
     let mut builder = tar::Builder::new(encoder);
 
@@ -498,7 +526,9 @@ fn create_backup_archive(
     if uploads_snapshot_path.exists() {
         builder
             .append_dir_all("uploads", uploads_snapshot_path)
-            .map_err(|error| format!("Unable to append uploads directory to backup archive: {error}"))?;
+            .map_err(|error| {
+                format!("Unable to append uploads directory to backup archive: {error}")
+            })?;
     }
 
     builder
@@ -558,8 +588,12 @@ fn run_backup_internal(app: &AppHandle, trigger: BackupTrigger) -> Result<PathBu
     let app_data = app_data_dir(app)?;
     let mut stored = load_stored_policy(app)?;
     let backup_dir = effective_backup_directory(app, &stored)?;
-    fs::create_dir_all(&backup_dir)
-        .map_err(|error| format!("Unable to create backup directory {}: {error}", backup_dir.display()))?;
+    fs::create_dir_all(&backup_dir).map_err(|error| {
+        format!(
+            "Unable to create backup directory {}: {error}",
+            backup_dir.display()
+        )
+    })?;
 
     let work_dir = app_data
         .join("backup-work")
@@ -619,8 +653,12 @@ fn run_backup_internal(app: &AppHandle, trigger: BackupTrigger) -> Result<PathBu
 }
 
 fn extract_archive(backup_path: &Path, destination: &Path) -> Result<(), String> {
-    let file = File::open(backup_path)
-        .map_err(|error| format!("Unable to open backup file {}: {error}", backup_path.display()))?;
+    let file = File::open(backup_path).map_err(|error| {
+        format!(
+            "Unable to open backup file {}: {error}",
+            backup_path.display()
+        )
+    })?;
     let decoder = GzDecoder::new(file);
     let mut archive = tar::Archive::new(decoder);
     archive
@@ -629,11 +667,18 @@ fn extract_archive(backup_path: &Path, destination: &Path) -> Result<(), String>
 }
 
 fn read_manifest(path: &Path) -> Result<BackupManifest, String> {
-    let raw = fs::read_to_string(path).map_err(|error| format!("Unable to read backup manifest: {error}"))?;
-    serde_json::from_str::<BackupManifest>(&raw).map_err(|error| format!("Unable to parse backup manifest: {error}"))
+    let raw = fs::read_to_string(path)
+        .map_err(|error| format!("Unable to read backup manifest: {error}"))?;
+    serde_json::from_str::<BackupManifest>(&raw)
+        .map_err(|error| format!("Unable to parse backup manifest: {error}"))
 }
 
-fn run_psql_restore(app: &AppHandle, sql_path: &Path, port: u16, database: &str) -> Result<(), String> {
+fn run_psql_restore(
+    app: &AppHandle,
+    sql_path: &Path,
+    port: u16,
+    database: &str,
+) -> Result<(), String> {
     let psql = sidecar::resolve_postgres_binary(app, "psql");
     let mut command = Command::new(psql);
     #[cfg(windows)]
@@ -691,7 +736,16 @@ fn wait_for_postgres_ready(app: &AppHandle, port: u16) -> Result<(), String> {
         apply_postgres_runtime_env(app, &mut command);
 
         let status = command
-            .args(["-h", "127.0.0.1", "-p", &port.to_string(), "-U", "elms", "-t", "1"])
+            .args([
+                "-h",
+                "127.0.0.1",
+                "-p",
+                &port.to_string(),
+                "-U",
+                "elms",
+                "-t",
+                "1",
+            ])
             .status()
             .map_err(|error| format!("Unable to run pg_isready: {error}"))?;
 
@@ -798,7 +852,8 @@ fn apply_restore_from_backup(app: &AppHandle, backup_path: &Path) -> Result<(), 
     let restore_work = app_data
         .join("restore-work")
         .join(format!("{}", Local::now().timestamp_millis()));
-    fs::create_dir_all(&restore_work).map_err(|error| format!("Unable to create restore work directory: {error}"))?;
+    fs::create_dir_all(&restore_work)
+        .map_err(|error| format!("Unable to create restore work directory: {error}"))?;
 
     let cleanup = || {
         let _ = fs::remove_dir_all(&restore_work);
@@ -811,7 +866,10 @@ fn apply_restore_from_backup(app: &AppHandle, backup_path: &Path) -> Result<(), 
         let manifest_path = restore_work.join("manifest.json");
         let manifest = read_manifest(&manifest_path)?;
         if manifest.version != 1 {
-            return Err(format!("Unsupported backup manifest version: {}", manifest.version));
+            return Err(format!(
+                "Unsupported backup manifest version: {}",
+                manifest.version
+            ));
         }
 
         let dump_path = restore_work.join("database.sql.gz");
@@ -821,9 +879,11 @@ fn apply_restore_from_backup(app: &AppHandle, backup_path: &Path) -> Result<(), 
 
         let sql_path = restore_work.join("database.sql");
         {
-            let dump_file = File::open(&dump_path).map_err(|error| format!("Unable to read backup dump: {error}"))?;
+            let dump_file = File::open(&dump_path)
+                .map_err(|error| format!("Unable to read backup dump: {error}"))?;
             let mut decoder = GzDecoder::new(dump_file);
-            let mut sql_file = File::create(&sql_path).map_err(|error| format!("Unable to create restore SQL file: {error}"))?;
+            let mut sql_file = File::create(&sql_path)
+                .map_err(|error| format!("Unable to create restore SQL file: {error}"))?;
             std::io::copy(&mut decoder, &mut sql_file)
                 .map_err(|error| format!("Unable to decompress backup SQL dump: {error}"))?;
             sql_file
@@ -838,8 +898,9 @@ fn apply_restore_from_backup(app: &AppHandle, backup_path: &Path) -> Result<(), 
         let uploads_src = restore_work.join("uploads");
         let uploads_target = app_data.join("uploads");
         if uploads_target.exists() {
-            fs::remove_dir_all(&uploads_target)
-                .map_err(|error| format!("Unable to clear uploads directory before restore: {error}"))?;
+            fs::remove_dir_all(&uploads_target).map_err(|error| {
+                format!("Unable to clear uploads directory before restore: {error}")
+            })?;
         }
         copy_dir_recursive(&uploads_src, &uploads_target)?;
 
@@ -858,7 +919,10 @@ fn apply_restore_from_backup(app: &AppHandle, backup_path: &Path) -> Result<(), 
     result
 }
 
-fn compute_next_run(now: chrono::DateTime<Local>, policy: &BackupPolicy) -> Option<chrono::DateTime<Local>> {
+fn compute_next_run(
+    now: chrono::DateTime<Local>,
+    policy: &BackupPolicy,
+) -> Option<chrono::DateTime<Local>> {
     if !policy.enabled {
         return None;
     }
@@ -931,10 +995,15 @@ fn should_run_schedule(policy: &BackupPolicy, last_backup_at: Option<&str>) -> b
 fn build_policy_response(app: &AppHandle) -> Result<BackupPolicyResponse, String> {
     let stored = load_stored_policy(app)?;
     let backup_dir = effective_backup_directory(app, &stored)?;
-    fs::create_dir_all(&backup_dir)
-        .map_err(|error| format!("Unable to create backup directory {}: {error}", backup_dir.display()))?;
+    fs::create_dir_all(&backup_dir).map_err(|error| {
+        format!(
+            "Unable to create backup directory {}: {error}",
+            backup_dir.display()
+        )
+    })?;
 
-    let next_scheduled_backup_at = compute_next_run(Local::now(), &stored.policy).map(|dt| dt.to_rfc3339());
+    let next_scheduled_backup_at =
+        compute_next_run(Local::now(), &stored.policy).map(|dt| dt.to_rfc3339());
 
     Ok(BackupPolicyResponse {
         policy: stored.policy,
@@ -954,7 +1023,10 @@ pub fn desktop_get_backup_policy(app: AppHandle) -> Result<BackupPolicyResponse,
 }
 
 #[tauri::command]
-pub fn desktop_set_backup_policy(app: AppHandle, payload: SetBackupPolicyInput) -> Result<BackupPolicyResponse, String> {
+pub fn desktop_set_backup_policy(
+    app: AppHandle,
+    payload: SetBackupPolicyInput,
+) -> Result<BackupPolicyResponse, String> {
     let mut stored = load_stored_policy(&app)?;
     let updated = BackupPolicy {
         enabled: payload.enabled,
@@ -1063,33 +1135,31 @@ pub fn start_backup_scheduler(app: AppHandle) {
         return;
     }
 
-    std::thread::spawn(move || {
-        loop {
-            std::thread::sleep(Duration::from_secs(30));
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(30));
 
-            let runtime_state = app.state::<sidecar::RuntimeState>();
-            if runtime_state.is_bootstrapping() || runtime_state.current_phase() != "ready" {
-                continue;
-            }
-
-            let stored = match load_stored_policy(&app) {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
-
-            if !should_run_schedule(&stored.policy, stored.last_backup_at.as_deref()) {
-                continue;
-            }
-
-            let backup_state = app.state::<BackupState>();
-            let guard = match begin_operation(&backup_state) {
-                Ok(guard) => guard,
-                Err(_) => continue,
-            };
-
-            let _ = run_backup_internal(&app, BackupTrigger::Scheduled);
-            drop(guard);
+        let runtime_state = app.state::<sidecar::RuntimeState>();
+        if runtime_state.is_bootstrapping() || runtime_state.current_phase() != "ready" {
+            continue;
         }
+
+        let stored = match load_stored_policy(&app) {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+
+        if !should_run_schedule(&stored.policy, stored.last_backup_at.as_deref()) {
+            continue;
+        }
+
+        let backup_state = app.state::<BackupState>();
+        let guard = match begin_operation(&backup_state) {
+            Ok(guard) => guard,
+            Err(_) => continue,
+        };
+
+        let _ = run_backup_internal(&app, BackupTrigger::Scheduled);
+        drop(guard);
     });
 }
 
@@ -1108,7 +1178,10 @@ mod tests {
 
     #[test]
     fn computes_next_daily_run() {
-        let now = Local.with_ymd_and_hms(2026, 4, 12, 1, 0, 0).single().expect("valid date");
+        let now = Local
+            .with_ymd_and_hms(2026, 4, 12, 1, 0, 0)
+            .single()
+            .expect("valid date");
         let policy = BackupPolicy {
             enabled: true,
             frequency: BackupFrequency::Daily,
@@ -1124,7 +1197,10 @@ mod tests {
 
     #[test]
     fn computes_next_weekly_run() {
-        let now = Local.with_ymd_and_hms(2026, 4, 12, 9, 0, 0).single().expect("valid date"); // Sunday
+        let now = Local
+            .with_ymd_and_hms(2026, 4, 12, 9, 0, 0)
+            .single()
+            .expect("valid date"); // Sunday
         let policy = BackupPolicy {
             enabled: true,
             frequency: BackupFrequency::Weekly,

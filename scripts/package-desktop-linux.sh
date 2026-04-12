@@ -15,7 +15,9 @@ bash ./scripts/bundle-linux-deps.sh
 node ./scripts/verify-desktop-resources.mjs
 
 set +e
-NO_STRIP=1 pnpm --filter @elms/desktop tauri build --bundles "$DESKTOP_BUNDLES" --ci 2>&1 | tee "$LOG_FILE"
+# NO_STRIP=1: prevents linuxdeploy from stripping RELR-enabled binaries (causes segfaults).
+# APPIMAGE_EXTRACT_AND_RUN=1: allows linuxdeploy (itself an AppImage) to run without FUSE kernel support.
+APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1 pnpm --filter @elms/desktop tauri build --bundles "$DESKTOP_BUNDLES" --ci 2>&1 | tee "$LOG_FILE"
 status=${PIPESTATUS[0]}
 set -e
 
