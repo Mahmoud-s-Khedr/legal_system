@@ -96,4 +96,5 @@ describe("generate-license.ts", () => {
     expect(legacy.expiresAt).toBe("2030-01-01T00:00:00Z");
     expect(typeof legacy.signature).toBe("string");
   });
+
 });

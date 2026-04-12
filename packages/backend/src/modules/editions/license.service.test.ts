@@ -85,6 +85,17 @@ function makeFirmState(overrides?: Partial<{
 }
 
 describe("decodeLicenseKey", () => {
+  it("accepts DESKTOP_LICENSE_PUBLIC_KEY as base64-encoded PEM", () => {
+    const key = makeActivationKey({
+      firmId: "firm-1",
+      editionKey: EditionKey.SOLO_OFFLINE,
+      expiresAt: "2030-01-01T00:00:00.000Z"
+    });
+
+    process.env.DESKTOP_LICENSE_PUBLIC_KEY = Buffer.from(publicKey, "utf8").toString("base64");
+    expect(() => decodeLicenseKey(key)).not.toThrow();
+  });
+
   it("rejects invalid signature", () => {
     const key = makeActivationKey({
       firmId: "firm-1",
@@ -96,9 +107,41 @@ describe("decodeLicenseKey", () => {
     expect(() => decodeLicenseKey(tampered)).toThrowError(LicenseServiceError);
     expect(() => decodeLicenseKey(tampered)).toThrowError("License key signature is invalid");
   });
+
+  it("fails clearly when DESKTOP_LICENSE_PUBLIC_KEY is missing", () => {
+    const key = makeActivationKey({
+      firmId: "firm-1",
+      editionKey: EditionKey.SOLO_OFFLINE,
+      expiresAt: "2030-01-01T00:00:00.000Z"
+    });
+
+    delete process.env.DESKTOP_LICENSE_PUBLIC_KEY;
+
+    expect(() => decodeLicenseKey(key)).toThrowError(LicenseServiceError);
+    expect(() => decodeLicenseKey(key)).toThrowError("License verification key is missing");
+  });
+
+  it("fails clearly when DESKTOP_LICENSE_PUBLIC_KEY format is invalid", () => {
+    const key = makeActivationKey({
+      firmId: "firm-1",
+      editionKey: EditionKey.SOLO_OFFLINE,
+      expiresAt: "2030-01-01T00:00:00.000Z"
+    });
+
+    process.env.DESKTOP_LICENSE_PUBLIC_KEY = "not-a-pem-or-base64";
+
+    expect(() => decodeLicenseKey(key)).toThrowError(LicenseServiceError);
+    expect(() => decodeLicenseKey(key)).toThrowError(
+      "DESKTOP_LICENSE_PUBLIC_KEY must be a raw PEM public key or a base64-encoded PEM public key."
+    );
+  });
 });
 
 describe("activateLicense", () => {
+  beforeEach(() => {
+    process.env.DESKTOP_LICENSE_PUBLIC_KEY = publicKey;
+  });
+
   it("activates a valid license and marks firm as LICENSED", async () => {
     const key = makeActivationKey({
       firmId: "firm-1",

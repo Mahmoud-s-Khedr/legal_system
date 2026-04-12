@@ -38,6 +38,7 @@ const baseSchema = z.object({
   DESKTOP_FRONTEND_URL: z.string().default("http://127.0.0.1:5173"),
   DESKTOP_BACKEND_URL: z.string().default("http://127.0.0.1:7854"),
   DESKTOP_POSTGRES_PORT: z.coerce.number().default(5433),
+  DESKTOP_LICENSE_PUBLIC_KEY: z.string().optional(),
   ELMS_ENABLE_SWAGGER: booleanish.default(false),
   // Documents / Storage
   MAX_UPLOAD_BYTES: z.coerce.number().default(50 * 1024 * 1024),
@@ -95,6 +96,10 @@ function getDevelopmentKeys() {
   };
 }
 
+function isDesktopBootstrapRuntime(source: NodeJS.ProcessEnv): boolean {
+  return Boolean(source.ELMS_DESKTOP_BOOTSTRAP_TOKEN?.trim());
+}
+
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   if (cachedEnv) {
     return cachedEnv;
@@ -112,6 +117,11 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     if (!parsed.JWT_PRIVATE_KEY || !parsed.JWT_PUBLIC_KEY) {
       throw new Error("JWT_PRIVATE_KEY and JWT_PUBLIC_KEY must be set in production");
     }
+
+    if (isDesktopBootstrapRuntime(source) && !parsed.DESKTOP_LICENSE_PUBLIC_KEY?.trim()) {
+      throw new Error("DESKTOP_LICENSE_PUBLIC_KEY must be set for production desktop runtime");
+    }
+
     cachedEnv = {
       ...parsed,
       AUTH_MODE: normalizedAuthMode

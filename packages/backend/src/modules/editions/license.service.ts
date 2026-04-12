@@ -1,6 +1,4 @@
 import { createHash, createVerify } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { EditionKey, FirmLifecycleStatus, type LicenseActivationResponseDto } from "@elms/shared";
 import { prisma } from "../../db/prisma.js";
 
@@ -23,28 +21,32 @@ export class LicenseServiceError extends Error {
 }
 
 function getPublicKey(): string {
-  if (process.env.DESKTOP_LICENSE_PUBLIC_KEY) {
-    const raw = process.env.DESKTOP_LICENSE_PUBLIC_KEY;
-    if (raw.startsWith("-----")) return raw;
-    return Buffer.from(raw, "base64").toString("utf-8");
+  const raw = process.env.DESKTOP_LICENSE_PUBLIC_KEY?.trim();
+  if (!raw) {
+    throw new LicenseServiceError(
+      "LICENSE_NOT_CONFIGURED",
+      "License verification key is missing. Set DESKTOP_LICENSE_PUBLIC_KEY.",
+      500
+    );
   }
 
-  const candidates = [
-    join(process.cwd(), "resources", "elms_pub.pem"),
-    join(process.cwd(), "..", "..", "apps", "desktop", "src-tauri", "resources", "elms_pub.pem")
-  ];
+  if (raw.startsWith("-----BEGIN PUBLIC KEY-----")) {
+    return raw;
+  }
 
-  for (const candidate of candidates) {
-    try {
-      return readFileSync(candidate, "utf-8");
-    } catch {
-      // not found at this path, try next
+  try {
+    const decoded = Buffer.from(raw, "base64").toString("utf-8");
+    if (!decoded.includes("-----BEGIN PUBLIC KEY-----")) {
+      throw new Error("decoded value does not look like a PEM public key");
     }
+    return decoded;
+  } catch {
+    throw new LicenseServiceError(
+      "LICENSE_NOT_CONFIGURED",
+      "DESKTOP_LICENSE_PUBLIC_KEY must be a raw PEM public key or a base64-encoded PEM public key.",
+      500
+    );
   }
-
-  throw new Error(
-    "ELMS license public key not found. Set DESKTOP_LICENSE_PUBLIC_KEY env var or provide elms_pub.pem."
-  );
 }
 
 export function decodeLicenseKey(licenseKey: string): {

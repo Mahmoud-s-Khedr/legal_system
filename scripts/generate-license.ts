@@ -9,20 +9,18 @@
  * Legacy mode (--legacy-json): generates the historical JSON license file.
  *
  * Usage:
- *   tsx scripts/generate-license.ts \
- *     --firm-id "uuid" \
- *     --edition-key solo_offline \
- *     --expires-at 2027-03-20 \
+ *   tsx scripts/generate-license.ts --firm-id "uuid" --edition-key solo_offline --expires-at 2027-03-20
  *     [--private-key apps/desktop/src-tauri/keys/private.pem] \
  *     [--out activation.key]
  *
- *   When --private-key is omitted a fresh key pair is generated and
- *   the public key PEM is printed to stdout for embedding in:
- *   apps/desktop/src-tauri/resources/elms_pub.pem (or DESKTOP_LICENSE_PUBLIC_KEY env).
+ *   When --private-key is omitted, the script uses:
+ *   apps/desktop/src-tauri/keys/private.pem
+ *   (vendor-side key, not committed).
  */
 
-import { createSign, generateKeyPairSync } from "node:crypto";
+import { createSign } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 // ── CLI argument parsing ──────────────────────────────────────────────────────
 
@@ -49,17 +47,18 @@ const legacySlug = flag("slug");
 const legacyExpires = flag("expires");
 const privateKeyPath = flag("private-key");
 const outPath = flag("out");
+const defaultPrivateKeyPath = resolve(process.cwd(), "apps/desktop/src-tauri/keys/private.pem");
 
 if (!legacyJsonMode && (!firmId || !editionKey || !expiresAtArg)) {
   console.error(
-    "Usage: tsx scripts/generate-license.ts --firm-id <uuid> --edition-key <edition> --expires-at <YYYY-MM-DD> [--private-key <path>] [--out <path>]"
+    "Usage: tsx scripts/generate-license.ts --firm-id <uuid> --edition-key <edition> --expires-at <YYYY-MM-DD> [--private-key <path>] [--out <path>]\nDefault private key path: apps/desktop/src-tauri/keys/private.pem"
   );
   process.exit(1);
 }
 
 if (legacyJsonMode && (!legacyFirm || !legacySlug || !legacyExpires)) {
   console.error(
-    "Legacy mode usage: tsx scripts/generate-license.ts --legacy-json --firm <name> --slug <slug> --expires <YYYY-MM-DD> [--private-key <path>] [--out <path>]"
+    "Legacy mode usage: tsx scripts/generate-license.ts --legacy-json --firm <name> --slug <slug> --expires <YYYY-MM-DD> [--private-key <path>] [--out <path>]\nDefault private key path: apps/desktop/src-tauri/keys/private.pem"
   );
   process.exit(1);
 }
@@ -82,22 +81,21 @@ if (editionKey && !EDITION_KEYS.includes(editionKey as (typeof EDITION_KEYS)[num
 // ── Key handling ──────────────────────────────────────────────────────────────
 
 let privateKeyPem: string;
-let publicKeyPem: string | null = null;
+const effectivePrivateKeyPath = privateKeyPath ?? defaultPrivateKeyPath;
 
-if (privateKeyPath) {
-  privateKeyPem = readFileSync(privateKeyPath, "utf8");
-} else {
-  console.log("No --private-key provided — generating a fresh RSA-2048 key pair.");
-  const { privateKey, publicKey } = generateKeyPairSync("rsa", {
-    modulusLength: 2048,
-    publicKeyEncoding: { type: "spki", format: "pem" },
-    privateKeyEncoding: { type: "pkcs8", format: "pem" }
-  });
-  privateKeyPem = privateKey as string;
-  publicKeyPem = publicKey as string;
-  console.log("\n--- PUBLIC KEY (embed in apps/desktop/src-tauri/resources/elms_pub.pem) ---");
-  console.log(publicKeyPem);
-  console.log("--- END PUBLIC KEY ---\n");
+try {
+  privateKeyPem = readFileSync(effectivePrivateKeyPath, "utf8");
+} catch (error) {
+  const reason = error instanceof Error ? error.message : String(error);
+  console.error(
+    `Unable to read private key from ${effectivePrivateKeyPath}.\n` +
+      "Generate it with:\n" +
+      "  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out apps/desktop/src-tauri/keys/private.pem\n" +
+      "Then derive the public key with:\n" +
+      "  openssl rsa -pubout -in apps/desktop/src-tauri/keys/private.pem -out apps/desktop/src-tauri/keys/public.pem\n" +
+      `Reason: ${reason}`
+  );
+  process.exit(1);
 }
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
@@ -151,11 +149,6 @@ if (legacyJsonMode) {
   console.log(`  Issued:  ${issuedAt}`);
   console.log(`  Expires: ${expiresAt}`);
 
-  if (publicKeyPem) {
-    console.log(
-      "\nTo embed this key, copy the PUBLIC KEY block above into:\n  apps/desktop/src-tauri/resources/elms_pub.pem"
-    );
-  }
   process.exit(0);
 }
 
@@ -181,12 +174,6 @@ console.log("\nActivation key:");
 console.log(activationKey);
 console.log("\nPayload:");
 console.log(JSON.stringify(payload, null, 2));
-
-if (publicKeyPem) {
-  console.log(
-    "\nTo embed this key, copy the PUBLIC KEY block above into:\n  apps/desktop/src-tauri/resources/elms_pub.pem"
-  );
-}
 
 if (!outPath) {
   console.log("\nTip: pass --out <path> to save the activation key to a file.");

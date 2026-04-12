@@ -279,8 +279,7 @@ openssl rsa -pubout -in private.pem -out public.pem
 ```
 
 Wire the public key into backend verification via:
-- `DESKTOP_LICENSE_PUBLIC_KEY` environment variable (raw PEM or base64-encoded PEM), or
-- fallback key file path `resources/elms_pub.pem` (with repo fallback to `apps/desktop/src-tauri/resources/elms_pub.pem`).
+- `DESKTOP_LICENSE_PUBLIC_KEY` environment variable (raw PEM or base64-encoded PEM).
 
 The private key is vendor-only material and must never be distributed with desktop builds.
 

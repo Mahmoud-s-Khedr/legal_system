@@ -33,6 +33,37 @@ function resolveDesktopEnvSource() {
   );
 }
 
+function parseEnvFile(envPath) {
+  const parsed = {};
+  const contents = readFileSync(envPath, "utf8");
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex === -1) {
+      continue;
+    }
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim();
+    parsed[key] = value;
+  }
+  return parsed;
+}
+
+function assertDesktopLicensePublicKeyForBuild() {
+  const envSourcePath = resolveDesktopEnvSource();
+  const envFromFile = parseEnvFile(envSourcePath);
+  const envValue = (env.DESKTOP_LICENSE_PUBLIC_KEY ?? envFromFile.DESKTOP_LICENSE_PUBLIC_KEY ?? "").trim();
+
+  if (!envValue) {
+    throw new Error(
+      `DESKTOP_LICENSE_PUBLIC_KEY is required for desktop build packaging. Set it in process env or ${envSourcePath}.`
+    );
+  }
+}
+
 function withBuildConfigOverride(buildArgs) {
   const tempDir = mkdtempSync(join(tmpdir(), "elms-tauri-config-"));
   const overridePath = join(tempDir, "tauri.bundle.env.json");
@@ -64,6 +95,7 @@ let childArgs = args;
 let cleanup = () => {};
 
 if (args[0] === "build") {
+  assertDesktopLicensePublicKeyForBuild();
   const override = withBuildConfigOverride(args);
   childArgs = override.args;
   cleanup = override.cleanup;

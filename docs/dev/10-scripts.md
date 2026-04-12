@@ -332,9 +332,7 @@ DESKTOP_LICENSE_PUBLIC_KEY="$(cat public.pem)"
 DESKTOP_LICENSE_PUBLIC_KEY="$(base64 < public.pem | tr -d '\n')"
 ```
 
-Alternatively, place the public key file at one of the backend fallback locations:
-- `resources/elms_pub.pem` (from backend process working directory)
-- `apps/desktop/src-tauri/resources/elms_pub.pem` (repo fallback path)
+`DESKTOP_LICENSE_PUBLIC_KEY` is the source of truth for backend license verification in production desktop runtime.
 
 Security note: keep `private.pem` vendor-side only and never ship it with the desktop app.
 
