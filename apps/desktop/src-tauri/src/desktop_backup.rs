@@ -82,7 +82,7 @@ pub enum BackupFrequency {
     Weekly,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct StoredBackupPolicy {
     #[serde(default)]
@@ -91,18 +91,6 @@ struct StoredBackupPolicy {
     last_backup_at: Option<String>,
     last_backup_result: Option<String>,
     last_backup_path: Option<String>,
-}
-
-impl Default for StoredBackupPolicy {
-    fn default() -> Self {
-        Self {
-            policy: BackupPolicy::default(),
-            backup_directory: None,
-            last_backup_at: None,
-            last_backup_result: None,
-            last_backup_path: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize)]
