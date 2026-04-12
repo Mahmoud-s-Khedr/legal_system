@@ -6,6 +6,7 @@ import { getAuditContext } from "../../utils/auditContext.js";
 import {
   createTemplate,
   deleteTemplate,
+  exportTemplateDocx,
   getTemplate,
   listTemplates,
   renderTemplate,
@@ -106,6 +107,35 @@ export async function registerTemplateRoutes(app: FastifyInstance) {
       }
 
       return result;
+    }
+  );
+
+  app.post(
+    "/api/templates/:id/export",
+    { preHandler: [requireAuth, requirePermission("templates:read")] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const query = z
+        .object({
+          format: z.literal("docx").default("docx"),
+          mode: z.enum(["template", "rendered"]).default("template")
+        })
+        .parse(request.query);
+      const body = z.object({ caseId: z.string().uuid().optional() }).parse(request.body ?? {});
+
+      if (query.mode === "rendered" && !body.caseId) {
+        return reply.status(400).send({ error: "caseId is required for rendered export mode" });
+      }
+
+      const result = await exportTemplateDocx(request.sessionUser!, id, query.mode, body.caseId);
+      if (!result) {
+        return reply.status(404).send({ error: "Template or case not found" });
+      }
+
+      return reply
+        .header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        .header("Content-Disposition", `attachment; filename=\"${result.fileName}\"`)
+        .send(result.buffer);
     }
   );
 }

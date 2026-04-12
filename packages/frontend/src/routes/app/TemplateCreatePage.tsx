@@ -3,6 +3,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useCreateTemplate, type CreateTemplateDto } from "../../lib/templates";
 import { Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import { TemplateRichEditor } from "../../components/templates/TemplateRichEditor";
+import { isTemplateHtmlEmpty } from "../../lib/templateEditor";
 
 const LANGUAGES = ["AR", "EN", "FR"];
 
@@ -15,6 +17,7 @@ export function TemplateCreatePage() {
     language: "AR",
     body: ""
   });
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const create = useCreateTemplate();
 
@@ -27,6 +30,11 @@ export function TemplateCreatePage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
+            if (isTemplateHtmlEmpty(form.body)) {
+              setValidationError(t("templates.validation.bodyRequired"));
+              return;
+            }
+            setValidationError(null);
             create.mutate(form, { onSuccess: () => void navigate({ to: "/app/templates" }) });
           }}
         >
@@ -47,13 +55,13 @@ export function TemplateCreatePage() {
               {t("templates.body")}
             </label>
             <p className="mb-2 text-xs text-slate-400">{t("templates.bodyHelp")}</p>
-            <textarea
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm focus:border-accent focus:outline-none"
-              rows={16}
-              dir="auto"
+            <TemplateRichEditor
               value={form.body}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
+              language={form.language ?? "AR"}
+              onChange={(body) => setForm({ ...form, body })}
             />
+            {validationError ? <p className="mt-2 text-sm text-red-600">{validationError}</p> : null}
+            <p className="mt-2 text-xs text-slate-500">{t("templates.exportAfterSave")}</p>
           </div>
           <FormExitActions
             cancelTo="/app/templates"

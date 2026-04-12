@@ -17,6 +17,12 @@
     "i18n:check": "node ./scripts/check-i18n-keys.mjs"
   },
   "dependencies": {
+    "@tiptap/extension-text-align": "^2.26.2",
+    "@tiptap/extension-underline": "^2.26.2",
+    "@tiptap/core": "^2.26.2",
+    "@tiptap/pm": "^2.26.2",
+    "@tiptap/react": "^2.26.2",
+    "@tiptap/starter-kit": "^2.26.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",

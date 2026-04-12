@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "./api";
+import { apiDownload, apiFetch } from "./api";
+import { saveBlobToDownloads } from "./desktopDownloads";
 
 export interface TemplateDto {
   id: string;
@@ -25,9 +26,13 @@ export interface UpdateTemplateDto {
 }
 
 export interface RenderResultDto {
+  renderedHtml: string;
+  renderedText: string;
   rendered: string;
   variables: Record<string, string>;
 }
+
+export type TemplateExportMode = "template" | "rendered";
 
 export function useTemplates() {
   return useQuery({
@@ -78,4 +83,19 @@ export function useDeleteTemplate() {
     mutationFn: (id: string) => apiFetch<void>(`/api/templates/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] })
   });
+}
+
+export async function exportTemplateDocx(
+  templateId: string,
+  mode: TemplateExportMode,
+  caseId?: string
+): Promise<string | null> {
+  const body = mode === "rendered" ? { caseId } : {};
+  const { blob, filename } = await apiDownload(`/api/templates/${templateId}/export?format=docx&mode=${mode}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  return saveBlobToDownloads(blob, filename ?? `template-${templateId}.docx`);
 }

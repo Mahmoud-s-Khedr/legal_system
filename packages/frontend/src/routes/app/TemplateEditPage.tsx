@@ -3,9 +3,12 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import type { TemplateDto, UpdateTemplateDto } from "../../lib/templates";
+import { exportTemplateDocx, type TemplateDto, type UpdateTemplateDto } from "../../lib/templates";
 import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 import { useTemplateRender } from "../../lib/templates";
+import { TemplateRichEditor } from "../../components/templates/TemplateRichEditor";
+import { isTemplateHtmlEmpty } from "../../lib/templateEditor";
+import { useToastStore } from "../../store/toastStore";
 
 const LANGUAGES = ["AR", "EN", "FR"];
 
@@ -14,6 +17,7 @@ export function TemplateEditPage() {
   const { templateId } = useParams({ from: "/app/templates/$templateId/edit" });
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const addToast = useToastStore((state) => state.addToast);
 
   const { data: tpl, isLoading } = useQuery({
     queryKey: ["templates", templateId],
@@ -22,7 +26,11 @@ export function TemplateEditPage() {
 
   const [form, setForm] = useState<UpdateTemplateDto>({});
   const [renderCaseId, setRenderCaseId] = useState("");
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewText, setPreviewText] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [exportingTemplate, setExportingTemplate] = useState(false);
+  const [exportingRendered, setExportingRendered] = useState(false);
 
   useEffect(() => {
     if (tpl) {
@@ -61,6 +69,11 @@ export function TemplateEditPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
+            if (isTemplateHtmlEmpty(form.body ?? "")) {
+              setValidationError(t("templates.validation.bodyRequired"));
+              return;
+            }
+            setValidationError(null);
             update.mutate(form);
           }}
         >
@@ -81,13 +94,13 @@ export function TemplateEditPage() {
               {t("templates.body")}
             </label>
             <p className="mb-2 text-xs text-slate-400">{t("templates.bodyHelp")}</p>
-            <textarea
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm focus:border-accent focus:outline-none"
-              rows={16}
-              dir="auto"
+            <TemplateRichEditor
               value={form.body ?? ""}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
+              language={form.language ?? "AR"}
+              onChange={(body) => setForm({ ...form, body })}
+              disabled={tpl.isSystem}
             />
+            {validationError ? <p className="mt-2 text-sm text-red-600">{validationError}</p> : null}
           </div>
           {!tpl.isSystem && (
             <FormExitActions
@@ -123,7 +136,10 @@ export function TemplateEditPage() {
               renderMutation.mutate(
                 { caseId: renderCaseId },
                 {
-                  onSuccess: (data) => setPreview(data.rendered)
+                  onSuccess: (data) => {
+                    setPreviewHtml(data.renderedHtml);
+                    setPreviewText(data.renderedText);
+                  }
                 }
               );
             }}
@@ -133,9 +149,49 @@ export function TemplateEditPage() {
             {renderMutation.isPending ? t("labels.loading") : t("templates.render")}
           </button>
         </div>
-        {preview !== null && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setExportingTemplate(true);
+              void exportTemplateDocx(templateId, "template")
+                .then(() => addToast(t("reports.exportReady", { format: "DOCX" }), "success"))
+                .catch((error) => addToast((error as Error).message, "error"))
+                .finally(() => setExportingTemplate(false));
+            }}
+            disabled={exportingTemplate}
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+          >
+            {exportingTemplate ? t("labels.loading") : t("templates.exportTemplateDocx")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!renderCaseId) {
+                addToast(t("templates.validation.caseIdRequired"), "error");
+                return;
+              }
+              setExportingRendered(true);
+              void exportTemplateDocx(templateId, "rendered", renderCaseId)
+                .then(() => addToast(t("reports.exportReady", { format: "DOCX" }), "success"))
+                .catch((error) => addToast((error as Error).message, "error"))
+                .finally(() => setExportingRendered(false));
+            }}
+            disabled={exportingRendered}
+            className="rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {exportingRendered ? t("labels.loading") : t("templates.exportRenderedDocx")}
+          </button>
+        </div>
+        {previewHtml !== null && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("templates.previewRich")}</p>
+            <div className="prose prose-sm max-w-none" dir="auto" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          </div>
+        )}
+        {previewText !== null && (
           <pre className="mt-4 whitespace-pre-wrap rounded-2xl border border-slate-200 bg-sand p-4 text-sm leading-relaxed" dir="auto">
-            {preview}
+            {previewText}
           </pre>
         )}
       </SectionCard>

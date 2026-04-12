@@ -1031,7 +1031,43 @@
     "save": "Save template",
     "preview": "Preview",
     "previewHelp": "Paste a case ID to preview the substitution output.",
-    "render": "Preview"
+    "render": "Preview",
+    "exportAfterSave": "Save the template first to enable export actions.",
+    "insertPlaceholder": "Insert placeholder",
+    "exportTemplateDocx": "Export template .docx",
+    "exportRenderedDocx": "Export rendered .docx",
+    "previewRich": "Formatted preview",
+    "validation": {
+      "bodyRequired": "Template body is required.",
+      "caseIdRequired": "Case ID is required for rendered export."
+    },
+    "toolbar": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "h1": "H1",
+      "h2": "H2",
+      "bulletList": "Bullets",
+      "numberedList": "Numbered",
+      "alignLeft": "Align left",
+      "alignCenter": "Align center",
+      "alignRight": "Align right",
+      "undo": "Undo",
+      "redo": "Redo",
+      "clear": "Clear format"
+    },
+    "placeholder": {
+      "caseName": "Case name",
+      "caseNumber": "Case number",
+      "internalReference": "Internal reference",
+      "clientName": "Client name",
+      "clientNameAr": "Client name (Arabic)",
+      "courtName": "Court name",
+      "courtLevel": "Court level",
+      "hearingDate": "Hearing date",
+      "today": "Today (Arabic)",
+      "todayEn": "Today (English)"
+    }
   },
   "pwa": {
     "offline": "You are offline. Changes will be synced when you reconnect."

@@ -1042,7 +1042,43 @@
     "save": "حفظ النموذج",
     "preview": "معاينة",
     "previewHelp": "الصق معرّف القضية لمعاينة النموذج بعد استبدال المتغيرات.",
-    "render": "معاينة"
+    "render": "معاينة",
+    "exportAfterSave": "احفظ القالب أولاً لتفعيل خيارات التصدير.",
+    "insertPlaceholder": "إدراج متغير",
+    "exportTemplateDocx": "تصدير القالب .docx",
+    "exportRenderedDocx": "تصدير المستند النهائي .docx",
+    "previewRich": "معاينة منسقة",
+    "validation": {
+      "bodyRequired": "محتوى القالب مطلوب.",
+      "caseIdRequired": "معرّف القضية مطلوب للتصدير النهائي."
+    },
+    "toolbar": {
+      "bold": "عريض",
+      "italic": "مائل",
+      "underline": "تسطير",
+      "h1": "عنوان 1",
+      "h2": "عنوان 2",
+      "bulletList": "تعداد نقطي",
+      "numberedList": "تعداد رقمي",
+      "alignLeft": "محاذاة يسار",
+      "alignCenter": "توسيط",
+      "alignRight": "محاذاة يمين",
+      "undo": "تراجع",
+      "redo": "إعادة",
+      "clear": "مسح التنسيق"
+    },
+    "placeholder": {
+      "caseName": "اسم القضية",
+      "caseNumber": "رقم القضية",
+      "internalReference": "المرجع الداخلي",
+      "clientName": "اسم العميل",
+      "clientNameAr": "اسم العميل (عربي)",
+      "courtName": "اسم المحكمة",
+      "courtLevel": "درجة المحكمة",
+      "hearingDate": "تاريخ الجلسة",
+      "today": "تاريخ اليوم (عربي)",
+      "todayEn": "تاريخ اليوم (إنجليزي)"
+    }
   },
   "pwa": {
     "offline": "أنت غير متصل بالإنترنت. سيتم مزامنة التغييرات عند إعادة الاتصال."

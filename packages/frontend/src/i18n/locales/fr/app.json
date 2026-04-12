@@ -1019,7 +1019,43 @@
     "save": "Enregistrer le modèle",
     "preview": "Aperçu",
     "previewHelp": "Collez un ID de dossier pour prévisualiser la substitution.",
-    "render": "Aperçu"
+    "render": "Aperçu",
+    "exportAfterSave": "Enregistrez d'abord le modèle pour activer les actions d'export.",
+    "insertPlaceholder": "Insérer un placeholder",
+    "exportTemplateDocx": "Exporter le modèle .docx",
+    "exportRenderedDocx": "Exporter le document rendu .docx",
+    "previewRich": "Aperçu formaté",
+    "validation": {
+      "bodyRequired": "Le contenu du modèle est obligatoire.",
+      "caseIdRequired": "L'identifiant du dossier est requis pour l'export rendu."
+    },
+    "toolbar": {
+      "bold": "Gras",
+      "italic": "Italique",
+      "underline": "Souligné",
+      "h1": "Titre 1",
+      "h2": "Titre 2",
+      "bulletList": "Puces",
+      "numberedList": "Numérotée",
+      "alignLeft": "Aligner à gauche",
+      "alignCenter": "Aligner au centre",
+      "alignRight": "Aligner à droite",
+      "undo": "Annuler",
+      "redo": "Rétablir",
+      "clear": "Effacer le format"
+    },
+    "placeholder": {
+      "caseName": "Nom du dossier",
+      "caseNumber": "Numéro du dossier",
+      "internalReference": "Référence interne",
+      "clientName": "Nom du client",
+      "clientNameAr": "Nom client (arabe)",
+      "courtName": "Nom du tribunal",
+      "courtLevel": "Niveau du tribunal",
+      "hearingDate": "Date d'audience",
+      "today": "Aujourd'hui (arabe)",
+      "todayEn": "Aujourd'hui (anglais)"
+    }
   },
   "pwa": {
     "offline": "Vous êtes hors ligne. Les modifications seront synchronisées à la reconnexion."
