@@ -39,8 +39,8 @@ All contributors are expected to maintain a respectful and professional environm
 4. **Create a branch** from `main` (see [Branch Naming](#branch-naming)).
 5. **Develop** — run the dev server with:
    ```bash
-   # Web (cloud mode): backend on default port + frontend on :5174
-   pnpm dev:web
+   # Desktop-local full stack: backend + frontend
+   pnpm dev:desktop
 
    # Desktop (Tauri dev shell)
    pnpm dev:tauri

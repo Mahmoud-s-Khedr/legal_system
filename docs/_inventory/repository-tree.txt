@@ -1,0 +1,1128 @@
+./
+.claude/
+├── settings.json
+└── settings.local.json
+.github/
+├── workflows/
+│   ├── build-dummy-desktop.yml
+│   ├── build-linux.yml
+│   ├── build-macos.yml
+│   ├── build-windows.yml
+│   ├── ci.yml
+│   └── release-desktop.yml
+└── pull_request_template.md
+.logs/
+└── desktop-linux-package-deb--rpm.log
+apps/
+└── desktop/
+    ├── .tauri-build-tmp/
+    │   └── 1774508862283-320410/
+    │       └── tauri.bundle.env.json
+    ├── resources/
+    │   ├── node/
+    │   │   ├── .bundle-complete
+    │   │   ├── .gitkeep
+    │   │   └── node
+    │   └── postgres/
+    │       ├── bin/
+    │       │   ├── createdb
+    │       │   ├── initdb
+    │       │   ├── pg_ctl
+    │       │   ├── pg_isready
+    │       │   └── postgres
+    │       ├── lib/
+    │       │   ├── libaudit.so.1
+    │       │   ├── libcap-ng.so.0
+    │       │   ├── libcap.so.2
+    │       │   ├── libcom_err.so.2
+    │       │   ├── libcrypt.so.2
+    │       │   ├── libcrypto.so.3
+    │       │   ├── libeconf.so.0
+    │       │   ├── libevent-2.1.so.7
+    │       │   ├── libgcc_s.so.1
+    │       │   ├── libgssapi_krb5.so.2
+    │       │   ├── libicudata.so.77
+    │       │   ├── libicui18n.so.77
+    │       │   ├── libicuuc.so.77
+    │       │   ├── libk5crypto.so.3
+    │       │   ├── libkeyutils.so.1
+    │       │   ├── libkrb5.so.3
+    │       │   ├── libkrb5support.so.0
+    │       │   ├── liblber.so.2
+    │       │   ├── libldap.so.2
+    │       │   ├── liblz4.so.1
+    │       │   ├── liblzma.so.5
+    │       │   ├── libpam.so.0
+    │       │   ├── libpcre2-8.so.0
+    │       │   ├── libpq.so.private18-5
+    │       │   ├── libresolv.so.2
+    │       │   ├── libsasl2.so.3
+    │       │   ├── libselinux.so.1
+    │       │   ├── libssl.so.3
+    │       │   ├── libstdc++.so.6
+    │       │   ├── libsystemd.so.0
+    │       │   ├── libxml2.so.2
+    │       │   ├── libz.so.1
+    │       │   └── libzstd.so.1
+    │       ├── lib64/
+    │       │   └── pgsql/
+    │       │       ├── _int.so
+    │       │       ├── amcheck.so
+    │       │       ├── auth_delay.so
+    │       │       ├── auto_explain.so
+    │       │       ├── autoinc.so
+    │       │       ├── basebackup_to_shell.so
+    │       │       ├── basic_archive.so
+    │       │       ├── bloom.so
+    │       │       ├── btree_gin.so
+    │       │       ├── btree_gist.so
+    │       │       ├── citext.so
+    │       │       ├── cube.so
+    │       │       ├── cyrillic_and_mic.so
+    │       │       ├── dblink.so
+    │       │       ├── dict_int.so
+    │       │       ├── dict_snowball.so
+    │       │       ├── dict_xsyn.so
+    │       │       ├── earthdistance.so
+    │       │       ├── euc_cn_and_mic.so
+    │       │       ├── euc_jp_and_sjis.so
+    │       │       ├── euc_kr_and_mic.so
+    │       │       ├── euc_tw_and_big5.so
+    │       │       ├── euc2004_sjis2004.so
+    │       │       ├── file_fdw.so
+    │       │       ├── fuzzystrmatch.so
+    │       │       ├── hstore_plperl.so
+    │       │       ├── hstore_plpython3.so
+    │       │       ├── hstore.so
+    │       │       ├── insert_username.so
+    │       │       ├── isn.so
+    │       │       ├── jsonb_plperl.so
+    │       │       ├── jsonb_plpython3.so
+    │       │       ├── latin_and_mic.so
+    │       │       ├── latin2_and_win1250.so
+    │       │       ├── libpqwalreceiver.so
+    │       │       ├── lo.so
+    │       │       ├── ltree_plpython3.so
+    │       │       ├── ltree.so
+    │       │       ├── moddatetime.so
+    │       │       ├── pageinspect.so
+    │       │       ├── passwordcheck.so
+    │       │       ├── pg_buffercache.so
+    │       │       ├── pg_freespacemap.so
+    │       │       ├── pg_logicalinspect.so
+    │       │       ├── pg_overexplain.so
+    │       │       ├── pg_prewarm.so
+    │       │       ├── pg_stat_statements.so
+    │       │       ├── pg_surgery.so
+    │       │       ├── pg_trgm.so
+    │       │       ├── pg_visibility.so
+    │       │       ├── pg_walinspect.so
+    │       │       ├── pgcrypto.so
+    │       │       ├── pgoutput.so
+    │       │       ├── pgrowlocks.so
+    │       │       ├── pgstattuple.so
+    │       │       ├── pgxml.so
+    │       │       ├── plpgsql.so
+    │       │       ├── postgres_fdw.so
+    │       │       ├── refint.so
+    │       │       ├── seg.so
+    │       │       ├── sepgsql.so
+    │       │       ├── sslinfo.so
+    │       │       ├── tablefunc.so
+    │       │       ├── tcn.so
+    │       │       ├── test_decoding.so
+    │       │       ├── tsm_system_rows.so
+    │       │       ├── tsm_system_time.so
+    │       │       ├── unaccent.so
+    │       │       ├── utf8_and_big5.so
+    │       │       ├── utf8_and_cyrillic.so
+    │       │       ├── utf8_and_euc_cn.so
+    │       │       ├── utf8_and_euc_jp.so
+    │       │       ├── utf8_and_euc_kr.so
+    │       │       ├── utf8_and_euc_tw.so
+    │       │       ├── utf8_and_euc2004.so
+    │       │       ├── utf8_and_gb18030.so
+    │       │       ├── utf8_and_gbk.so
+    │       │       ├── utf8_and_iso8859_1.so
+    │       │       ├── utf8_and_iso8859.so
+    │       │       ├── utf8_and_johab.so
+    │       │       ├── utf8_and_sjis.so
+    │       │       ├── utf8_and_sjis2004.so
+    │       │       ├── utf8_and_uhc.so
+    │       │       ├── utf8_and_win.so
+    │       │       └── uuid-ossp.so
+    │       ├── share/
+    │       │   └── pgsql/
+    │       │       ├── contrib/
+    │       │       │   └── sepgsql.sql
+    │       │       ├── extension/
+    │       │       │   ├── amcheck--1.0--1.1.sql
+    │       │       │   ├── amcheck--1.0.sql
+    │       │       │   ├── amcheck--1.1--1.2.sql
+    │       │       │   ├── amcheck--1.2--1.3.sql
+    │       │       │   ├── amcheck--1.3--1.4.sql
+    │       │       │   ├── amcheck--1.4--1.5.sql
+    │       │       │   ├── amcheck.control
+    │       │       │   ├── autoinc--1.0.sql
+    │       │       │   ├── autoinc.control
+    │       │       │   ├── bloom--1.0.sql
+    │       │       │   ├── bloom.control
+    │       │       │   ├── btree_gin--1.0--1.1.sql
+    │       │       │   ├── btree_gin--1.0.sql
+    │       │       │   ├── btree_gin--1.1--1.2.sql
+    │       │       │   ├── btree_gin--1.2--1.3.sql
+    │       │       │   ├── btree_gin.control
+    │       │       │   ├── btree_gist--1.0--1.1.sql
+    │       │       │   ├── btree_gist--1.1--1.2.sql
+    │       │       │   ├── btree_gist--1.2--1.3.sql
+    │       │       │   ├── btree_gist--1.2.sql
+    │       │       │   ├── btree_gist--1.3--1.4.sql
+    │       │       │   ├── btree_gist--1.4--1.5.sql
+    │       │       │   ├── btree_gist--1.5--1.6.sql
+    │       │       │   ├── btree_gist--1.6--1.7.sql
+    │       │       │   ├── btree_gist--1.7--1.8.sql
+    │       │       │   ├── btree_gist.control
+    │       │       │   ├── citext--1.0--1.1.sql
+    │       │       │   ├── citext--1.1--1.2.sql
+    │       │       │   ├── citext--1.2--1.3.sql
+    │       │       │   ├── citext--1.3--1.4.sql
+    │       │       │   ├── citext--1.4--1.5.sql
+    │       │       │   ├── citext--1.4.sql
+    │       │       │   ├── citext--1.5--1.6.sql
+    │       │       │   ├── citext--1.6--1.7.sql
+    │       │       │   ├── citext--1.7--1.8.sql
+    │       │       │   ├── citext.control
+    │       │       │   ├── cube--1.0--1.1.sql
+    │       │       │   ├── cube--1.1--1.2.sql
+    │       │       │   ├── cube--1.2--1.3.sql
+    │       │       │   ├── cube--1.2.sql
+    │       │       │   ├── cube--1.3--1.4.sql
+    │       │       │   ├── cube--1.4--1.5.sql
+    │       │       │   ├── cube.control
+    │       │       │   ├── dblink--1.0--1.1.sql
+    │       │       │   ├── dblink--1.1--1.2.sql
+    │       │       │   ├── dblink--1.2.sql
+    │       │       │   ├── dblink.control
+    │       │       │   ├── dict_int--1.0.sql
+    │       │       │   ├── dict_int.control
+    │       │       │   ├── dict_xsyn--1.0.sql
+    │       │       │   ├── dict_xsyn.control
+    │       │       │   ├── earthdistance--1.0--1.1.sql
+    │       │       │   ├── earthdistance--1.1--1.2.sql
+    │       │       │   ├── earthdistance--1.1.sql
+    │       │       │   ├── earthdistance.control
+    │       │       │   ├── file_fdw--1.0.sql
+    │       │       │   ├── file_fdw.control
+    │       │       │   ├── fuzzystrmatch--1.0--1.1.sql
+    │       │       │   ├── fuzzystrmatch--1.1--1.2.sql
+    │       │       │   ├── fuzzystrmatch--1.1.sql
+    │       │       │   ├── fuzzystrmatch.control
+    │       │       │   ├── hstore_plperl--1.0.sql
+    │       │       │   ├── hstore_plperl.control
+    │       │       │   ├── hstore_plperlu--1.0.sql
+    │       │       │   ├── hstore_plperlu.control
+    │       │       │   ├── hstore_plpython3u--1.0.sql
+    │       │       │   ├── hstore_plpython3u.control
+    │       │       │   ├── hstore--1.1--1.2.sql
+    │       │       │   ├── hstore--1.2--1.3.sql
+    │       │       │   ├── hstore--1.3--1.4.sql
+    │       │       │   ├── hstore--1.4--1.5.sql
+    │       │       │   ├── hstore--1.4.sql
+    │       │       │   ├── hstore--1.5--1.6.sql
+    │       │       │   ├── hstore--1.6--1.7.sql
+    │       │       │   ├── hstore--1.7--1.8.sql
+    │       │       │   ├── hstore.control
+    │       │       │   ├── insert_username--1.0.sql
+    │       │       │   ├── insert_username.control
+    │       │       │   ├── intagg--1.0--1.1.sql
+    │       │       │   ├── intagg--1.1.sql
+    │       │       │   ├── intagg.control
+    │       │       │   ├── intarray--1.0--1.1.sql
+    │       │       │   ├── intarray--1.1--1.2.sql
+    │       │       │   ├── intarray--1.2--1.3.sql
+    │       │       │   ├── intarray--1.2.sql
+    │       │       │   ├── intarray--1.3--1.4.sql
+    │       │       │   ├── intarray--1.4--1.5.sql
+    │       │       │   ├── intarray.control
+    │       │       │   ├── isn--1.0--1.1.sql
+    │       │       │   ├── isn--1.1--1.2.sql
+    │       │       │   ├── isn--1.1.sql
+    │       │       │   ├── isn--1.2--1.3.sql
+    │       │       │   ├── isn.control
+    │       │       │   ├── jsonb_plperl--1.0.sql
+    │       │       │   ├── jsonb_plperl.control
+    │       │       │   ├── jsonb_plperlu--1.0.sql
+    │       │       │   ├── jsonb_plperlu.control
+    │       │       │   ├── jsonb_plpython3u--1.0.sql
+    │       │       │   ├── jsonb_plpython3u.control
+    │       │       │   ├── lo--1.0--1.1.sql
+    │       │       │   ├── lo--1.1--1.2.sql
+    │       │       │   ├── lo--1.1.sql
+    │       │       │   ├── lo.control
+    │       │       │   ├── ltree_plpython3u--1.0.sql
+    │       │       │   ├── ltree_plpython3u.control
+    │       │       │   ├── ltree--1.0--1.1.sql
+    │       │       │   ├── ltree--1.1--1.2.sql
+    │       │       │   ├── ltree--1.1.sql
+    │       │       │   ├── ltree--1.2--1.3.sql
+    │       │       │   ├── ltree.control
+    │       │       │   ├── moddatetime--1.0.sql
+    │       │       │   ├── moddatetime.control
+    │       │       │   ├── pageinspect--1.0--1.1.sql
+    │       │       │   ├── pageinspect--1.1--1.2.sql
+    │       │       │   ├── pageinspect--1.10--1.11.sql
+    │       │       │   ├── pageinspect--1.11--1.12.sql
+    │       │       │   ├── pageinspect--1.12--1.13.sql
+    │       │       │   ├── pageinspect--1.2--1.3.sql
+    │       │       │   ├── pageinspect--1.3--1.4.sql
+    │       │       │   ├── pageinspect--1.4--1.5.sql
+    │       │       │   ├── pageinspect--1.5--1.6.sql
+    │       │       │   ├── pageinspect--1.5.sql
+    │       │       │   ├── pageinspect--1.6--1.7.sql
+    │       │       │   ├── pageinspect--1.7--1.8.sql
+    │       │       │   ├── pageinspect--1.8--1.9.sql
+    │       │       │   ├── pageinspect--1.9--1.10.sql
+    │       │       │   ├── pageinspect.control
+    │       │       │   ├── pg_buffercache--1.0--1.1.sql
+    │       │       │   ├── pg_buffercache--1.1--1.2.sql
+    │       │       │   ├── pg_buffercache--1.2--1.3.sql
+    │       │       │   ├── pg_buffercache--1.2.sql
+    │       │       │   ├── pg_buffercache--1.3--1.4.sql
+    │       │       │   ├── pg_buffercache--1.4--1.5.sql
+    │       │       │   ├── pg_buffercache--1.5--1.6.sql
+    │       │       │   ├── pg_buffercache.control
+    │       │       │   ├── pg_freespacemap--1.0--1.1.sql
+    │       │       │   ├── pg_freespacemap--1.1--1.2.sql
+    │       │       │   ├── pg_freespacemap--1.1.sql
+    │       │       │   ├── pg_freespacemap--1.2--1.3.sql
+    │       │       │   ├── pg_freespacemap.control
+    │       │       │   ├── pg_logicalinspect--1.0.sql
+    │       │       │   ├── pg_logicalinspect.control
+    │       │       │   ├── pg_prewarm--1.0--1.1.sql
+    │       │       │   ├── pg_prewarm--1.1--1.2.sql
+    │       │       │   ├── pg_prewarm--1.1.sql
+    │       │       │   ├── pg_prewarm.control
+    │       │       │   ├── pg_stat_statements--1.0--1.1.sql
+    │       │       │   ├── pg_stat_statements--1.1--1.2.sql
+    │       │       │   ├── pg_stat_statements--1.10--1.11.sql
+    │       │       │   ├── pg_stat_statements--1.11--1.12.sql
+    │       │       │   ├── pg_stat_statements--1.2--1.3.sql
+    │       │       │   ├── pg_stat_statements--1.3--1.4.sql
+    │       │       │   ├── pg_stat_statements--1.4--1.5.sql
+    │       │       │   ├── pg_stat_statements--1.4.sql
+    │       │       │   ├── pg_stat_statements--1.5--1.6.sql
+    │       │       │   ├── pg_stat_statements--1.6--1.7.sql
+    │       │       │   ├── pg_stat_statements--1.7--1.8.sql
+    │       │       │   ├── pg_stat_statements--1.8--1.9.sql
+    │       │       │   ├── pg_stat_statements--1.9--1.10.sql
+    │       │       │   ├── pg_stat_statements.control
+    │       │       │   ├── pg_surgery--1.0.sql
+    │       │       │   ├── pg_surgery.control
+    │       │       │   ├── pg_trgm--1.0--1.1.sql
+    │       │       │   ├── pg_trgm--1.1--1.2.sql
+    │       │       │   ├── pg_trgm--1.2--1.3.sql
+    │       │       │   ├── pg_trgm--1.3--1.4.sql
+    │       │       │   ├── pg_trgm--1.3.sql
+    │       │       │   ├── pg_trgm--1.4--1.5.sql
+    │       │       │   ├── pg_trgm--1.5--1.6.sql
+    │       │       │   ├── pg_trgm.control
+    │       │       │   ├── pg_visibility--1.0--1.1.sql
+    │       │       │   ├── pg_visibility--1.1--1.2.sql
+    │       │       │   ├── pg_visibility--1.1.sql
+    │       │       │   ├── pg_visibility.control
+    │       │       │   ├── pg_walinspect--1.0--1.1.sql
+    │       │       │   ├── pg_walinspect--1.0.sql
+    │       │       │   ├── pg_walinspect.control
+    │       │       │   ├── pgcrypto--1.0--1.1.sql
+    │       │       │   ├── pgcrypto--1.1--1.2.sql
+    │       │       │   ├── pgcrypto--1.2--1.3.sql
+    │       │       │   ├── pgcrypto--1.3--1.4.sql
+    │       │       │   ├── pgcrypto--1.3.sql
+    │       │       │   ├── pgcrypto.control
+    │       │       │   ├── pgrowlocks--1.0--1.1.sql
+    │       │       │   ├── pgrowlocks--1.1--1.2.sql
+    │       │       │   ├── pgrowlocks--1.2.sql
+    │       │       │   ├── pgrowlocks.control
+    │       │       │   ├── pgstattuple--1.0--1.1.sql
+    │       │       │   ├── pgstattuple--1.1--1.2.sql
+    │       │       │   ├── pgstattuple--1.2--1.3.sql
+    │       │       │   ├── pgstattuple--1.3--1.4.sql
+    │       │       │   ├── pgstattuple--1.4--1.5.sql
+    │       │       │   ├── pgstattuple--1.4.sql
+    │       │       │   ├── pgstattuple.control
+    │       │       │   ├── plpgsql--1.0.sql
+    │       │       │   ├── plpgsql.control
+    │       │       │   ├── postgres_fdw--1.0--1.1.sql
+    │       │       │   ├── postgres_fdw--1.0.sql
+    │       │       │   ├── postgres_fdw--1.1--1.2.sql
+    │       │       │   ├── postgres_fdw.control
+    │       │       │   ├── refint--1.0.sql
+    │       │       │   ├── refint.control
+    │       │       │   ├── seg--1.0--1.1.sql
+    │       │       │   ├── seg--1.1--1.2.sql
+    │       │       │   ├── seg--1.1.sql
+    │       │       │   ├── seg--1.2--1.3.sql
+    │       │       │   ├── seg--1.3--1.4.sql
+    │       │       │   ├── seg.control
+    │       │       │   ├── sslinfo--1.0--1.1.sql
+    │       │       │   ├── sslinfo--1.1--1.2.sql
+    │       │       │   ├── sslinfo--1.2.sql
+    │       │       │   ├── sslinfo.control
+    │       │       │   ├── tablefunc--1.0.sql
+    │       │       │   ├── tablefunc.control
+    │       │       │   ├── tcn--1.0.sql
+    │       │       │   ├── tcn.control
+    │       │       │   ├── tsm_system_rows--1.0.sql
+    │       │       │   ├── tsm_system_rows.control
+    │       │       │   ├── tsm_system_time--1.0.sql
+    │       │       │   ├── tsm_system_time.control
+    │       │       │   ├── unaccent--1.0--1.1.sql
+    │       │       │   ├── unaccent--1.1.sql
+    │       │       │   ├── unaccent.control
+    │       │       │   ├── uuid-ossp--1.0--1.1.sql
+    │       │       │   ├── uuid-ossp--1.1.sql
+    │       │       │   ├── uuid-ossp.control
+    │       │       │   ├── xml2--1.0--1.1.sql
+    │       │       │   ├── xml2--1.1--1.2.sql
+    │       │       │   ├── xml2--1.1.sql
+    │       │       │   └── xml2.control
+    │       │       ├── timezonesets/
+    │       │       │   ├── Africa.txt
+    │       │       │   ├── America.txt
+    │       │       │   ├── Antarctica.txt
+    │       │       │   ├── Asia.txt
+    │       │       │   ├── Atlantic.txt
+    │       │       │   ├── Australia
+    │       │       │   ├── Australia.txt
+    │       │       │   ├── Default
+    │       │       │   ├── Etc.txt
+    │       │       │   ├── Europe.txt
+    │       │       │   ├── India
+    │       │       │   ├── Indian.txt
+    │       │       │   └── Pacific.txt
+    │       │       ├── tsearch_data/
+    │       │       │   ├── danish.stop
+    │       │       │   ├── dutch.stop
+    │       │       │   ├── english.stop
+    │       │       │   ├── finnish.stop
+    │       │       │   ├── french.stop
+    │       │       │   ├── german.stop
+    │       │       │   ├── hungarian.stop
+    │       │       │   ├── hunspell_sample_long.affix
+    │       │       │   ├── hunspell_sample_long.dict
+    │       │       │   ├── hunspell_sample_num.affix
+    │       │       │   ├── hunspell_sample_num.dict
+    │       │       │   ├── hunspell_sample.affix
+    │       │       │   ├── ispell_sample.affix
+    │       │       │   ├── ispell_sample.dict
+    │       │       │   ├── italian.stop
+    │       │       │   ├── nepali.stop
+    │       │       │   ├── norwegian.stop
+    │       │       │   ├── portuguese.stop
+    │       │       │   ├── russian.stop
+    │       │       │   ├── spanish.stop
+    │       │       │   ├── swedish.stop
+    │       │       │   ├── synonym_sample.syn
+    │       │       │   ├── thesaurus_sample.ths
+    │       │       │   ├── turkish.stop
+    │       │       │   ├── unaccent.rules
+    │       │       │   └── xsyn_sample.rules
+    │       │       ├── information_schema.sql
+    │       │       ├── pg_hba.conf.sample
+    │       │       ├── pg_ident.conf.sample
+    │       │       ├── pg_service.conf.sample
+    │       │       ├── postgres.bki
+    │       │       ├── postgresql.conf.sample
+    │       │       ├── psqlrc.sample
+    │       │       ├── snowball_create.sql
+    │       │       ├── sql_features.txt
+    │       │       ├── system_constraints.sql
+    │       │       ├── system_functions.sql
+    │       │       └── system_views.sql
+    │       ├── .bundle-complete
+    │       ├── .gitkeep
+    │       └── .layout.env
+    ├── scripts/
+    │   ├── cargo-runner.mjs
+    │   ├── frontend-desktop-dev.mjs
+    │   ├── frontend-dummy-dev.mjs
+    │   ├── prepare-desktop-build.mjs
+    │   ├── prepare-dummy-desktop-build.mjs
+    │   └── tauri-wrapper.mjs
+    ├── src-tauri/
+    │   ├── capabilities/
+    │   │   └── default.json
+    │   ├── gen/
+    │   │   └── schemas/
+    │   │       ├── acl-manifests.json
+    │   │       ├── capabilities.json
+    │   │       ├── desktop-schema.json
+    │   │       ├── linux-schema.json
+    │   │       └── windows-schema.json
+    │   ├── icons/
+    │   │   ├── 128x128.png
+    │   │   ├── 128x128@2x.png
+    │   │   ├── 32x32.png
+    │   │   ├── 64x64.png
+    │   │   ├── icon.icns
+    │   │   ├── icon.ico
+    │   │   ├── icon.png
+    │   │   ├── Square107x107Logo.png
+    │   │   ├── Square142x142Logo.png
+    │   │   ├── Square150x150Logo.png
+    │   │   ├── Square284x284Logo.png
+    │   │   ├── Square30x30Logo.png
+    │   │   ├── Square310x310Logo.png
+    │   │   ├── Square44x44Logo.png
+    │   │   ├── Square71x71Logo.png
+    │   │   ├── Square89x89Logo.png
+    │   │   └── StoreLogo.png
+    │   ├── keys/
+    │   │   ├── elms.license.example
+    │   │   ├── private.pem
+    │   │   └── public.pem
+    │   ├── src/
+    │   │   ├── backend_connection.rs
+    │   │   ├── desktop_downloads.rs
+    │   │   ├── external_links.rs
+    │   │   ├── main.rs
+    │   │   ├── ppo_portal.rs
+    │   │   └── sidecar.rs
+    │   ├── .gitignore
+    │   ├── build.rs
+    │   ├── Cargo.lock
+    │   ├── Cargo.toml
+    │   ├── tauri.conf.json
+    │   └── tauri.dummy.conf.json
+    ├── .env.desktop
+    ├── .env.desktop.example
+    ├── desktop-env.production.example
+    └── package.json
+archive/
+└── cloud/
+    ├── apps/
+    │   └── web/
+    │       ├── nginx/
+    │       │   └── nginx.conf
+    │       ├── .env.cloud
+    │       ├── .env.production.example
+    │       ├── backend.Dockerfile
+    │       ├── Caddyfile
+    │       ├── docker-compose.prod.yml
+    │       ├── docker-compose.yml
+    │       ├── Dockerfile
+    │       └── package.json
+    ├── scripts/
+    │   ├── backup-postgres.sh
+    │   ├── deploy-cloud.sh
+    │   └── restore-postgres.sh
+    └── README.md
+docs/
+├── _inventory/
+│   ├── repository-tree.txt
+│   └── source-of-truth.md
+├── architecture/
+│   ├── 01-system-overview.md
+│   ├── 02-tech-stack-rationale.md
+│   ├── 03-data-flow.md
+│   ├── 04-auth-and-security.md
+│   ├── 05-multi-tenancy.md
+│   ├── 06-deployment-topologies.md
+│   ├── 07-document-pipeline.md
+│   ├── 08-ai-research-pipeline.md
+│   ├── 09-async-jobs.md
+│   ├── 10-notification-system.md
+│   ├── 11-editions-and-licensing.md
+│   ├── 12-cicd-pipeline.md
+│   └── 13-scalability-and-limits.md
+├── assets/
+│   └── logo.png
+├── business/
+│   ├── 01-executive-summary.md
+│   ├── 02-core-value-proposition.md
+│   ├── 03-feature-matrix.md
+│   ├── 04-market-fit.md
+│   ├── 05-deployment-models.md
+│   ├── 06-technology-differentiation.md
+│   ├── 07-scalability-and-security.md
+│   ├── 08-product-roadmap.md
+│   └── 09-competitive-positioning.md
+├── dev/
+│   ├── 01-getting-started.md
+│   ├── 02-repo-structure.md
+│   ├── 03-environment-variables.md
+│   ├── 04-architecture-internals.md
+│   ├── 05-database.md
+│   ├── 06-api-reference.md
+│   ├── 07-auth-internals.md
+│   ├── 08-testing.md
+│   ├── 09-contributing.md
+│   ├── 10-scripts.md
+│   ├── 11-desktop-build.md
+│   ├── 12-i18n.md
+│   ├── 13-repo-structure-audit.md
+│   ├── build-process-review-2026-03-24.md
+│   └── internet-required-features.md
+├── notes/
+│   ├── NeededFeaturesList.md
+│   ├── temp-licence.md
+│   └── temp-wincpp.md
+└── user/
+    ├── admin/
+    │   ├── 18-firm-settings.md
+    │   ├── 19-roles-and-permissions.md
+    │   └── 20-backup-and-restore.md
+    ├── advanced/
+    │   ├── 12-law-library.md
+    │   ├── 13-ai-research.md
+    │   ├── 14-client-portal.md
+    │   ├── 15-team-management.md
+    │   ├── 16-reports.md
+    │   └── 17-data-import.md
+    ├── core-workflows/
+    │   ├── 05-managing-clients.md
+    │   ├── 06-managing-cases.md
+    │   ├── 07-hearings-and-calendar.md
+    │   ├── 08-tasks-and-deadlines.md
+    │   ├── 09-documents.md
+    │   ├── 10-billing-and-invoicing.md
+    │   └── 11-notifications.md
+    ├── getting-started/
+    │   ├── 01-what-is-elms.md
+    │   ├── 02-desktop-installation.md
+    │   ├── 03-first-time-setup.md
+    │   └── 04-cloud-access.md
+    ├── troubleshooting/
+    │   ├── 21-login-issues.md
+    │   ├── 22-document-upload-errors.md
+    │   ├── 23-desktop-connectivity.md
+    │   └── 24-faq.md
+    └── index.md
+packages/
+├── backend/
+│   ├── .logs/
+│   ├── prisma/
+│   │   ├── migrations/
+│   │   │   ├── 0001_initial/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0002_raw/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0003_performance_indexes/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0004_user_email_unique/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0005_lookup_tables/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0006_case_courts_client/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0007_case_client_not_null/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0008_phase6_phase8/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0009_editions_foundation/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0010_naming_normalization/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0011_phase6_foundation/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0012_table_query_indexes/
+│   │   │   │   └── migration.sql
+│   │   │   └── 0013_pending_edition_key/
+│   │   │       └── migration.sql
+│   │   ├── migration_lock.toml
+│   │   ├── schema.prisma
+│   │   └── seed.ts
+│   ├── scripts/
+│   │   ├── build-desktop.mjs
+│   │   └── dev-local.mjs
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── constants.ts
+│   │   │   └── env.ts
+│   │   ├── db/
+│   │   │   ├── embedded-pg.ts
+│   │   │   ├── prisma.ts
+│   │   │   └── tenant.ts
+│   │   ├── jobs/
+│   │   │   ├── extractionDispatcher.ts
+│   │   │   ├── extractionQueue.ts
+│   │   │   ├── extractionWorker.ts
+│   │   │   ├── libraryExtractionDispatcher.ts
+│   │   │   ├── libraryExtractionQueue.ts
+│   │   │   ├── libraryExtractionWorker.ts
+│   │   │   ├── runExtraction.ts
+│   │   │   └── runLibraryExtraction.ts
+│   │   ├── middleware/
+│   │   │   ├── firmLifecycleWriteGuard.ts
+│   │   │   ├── injectTenant.ts
+│   │   │   ├── licenseAccessGuard.ts
+│   │   │   ├── requireAuth.ts
+│   │   │   ├── requireEditionFeature.ts
+│   │   │   └── requirePermission.ts
+│   │   ├── modules/
+│   │   │   ├── auth/
+│   │   │   │   ├── auth.routes.ts
+│   │   │   │   ├── auth.test.ts
+│   │   │   │   ├── auth.types.ts
+│   │   │   │   ├── cloudAuthService.ts
+│   │   │   │   ├── createAuthService.ts
+│   │   │   │   ├── inviteToken.ts
+│   │   │   │   ├── localAuthService.ts
+│   │   │   │   ├── localSessionStore.ts
+│   │   │   │   └── sessionUser.ts
+│   │   │   ├── billing/
+│   │   │   │   ├── billing.routes.ts
+│   │   │   │   ├── billing.service.test.ts
+│   │   │   │   ├── billing.service.ts
+│   │   │   │   └── invoice.pdf.ts
+│   │   │   ├── cases/
+│   │   │   │   ├── cases.routes.ts
+│   │   │   │   ├── cases.service.test.ts
+│   │   │   │   └── cases.service.ts
+│   │   │   ├── clients/
+│   │   │   │   ├── clients.routes.test.ts
+│   │   │   │   ├── clients.routes.ts
+│   │   │   │   ├── clients.service.test.ts
+│   │   │   │   └── clients.service.ts
+│   │   │   ├── dashboard/
+│   │   │   │   ├── dashboard.routes.ts
+│   │   │   │   └── dashboard.service.ts
+│   │   │   ├── documents/
+│   │   │   │   ├── ocr/
+│   │   │   │   │   ├── GoogleVisionAdapter.ts
+│   │   │   │   │   ├── IOcrAdapter.ts
+│   │   │   │   │   └── TesseractAdapter.ts
+│   │   │   │   ├── documents.routes.ts
+│   │   │   │   ├── documents.service.test.ts
+│   │   │   │   ├── documents.service.ts
+│   │   │   │   ├── search.routes.ts
+│   │   │   │   └── search.service.ts
+│   │   │   ├── editions/
+│   │   │   │   ├── editionPolicy.ts
+│   │   │   │   ├── license.routes.ts
+│   │   │   │   ├── license.service.test.ts
+│   │   │   │   ├── license.service.ts
+│   │   │   │   ├── lifecycle.scheduler.ts
+│   │   │   │   ├── lifecycle.service.test.ts
+│   │   │   │   ├── lifecycle.service.ts
+│   │   │   │   └── trialDates.ts
+│   │   │   ├── firms/
+│   │   │   │   ├── firms.routes.ts
+│   │   │   │   ├── firms.service.test.ts
+│   │   │   │   └── firms.service.ts
+│   │   │   ├── hearings/
+│   │   │   │   ├── hearings.routes.ts
+│   │   │   │   ├── hearings.service.test.ts
+│   │   │   │   └── hearings.service.ts
+│   │   │   ├── import/
+│   │   │   │   ├── import.routes.ts
+│   │   │   │   └── import.service.ts
+│   │   │   ├── integrations/
+│   │   │   │   ├── google-calendar.routes.ts
+│   │   │   │   └── googleCalendar.service.ts
+│   │   │   ├── invitations/
+│   │   │   │   ├── invitations.routes.ts
+│   │   │   │   ├── invitations.service.test.ts
+│   │   │   │   └── invitations.service.ts
+│   │   │   ├── library/
+│   │   │   │   ├── library.routes.ts
+│   │   │   │   ├── library.routes.upload.test.ts
+│   │   │   │   └── library.service.ts
+│   │   │   ├── lookups/
+│   │   │   │   ├── lookups.routes.ts
+│   │   │   │   └── lookups.service.ts
+│   │   │   ├── notifications/
+│   │   │   │   ├── channels/
+│   │   │   │   │   ├── desktopOs.ts
+│   │   │   │   │   ├── email.ts
+│   │   │   │   │   ├── inApp.ts
+│   │   │   │   │   └── sms.ts
+│   │   │   │   ├── notification.service.test.ts
+│   │   │   │   ├── notification.service.ts
+│   │   │   │   ├── notifications.routes.ts
+│   │   │   │   └── reminder.scheduler.ts
+│   │   │   ├── portal/
+│   │   │   │   ├── portal-auth.routes.ts
+│   │   │   │   ├── portal.routes.ts
+│   │   │   │   └── portal.test.ts
+│   │   │   ├── powers/
+│   │   │   │   ├── powers.routes.ts
+│   │   │   │   └── powers.service.ts
+│   │   │   ├── reports/
+│   │   │   │   ├── custom-reports.service.test.ts
+│   │   │   │   ├── custom-reports.service.ts
+│   │   │   │   ├── report.export.ts
+│   │   │   │   ├── reports.routes.ts
+│   │   │   │   ├── reports.service.test.ts
+│   │   │   │   └── reports.service.ts
+│   │   │   ├── research/
+│   │   │   │   ├── ai.provider.ts
+│   │   │   │   ├── research.routes.ts
+│   │   │   │   ├── research.service.test.ts
+│   │   │   │   ├── research.service.ts
+│   │   │   │   └── retrieval.service.ts
+│   │   │   ├── roles/
+│   │   │   │   ├── roles.routes.ts
+│   │   │   │   └── roles.service.ts
+│   │   │   ├── tasks/
+│   │   │   │   ├── tasks.routes.ts
+│   │   │   │   └── tasks.service.ts
+│   │   │   ├── templates/
+│   │   │   │   ├── templates.routes.ts
+│   │   │   │   └── templates.service.ts
+│   │   │   └── users/
+│   │   │       ├── users.routes.ts
+│   │   │       ├── users.service.test.ts
+│   │   │       └── users.service.ts
+│   │   ├── monitoring/
+│   │   │   └── sentry.ts
+│   │   ├── plugins/
+│   │   │   ├── auth.ts
+│   │   │   ├── cookie.ts
+│   │   │   ├── cors.ts
+│   │   │   ├── errorHandler.test.ts
+│   │   │   ├── errorHandler.ts
+│   │   │   ├── multipart.ts
+│   │   │   ├── rateLimit.ts
+│   │   │   └── sessionContext.ts
+│   │   ├── schemas/
+│   │   │   └── index.ts
+│   │   ├── security/
+│   │   │   ├── bootstrap.ts
+│   │   │   ├── devSeed.ts
+│   │   │   ├── librarySeed.ts
+│   │   │   └── lookupSeed.ts
+│   │   ├── services/
+│   │   │   ├── audit.service.ts
+│   │   │   └── encryption.service.ts
+│   │   ├── storage/
+│   │   │   ├── index.ts
+│   │   │   ├── IStorageAdapter.ts
+│   │   │   ├── LocalStorageAdapter.ts
+│   │   │   └── R2StorageAdapter.ts
+│   │   ├── test-utils/
+│   │   │   └── session-user.ts
+│   │   ├── types/
+│   │   │   └── fastify.d.ts
+│   │   ├── utils/
+│   │   │   ├── arabic.ts
+│   │   │   ├── auditContext.ts
+│   │   │   ├── pagination.test.ts
+│   │   │   ├── pagination.ts
+│   │   │   ├── passwordPolicy.ts
+│   │   │   ├── pdfFonts.ts
+│   │   │   ├── tableQuery.ts
+│   │   │   └── tableSessionStore.ts
+│   │   ├── app.ts
+│   │   ├── index.ts
+│   │   └── server.ts
+│   ├── uploads/
+│   │   ├── 8b41f742-4a89-421f-b5ee-28cd36eff95d/
+│   │   │   └── 0b4c1b68-436f-4279-a90e-c9d21f4c6de1/
+│   │   │       └── Mahmoud-Khedr-Software-Engineer-CV.pdf
+│   │   └── library/
+│   │       └── 8b41f742-4a89-421f-b5ee-28cd36eff95d/
+│   │           └── a93d9158-4e16-4225-93da-4797be35e2ea/
+│   │               └── Object_Oriented_Analysis_and_Design_with_Applications_3rd_Edition.pdf
+│   ├── ara.traineddata
+│   ├── eng.traineddata
+│   ├── fra.traineddata
+│   ├── package.json
+│   ├── prisma.config.ts
+│   ├── tsconfig.json
+│   ├── tsup.config.ts
+│   └── vitest.config.ts
+├── frontend/
+│   ├── public/
+│   │   ├── fonts/
+│   │   │   ├── cairo-arabic-400-normal.woff
+│   │   │   ├── cairo-arabic-400-normal.woff2
+│   │   │   ├── cairo-arabic-600-normal.woff
+│   │   │   ├── cairo-arabic-600-normal.woff2
+│   │   │   ├── cairo-arabic-700-normal.woff
+│   │   │   └── cairo-arabic-700-normal.woff2
+│   │   ├── icons/
+│   │   │   ├── icon-192.png
+│   │   │   └── icon-512.png
+│   │   ├── apple-touch-icon.png
+│   │   ├── favicon-32x32.png
+│   │   └── favicon.ico
+│   ├── scripts/
+│   │   ├── check-i18n-keys.mjs
+│   │   └── check-tailwind-tokens.mjs
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── billing/
+│   │   │   │   └── CaseBillingTab.tsx
+│   │   │   ├── documents/
+│   │   │   │   ├── DocumentList.test.ts
+│   │   │   │   ├── DocumentList.tsx
+│   │   │   │   ├── DocumentUploadForm.tsx
+│   │   │   │   ├── DocumentViewer.tsx
+│   │   │   │   ├── ExtractionStatusBadge.tsx
+│   │   │   │   ├── PdfViewer.tsx
+│   │   │   │   └── VersionHistory.tsx
+│   │   │   ├── library/
+│   │   │   │   └── CaseLegalReferencesTab.tsx
+│   │   │   ├── navigation/
+│   │   │   │   ├── BackToTopButton.tsx
+│   │   │   │   ├── ShellFooter.tsx
+│   │   │   │   ├── shellFooterLinks.test.ts
+│   │   │   │   └── shellFooterLinks.ts
+│   │   │   ├── notifications/
+│   │   │   │   └── NotificationBell.tsx
+│   │   │   ├── search/
+│   │   │   │   ├── CommandPalette.tsx
+│   │   │   │   ├── GlobalSearchBar.tsx
+│   │   │   │   └── SearchResultCard.tsx
+│   │   │   ├── shared/
+│   │   │   │   ├── AntdProvider.tsx
+│   │   │   │   ├── DesktopBootstrapGate.tsx
+│   │   │   │   ├── DirectionProvider.tsx
+│   │   │   │   ├── EnumBadge.tsx
+│   │   │   │   ├── LanguageSwitcher.tsx
+│   │   │   │   ├── PermissionChecklist.tsx
+│   │   │   │   ├── PpoScreenshotEventBridge.tsx
+│   │   │   │   ├── Skeleton.tsx
+│   │   │   │   ├── Toast.tsx
+│   │   │   │   ├── useAccessibleOverlay.test.tsx
+│   │   │   │   └── useAccessibleOverlay.ts
+│   │   │   ├── ErrorFallback.tsx
+│   │   │   ├── InlineEditField.tsx
+│   │   │   └── PermissionGate.tsx
+│   │   ├── i18n/
+│   │   │   ├── locales/
+│   │   │   │   ├── ar/
+│   │   │   │   │   ├── app.json
+│   │   │   │   │   └── auth.json
+│   │   │   │   ├── en/
+│   │   │   │   │   ├── app.json
+│   │   │   │   │   └── auth.json
+│   │   │   │   └── fr/
+│   │   │   │       ├── app.json
+│   │   │   │       └── auth.json
+│   │   │   ├── index.ts
+│   │   │   └── translationRegression.test.ts
+│   │   ├── lib/
+│   │   │   ├── api.test.ts
+│   │   │   ├── api.ts
+│   │   │   ├── billing.ts
+│   │   │   ├── dateInput.test.ts
+│   │   │   ├── dateInput.ts
+│   │   │   ├── desktopDownloads.test.ts
+│   │   │   ├── desktopDownloads.ts
+│   │   │   ├── developerContact.test.ts
+│   │   │   ├── developerContact.ts
+│   │   │   ├── dialog.test.ts
+│   │   │   ├── dialog.ts
+│   │   │   ├── egyptGovernorates.test.ts
+│   │   │   ├── egyptGovernorates.ts
+│   │   │   ├── enumLabel.ts
+│   │   │   ├── externalLinks.ts
+│   │   │   ├── feedback.ts
+│   │   │   ├── internetRestrictedUi.ts
+│   │   │   ├── lookups.ts
+│   │   │   ├── ppoPortal.test.ts
+│   │   │   ├── ppoPortal.ts
+│   │   │   ├── ppoScreenshotEvents.test.ts
+│   │   │   ├── ppoScreenshotEvents.ts
+│   │   │   ├── reports.ts
+│   │   │   ├── tableQueryState.test.tsx
+│   │   │   ├── tableQueryState.ts
+│   │   │   ├── templates.ts
+│   │   │   ├── useUnsavedChanges.test.tsx
+│   │   │   └── useUnsavedChanges.ts
+│   │   ├── pwa/
+│   │   │   ├── offlineBanner.tsx
+│   │   │   └── syncQueue.ts
+│   │   ├── routes/
+│   │   │   ├── app/
+│   │   │   │   ├── library/
+│   │   │   │   │   ├── LibraryAdminPage.tsx
+│   │   │   │   │   ├── LibraryDocumentPage.tsx
+│   │   │   │   │   ├── LibraryPage.tsx
+│   │   │   │   │   ├── LibrarySearchPage.tsx
+│   │   │   │   │   ├── LibraryUploadPage.test.tsx
+│   │   │   │   │   └── LibraryUploadPage.tsx
+│   │   │   │   ├── research/
+│   │   │   │   │   ├── ResearchPage.tsx
+│   │   │   │   │   └── ResearchSessionPage.tsx
+│   │   │   │   ├── AppLayout.tsx
+│   │   │   │   ├── breadcrumbs.test.ts
+│   │   │   │   ├── breadcrumbs.ts
+│   │   │   │   ├── calendarEvents.test.ts
+│   │   │   │   ├── calendarEvents.ts
+│   │   │   │   ├── CalendarPage.tsx
+│   │   │   │   ├── CaseCreatePage.tsx
+│   │   │   │   ├── CaseDetailPage.tsx
+│   │   │   │   ├── CaseQuickIntakePage.test.ts
+│   │   │   │   ├── CaseQuickIntakePage.tsx
+│   │   │   │   ├── CasesPage.tsx
+│   │   │   │   ├── ClientCreatePage.tsx
+│   │   │   │   ├── ClientDetailPage.tsx
+│   │   │   │   ├── ClientEditPage.tsx
+│   │   │   │   ├── ClientsPage.tsx
+│   │   │   │   ├── DashboardPage.tsx
+│   │   │   │   ├── DocumentsPage.tsx
+│   │   │   │   ├── DocumentUploadPage.tsx
+│   │   │   │   ├── ExpensesPage.tsx
+│   │   │   │   ├── formExitActions.test.tsx
+│   │   │   │   ├── hearingCalendar.test.ts
+│   │   │   │   ├── hearingCalendar.ts
+│   │   │   │   ├── HearingCreatePage.tsx
+│   │   │   │   ├── HearingEditPage.tsx
+│   │   │   │   ├── HearingsPage.tsx
+│   │   │   │   ├── ImportPage.tsx
+│   │   │   │   ├── InlineHearingForm.tsx
+│   │   │   │   ├── InlineTaskForm.tsx
+│   │   │   │   ├── InvitationCreatePage.tsx
+│   │   │   │   ├── InvitationsPage.tsx
+│   │   │   │   ├── InvoiceCreatePage.tsx
+│   │   │   │   ├── InvoiceDetailPage.tsx
+│   │   │   │   ├── InvoicesPage.tsx
+│   │   │   │   ├── LookupSettingsDetailPage.tsx
+│   │   │   │   ├── LookupSettingsPage.tsx
+│   │   │   │   ├── navConfig.test.ts
+│   │   │   │   ├── navConfig.ts
+│   │   │   │   ├── NotificationPreferencesPage.tsx
+│   │   │   │   ├── NotificationsPage.tsx
+│   │   │   │   ├── PpoPortalPage.test.tsx
+│   │   │   │   ├── PpoPortalPage.tsx
+│   │   │   │   ├── ReportBuilderPage.tsx
+│   │   │   │   ├── reportExport.test.ts
+│   │   │   │   ├── reportExport.ts
+│   │   │   │   ├── ReportsPage.tsx
+│   │   │   │   ├── RoleCreatePage.tsx
+│   │   │   │   ├── RoleEditPage.tsx
+│   │   │   │   ├── RoleSettingsPage.tsx
+│   │   │   │   ├── SearchPage.tsx
+│   │   │   │   ├── SettingsPage.tsx
+│   │   │   │   ├── SidebarNav.test.ts
+│   │   │   │   ├── SidebarNav.tsx
+│   │   │   │   ├── TaskCreatePage.tsx
+│   │   │   │   ├── TaskDetailPage.tsx
+│   │   │   │   ├── TasksPage.tsx
+│   │   │   │   ├── TemplateCreatePage.tsx
+│   │   │   │   ├── TemplateEditPage.tsx
+│   │   │   │   ├── TemplatesPage.tsx
+│   │   │   │   ├── ui.test.tsx
+│   │   │   │   ├── ui.tsx
+│   │   │   │   ├── UserCreatePage.tsx
+│   │   │   │   ├── UserDetailPage.tsx
+│   │   │   │   └── UsersPage.tsx
+│   │   │   ├── auth/
+│   │   │   │   ├── AuthShell.tsx
+│   │   │   │   ├── BackendConnectionPage.tsx
+│   │   │   │   ├── LoginPage.tsx
+│   │   │   │   └── SetupPage.tsx
+│   │   │   ├── portal/
+│   │   │   │   ├── PortalCasePage.tsx
+│   │   │   │   ├── PortalDashboardPage.tsx
+│   │   │   │   ├── PortalLayout.tsx
+│   │   │   │   └── PortalLoginPage.tsx
+│   │   │   ├── public/
+│   │   │   │   └── AboutPage.tsx
+│   │   │   └── contactIntegration.test.tsx
+│   │   ├── store/
+│   │   │   ├── authStore.ts
+│   │   │   ├── portalAuthStore.ts
+│   │   │   └── toastStore.ts
+│   │   ├── fonts.css
+│   │   ├── main.tsx
+│   │   ├── router.tsx
+│   │   └── styles.css
+│   ├── index.html
+│   ├── package.json
+│   ├── postcss.config.cjs
+│   ├── tailwind.config.cjs
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── vitest.config.ts
+└── shared/
+    ├── src/
+    │   ├── dtos/
+    │   │   ├── auth.ts
+    │   │   ├── billing.ts
+    │   │   ├── cases.ts
+    │   │   ├── clients.ts
+    │   │   ├── dashboard.ts
+    │   │   ├── documents.ts
+    │   │   ├── firms.ts
+    │   │   ├── hearings.ts
+    │   │   ├── invitations.ts
+    │   │   ├── lookups.ts
+    │   │   ├── notifications.ts
+    │   │   ├── powers.ts
+    │   │   ├── roles.ts
+    │   │   ├── tasks.ts
+    │   │   └── users.ts
+    │   ├── enums/
+    │   │   ├── index.test.ts
+    │   │   └── index.ts
+    │   ├── types/
+    │   │   ├── auth.ts
+    │   │   └── common.ts
+    │   └── index.ts
+    ├── package.json
+    ├── tsconfig.json
+    └── vitest.config.ts
+scripts/
+├── docs/
+│   ├── structure-audit.mjs
+│   ├── structure-check.mjs
+│   └── verify-docs-truth.mjs
+├── bundle-linux-deps.sh
+├── bundle-macos-deps.sh
+├── bundle-windows-deps.ps1
+├── check-desktop-packaging-host.sh
+├── check-lockfile.sh
+├── desktop-bundle-extras.mjs
+├── desktop-resource-contract.mjs
+├── generate-license.test.ts
+├── generate-license.ts
+├── i18n-audit.ts
+├── package-desktop-linux.sh
+├── package-desktop-windows-cross.sh
+├── release-desktop-local.sh
+├── smoke-windows-runtime.ps1
+├── tsconfig.json
+├── verify-desktop-resources.mjs
+├── verify-desktop-resources.sh
+├── verify-desktop-runtime.sh
+├── verify-linux-packages.sh
+├── verify-macos-dmg.sh
+├── verify-packaged-desktop-tree.mjs
+├── verify-windows-installer.mjs
+└── verify-windows-installer.ps1
+tests/
+├── e2e/
+│   ├── billing-workflow.spec.ts
+│   ├── cloud-auth.smoke.spec.ts
+│   ├── cloud-beta.smoke.spec.ts
+│   ├── date-input-responsiveness.spec.ts
+│   ├── desktop.smoke.spec.ts
+│   ├── document-upload.spec.ts
+│   ├── import-workflow.spec.ts
+│   ├── portal-access.spec.ts
+│   ├── quick-intake-navigation.spec.ts
+│   ├── responsive-layout.spec.ts
+│   └── shell-accessibility.spec.ts
+└── load/
+    ├── api-baseline.js
+    ├── auth.js
+    └── document-upload.js
+.dockerignore
+.editorconfig
+.env.example
+.gitignore
+.lighthouserc.json
+.prettierignore
+.prettierrc.json
+eslint.config.mjs
+package.json
+playwright.config.ts
+pnpm-lock.yaml
+pnpm-workspace.yaml
+README.md
+tsconfig.base.json
+turbo.json

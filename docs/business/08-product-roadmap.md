@@ -20,5 +20,5 @@ Roadmap proposals must be maintained outside implementation docs unless correspo
 - `packages/backend/src/app.ts`
 - `packages/backend/src/modules/**`
 - `packages/frontend/src/router.tsx`
-- `apps/web/*`
+- `archive/cloud/apps/web/*`
 - `apps/desktop/*`

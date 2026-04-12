@@ -10,7 +10,7 @@
     "dev:tauri:dummy": "pnpm --filter @elms/desktop tauri:dev:dummy",
     "build": "pnpm compile",
     "compile": "turbo run compile",
-    "validate": "pnpm check:lockfile && pnpm prisma:generate && pnpm lint && pnpm i18n:check && pnpm typecheck && pnpm test && pnpm test:coverage",
+    "validate": "pnpm check:lockfile && pnpm prisma:generate && pnpm lint && pnpm i18n:check && pnpm typecheck && pnpm test && pnpm test:coverage && pnpm docs:verify",
     "check:lockfile": "bash ./scripts/check-lockfile.sh",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -32,7 +32,9 @@
     "release:desktop:dummy:binary": "pnpm --filter @elms/desktop package:binary:dummy",
     "seed:dev": "NODE_ENV=development pnpm --filter @elms/backend seed:dev",
     "i18n:check": "pnpm --filter @elms/frontend i18n:check",
-    "docs:verify": "node ./scripts/docs/verify-docs-truth.mjs"
+    "docs:verify": "node ./scripts/docs/verify-docs-truth.mjs && pnpm structure:check",
+    "structure:audit": "node ./scripts/docs/structure-audit.mjs",
+    "structure:check": "node ./scripts/docs/structure-check.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

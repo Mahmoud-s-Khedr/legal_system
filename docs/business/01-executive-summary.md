@@ -2,7 +2,7 @@
 
 ELMS is a legal practice management system implemented as a pnpm monorepo with shared backend/frontend contracts and two runtime topologies:
 
-- Cloud/web deployment (`apps/web`, Docker-based)
+- Cloud/web deployment (`archive/cloud/apps/web`, Docker-based)
 - Desktop deployment (`apps/desktop`, Tauri-based)
 
 Current shipped implementation includes:
@@ -19,5 +19,5 @@ This summary intentionally excludes market sizing, sales claims, or future roadm
 - `packages/backend/src/app.ts`
 - `packages/backend/src/modules/**`
 - `packages/frontend/src/router.tsx`
-- `apps/web/*`
+- `archive/cloud/apps/web/*`
 - `apps/desktop/*`

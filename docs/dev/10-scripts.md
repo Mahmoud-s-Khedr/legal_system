@@ -36,7 +36,7 @@ Cloud deployment scripts were archived on 2026-03-28 under [`archive/cloud/`](..
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `COMPOSE_FILE` | `apps/web/docker-compose.prod.yml` | Path to the Docker Compose file |
+| `COMPOSE_FILE` | `archive/cloud/apps/web/docker-compose.prod.yml` | Path to the Docker Compose file |
 | `BACKUP_DIR` | `.backups/` (repo root) | Directory where dumps are written |
 | `POSTGRES_DB` | `elms_cloud` | Database name |
 | `POSTGRES_USER` | `elms` | PostgreSQL user |
@@ -72,7 +72,7 @@ POSTGRES_DB=elms_staging LOCAL_RETENTION_DAYS=14 bash scripts/backup-postgres.sh
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `COMPOSE_FILE` | `apps/web/docker-compose.prod.yml` | Path to the Docker Compose file |
+| `COMPOSE_FILE` | `archive/cloud/apps/web/docker-compose.prod.yml` | Path to the Docker Compose file |
 | `POSTGRES_DB` | `elms_cloud` | Target database name |
 | `POSTGRES_USER` | `elms` | PostgreSQL user |
 
@@ -93,7 +93,7 @@ The script exits with an error if the backup file argument is missing or the fil
 **When to use:** Deploying a new release to a production or staging server.
 
 **How it works:**
-1. Builds local Docker images for backend and frontend by default (`apps/web/backend.Dockerfile` and `apps/web/Dockerfile`).
+1. Builds local Docker images for backend and frontend by default (`archive/cloud/apps/web/backend.Dockerfile` and `archive/cloud/apps/web/Dockerfile`).
 2. Pulls third-party images for `postgres`, `redis`, and `edge` services.
 3. Runs database migrations via the short-lived `migrate` service (`docker compose run --rm migrate`).
 4. Starts or replaces containers for `postgres`, `redis`, `backend`, `web`, and `edge` with `up -d`.
@@ -103,7 +103,7 @@ The script exits with an error if the backup file argument is missing or the fil
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `COMPOSE_FILE` | `apps/web/docker-compose.prod.yml` | Path to the Docker Compose file |
+| `COMPOSE_FILE` | `archive/cloud/apps/web/docker-compose.prod.yml` | Path to the Docker Compose file |
 | `BACKEND_IMAGE` | `elms-backend:local` | Local image tag used for backend and migration services |
 | `FRONTEND_IMAGE` | `elms-frontend:local` | Local image tag used for frontend service |
 | `BUILD_LOCAL_IMAGES` | `1` | Build backend/frontend images locally before compose up (`0` to skip) |

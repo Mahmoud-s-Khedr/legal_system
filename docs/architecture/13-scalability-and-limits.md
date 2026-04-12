@@ -174,7 +174,7 @@ Under the default configuration (1 backend instance, PostgreSQL pool 10, no work
 | [docs/architecture/06-deployment-topologies.md](./06-deployment-topologies.md) | Cloud vs desktop infrastructure |
 | [docs/architecture/09-async-jobs.md](./09-async-jobs.md) | BullMQ worker architecture |
 | [packages/backend/src/jobs/extractionWorker.ts](../../packages/backend/src/jobs/extractionWorker.ts) | Worker process entry point |
-| [apps/web/docker-compose.prod.yml](../../apps/web/docker-compose.prod.yml) | Production Docker configuration |
+| [archive/cloud/apps/web/docker-compose.prod.yml](../../archive/cloud/apps/web/docker-compose.prod.yml) | Production Docker configuration |
 
 ## Source of truth
 

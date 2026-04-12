@@ -27,5 +27,5 @@ This document is constrained to repository-verifiable workflow coverage.
 
 - `packages/backend/src/modules/**`
 - `packages/frontend/src/router.tsx`
-- `apps/web/docker-compose*.yml`
+- `archive/cloud/apps/web/docker-compose*.yml`
 - `apps/desktop/src-tauri/tauri.conf.json`

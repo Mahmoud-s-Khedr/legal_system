@@ -1,6 +1,6 @@
 # ELMS — Electronic Legal Management System
 
-Monorepo for a legal practice management system with cloud and desktop deployments.
+Monorepo for a legal practice management system with desktop-first workflows and archived cloud deployment assets.
 
 ## What is implemented
 
@@ -22,7 +22,8 @@ Based on current code (`packages/backend/src/app.ts`, `packages/frontend/src/rou
 ```text
 apps/
   desktop/   Tauri shell and desktop packaging scripts
-  web/       Dockerfiles + compose for web deployment
+archive/
+  cloud/     Archived cloud Dockerfiles/compose/scripts (reference only)
 packages/
   backend/   Fastify API + Prisma + jobs
   frontend/  React SPA
@@ -49,7 +50,7 @@ cp .env.example .env
 pnpm prisma:generate
 pnpm --filter @elms/backend prisma migrate dev
 pnpm seed:dev:cloud
-pnpm dev:web
+pnpm dev:desktop
 ```
 
 Useful alternatives:
@@ -64,10 +65,11 @@ Useful alternatives:
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm test:e2e`
-- `pnpm release:web`
 - `pnpm release:desktop:linux`
 - `pnpm release:desktop:local`
 - `pnpm docs:verify`
+- `pnpm structure:audit`
+- `pnpm structure:check`
 
 ## Documentation
 

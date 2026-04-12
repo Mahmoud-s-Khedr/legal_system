@@ -29,7 +29,7 @@ Do not include:
 
 ## Intentional Exclusions
 
-- Planned integrations in `NeededFeaturesList.md` such as MoJ portals, WhatsApp, ETA, Digital Egypt, and VLM OCR are not included because they are not currently implemented.
+- Planned integrations in `docs/notes/NeededFeaturesList.md` such as MoJ portals, WhatsApp, ETA, Digital Egypt, and VLM OCR are not included because they are not currently implemented.
 - Sentry is not included because it is an internal observability concern, not a product feature.
 - Desktop-local capabilities that run against the embedded backend and database on `localhost` are not included because they do not require external internet access.
 - The client portal itself is not listed as a separate internet-required feature here; the runtime dependency captured in this inventory is email-backed invitation delivery, while the portal application surface is a deployment/access mode rather than a distinct external service integration.
@@ -45,4 +45,3 @@ Do not include:
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

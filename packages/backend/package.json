@@ -7,7 +7,7 @@
   "types": "dist/cloud/server.d.ts",
   "scripts": {
     "dev": "node ./scripts/dev-local.mjs",
-    "dev:cloud": "node ./scripts/dev-local.mjs ../../apps/web/.env.cloud",
+    "dev:cloud": "node ./scripts/dev-local.mjs ../../archive/cloud/apps/web/.env.cloud",
     "dev:local": "node ./scripts/dev-local.mjs ../../apps/desktop/.env.desktop",
     "compile": "pnpm build",
     "build": "tsup --clean",

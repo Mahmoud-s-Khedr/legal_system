@@ -42,7 +42,7 @@ legal_system/
 
 ### `archive/cloud`
 
-Contains archived cloud/SaaS deployment artifacts (former `apps/web` and cloud deployment scripts). These assets are preserved for historical reference and are not part of active local-only workflows.
+Contains archived cloud/SaaS deployment artifacts (former cloud web deployment assets and scripts). These assets are preserved for historical reference and are not part of active local-only workflows.
 
 ### `apps/desktop`
 
@@ -86,6 +86,16 @@ Node.js utility scripts that are invoked from package `scripts` fields. Includes
 
 - `tests/e2e/` — Playwright tests configured in `playwright.config.ts`
 - `tests/load/` — k6 load test scenarios (`api-baseline.js`, `auth.js`, `document-upload.js`)
+
+---
+
+## Repo Boundaries
+
+- Keep root files limited to workspace/tooling entrypoints (`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`, lint/format config, README).
+- Put planning, review, and temporary markdown notes under `docs/notes/`.
+- Put documentation media/assets under `docs/assets/` rather than repo root.
+- Keep archived/non-active deployment artifacts under `archive/` only.
+- Keep executable automation under `scripts/` and product code under `apps/` or `packages/`.
 
 ---
 

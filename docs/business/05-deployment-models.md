@@ -2,7 +2,7 @@
 
 ## Cloud/Web model
 
-- Infrastructure artifacts: `apps/web/docker-compose.yml`, `apps/web/docker-compose.prod.yml`, `apps/web/Dockerfile`, `apps/web/backend.Dockerfile`.
+- Infrastructure artifacts: `archive/cloud/apps/web/docker-compose.yml`, `archive/cloud/apps/web/docker-compose.prod.yml`, `archive/cloud/apps/web/Dockerfile`, `archive/cloud/apps/web/backend.Dockerfile`.
 - Backend and frontend run as separate services.
 - Cloud mode uses `AUTH_MODE=cloud` and may use Redis-backed flows.
 
@@ -18,7 +18,7 @@
 
 ## Source of truth
 
-- `apps/web/*`
+- `archive/cloud/apps/web/*`
 - `apps/desktop/*`
 - `package.json`
 - `packages/backend/src/config/env.ts`

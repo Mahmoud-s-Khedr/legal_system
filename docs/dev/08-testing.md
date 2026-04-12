@@ -177,7 +177,7 @@ Start the full stack first (both backend and frontend must be running):
 
 ```bash
 # Terminal 1 — start backend + frontend
-pnpm dev:web
+pnpm dev:desktop
 
 # Terminal 2 — run all E2E specs
 pnpm test:e2e
@@ -315,4 +315,3 @@ Related: [Auth Internals](./07-auth-internals.md) | [Contributing](./09-contribu
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-
