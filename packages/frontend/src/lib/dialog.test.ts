@@ -39,4 +39,22 @@ describe("dialog helpers", () => {
       content: "Something failed"
     });
   });
+
+  it("confirmAction forwards custom button labels", async () => {
+    const { confirmAction } = await import("./dialog");
+    confirmMock.mockImplementationOnce((options: { onCancel?: () => void }) => {
+      options.onCancel?.();
+    });
+
+    await confirmAction({
+      content: "Leave this page?",
+      okText: "Leave",
+      cancelText: "Stay"
+    });
+
+    expect(confirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      okText: "Leave",
+      cancelText: "Stay"
+    }));
+  });
 });

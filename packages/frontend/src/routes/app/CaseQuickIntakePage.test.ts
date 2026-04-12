@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CaseRoleOnCase, TaskPriority } from "@elms/shared";
 import { isPartyPristine, isQuickIntakeDirty } from "./CaseQuickIntakePage";
@@ -87,5 +89,18 @@ describe("quick intake dirty state", () => {
 
     state.parties[0] = { ...state.parties[0], role: "PLAINTIFF" };
     expect(isQuickIntakeDirty(state)).toBe(false);
+  });
+
+  it("sets unsaved-change bypass helper immediately before success navigation", () => {
+    const source = readFileSync(resolve(process.cwd(), "src/routes/app/CaseQuickIntakePage.tsx"), "utf8");
+
+    expect(source).toContain("useUnsavedChangesBypass()");
+    expect(source).toContain("useUnsavedChanges(quickIntakeDirty, { bypassBlockRef: bypassRef })");
+
+    const bypassIndex = source.indexOf("allowNextNavigation();");
+    const navigateIndex = source.indexOf('navigate({ to: "/app/cases/$caseId", params: { caseId } })');
+    expect(bypassIndex).toBeGreaterThan(-1);
+    expect(navigateIndex).toBeGreaterThan(-1);
+    expect(bypassIndex).toBeLessThan(navigateIndex);
   });
 });

@@ -6,7 +6,7 @@ import type { CaseListResponseDto, ClientListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useCreateInvoice } from "../../lib/billing";
-import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
+import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 interface ItemRow {
@@ -21,6 +21,7 @@ export function InvoiceCreatePage() {
   const feedback = useMutationFeedback();
   const createInvoice = useCreateInvoice();
   const search = useSearch({ strict: false }) as { clientId?: string };
+  const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
 
   const [caseId, setCaseId] = useState("");
   const [clientId, setClientId] = useState(search.clientId ?? "");
@@ -30,7 +31,7 @@ export function InvoiceCreatePage() {
   const [dueDate, setDueDate] = useState("");
   const [items, setItems] = useState<ItemRow[]>([{ description: "", quantity: "1", unitPrice: "0" }]);
   const [error, setError] = useState("");
-  useUnsavedChanges(caseId !== "" || clientId !== "" || items.some((i) => i.description !== ""));
+  useUnsavedChanges(caseId !== "" || clientId !== "" || items.some((i) => i.description !== ""), { bypassBlockRef: bypassRef });
 
   const casesQuery = useQuery({
     queryKey: ["cases"],
@@ -86,6 +87,7 @@ export function InvoiceCreatePage() {
         }))
       });
       feedback.success("messages.invoiceCreated");
+      allowNextNavigation();
       await navigate({ to: "/app/invoices/$invoiceId", params: { invoiceId: invoice.id } });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.fallback"));

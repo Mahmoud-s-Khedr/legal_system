@@ -72,6 +72,7 @@ export function UserDetailPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       await queryClient.invalidateQueries({ queryKey: ["user", userId] });
+      void navigate({ to: "/app/users" });
     }
   });
 

@@ -1,6 +1,8 @@
 {
   "unsavedChanges": {
-    "confirmLeave": "You have unsaved changes. Leave and discard them?"
+    "confirmLeave": "You have unsaved changes. Leave and discard them?",
+    "leave": "Leave",
+    "stay": "Stay"
   },
   "errors": {
     "title": "Something went wrong",
@@ -227,6 +229,7 @@
   },
   "footer": {
     "navigation": "Quick navigation",
+    "home": "Home",
     "login": "Login",
     "setup": "Setup",
     "connection": "Connection",

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
+import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ClientType, Language, type ClientListResponseDto, type CreateClientDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
@@ -41,6 +41,7 @@ export function ClientCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const feedback = useMutationFeedback();
+  const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
 
   const clientTypeOptions = Object.values(ClientType).map((v) => ({
     value: v,
@@ -66,7 +67,7 @@ export function ClientCreatePage() {
   });
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
-  useUnsavedChanges(form.name !== "" || form.type !== "");
+  useUnsavedChanges(form.name !== "" || form.type !== "", { bypassBlockRef: bypassRef });
 
   const dupCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,6 +96,7 @@ export function ClientCreatePage() {
     onSuccess: async () => {
       feedback.success("messages.clientCreated");
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
+      allowNextNavigation();
       void navigate({ to: "/app/clients" });
     }
   });

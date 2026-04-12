@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
+import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ClientListResponseDto, CreateCaseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,7 @@ export function CaseCreatePage() {
   const queryClient = useQueryClient();
   const feedback = useMutationFeedback();
   const search = useSearch({ strict: false }) as { clientId?: string };
+  const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
 
   const [form, setForm] = useState<CreateCaseDto>({
     clientId: search.clientId ?? "",
@@ -31,7 +32,7 @@ export function CaseCreatePage() {
   });
 
   const caseTypesQuery = useLookupOptions("CaseType");
-  useUnsavedChanges(form.title !== "" || form.clientId !== "");
+  useUnsavedChanges(form.title !== "" || form.clientId !== "", { bypassBlockRef: bypassRef });
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateCaseDto) =>
@@ -42,6 +43,7 @@ export function CaseCreatePage() {
     onSuccess: async () => {
       feedback.success("messages.caseCreated");
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
+      allowNextNavigation();
       void navigate({ to: "/app/cases" });
     }
   });

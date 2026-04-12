@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
+import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   TaskPriority,
@@ -21,6 +21,7 @@ export function TaskCreatePage() {
   const search = useSearch({ strict: false }) as { caseId?: string };
   const queryClient = useQueryClient();
   const feedback = useMutationFeedback();
+  const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
 
   const [form, setForm] = useState<CreateTaskDto>({
     caseId: search.caseId ?? "",
@@ -32,7 +33,7 @@ export function TaskCreatePage() {
     dueAt: ""
   });
 
-  useUnsavedChanges(form.title !== "");
+  useUnsavedChanges(form.title !== "", { bypassBlockRef: bypassRef });
 
   const casesQuery = useQuery({
     queryKey: ["cases"],
@@ -100,6 +101,7 @@ export function TaskCreatePage() {
       feedback.success("messages.taskCreated");
       await queryClient.invalidateQueries({ queryKey: ["tasks"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      allowNextNavigation();
       void navigate({ to: "/app/tasks" });
     }
   });

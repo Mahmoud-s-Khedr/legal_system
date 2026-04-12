@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
+import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClientType, Language, type ClientDto, type CreateClientDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
@@ -36,6 +36,7 @@ export function ClientEditPage() {
   const { clientId } = useParams({ from: "/app/clients/$clientId/edit" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
 
   const clientTypeOptions = Object.values(ClientType).map((v) => ({
     value: v,
@@ -64,7 +65,9 @@ export function ClientEditPage() {
     contacts: []
   });
   const loadedFormRef = useRef<CreateClientDto | null>(null);
-  useUnsavedChanges(loadedFormRef.current !== null && JSON.stringify(form) !== JSON.stringify(loadedFormRef.current));
+  useUnsavedChanges(loadedFormRef.current !== null && JSON.stringify(form) !== JSON.stringify(loadedFormRef.current), {
+    bypassBlockRef: bypassRef
+  });
 
   const governorateOptions = withLegacyGovernorateOption(
     getEgyptGovernorateOptions(i18n.resolvedLanguage ?? i18n.language ?? "en"),
@@ -100,6 +103,7 @@ export function ClientEditPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["client", clientId] });
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
+      allowNextNavigation();
       void navigate({ to: "/app/clients/$clientId", params: { clientId } });
     }
   });

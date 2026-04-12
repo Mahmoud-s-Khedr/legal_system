@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
+import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CaseRoleOnCase,
@@ -246,6 +246,7 @@ export function CaseQuickIntakePage() {
     failedSections: SubmitSection[];
     message: string;
   } | null>(null);
+  const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
 
   const [clientForm, setClientForm] = useState<ClientFormState>({
     name: "",
@@ -293,7 +294,7 @@ export function CaseQuickIntakePage() {
     documents
   });
 
-  useUnsavedChanges(quickIntakeDirty);
+  useUnsavedChanges(quickIntakeDirty, { bypassBlockRef: bypassRef });
 
   const clientsQuery = useQuery({
     queryKey: ["clients", "quick-intake"],
@@ -717,6 +718,7 @@ export function CaseQuickIntakePage() {
       }
 
       feedback.success("messages.caseCreated");
+      allowNextNavigation();
       void navigate({ to: "/app/cases/$caseId", params: { caseId } });
     } catch (error) {
       setValidationMessage((error as Error)?.message ?? t("errors.fallback"));

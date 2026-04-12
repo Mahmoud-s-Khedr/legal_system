@@ -154,9 +154,14 @@ export function AboutPage() {
               ) : null}
             </div>
           </div>
-          <Link to="/login" className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:border-accent hover:text-accent">
-            {t("footer.login")}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/" className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:border-accent hover:text-accent">
+              {t("footer.home")}
+            </Link>
+            <Link to="/login" className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:border-accent hover:text-accent">
+              {t("footer.login")}
+            </Link>
+          </div>
         </section>
       </main>
       <ShellFooter ariaLabel={t("footer.navigation")} links={footerLinks} />

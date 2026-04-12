@@ -76,6 +76,7 @@ describe("contact integration smoke", () => {
     const view = render(<AboutPage />);
     expect(view.textContent).toContain("About This System");
     expect(view.textContent).toContain("Developer Contact");
+    expect(view.querySelector("a[href='/']")).not.toBeNull();
     expect(view.querySelector("a[href='mailto:mahmoud.s.khedr.2@gmail.com']")).not.toBeNull();
     expect(view.querySelector("a[href='tel:01016240934']")).not.toBeNull();
   });

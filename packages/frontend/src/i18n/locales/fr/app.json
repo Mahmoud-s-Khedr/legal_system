@@ -1,6 +1,8 @@
 {
   "unsavedChanges": {
-    "confirmLeave": "Vous avez des modifications non sauvegardées. Quitter et les abandonner ?"
+    "confirmLeave": "Vous avez des modifications non sauvegardées. Quitter et les abandonner ?",
+    "leave": "Quitter",
+    "stay": "Rester"
   },
   "errors": {
     "title": "Une erreur s'est produite",
@@ -227,6 +229,7 @@
   },
   "footer": {
     "navigation": "Navigation rapide",
+    "home": "Accueil",
     "login": "Connexion",
     "setup": "Configuration",
     "connection": "Connexion backend",

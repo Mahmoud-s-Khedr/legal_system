@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
+import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   SessionOutcome,
@@ -31,6 +31,7 @@ export function HearingEditPage() {
   const { hearingId } = useParams({ from: "/app/hearings/$hearingId/edit" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
 
   const hearingQuery = useQuery({
     queryKey: ["hearing", hearingId],
@@ -54,7 +55,9 @@ export function HearingEditPage() {
     notes: ""
   });
   const loadedFormRef = useRef<CreateHearingDto | null>(null);
-  useUnsavedChanges(loadedFormRef.current !== null && JSON.stringify(form) !== JSON.stringify(loadedFormRef.current));
+  useUnsavedChanges(loadedFormRef.current !== null && JSON.stringify(form) !== JSON.stringify(loadedFormRef.current), {
+    bypassBlockRef: bypassRef
+  });
 
   const [debouncedConflictInput, setDebouncedConflictInput] = useState({
     assignedLawyerId: "",
@@ -154,6 +157,7 @@ export function HearingEditPage() {
       await queryClient.invalidateQueries({ queryKey: ["hearings"] });
       await queryClient.invalidateQueries({ queryKey: ["hearing", hearingId] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      allowNextNavigation();
       void navigate({ to: "/app/hearings" });
     }
   });
