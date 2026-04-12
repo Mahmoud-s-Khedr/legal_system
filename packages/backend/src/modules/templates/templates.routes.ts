@@ -134,7 +134,7 @@ export async function registerTemplateRoutes(app: FastifyInstance) {
 
       return reply
         .header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-        .header("Content-Disposition", `attachment; filename=\"${result.fileName}\"`)
+        .header("Content-Disposition", `attachment; filename="${result.fileName}"`)
         .send(result.buffer);
     }
   );
