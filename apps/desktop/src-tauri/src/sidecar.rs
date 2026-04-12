@@ -403,6 +403,10 @@ impl RuntimeStateInner {
     fn clear_database_reset_request(&self) {
         self.reset_database_requested.store(false, Ordering::SeqCst);
     }
+
+    fn is_bootstrapping(&self) -> bool {
+        self.is_bootstrapping.load(Ordering::SeqCst)
+    }
 }
 
 #[derive(Clone)]
@@ -426,6 +430,16 @@ impl Default for RuntimeState {
                 reset_database_requested: AtomicBool::new(false),
             }),
         }
+    }
+}
+
+impl RuntimeState {
+    pub fn is_bootstrapping(&self) -> bool {
+        self.inner.is_bootstrapping()
+    }
+
+    pub fn current_phase(&self) -> String {
+        self.inner.snapshot().phase
     }
 }
 
@@ -2846,7 +2860,7 @@ fn read_postgres_layout_entry(resource_dir: &Path, key: &str) -> Option<PathBuf>
     None
 }
 
-fn resolve_postgres_binary(app: &AppHandle, executable: &str) -> PathBuf {
+pub(crate) fn resolve_postgres_binary(app: &AppHandle, executable: &str) -> PathBuf {
     // On Windows all PostgreSQL tools carry a .exe extension.
     #[cfg(windows)]
     let executable = format!("{executable}.exe");

@@ -15,6 +15,18 @@ import {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import {
+  chooseDesktopBackupDirectory,
+  getDesktopBackupPolicy,
+  isDesktopBackupEnabled,
+  resetDesktopBackupDirectory,
+  restoreDesktopBackup,
+  runDesktopBackupNow,
+  setDesktopBackupPolicy,
+  validateBackupTimeLocal,
+  canSubmitRestoreAcknowledgement,
+  type DesktopBackupPolicy
+} from "../../lib/desktopBackup";
+import {
   chooseDesktopDownloadDirectory,
   getDesktopDownloadSettings,
   isDesktopDownloadsEnabled,
@@ -27,7 +39,9 @@ import { Badge, EmptyState, Field, PageHeader, PrimaryButton, SectionCard, Selec
 export function SettingsPage() {
   const { t } = useTranslation("app");
   const isDesktopShell = isDesktopDownloadsEnabled();
+  const isDesktopBackupShell = isDesktopBackupEnabled();
   const { user, refreshSession } = useAuthBootstrap();
+  const canUpdateSettings = user?.permissions.includes("settings:update") ?? false;
   const queryClient = useQueryClient();
   const firmQuery = useQuery({
     queryKey: ["firm-me"],
@@ -43,6 +57,11 @@ export function SettingsPage() {
     queryFn: () => getDesktopDownloadSettings(),
     enabled: isDesktopShell
   });
+  const desktopBackupPolicyQuery = useQuery({
+    queryKey: ["desktop-backup-policy"],
+    queryFn: () => getDesktopBackupPolicy(),
+    enabled: isDesktopBackupShell
+  });
 
   const [profileForm, setProfileForm] = useState({
     fullName: "",
@@ -55,6 +74,16 @@ export function SettingsPage() {
   });
   const [activationKey, setActivationKey] = useState("");
   const [editionChangeTarget, setEditionChangeTarget] = useState<EditionKey>(EditionKey.SOLO_OFFLINE);
+  const [backupPolicyForm, setBackupPolicyForm] = useState<DesktopBackupPolicy>({
+    enabled: true,
+    frequency: "daily",
+    timeLocal: "02:00",
+    weeklyDay: null,
+    retentionCount: 14
+  });
+  const [selectedBackupPath, setSelectedBackupPath] = useState("");
+  const [restoreCheckOne, setRestoreCheckOne] = useState(false);
+  const [restoreCheckTwo, setRestoreCheckTwo] = useState(false);
 
   useEffect(() => {
     if (!selfQuery.data) {
@@ -75,6 +104,21 @@ export function SettingsPage() {
     }
     setEditionChangeTarget(target);
   }, [firmQuery.data?.firm.editionKey, firmQuery.data?.firm.pendingEditionKey]);
+
+  useEffect(() => {
+    const backupPolicyData = desktopBackupPolicyQuery.data;
+    if (!backupPolicyData) {
+      return;
+    }
+
+    setBackupPolicyForm(backupPolicyData.policy);
+    setSelectedBackupPath((current) => {
+      if (current && backupPolicyData.backups.some((backup) => backup.path === current)) {
+        return current;
+      }
+      return backupPolicyData.backups[0]?.path ?? "";
+    });
+  }, [desktopBackupPolicyQuery.data]);
 
   const updateProfileMutation = useMutation({
     mutationFn: (payload: UpdateUserDto) =>
@@ -111,6 +155,38 @@ export function SettingsPage() {
     mutationFn: () => resetDesktopDownloadDirectory(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["desktop-download-settings"] });
+    }
+  });
+  const chooseBackupDirectoryMutation = useMutation({
+    mutationFn: () => chooseDesktopBackupDirectory(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+    }
+  });
+  const resetBackupDirectoryMutation = useMutation({
+    mutationFn: () => resetDesktopBackupDirectory(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+    }
+  });
+  const saveBackupPolicyMutation = useMutation({
+    mutationFn: (payload: DesktopBackupPolicy) => setDesktopBackupPolicy(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+    }
+  });
+  const runBackupNowMutation = useMutation({
+    mutationFn: () => runDesktopBackupNow(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+    }
+  });
+  const restoreBackupMutation = useMutation({
+    mutationFn: (backupPath: string) => restoreDesktopBackup(backupPath),
+    onSuccess: async () => {
+      setRestoreCheckOne(false);
+      setRestoreCheckTwo(false);
+      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
     }
   });
   const activateLicenseMutation = useMutation({
@@ -172,6 +248,12 @@ export function SettingsPage() {
       endDate: formatDate(firm.trialEndsAt)
     });
   })();
+  const isBackupPolicyValid =
+    validateBackupTimeLocal(backupPolicyForm.timeLocal) &&
+    backupPolicyForm.retentionCount >= 1 &&
+    backupPolicyForm.retentionCount <= 365 &&
+    (backupPolicyForm.frequency !== "weekly" || backupPolicyForm.weeklyDay !== null);
+  const canSubmitRestore = canSubmitRestoreAcknowledgement(restoreCheckOne, restoreCheckTwo);
 
   return (
     <div className="space-y-6">
@@ -332,6 +414,220 @@ export function SettingsPage() {
             ) : null}
             {resetDownloadDirectoryMutation.error ? (
               <p className="text-sm text-red-600">{(resetDownloadDirectoryMutation.error as Error).message}</p>
+            ) : null}
+          </div>
+        </SectionCard>
+      ) : null}
+      {isDesktopBackupShell ? (
+        <SectionCard title={t("settings.backupTitle")} description={t("settings.backupHelp")}>
+          <div className="space-y-4">
+            <Detail
+              label={t("settings.backupDirectory")}
+              value={desktopBackupPolicyQuery.data?.effectiveBackupDirectory ?? t("labels.loading")}
+            />
+            <div className="grid gap-3 xl:grid-cols-2">
+              <label className="space-y-2 text-sm">
+                <span className="text-slate-600">{t("settings.backupEnabled")}</span>
+                <select
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
+                  disabled={!canUpdateSettings}
+                  onChange={(event) =>
+                    setBackupPolicyForm((current) => ({
+                      ...current,
+                      enabled: event.target.value === "true"
+                    }))
+                  }
+                  value={String(backupPolicyForm.enabled)}
+                >
+                  <option value="true">{t("settings.backupOn")}</option>
+                  <option value="false">{t("settings.backupOff")}</option>
+                </select>
+              </label>
+              <label className="space-y-2 text-sm">
+                <span className="text-slate-600">{t("settings.backupFrequency")}</span>
+                <select
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
+                  disabled={!canUpdateSettings}
+                  onChange={(event) =>
+                    setBackupPolicyForm((current) => ({
+                      ...current,
+                      frequency: event.target.value as "daily" | "weekly",
+                      weeklyDay: event.target.value === "weekly" ? current.weeklyDay ?? 0 : null
+                    }))
+                  }
+                  value={backupPolicyForm.frequency}
+                >
+                  <option value="daily">{t("settings.backupDaily")}</option>
+                  <option value="weekly">{t("settings.backupWeekly")}</option>
+                </select>
+              </label>
+              <label className="space-y-2 text-sm">
+                <span className="text-slate-600">{t("settings.backupTime")}</span>
+                <input
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
+                  disabled={!canUpdateSettings}
+                  onChange={(event) =>
+                    setBackupPolicyForm((current) => ({ ...current, timeLocal: event.target.value }))
+                  }
+                  type="time"
+                  value={backupPolicyForm.timeLocal}
+                />
+              </label>
+              <label className="space-y-2 text-sm">
+                <span className="text-slate-600">{t("settings.backupRetention")}</span>
+                <input
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
+                  disabled={!canUpdateSettings}
+                  max={365}
+                  min={1}
+                  onChange={(event) =>
+                    setBackupPolicyForm((current) => ({
+                      ...current,
+                      retentionCount: Number(event.target.value || 1)
+                    }))
+                  }
+                  type="number"
+                  value={backupPolicyForm.retentionCount}
+                />
+              </label>
+              {backupPolicyForm.frequency === "weekly" ? (
+                <label className="space-y-2 text-sm">
+                  <span className="text-slate-600">{t("settings.backupWeekday")}</span>
+                  <select
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
+                    disabled={!canUpdateSettings}
+                    onChange={(event) =>
+                      setBackupPolicyForm((current) => ({
+                        ...current,
+                        weeklyDay: Number(event.target.value)
+                      }))
+                    }
+                    value={backupPolicyForm.weeklyDay ?? 0}
+                  >
+                    <option value={0}>{t("settings.daySunday")}</option>
+                    <option value={1}>{t("settings.dayMonday")}</option>
+                    <option value={2}>{t("settings.dayTuesday")}</option>
+                    <option value={3}>{t("settings.dayWednesday")}</option>
+                    <option value={4}>{t("settings.dayThursday")}</option>
+                    <option value={5}>{t("settings.dayFriday")}</option>
+                    <option value={6}>{t("settings.daySaturday")}</option>
+                  </select>
+                </label>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
+                disabled={!canUpdateSettings || chooseBackupDirectoryMutation.isPending || resetBackupDirectoryMutation.isPending}
+                onClick={() => {
+                  void chooseBackupDirectoryMutation.mutateAsync();
+                }}
+                type="button"
+              >
+                {t("settings.chooseBackupFolder")}
+              </button>
+              <button
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
+                disabled={!canUpdateSettings || chooseBackupDirectoryMutation.isPending || resetBackupDirectoryMutation.isPending}
+                onClick={() => {
+                  void resetBackupDirectoryMutation.mutateAsync();
+                }}
+                type="button"
+              >
+                {t("settings.resetBackupFolder")}
+              </button>
+              <button
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
+                disabled={!canUpdateSettings || !isBackupPolicyValid || saveBackupPolicyMutation.isPending}
+                onClick={() => {
+                  void saveBackupPolicyMutation.mutateAsync(backupPolicyForm);
+                }}
+                type="button"
+              >
+                {t("settings.saveBackupPolicy")}
+              </button>
+              <button
+                className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:border-emerald-300 transition disabled:opacity-50"
+                disabled={!canUpdateSettings || runBackupNowMutation.isPending}
+                onClick={() => {
+                  void runBackupNowMutation.mutateAsync();
+                }}
+                type="button"
+              >
+                {t("settings.runBackupNow")}
+              </button>
+            </div>
+            <div className="space-y-1 text-sm text-slate-600">
+              <p>{t("settings.lastBackupAt")}: {desktopBackupPolicyQuery.data?.lastBackupAt ? formatDate(desktopBackupPolicyQuery.data.lastBackupAt) : "-"}</p>
+              <p>{t("settings.lastBackupResult")}: {desktopBackupPolicyQuery.data?.lastBackupResult ?? "-"}</p>
+              <p>{t("settings.nextBackupAt")}: {desktopBackupPolicyQuery.data?.nextScheduledBackupAt ? formatDate(desktopBackupPolicyQuery.data.nextScheduledBackupAt) : "-"}</p>
+            </div>
+
+            {desktopBackupPolicyQuery.data?.backups.length ? (
+              <div className="space-y-3 border-t border-slate-200 pt-4">
+                <label className="space-y-2 text-sm">
+                  <span className="text-slate-600">{t("settings.restoreSource")}</span>
+                  <select
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
+                    disabled={!canUpdateSettings}
+                    onChange={(event) => setSelectedBackupPath(event.target.value)}
+                    value={selectedBackupPath}
+                  >
+                    {desktopBackupPolicyQuery.data.backups.map((backup) => (
+                      <option key={backup.path} value={backup.path}>
+                        {backup.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    checked={restoreCheckOne}
+                    className="mt-1"
+                    disabled={!canUpdateSettings}
+                    onChange={(event) => setRestoreCheckOne(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>{t("settings.restoreAckOne")}</span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    checked={restoreCheckTwo}
+                    className="mt-1"
+                    disabled={!canUpdateSettings}
+                    onChange={(event) => setRestoreCheckTwo(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>{t("settings.restoreAckTwo")}</span>
+                </label>
+                <button
+                  className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 hover:border-amber-300 transition disabled:opacity-50"
+                  disabled={!canUpdateSettings || !selectedBackupPath || !canSubmitRestore || restoreBackupMutation.isPending}
+                  onClick={() => {
+                    void restoreBackupMutation.mutateAsync(selectedBackupPath);
+                  }}
+                  type="button"
+                >
+                  {t("settings.restoreNow")}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600">{t("settings.noBackupsYet")}</p>
+            )}
+            {chooseBackupDirectoryMutation.error ? (
+              <p className="text-sm text-red-600">{(chooseBackupDirectoryMutation.error as Error).message}</p>
+            ) : null}
+            {resetBackupDirectoryMutation.error ? (
+              <p className="text-sm text-red-600">{(resetBackupDirectoryMutation.error as Error).message}</p>
+            ) : null}
+            {saveBackupPolicyMutation.error ? (
+              <p className="text-sm text-red-600">{(saveBackupPolicyMutation.error as Error).message}</p>
+            ) : null}
+            {runBackupNowMutation.error ? (
+              <p className="text-sm text-red-600">{(runBackupNowMutation.error as Error).message}</p>
+            ) : null}
+            {restoreBackupMutation.error ? (
+              <p className="text-sm text-red-600">{(restoreBackupMutation.error as Error).message}</p>
             ) : null}
           </div>
         </SectionCard>

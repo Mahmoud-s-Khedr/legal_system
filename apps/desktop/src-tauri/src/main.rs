@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod backend_connection;
+mod desktop_backup;
 mod desktop_downloads;
 mod external_links;
 mod ppo_portal;
@@ -43,11 +44,19 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(sidecar::RuntimeState::default())
+        .manage(desktop_backup::BackupState::default())
         .invoke_handler(tauri::generate_handler![
             sidecar::desktop_bootstrap_status,
             sidecar::retry_bootstrap,
             sidecar::repair_bootstrap_migrations,
             sidecar::reset_local_database,
+            desktop_backup::desktop_get_backup_policy,
+            desktop_backup::desktop_set_backup_policy,
+            desktop_backup::desktop_choose_backup_directory,
+            desktop_backup::desktop_reset_backup_directory,
+            desktop_backup::desktop_list_backups,
+            desktop_backup::desktop_run_backup_now,
+            desktop_backup::desktop_restore_backup,
             backend_connection::desktop_get_backend_connection,
             backend_connection::desktop_set_backend_connection,
             desktop_downloads::desktop_get_download_settings,
@@ -70,6 +79,7 @@ fn main() {
                 tauri::async_runtime::spawn(async move {
                     sidecar::start_runtime_bootstrap(&handle);
                 });
+                desktop_backup::start_backup_scheduler(app.handle().clone());
             }
 
             if let Some(window) = app.get_webview_window("main") {
