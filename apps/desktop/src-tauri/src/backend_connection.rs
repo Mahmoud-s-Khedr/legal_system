@@ -26,7 +26,7 @@ pub struct BackendConnectionSetResult {
 }
 
 fn normalize_base_url(input: &str) -> Result<String, String> {
-    let trimmed = input.trim().trim_end_matches('/');
+    let trimmed = input.trim();
     if trimmed.is_empty() {
         return Err("BACKEND_URL_EMPTY".to_string());
     }
@@ -44,7 +44,22 @@ fn normalize_base_url(input: &str) -> Result<String, String> {
         return Err("BACKEND_URL_INVALID_HOST".to_string());
     }
 
-    Ok(trimmed.to_string())
+    let scheme = if trimmed.starts_with("https://") {
+        "https://"
+    } else {
+        "http://"
+    };
+    let host_with_optional_port = without_scheme
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or_default()
+        .trim();
+
+    if host_with_optional_port.is_empty() {
+        return Err("BACKEND_URL_INVALID_HOST".to_string());
+    }
+
+    Ok(format!("{scheme}{host_with_optional_port}"))
 }
 
 fn connection_file_path(app: &AppHandle) -> Result<PathBuf, String> {

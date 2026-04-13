@@ -1656,20 +1656,33 @@ fn should_use_workspace_runtime() -> bool {
 }
 
 fn normalize_http_base_url(value: &str) -> Option<String> {
-    let trimmed = value.trim().trim_end_matches('/');
+    let trimmed = value.trim();
     if !(trimmed.starts_with("http://") || trimmed.starts_with("https://")) {
         return None;
     }
 
-    let without_scheme = trimmed
-        .strip_prefix("http://")
-        .or_else(|| trimmed.strip_prefix("https://"))
-        .unwrap_or_default();
+    let (scheme, without_scheme) = if let Some(value) = trimmed.strip_prefix("http://") {
+        ("http://", value)
+    } else if let Some(value) = trimmed.strip_prefix("https://") {
+        ("https://", value)
+    } else {
+        return None;
+    };
+
     if without_scheme.is_empty() || without_scheme.starts_with('/') {
         return None;
     }
 
-    Some(trimmed.to_string())
+    let host_with_optional_port = without_scheme
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or_default()
+        .trim();
+    if host_with_optional_port.is_empty() {
+        return None;
+    }
+
+    Some(format!("{scheme}{host_with_optional_port}"))
 }
 
 fn resolve_runtime_backend_base_url() -> String {

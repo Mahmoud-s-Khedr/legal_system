@@ -7,6 +7,7 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
   const extraOrigins = env.ALLOWED_ORIGINS
     ? env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
+  const isDesktopBootstrapRuntime = Boolean(process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN?.trim());
 
   const devOrigins: (string | RegExp)[] = [
     /^https?:\/\/localhost(?::\d+)?$/,
@@ -20,7 +21,9 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
   }
 
   const allowedOrigins: (string | RegExp)[] =
-    env.NODE_ENV === "production" ? extraOrigins : [...devOrigins, ...extraOrigins];
+    env.NODE_ENV === "production" && !isDesktopBootstrapRuntime
+      ? extraOrigins
+      : [...devOrigins, ...extraOrigins];
 
   await app.register(cors, {
     origin: allowedOrigins,

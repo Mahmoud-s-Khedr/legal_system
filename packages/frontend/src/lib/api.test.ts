@@ -225,4 +225,22 @@ describe("apiDownload", () => {
       expect.anything()
     );
   });
+
+  it("does not duplicate /api when VITE_API_BASE_URL is /api", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DESKTOP_SHELL", "false");
+    vi.stubEnv("VITE_API_BASE_URL", "/api");
+
+    const { resolveApiUrl } = await import("./api");
+    expect(resolveApiUrl("/api/health")).toBe("/api/health");
+  });
+
+  it("does not duplicate /api when VITE_API_BASE_URL is an absolute /api origin", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DESKTOP_SHELL", "false");
+    vi.stubEnv("VITE_API_BASE_URL", "http://127.0.0.1:7854/api");
+
+    const { resolveApiUrl } = await import("./api");
+    expect(resolveApiUrl("/api/health")).toBe("http://127.0.0.1:7854/api/health");
+  });
 });

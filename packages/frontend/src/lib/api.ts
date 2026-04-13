@@ -1,4 +1,4 @@
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? "";
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
 const desktopRuntimeVariant = (import.meta.env.VITE_DESKTOP_RUNTIME_VARIANT as string | undefined) ?? "embedded";
 const DESKTOP_EMBEDDED_FALLBACK_BASE_URL = "http://127.0.0.1:7854";
@@ -104,7 +104,7 @@ function normalizeBaseUrl(value: string | null | undefined) {
     return null;
   }
 
-  const trimmed = value.trim().replace(/\/+$/, "");
+  const trimmed = value.trim();
   if (!trimmed) {
     return null;
   }
@@ -118,11 +118,10 @@ function normalizeBaseUrl(value: string | null | undefined) {
     if (!parsed.host) {
       return null;
     }
+    return parsed.origin;
   } catch {
     return null;
   }
-
-  return trimmed;
 }
 
 function readDesktopBackendBaseUrlCache() {
@@ -486,12 +485,42 @@ export function resolveApiUrl(input: string) {
     return input;
   }
 
-  const baseUrl = desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl;
+  const baseUrl = (desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl).trim();
   if (!baseUrl) {
     return input;
   }
 
-  return `${baseUrl}${input.startsWith("/") ? input : `/${input}`}`;
+  const inputPath = input.startsWith("/") ? input : `/${input}`;
+  const normalizeBasePath = (pathValue: string) => {
+    const cleaned = pathValue.trim().replace(/\/+$/, "");
+    if (!cleaned || cleaned === "/") {
+      return "";
+    }
+
+    return cleaned.startsWith("/") ? cleaned : `/${cleaned}`;
+  };
+  const mergeBasePath = (basePath: string, requestPath: string) => {
+    if (!basePath) {
+      return requestPath;
+    }
+    if (requestPath === basePath || requestPath.startsWith(`${basePath}/`)) {
+      return requestPath;
+    }
+    return `${basePath}${requestPath}`;
+  };
+
+  if (/^https?:\/\//i.test(baseUrl)) {
+    try {
+      const parsedBase = new URL(baseUrl);
+      const mergedPath = mergeBasePath(normalizeBasePath(parsedBase.pathname), inputPath);
+      return `${parsedBase.origin}${mergedPath}`;
+    } catch {
+      return inputPath;
+    }
+  }
+
+  const mergedPath = mergeBasePath(normalizeBasePath(baseUrl), inputPath);
+  return mergedPath || inputPath;
 }
 
 function buildAuthHeaders(initHeaders?: HeadersInit) {
