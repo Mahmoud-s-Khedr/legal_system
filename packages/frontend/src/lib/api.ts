@@ -28,8 +28,24 @@ interface DesktopRuntimeBackendUrl {
   baseUrl: string;
 }
 
+export interface DesktopConnectivityDiagnosticSnapshot {
+  reason: string;
+  requestUrl?: string | null;
+  selectedBaseUrl?: string | null;
+  apiBaseUrl?: string | null;
+  runtimeBaseUrl?: string | null;
+  savedOverrideBaseUrl?: string | null;
+  windowOrigin?: string | null;
+  isDesktopShell?: boolean;
+  desktopRuntimeVariant?: string;
+  isEmbeddedDesktopRuntime?: boolean;
+  [key: string]: unknown;
+}
+
 let desktopApiBaseUrlOverride = readDesktopBackendBaseUrlCache();
-let desktopRuntimeBaseUrl: string | null = normalizeBaseUrl(apiBaseUrl);
+let desktopRuntimeBaseUrl: string | null = isDesktopShell && isEmbeddedDesktopRuntime()
+  ? null
+  : normalizeBaseUrl(apiBaseUrl);
 let desktopRuntimeBaseUrlPromise: Promise<void> | null = null;
 let desktopBackendConnectionPromise: Promise<void> | null = null;
 let desktopBackendConnectionValidatedPromise: Promise<void> | null = null;
@@ -168,6 +184,42 @@ function writeDesktopBackendBaseUrlCache(value: string | null) {
     window.localStorage.setItem(DESKTOP_BACKEND_BASE_URL_CACHE_KEY, value);
   } catch {
     // Ignore storage failures in desktop/webview.
+  }
+}
+
+function resolveWindowOrigin() {
+  try {
+    if (window?.location?.origin) {
+      return window.location.origin;
+    }
+  } catch {
+    // Ignore window inspection failures.
+  }
+  return null;
+}
+
+function currentActiveBaseUrl() {
+  return desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? (apiBaseUrl || null);
+}
+
+export function captureDesktopConnectivitySnapshot(snapshot: DesktopConnectivityDiagnosticSnapshot) {
+  const normalized = {
+    windowOrigin: resolveWindowOrigin(),
+    selectedBaseUrl: currentActiveBaseUrl(),
+    apiBaseUrl: apiBaseUrl || null,
+    runtimeBaseUrl: desktopRuntimeBaseUrl,
+    savedOverrideBaseUrl: desktopApiBaseUrlOverride,
+    isDesktopShell,
+    desktopRuntimeVariant,
+    isEmbeddedDesktopRuntime: isEmbeddedDesktopRuntime(),
+    ...snapshot
+  };
+
+  writeDesktopConnectivitySnapshot(normalized);
+
+  if (isDesktopShell) {
+    // Fast local triage in packaged desktop sessions.
+    console.warn("[desktop-connectivity]", normalized);
   }
 }
 
@@ -378,10 +430,19 @@ function mapTransportError(error: unknown, input: string) {
   }
 
   const resolvedUrl = resolveRequestUrl(input);
-  const activeBaseUrl = desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? (apiBaseUrl || null);
+  const activeBaseUrl = currentActiveBaseUrl();
+  captureDesktopConnectivitySnapshot({
+    reason: "NETWORK_FETCH_FAILED",
+    requestUrl: resolvedUrl,
+    selectedBaseUrl: activeBaseUrl
+  });
+
   return buildBackendUnreachableError(undefined, {
     requestUrl: resolvedUrl,
     apiBaseUrl: activeBaseUrl,
+    runtimeBaseUrl: desktopRuntimeBaseUrl,
+    savedOverrideBaseUrl: desktopApiBaseUrlOverride,
+    windowOrigin: resolveWindowOrigin(),
     isDesktopShell,
     desktopRuntimeVariant,
     isEmbeddedDesktopRuntime: isEmbeddedDesktopRuntime()

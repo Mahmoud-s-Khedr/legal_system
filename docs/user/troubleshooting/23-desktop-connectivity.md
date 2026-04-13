@@ -57,6 +57,25 @@ Triage order:
 2. Confirm `http://127.0.0.1:7854/api/health` became reachable.
 3. Check `backend-connection.json` for custom backend URL overrides that may be unreachable.
 
+### Backend Reachable in Browser but Not in Desktop App (Windows)
+
+If `http://127.0.0.1:7854/api/health` works in an external browser on Windows, but ELMS desktop still reports backend unreachable, the backend process is usually healthy and the issue is typically desktop WebView request context (origin/CORS).
+
+Validation steps:
+
+1. In ELMS desktop, open **Backend connection** and keep the URL as `http://127.0.0.1:7854`.
+2. Click **Test connection** and note the result.
+3. Collect diagnostics from:
+   - `%APPDATA%\com.elms.desktop\logs\desktop-bootstrap.log`
+   - `%APPDATA%\com.elms.desktop\logs\backend.stdout.log`
+   - `%APPDATA%\com.elms.desktop\logs\backend.stderr.log`
+   - `%APPDATA%\com.elms.desktop\backend-connection.json`
+4. If your support package includes `windows-runtime-diagnostics/cors-origin-probe.json`, confirm:
+   - `passed=true`
+   - `accessControlAllowOrigin=http://tauri.localhost`
+
+If step 4 fails, this indicates a desktop-origin compatibility issue rather than backend startup failure.
+
 ### Linux Startup Repair (Version Mismatch / Upgrade Failures)
 
 If startup fails after upgrading ELMS, the app may detect that the old local PostgreSQL data directory was created by a different PostgreSQL major version.

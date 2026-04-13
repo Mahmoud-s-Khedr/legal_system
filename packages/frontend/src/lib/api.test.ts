@@ -179,6 +179,16 @@ describe("apiDownload", () => {
       name: "ApiError",
       status: 503
     });
+
+    const snapshotRaw = window.localStorage.getItem("elms.desktopBackendConnectivity");
+    expect(snapshotRaw).toBeTruthy();
+    const snapshot = JSON.parse(snapshotRaw as string) as Record<string, unknown>;
+    expect(snapshot.reason).toBe("NETWORK_FETCH_FAILED");
+    expect(snapshot.requestUrl).toBe("http://10.10.10.10:9000/api/auth/login");
+    expect(snapshot.selectedBaseUrl).toBe("http://10.10.10.10:9000");
+    expect(snapshot.runtimeBaseUrl).toBe("http://127.0.0.1:17854");
+    expect(snapshot.desktopRuntimeVariant).toBe("embedded");
+    expect(snapshot.windowOrigin).toBeTruthy();
   });
 
   it("blocks auth calls when desktop bootstrap has failed", async () => {

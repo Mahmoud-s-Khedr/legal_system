@@ -30,12 +30,17 @@ if (Test-Path $resolvedDiagnosticsDir) {
 New-Item -ItemType Directory -Path $resolvedDiagnosticsDir -Force | Out-Null
 
 $healthUri = "http://127.0.0.1:7854/api/health"
+$corsProbeOrigin = "http://tauri.localhost"
 $pollIntervalMs = 2000
 $startTime = Get-Date
 $lastProbeSnapshotAt = Get-Date "1970-01-01"
 $desktopProcess = $null
 $failureMessage = $null
 $lastHealthError = ""
+$corsProbePassed = $false
+$corsProbeStatusCode = 0
+$corsProbeAllowOrigin = ""
+$corsProbeError = ""
 $fatalPatterns = @(
     "(?i)pg_ctl failed:.*system cannot find the path specified",
     "(?i)initdb failed:.*system cannot find the path specified",
@@ -314,6 +319,11 @@ function Export-Diagnostics {
         ("backend_spawn_attempted_seen={0}" -f $snapshot.backendSpawnAttemptedSeen),
         ("backend_health_seen={0}" -f $snapshot.backendHealthSeen),
         ("postgres_command_stall_detected={0}" -f $snapshot.postgresCommandStallDetected),
+        ("cors_probe_origin={0}" -f $corsProbeOrigin),
+        ("cors_probe_passed={0}" -f $corsProbePassed),
+        ("cors_probe_status_code={0}" -f $corsProbeStatusCode),
+        ("cors_probe_allow_origin={0}" -f $corsProbeAllowOrigin),
+        ("cors_probe_error={0}" -f $corsProbeError),
         ("backend_connection_file={0}" -f $backendConnectionFile),
         ("backend_connection_json={0}" -f $backendConnectionContent),
         ("runner_appdata={0}" -f $env:APPDATA),
@@ -336,12 +346,29 @@ function Export-Diagnostics {
         backendSpawnAttemptedSeen = $snapshot.backendSpawnAttemptedSeen
         backendHealthSeen = $snapshot.backendHealthSeen
         postgresCommandStallDetected = $snapshot.postgresCommandStallDetected
+        corsProbeOrigin = $corsProbeOrigin
+        corsProbePassed = $corsProbePassed
+        corsProbeStatusCode = $corsProbeStatusCode
+        corsProbeAllowOrigin = $corsProbeAllowOrigin
+        corsProbeError = $corsProbeError
         backendConnectionFile = $backendConnectionFile
         backendConnectionJson = $backendConnectionContent
         runnerAppData = $env:APPDATA
         runnerLocalAppData = $env:LOCALAPPDATA
     }
     $summaryObject | ConvertTo-Json -Depth 5 | Set-Content -Path $summaryJsonPath -Encoding UTF8
+
+    $corsProbePath = Join-Path $resolvedDiagnosticsDir "cors-origin-probe.json"
+    $corsProbeObject = [ordered]@{
+        timestamp = (Get-Date).ToString("o")
+        healthUri = $healthUri
+        origin = $corsProbeOrigin
+        passed = $corsProbePassed
+        statusCode = $corsProbeStatusCode
+        accessControlAllowOrigin = $corsProbeAllowOrigin
+        error = $corsProbeError
+    }
+    $corsProbeObject | ConvertTo-Json -Depth 5 | Set-Content -Path $corsProbePath -Encoding UTF8
 
     $logFiles = @(Get-DesktopLogFiles)
     $manifest = Join-Path $resolvedDiagnosticsDir "log-manifest.txt"
@@ -418,6 +445,20 @@ try {
         try {
             $response = Invoke-WebRequest -Uri $healthUri -UseBasicParsing -TimeoutSec 2
             if ($response.StatusCode -eq 200 -and $response.Content -match '"ok"\s*:\s*true') {
+                try {
+                    $corsResponse = Invoke-WebRequest -Uri $healthUri -UseBasicParsing -TimeoutSec 2 -Headers @{ Origin = $corsProbeOrigin }
+                    $corsProbeStatusCode = [int]$corsResponse.StatusCode
+                    $corsProbeAllowOrigin = [string]$corsResponse.Headers["Access-Control-Allow-Origin"]
+                    if ($corsProbeStatusCode -ne 200 -or $corsProbeAllowOrigin -ne $corsProbeOrigin) {
+                        throw ("Unexpected CORS probe response (status={0}, access-control-allow-origin={1})" -f $corsProbeStatusCode, $corsProbeAllowOrigin)
+                    }
+                    $corsProbePassed = $true
+                    Write-Host ("Desktop runtime CORS probe passed for Origin={0}" -f $corsProbeOrigin)
+                } catch {
+                    $corsProbeError = $_.Exception.Message
+                    throw ("Desktop runtime CORS probe failed for Origin={0}: {1}" -f $corsProbeOrigin, $corsProbeError)
+                }
+
                 Write-Host ("Desktop runtime smoke check passed at {0}" -f $healthUri)
                 $healthy = $true
                 break

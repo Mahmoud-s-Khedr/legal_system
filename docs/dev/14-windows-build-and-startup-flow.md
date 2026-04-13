@@ -181,6 +181,7 @@ Triage order:
 2. Confirm PostgreSQL ready lines in `postgres.log`.
 3. Confirm backend launch and health progression.
 4. If login shows `Failed to fetch`, verify `/api/health` reachability and effective backend URL override.
+5. If `/api/health` is reachable in an external browser but desktop still fails, inspect `cors-origin-probe.json` from smoke diagnostics and verify `Access-Control-Allow-Origin` is returned for `http://tauri.localhost`.
 
 ## Release Candidate Verification Checklist
 

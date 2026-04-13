@@ -2,7 +2,12 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { AuthShell } from "./AuthShell";
-import { ApiError, getEffectiveApiBaseUrl, resolveApiUrl, setApiBaseUrlOverride } from "../../lib/api";
+import {
+  ApiError,
+  captureDesktopConnectivitySnapshot,
+  getEffectiveApiBaseUrl,
+  setApiBaseUrlOverride
+} from "../../lib/api";
 import { Field, FormAlert } from "../app/ui";
 
 type TestStatus = "idle" | "success" | "error";
@@ -54,8 +59,14 @@ export function BackendConnectionPage() {
     setTestStatus("idle");
     setTestMessage(null);
     try {
-      const response = await fetch(resolveApiUrl("/api/health"), { credentials: "include" });
+      const baseUrl = await getEffectiveApiBaseUrl();
+      const requestUrl = `${baseUrl.replace(/\/+$/, "")}/api/health`;
+      const response = await fetch(requestUrl, { credentials: "include" });
       if (!response.ok) {
+        captureDesktopConnectivitySnapshot({
+          reason: "BACKEND_CONNECTION_TEST_NON_OK",
+          requestUrl
+        });
         setTestStatus("error");
         setTestMessage(t("backendConnection.unreachable"));
         return;
@@ -63,6 +74,10 @@ export function BackendConnectionPage() {
       setTestStatus("success");
       setTestMessage(t("backendConnection.reachable"));
     } catch {
+      captureDesktopConnectivitySnapshot({
+        reason: "BACKEND_CONNECTION_TEST_FETCH_FAILED",
+        requestUrl: null
+      });
       setTestStatus("error");
       setTestMessage(t("backendConnection.unreachable"));
     } finally {

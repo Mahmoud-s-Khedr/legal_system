@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff } from "lucide-react";
 import { AuthShell } from "./AuthShell";
-import { ApiError } from "../../lib/api";
+import { ApiError, captureDesktopConnectivitySnapshot } from "../../lib/api";
 import { useAuthBootstrap } from "../../store/authStore";
 import { Field, FormAlert } from "../app/ui";
 
@@ -16,12 +16,14 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBackendUnreachable, setIsBackendUnreachable] = useState(false);
+  const [diagnosticSummary, setDiagnosticSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsBackendUnreachable(false);
+    setDiagnosticSummary(null);
     setLoading(true);
 
     try {
@@ -33,6 +35,21 @@ export function LoginPage() {
         : undefined;
 
       if (code === "BACKEND_UNREACHABLE") {
+        const details =
+          submitError instanceof ApiError && typeof submitError.details === "object" && submitError.details !== null
+            ? (submitError.details as Record<string, unknown>)
+            : {};
+        const summary = [
+          `origin=${String(details.windowOrigin ?? window.location.origin ?? "unknown")}`,
+          `url=${String(details.requestUrl ?? "unknown")}`,
+          `base=${String(details.apiBaseUrl ?? "unknown")}`,
+          `runtime=${String(details.desktopRuntimeVariant ?? "unknown")}`
+        ].join(" | ");
+        setDiagnosticSummary(summary);
+        captureDesktopConnectivitySnapshot({
+          reason: "LOGIN_BACKEND_UNREACHABLE",
+          requestUrl: typeof details.requestUrl === "string" ? details.requestUrl : null
+        });
         setError(t("backendConnection.loginUnreachable"));
         setIsBackendUnreachable(true);
       } else {
@@ -85,6 +102,11 @@ export function LoginPage() {
         {isBackendUnreachable ? (
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
             {t("backendConnection.loginHint")}
+          </p>
+        ) : null}
+        {isBackendUnreachable && diagnosticSummary ? (
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700" dir="ltr">
+            {diagnosticSummary}
           </p>
         ) : null}
         <button
