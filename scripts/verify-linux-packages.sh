@@ -17,7 +17,7 @@ cleanup() {
     docker run --rm \
       -v "$TMP_DIR:/cleanup" \
       ubuntu:24.04 \
-      bash -lc '
+      bash -c '
         set -euo pipefail
         find /cleanup -mindepth 1 -delete
       ' >/dev/null 2>&1 || true
@@ -65,27 +65,85 @@ run_postgres_runtime_smoke() {
   local label="$4"
   local smoke_uid
   local smoke_gid
+  local requested_uid_gid
+  local selected_uid_gid
+  local selected_uid
+  local selected_gid
+  local uid_strategy
+  local preflight_output
 
   smoke_uid="$(id -u)"
   smoke_gid="$(id -g)"
   if [[ -z "$smoke_uid" || -z "$smoke_gid" ]]; then
     die "Failed to resolve host UID/GID for PostgreSQL smoke container."
   fi
+  requested_uid_gid="${smoke_uid}:${smoke_gid}"
+  selected_uid_gid="$requested_uid_gid"
+  uid_strategy="host-uid-gid"
 
-  echo "Running PostgreSQL runtime smoke in $label: $bundle_root (container uid:gid ${smoke_uid}:${smoke_gid})"
-
-  docker run --rm \
-    --user "${smoke_uid}:${smoke_gid}" \
-    -v "$mount_dir:/bundle:ro" \
+  set +e
+  preflight_output="$(docker run --rm \
+    --user "$requested_uid_gid" \
     "$image" \
-    bash -lc '
+    bash -c '
       set -euo pipefail
-      BUNDLE_ROOT="$1"
       EFFECTIVE_UID="$(id -u)"
       EFFECTIVE_GID="$(id -g)"
-      echo "PostgreSQL smoke effective uid:gid ${EFFECTIVE_UID}:${EFFECTIVE_GID}"
+
+      if [[ "$EFFECTIVE_UID" -eq 0 ]]; then
+        echo "root:${EFFECTIVE_UID}:${EFFECTIVE_GID}"
+        exit 12
+      fi
+
+      if getent passwd "$EFFECTIVE_UID" >/dev/null 2>&1; then
+        echo "resolved:${EFFECTIVE_UID}:${EFFECTIVE_GID}"
+        exit 0
+      fi
+
+      echo "missing-passwd:${EFFECTIVE_UID}:${EFFECTIVE_GID}"
+      exit 42
+    ' 2>&1)"
+  local preflight_status=$?
+  set -e
+
+  if [[ "$preflight_status" -eq 0 ]]; then
+    uid_strategy="host-uid-gid"
+  elif [[ "$preflight_status" -eq 42 ]]; then
+    selected_uid_gid="65534:65534"
+    uid_strategy="fallback-nobody"
+    echo "PostgreSQL smoke uid strategy: host uid $requested_uid_gid is not present in container passwd; using fallback $selected_uid_gid."
+  elif [[ "$preflight_status" -eq 12 ]]; then
+    die "PostgreSQL smoke preflight attempted to run as root for requested uid:gid $requested_uid_gid in image '$image': $preflight_output"
+  else
+    die "PostgreSQL smoke preflight failed for requested uid:gid $requested_uid_gid in image '$image' (exit $preflight_status): $preflight_output"
+  fi
+
+  selected_uid="${selected_uid_gid%%:*}"
+  selected_gid="${selected_uid_gid##*:}"
+  if [[ "$selected_uid" -eq 0 || "$selected_gid" -eq 0 ]]; then
+    die "PostgreSQL smoke selected invalid root uid:gid $selected_uid_gid (strategy: $uid_strategy)."
+  fi
+
+  echo "Running PostgreSQL runtime smoke in $label: $bundle_root (requested uid:gid $requested_uid_gid, selected uid:gid $selected_uid_gid, strategy: $uid_strategy)"
+
+  docker run --rm \
+    --user "$selected_uid_gid" \
+    -v "$mount_dir:/bundle:ro" \
+    "$image" \
+    bash -c '
+      set -euo pipefail
+      BUNDLE_ROOT="$1"
+      UID_STRATEGY="$2"
+      EFFECTIVE_UID="$(id -u)"
+      EFFECTIVE_GID="$(id -g)"
+      echo "PostgreSQL smoke effective uid:gid ${EFFECTIVE_UID}:${EFFECTIVE_GID} (strategy: ${UID_STRATEGY})"
       if [[ "$EFFECTIVE_UID" -eq 0 ]]; then
         echo "PostgreSQL smoke must not run as root; initdb rejects UID 0." >&2
+        exit 1
+      fi
+      if ! getent passwd "$EFFECTIVE_UID" >/dev/null 2>&1; then
+        echo "PostgreSQL smoke user lookup failed for uid ${EFFECTIVE_UID} (strategy: ${UID_STRATEGY})." >&2
+        echo "This indicates container passwd mapping is missing for the selected uid." >&2
         exit 1
       fi
       POSTGRES_ROOT="$BUNDLE_ROOT/postgres"
@@ -118,7 +176,7 @@ run_postgres_runtime_smoke() {
       "$BIN_DIR/pg_ctl" -D "$DATA_DIR" -l "$LOG_FILE" -o "-p $PORT -k $SOCK_DIR" start >/dev/null
       "$BIN_DIR/pg_isready" -h 127.0.0.1 -p "$PORT" -t 1 >/dev/null
       "$BIN_DIR/pg_ctl" -D "$DATA_DIR" -m fast stop >/dev/null
-    ' _ "$bundle_root"
+    ' _ "$bundle_root" "$uid_strategy"
 }
 
 verify_appimage() {
@@ -151,7 +209,7 @@ verify_deb() {
     -v "$ROOT_DIR:/workspace:ro" \
     -v "$extract_dir:/extract" \
     ubuntu:24.04 \
-    bash -lc '
+    bash -c '
       set -euo pipefail
       dpkg-deb -x "/workspace/'"$deb_relative"'" /extract
     '
@@ -171,7 +229,7 @@ verify_rpm() {
     -v "$ROOT_DIR:/workspace:ro" \
     -v "$install_root:/verify-root" \
     fedora:41 \
-    bash -lc '
+    bash -c '
       set -euo pipefail
       rpm --root /verify-root --initdb
       rpm --root /verify-root -ivh --nodeps --nosignature /workspace/'"${rpm_file#"$ROOT_DIR"/}"' >/dev/null

@@ -91,7 +91,9 @@ jobs:
       - name: Validate Linux deb and rpm artifacts
         env:
           VERIFY_LINUX_BUNDLES: "deb,rpm"
-        run: bash scripts/verify-linux-packages.sh
+        run: |
+          echo "Verifier host uid:gid $(id -u):$(id -g)"
+          bash scripts/verify-linux-packages.sh
 
       - name: Upload Linux deb artifact
         uses: actions/upload-artifact@v4
@@ -206,7 +208,9 @@ jobs:
       - name: Validate Linux AppImage artifact
         env:
           VERIFY_LINUX_BUNDLES: "appimage"
-        run: bash scripts/verify-linux-packages.sh
+        run: |
+          echo "Verifier host uid:gid $(id -u):$(id -g)"
+          bash scripts/verify-linux-packages.sh
 
       - name: Upload Linux AppImage artifact
         uses: actions/upload-artifact@v4
