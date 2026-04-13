@@ -127,7 +127,7 @@ COMPOSE_FILE=/srv/elms/docker-compose.yml bash scripts/deploy-cloud.sh
 **When to use:** Run once before building the Tauri desktop package on Linux — either locally or as a CI step. The script is idempotent: it skips downloads if `.bundle-complete` sentinel files exist.
 
 **How it works:**
-- **PostgreSQL:** Installs PostgreSQL via `apt-get` (Ubuntu) or `dnf` (Fedora) if not already present. Copies five executables (`pg_ctl`, `initdb`, `pg_isready`, `createdb`, `postgres`) to `resources/postgres/bin/`, collects shared library dependencies with `ldd`, copies them to `resources/postgres/lib/`, and patches RPATH using `patchelf` so the binaries resolve bundled libraries via `$ORIGIN/../lib`. Copies locale and timezone data to `resources/postgres/share/`.
+- **PostgreSQL:** Installs PostgreSQL via `apt-get` (Ubuntu) or `dnf` (Fedora) if not already present. Copies five executables (`pg_ctl`, `initdb`, `pg_isready`, `createdb`, `postgres`) to `resources/postgres/bin/`, collects shared library dependencies with `ldd`, copies them to `resources/postgres/lib/`, and patches **DT_RPATH** using `patchelf --force-rpath --set-rpath` so the binaries resolve bundled libraries via `$ORIGIN/../lib` (including transitive dependencies). Copies locale and timezone data to `resources/postgres/share/`.
 - **Node.js:** Downloads the Node.js Linux x64 tarball from `nodejs.org` and copies only the `node` binary to `resources/node/node`.
 
 **Requirements:** `curl`, `tar`, `ldd`, `patchelf`. `sudo` is needed only when PostgreSQL is not yet installed.

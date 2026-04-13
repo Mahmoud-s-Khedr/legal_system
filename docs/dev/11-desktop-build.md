@@ -114,7 +114,7 @@ Desktop runtime now uses profile-specific defaults to prevent workspace developm
 
 To temporarily revert workspace isolation for compatibility testing, set `ELMS_DISABLE_WORKSPACE_DEV_ISOLATION=true` before launching `pnpm dev:tauri`.
 
-On Linux the executables have their RPATH patched with `patchelf` to resolve bundled shared libraries via `$ORIGIN/../lib`, making the binaries fully portable without requiring `LD_LIBRARY_PATH`.
+On Linux the executables have their **DT_RPATH** patched with `patchelf --force-rpath --set-rpath` to resolve bundled shared libraries via `$ORIGIN/../lib` (including indirect dependencies). At runtime, ELMS also sets `LD_LIBRARY_PATH` from `POSTGRES_RUNTIME_LIB_DIR` as a compatibility fallback on minimal hosts.
 
 Linux bundles now include a manifest at `apps/desktop/resources/postgres/.layout.env`. The bundling step preserves PostgreSQL's distro-specific relative subtree under a synthetic bundle root, so Ubuntu layouts like `share/postgresql/16` and Fedora layouts like `share/pgsql` both remain valid inside the packaged app. The desktop runtime and resource verifier read this manifest instead of assuming a fixed `lib64/pgsql` / `share/pgsql` tree.
 
@@ -179,7 +179,7 @@ bash scripts/check-desktop-packaging-host.sh --targets linux
 pnpm release:desktop:linux
 ```
 
-`bundle-linux-deps.sh` now performs a PostgreSQL smoke test after copying resources: it runs the bundled `postgres` binary and initializes a temporary data directory with the bundled `initdb` binary before writing the bundle sentinel.
+`bundle-linux-deps.sh` now performs a PostgreSQL smoke test after copying resources: it verifies `ldd` has no unresolved dependencies for bundled PostgreSQL executables, then runs the bundled `postgres` and `initdb` in a sanitized environment before writing the bundle sentinel.
 
 Artifacts are written to:
 - `apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage`
@@ -408,4 +408,3 @@ Related: [Scripts Reference](./10-scripts.md) | [Environment Variables](./03-env
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

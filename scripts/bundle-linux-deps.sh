@@ -163,16 +163,31 @@ linux_node_bundle_is_usable() {
 run_postgres_layout_smoke_test() {
   local bundle_root="$1"
   local bin_relative="$2"
+  local runtime_lib_relative="$3"
 
   local bin_dir="$bundle_root/$bin_relative"
+  local runtime_lib_dir="$bundle_root/$runtime_lib_relative"
   local smoke_root="$TMP_DIR/postgres-smoke"
   local data_dir="$smoke_root/data"
 
   mkdir -p "$smoke_root"
 
   echo "[PG] Running bundled PostgreSQL smoke test ..."
-  "$bin_dir/postgres" -V >/dev/null
-  "$bin_dir/initdb" -D "$data_dir" -A trust -U elms --no-sync >/dev/null
+  local exe
+  for exe in pg_ctl initdb pg_isready createdb postgres; do
+    local ldd_output
+    ldd_output="$(ldd "$bin_dir/$exe" 2>&1 || true)"
+    if grep -q "not found" <<<"$ldd_output"; then
+      echo "[PG] Shared library resolution failed for $exe" >&2
+      echo "$ldd_output" >&2
+      return 1
+    fi
+  done
+
+  env -i PATH="/usr/bin:/bin" LD_LIBRARY_PATH="$runtime_lib_dir" \
+    "$bin_dir/postgres" -V >/dev/null
+  env -i PATH="/usr/bin:/bin" LD_LIBRARY_PATH="$runtime_lib_dir" \
+    "$bin_dir/initdb" -D "$data_dir" -A trust -U elms --no-sync >/dev/null
   rm -rf "$smoke_root"
 }
 
@@ -284,11 +299,12 @@ else
 
   # Patch RPATH on each binary so they resolve bundled libs via a path that is
   # relative to the preserved bindir layout inside the bundle.
-  # without requiring LD_LIBRARY_PATH to be set at runtime.
+  # Force legacy DT_RPATH semantics so indirect dependencies also resolve
+  # through the bundled runtime library directory.
   echo "[PG] Patching RPATH with patchelf ..."
   PG_RPATH_RELATIVE="$(realpath --relative-to="$PG_BIN_DEST" "$PG_RUNTIME_LIB_DEST")"
   for exe in pg_ctl initdb pg_isready createdb postgres; do
-    patchelf --set-rpath "\$ORIGIN/$PG_RPATH_RELATIVE" "$PG_BIN_DEST/$exe"
+    patchelf --force-rpath --set-rpath "\$ORIGIN/$PG_RPATH_RELATIVE" "$PG_BIN_DEST/$exe"
   done
 
   cat > "$PG_LAYOUT_FILE" <<EOF
@@ -298,7 +314,7 @@ POSTGRES_PKGLIB_DIR=$PG_PKG_LIB_RELATIVE
 POSTGRES_RUNTIME_LIB_DIR=$PG_RUNTIME_LIB_RELATIVE
 EOF
 
-  run_postgres_layout_smoke_test "$PG_DEST" "$PG_BIN_RELATIVE"
+  run_postgres_layout_smoke_test "$PG_DEST" "$PG_BIN_RELATIVE" "$PG_RUNTIME_LIB_RELATIVE"
 
   # Write sentinel so subsequent runs skip the whole block.
   echo "PostgreSQL $PG_VERSION bundled on $(date +%Y-%m-%d)" > "$PG_SENTINEL"

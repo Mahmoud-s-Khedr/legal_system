@@ -78,6 +78,17 @@ run_postgres_runtime_smoke() {
       source "$POSTGRES_ROOT/.layout.env"
 
       BIN_DIR="$POSTGRES_ROOT/$POSTGRES_BIN_DIR"
+      RUNTIME_LIB_DIR="$POSTGRES_ROOT/$POSTGRES_RUNTIME_LIB_DIR"
+      [[ -d "$RUNTIME_LIB_DIR" ]] || { echo "Missing runtime library dir: $RUNTIME_LIB_DIR" >&2; exit 1; }
+
+      LDD_OUTPUT="$(ldd "$BIN_DIR/postgres" 2>&1 || true)"
+      if grep -q "not found" <<<"$LDD_OUTPUT"; then
+        echo "Bundled postgres has unresolved shared libraries:" >&2
+        echo "$LDD_OUTPUT" >&2
+        exit 1
+      fi
+
+      export LD_LIBRARY_PATH="$RUNTIME_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
       SMOKE_ROOT="$(mktemp -d -t elms-pg-smoke-XXXXXX)"
       DATA_DIR="$SMOKE_ROOT/data"
       LOG_FILE="$SMOKE_ROOT/postgres.log"

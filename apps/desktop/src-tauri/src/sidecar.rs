@@ -2932,6 +2932,7 @@ where
             read_postgres_layout_entry(&resource_dir, "POSTGRES_RUNTIME_LIB_DIR")
         {
             if runtime_lib_dir.exists() {
+                let runtime_lib_dir_for_ld_library_path = runtime_lib_dir.clone();
                 let mut combined_paths = vec![runtime_lib_dir];
                 if let Some(existing_path) = std::env::var_os("PATH") {
                     combined_paths.extend(std::env::split_paths(&existing_path));
@@ -2939,6 +2940,20 @@ where
 
                 if let Ok(path_value) = std::env::join_paths(combined_paths) {
                     command.env("PATH", path_value);
+                }
+
+                #[cfg(target_os = "linux")]
+                {
+                    let mut ld_library_paths = vec![runtime_lib_dir_for_ld_library_path];
+                    if let Some(existing_ld_library_path) =
+                        std::env::var_os("LD_LIBRARY_PATH")
+                    {
+                        ld_library_paths.extend(std::env::split_paths(&existing_ld_library_path));
+                    }
+
+                    if let Ok(ld_library_path_value) = std::env::join_paths(ld_library_paths) {
+                        command.env("LD_LIBRARY_PATH", ld_library_path_value);
+                    }
                 }
             }
         }
