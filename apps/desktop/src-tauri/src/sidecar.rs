@@ -2945,9 +2945,7 @@ where
                 #[cfg(target_os = "linux")]
                 {
                     let mut ld_library_paths = vec![runtime_lib_dir_for_ld_library_path];
-                    if let Some(existing_ld_library_path) =
-                        std::env::var_os("LD_LIBRARY_PATH")
-                    {
+                    if let Some(existing_ld_library_path) = std::env::var_os("LD_LIBRARY_PATH") {
                         ld_library_paths.extend(std::env::split_paths(&existing_ld_library_path));
                     }
 
