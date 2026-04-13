@@ -148,6 +148,8 @@ The Rust sidecar code locates the bundled `node` binary relative to the app reso
 
 Desktop builds no longer require an `elms.license` file to launch. The active startup gates are runtime health only: PostgreSQL must initialize, the Node.js sidecar must become healthy, and the bundled frontend must load successfully.
 
+For a step-by-step Windows-focused implementation runbook (CI chain, payload contract, startup phases, diagnostics, and recovery), see [14 - Windows Build and Startup Flow](./14-windows-build-and-startup-flow.md).
+
 Backend licensing data and activation flows still exist for product logic, but they are not part of the desktop bootstrap path or local development setup.
 
 Desktop releases are installer-only in the current release train. The Tauri updater plugin and OTA manifest flow are not active, so version upgrades are distributed by shipping new platform installers.
