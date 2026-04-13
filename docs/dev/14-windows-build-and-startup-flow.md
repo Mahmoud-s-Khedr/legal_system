@@ -174,6 +174,7 @@ Key files to collect:
 - `postgres.log`
 - `backend.stdout.log`
 - `backend.stderr.log`
+- `backend-connection.json` (desktop backend URL override state)
 
 Triage order:
 1. Confirm bootstrap phase transitions in `desktop-bootstrap.log`.

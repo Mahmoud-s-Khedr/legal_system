@@ -114,6 +114,23 @@ function Get-DesktopLogFiles {
     return $files
 }
 
+function Get-BackendConnectionFiles {
+    $files = New-Object 'System.Collections.Generic.List[string]'
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+
+    foreach ($root in Get-DesktopLogRoots) {
+        $candidate = Join-Path $root "backend-connection.json"
+        if (Test-Path $candidate -PathType Leaf) {
+            $resolved = (Resolve-Path $candidate).Path
+            if ($seen.Add($resolved)) {
+                $files.Add($resolved) | Out-Null
+            }
+        }
+    }
+
+    return $files
+}
+
 function Find-FatalBootstrapError {
     foreach ($logFile in Get-DesktopLogFiles) {
         $tail = @()
@@ -272,6 +289,16 @@ function Export-Diagnostics {
         $failureSummary = $FailureMessage
     }
     $snapshot = Get-BootstrapPhaseSnapshot
+    $backendConnectionFiles = @(Get-BackendConnectionFiles)
+    $backendConnectionFile = if ($backendConnectionFiles.Count -gt 0) { $backendConnectionFiles[0] } else { "" }
+    $backendConnectionContent = ""
+    if ($backendConnectionFile) {
+      try {
+        $backendConnectionContent = (Get-Content -Path $backendConnectionFile -Raw -ErrorAction SilentlyContinue)
+      } catch {
+        $backendConnectionContent = ""
+      }
+    }
     $summaryLines = @(
         ("timestamp={0}" -f (Get-Date).ToString("o")),
         ("desktop_exe={0}" -f $desktopExe),
@@ -287,6 +314,8 @@ function Export-Diagnostics {
         ("backend_spawn_attempted_seen={0}" -f $snapshot.backendSpawnAttemptedSeen),
         ("backend_health_seen={0}" -f $snapshot.backendHealthSeen),
         ("postgres_command_stall_detected={0}" -f $snapshot.postgresCommandStallDetected),
+        ("backend_connection_file={0}" -f $backendConnectionFile),
+        ("backend_connection_json={0}" -f $backendConnectionContent),
         ("runner_appdata={0}" -f $env:APPDATA),
         ("runner_localappdata={0}" -f $env:LOCALAPPDATA)
     )
@@ -307,6 +336,8 @@ function Export-Diagnostics {
         backendSpawnAttemptedSeen = $snapshot.backendSpawnAttemptedSeen
         backendHealthSeen = $snapshot.backendHealthSeen
         postgresCommandStallDetected = $snapshot.postgresCommandStallDetected
+        backendConnectionFile = $backendConnectionFile
+        backendConnectionJson = $backendConnectionContent
         runnerAppData = $env:APPDATA
         runnerLocalAppData = $env:LOCALAPPDATA
     }
@@ -333,6 +364,17 @@ function Export-Diagnostics {
             Write-LogTailToConsole -Path $logFile -Lines 80
         } catch {
             $manifestLines.Add(("{0} -> copy failed: {1}" -f $logFile, $_.Exception.Message)) | Out-Null
+        }
+    }
+
+    foreach ($connectionFile in $backendConnectionFiles) {
+        $safe = (($connectionFile -replace '[:\\\/ ]', '_') -replace '_+', '_').Trim('_')
+        $destination = Join-Path $copiedDir ("{0}__{1}" -f $safe, (Split-Path -Leaf $connectionFile))
+        try {
+            Copy-Item -Path $connectionFile -Destination $destination -Force
+            $manifestLines.Add(("{0} -> {1}" -f $connectionFile, $destination)) | Out-Null
+        } catch {
+            $manifestLines.Add(("{0} -> copy failed: {1}" -f $connectionFile, $_.Exception.Message)) | Out-Null
         }
     }
 

@@ -106,6 +106,12 @@ function Assert-BundledPostgresResources {
         }
     }
 
+    foreach ($runtimeDll in @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")) {
+        if (-not (Test-Path (Join-Path $binDir $runtimeDll))) {
+            throw "Bundled PostgreSQL VC++ runtime dependency missing: $runtimeDll"
+        }
+    }
+
     if (-not (Test-Path (Join-Path $shareDir "timezonesets"))) {
         throw "Bundled PostgreSQL timezone data missing under $shareDir"
     }
@@ -113,6 +119,33 @@ function Assert-BundledPostgresResources {
     $dlls = Get-ChildItem -Path $libDir -Filter "*.dll" -File -ErrorAction SilentlyContinue
     if (-not $dlls -or $dlls.Count -eq 0) {
         throw "Bundled PostgreSQL runtime libraries are missing from $libDir"
+    }
+}
+
+function Copy-AppLocalMsVcRuntimeDlls {
+    param([string]$PgBinDir)
+
+    $requiredDlls = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")
+    $sourceDirectories = @(
+        (Join-Path $env:SystemRoot "System32"),
+        (Join-Path $env:SystemRoot "SysWOW64")
+    )
+
+    foreach ($dll in $requiredDlls) {
+        $sourcePath = $null
+        foreach ($sourceDir in $sourceDirectories) {
+            $candidate = Join-Path $sourceDir $dll
+            if (Test-Path $candidate -PathType Leaf) {
+                $sourcePath = $candidate
+                break
+            }
+        }
+
+        if (-not $sourcePath) {
+            throw "Unable to locate required VC++ runtime DLL '$dll' in System32/SysWOW64."
+        }
+
+        Copy-Item -Path $sourcePath -Destination (Join-Path $PgBinDir $dll) -Force
     }
 }
 
@@ -170,6 +203,9 @@ if ($PgBundleReady) {
             Write-Warning "PostgreSQL zip does not contain a '$Dir' directory — skipping."
         }
     }
+
+    Write-Host "  Copying MSVC runtime DLLs beside PostgreSQL executables ..."
+    Copy-AppLocalMsVcRuntimeDlls -PgBinDir (Join-Path $PgDestDir "bin")
 
     @"
 POSTGRES_BIN_DIR=bin

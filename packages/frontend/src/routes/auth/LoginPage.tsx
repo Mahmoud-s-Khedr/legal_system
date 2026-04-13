@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff } from "lucide-react";
 import { AuthShell } from "./AuthShell";
+import { ApiError } from "../../lib/api";
 import { useAuthBootstrap } from "../../store/authStore";
 import { Field, FormAlert } from "../app/ui";
 
@@ -14,18 +15,29 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isBackendUnreachable, setIsBackendUnreachable] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setIsBackendUnreachable(false);
     setLoading(true);
 
     try {
       await login({ email, password });
       await navigate({ to: "/app/dashboard" });
     } catch (submitError) {
-      setError((submitError as Error).message);
+      const code = submitError instanceof ApiError && typeof submitError.details === "object" && submitError.details !== null
+        ? (submitError.details as { code?: string }).code
+        : undefined;
+
+      if (code === "BACKEND_UNREACHABLE") {
+        setError(t("backendConnection.loginUnreachable"));
+        setIsBackendUnreachable(true);
+      } else {
+        setError((submitError as Error).message);
+      }
     } finally {
       setLoading(false);
     }
@@ -70,6 +82,11 @@ export function LoginPage() {
           </div>
         </div>
         {error ? <FormAlert message={error} /> : null}
+        {isBackendUnreachable ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {t("backendConnection.loginHint")}
+          </p>
+        ) : null}
         <button
           className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           type="submit"

@@ -1,8 +1,13 @@
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
 const desktopRuntimeVariant = (import.meta.env.VITE_DESKTOP_RUNTIME_VARIANT as string | undefined) ?? "embedded";
+const DESKTOP_EMBEDDED_DEFAULT_BASE_URL = "http://127.0.0.1:7854";
 const LOCAL_SESSION_STORAGE_KEY = "elms.localSessionToken";
 const DESKTOP_BACKEND_BASE_URL_CACHE_KEY = "elms.desktopBackendBaseUrl";
+const DESKTOP_CONNECTIVITY_SNAPSHOT_KEY = "elms.desktopBackendConnectivity";
+const DESKTOP_HEALTH_PROBE_TIMEOUT_MS = 1200;
+const DESKTOP_BOOTSTRAP_READY_TIMEOUT_MS = 15000;
+const DESKTOP_BOOTSTRAP_POLL_INTERVAL_MS = 350;
 
 interface DesktopBackendConnection {
   baseUrl: string | null;
@@ -13,8 +18,16 @@ interface DesktopSetBackendConnectionResult {
   code?: string | null;
 }
 
+interface DesktopBootstrapStatus {
+  phase: "starting" | "ready" | "recovering" | "failed";
+  message?: string | null;
+  failureCode?: string | null;
+}
+
 let desktopApiBaseUrlOverride = readDesktopBackendBaseUrlCache();
 let desktopBackendConnectionPromise: Promise<void> | null = null;
+let desktopBackendConnectionValidatedPromise: Promise<void> | null = null;
+let desktopBackendFallbackToastShown = false;
 
 export class ApiError extends Error {
   status: number;
@@ -118,6 +131,24 @@ function readDesktopBackendBaseUrlCache() {
   }
 }
 
+function writeDesktopConnectivitySnapshot(snapshot: Record<string, unknown>) {
+  if (!isDesktopShell) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      DESKTOP_CONNECTIVITY_SNAPSHOT_KEY,
+      JSON.stringify({
+        checkedAt: new Date().toISOString(),
+        ...snapshot
+      })
+    );
+  } catch {
+    // Ignore local storage failures in desktop/webview.
+  }
+}
+
 function writeDesktopBackendBaseUrlCache(value: string | null) {
   if (!isDesktopShell) {
     return;
@@ -138,6 +169,219 @@ function writeDesktopBackendBaseUrlCache(value: string | null) {
 async function invokeDesktop<T>(command: string, args?: Record<string, unknown>) {
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<T>(command, args);
+}
+
+function isEmbeddedDesktopRuntime() {
+  return isDesktopShell && desktopRuntimeVariant !== "dummy";
+}
+
+function getDesktopDefaultApiBaseUrl() {
+  const normalizedConfiguredBase = normalizeBaseUrl(apiBaseUrl);
+  if (normalizedConfiguredBase) {
+    return normalizedConfiguredBase;
+  }
+
+  if (isEmbeddedDesktopRuntime()) {
+    return DESKTOP_EMBEDDED_DEFAULT_BASE_URL;
+  }
+
+  return null;
+}
+
+function buildBackendUnreachableError(message = "Unable to reach the local ELMS backend service.", details: Record<string, unknown> = {}) {
+  return new ApiError(message, 503, {
+    code: "BACKEND_UNREACHABLE",
+    ...details
+  });
+}
+
+function isNetworkFailure(error: unknown) {
+  return error instanceof TypeError || (error instanceof DOMException && error.name === "AbortError");
+}
+
+async function probeBackendHealth(baseUrl: string, timeoutMs = DESKTOP_HEALTH_PROBE_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/health`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      return false;
+    }
+
+    const payload = await response.json().catch(() => null);
+    return Boolean(payload && typeof payload === "object" && (payload as { ok?: boolean }).ok === true);
+  } catch {
+    return false;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+async function showDesktopBackendFallbackToast() {
+  if (desktopBackendFallbackToastShown) {
+    return;
+  }
+
+  desktopBackendFallbackToastShown = true;
+  try {
+    const { useToastStore } = await import("../store/toastStore");
+    useToastStore
+      .getState()
+      .addToast("Custom backend URL is unreachable. Reverted to local runtime.", "info");
+  } catch {
+    // Swallow toast errors; connectivity behavior should still continue.
+  }
+}
+
+async function persistDesktopBackendConnectionOverride(baseUrl: string | null) {
+  if (!isDesktopShell) {
+    return;
+  }
+
+  try {
+    await invokeDesktop<DesktopSetBackendConnectionResult>("desktop_set_backend_connection", { baseUrl });
+  } catch {
+    // Ignore command errors; local in-memory fallback remains effective.
+  }
+}
+
+async function validateDesktopBackendConnection() {
+  if (!isEmbeddedDesktopRuntime()) {
+    return;
+  }
+
+  const savedOverride = desktopApiBaseUrlOverride;
+  const defaultBaseUrl = getDesktopDefaultApiBaseUrl();
+
+  if (!savedOverride || !defaultBaseUrl || savedOverride === defaultBaseUrl) {
+    writeDesktopConnectivitySnapshot({
+      selectedBaseUrl: savedOverride ?? defaultBaseUrl,
+      overrideUsed: Boolean(savedOverride),
+      fallbackApplied: false
+    });
+    return;
+  }
+
+  const overrideReachable = await probeBackendHealth(savedOverride);
+  if (overrideReachable) {
+    writeDesktopConnectivitySnapshot({
+      selectedBaseUrl: savedOverride,
+      overrideUsed: true,
+      overrideReachable: true,
+      fallbackApplied: false
+    });
+    return;
+  }
+
+  const defaultReachable = await probeBackendHealth(defaultBaseUrl);
+  if (defaultReachable) {
+    desktopApiBaseUrlOverride = null;
+    writeDesktopBackendBaseUrlCache(null);
+    await persistDesktopBackendConnectionOverride(null);
+    await showDesktopBackendFallbackToast();
+    writeDesktopConnectivitySnapshot({
+      selectedBaseUrl: defaultBaseUrl,
+      overrideUsed: false,
+      overrideReachable: false,
+      defaultReachable: true,
+      fallbackApplied: true
+    });
+    return;
+  }
+
+  writeDesktopConnectivitySnapshot({
+    selectedBaseUrl: savedOverride,
+    overrideUsed: true,
+    overrideReachable: false,
+    defaultReachable: false,
+    fallbackApplied: false
+  });
+}
+
+function isAuthApiPath(input: string) {
+  if (/^https?:\/\//.test(input)) {
+    try {
+      const path = new URL(input).pathname;
+      return path.startsWith("/api/auth/");
+    } catch {
+      return false;
+    }
+  }
+
+  return input.startsWith("/api/auth/") || input.startsWith("api/auth/");
+}
+
+async function waitForDesktopBootstrapReady() {
+  if (!isEmbeddedDesktopRuntime()) {
+    return;
+  }
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < DESKTOP_BOOTSTRAP_READY_TIMEOUT_MS) {
+    try {
+      const status = await invokeDesktop<DesktopBootstrapStatus>("desktop_bootstrap_status");
+      if (status.phase === "ready") {
+        return;
+      }
+      if (status.phase === "failed") {
+        throw buildBackendUnreachableError(
+          "Desktop runtime startup failed. Repair startup and try again.",
+          {
+            reason: "BOOTSTRAP_FAILED",
+            bootstrapPhase: status.phase,
+            bootstrapMessage: status.message ?? null,
+            bootstrapFailureCode: status.failureCode ?? null
+          }
+        );
+      }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw buildBackendUnreachableError("Unable to query desktop runtime status.", {
+        reason: "BOOTSTRAP_STATUS_UNAVAILABLE"
+      });
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, DESKTOP_BOOTSTRAP_POLL_INTERVAL_MS));
+  }
+
+  throw buildBackendUnreachableError(
+    "Desktop runtime is still starting. Wait a moment and try again.",
+    {
+      reason: "BOOTSTRAP_TIMEOUT"
+    }
+  );
+}
+
+function resolveRequestUrl(input: string) {
+  return resolveApiUrl(input);
+}
+
+function mapTransportError(error: unknown, input: string) {
+  if (error instanceof ApiError) {
+    return error;
+  }
+
+  if (!isNetworkFailure(error)) {
+    return error;
+  }
+
+  const resolvedUrl = resolveRequestUrl(input);
+  const activeBaseUrl = desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? (apiBaseUrl || null);
+  return buildBackendUnreachableError(undefined, {
+    requestUrl: resolvedUrl,
+    apiBaseUrl: activeBaseUrl,
+    isDesktopShell,
+    desktopRuntimeVariant,
+    isEmbeddedDesktopRuntime: isEmbeddedDesktopRuntime()
+  });
 }
 
 async function loadDesktopBackendConnection() {
@@ -166,11 +410,18 @@ async function ensureDesktopBackendConnectionLoaded() {
   }
 
   await desktopBackendConnectionPromise;
+
+  if (!desktopBackendConnectionValidatedPromise) {
+    desktopBackendConnectionValidatedPromise = validateDesktopBackendConnection().finally(() => {
+      desktopBackendConnectionValidatedPromise = null;
+    });
+  }
+  await desktopBackendConnectionValidatedPromise;
 }
 
 export async function getEffectiveApiBaseUrl() {
   await ensureDesktopBackendConnectionLoaded();
-  return desktopApiBaseUrlOverride ?? apiBaseUrl;
+  return desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl;
 }
 
 export async function setApiBaseUrlOverride(baseUrl: string | null) {
@@ -202,7 +453,7 @@ export function resolveApiUrl(input: string) {
     return input;
   }
 
-  const baseUrl = desktopApiBaseUrlOverride ?? apiBaseUrl;
+  const baseUrl = desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl;
   if (!baseUrl) {
     return input;
   }
@@ -262,6 +513,9 @@ export async function apiFetch<T>(
   init?: RequestInit
 ): Promise<T> {
   await ensureDesktopBackendConnectionLoaded();
+  if (isAuthApiPath(input)) {
+    await waitForDesktopBootstrapReady();
+  }
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
   const shouldSetJsonContentType =
@@ -271,12 +525,17 @@ export async function apiFetch<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(resolveApiUrl(input), {
-    credentials: "include",
-    headers,
-    signal,
-    ...restInit
-  });
+  let response: Response;
+  try {
+    response = await fetch(resolveRequestUrl(input), {
+      credentials: "include",
+      headers,
+      signal,
+      ...restInit
+    });
+  } catch (error) {
+    throw mapTransportError(error, input);
+  }
 
   if (!response.ok) {
     await parseErrorPayload(response);
@@ -294,12 +553,17 @@ export async function apiFormFetch<T>(
   const { signal, headers: initHeaders, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
 
-  const response = await fetch(resolveApiUrl(input), {
-    credentials: "include",
-    headers,
-    signal,
-    ...restInit
-  });
+  let response: Response;
+  try {
+    response = await fetch(resolveRequestUrl(input), {
+      credentials: "include",
+      headers,
+      signal,
+      ...restInit
+    });
+  } catch (error) {
+    throw mapTransportError(error, input);
+  }
 
   if (!response.ok) {
     await parseErrorPayload(response);
@@ -316,12 +580,17 @@ export async function apiDownload(
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
 
-  const response = await fetch(resolveApiUrl(input), {
-    credentials: "include",
-    headers,
-    signal,
-    ...restInit
-  });
+  let response: Response;
+  try {
+    response = await fetch(resolveRequestUrl(input), {
+      credentials: "include",
+      headers,
+      signal,
+      ...restInit
+    });
+  } catch (error) {
+    throw mapTransportError(error, input);
+  }
 
   if (!response.ok) {
     await parseErrorPayload(response);

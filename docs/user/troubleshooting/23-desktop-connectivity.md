@@ -39,6 +39,24 @@ If startup keeps failing on Linux, collect these files before contacting support
 
 These logs include the exact bootstrap phase, `pg_ctl` command failures, and PostgreSQL server output.
 
+### Windows Diagnostic Logs
+
+If startup or login fails on Windows, collect these files before contacting support:
+
+- `%APPDATA%\com.elms.desktop\logs\desktop-bootstrap.log`
+- `%APPDATA%\com.elms.desktop\logs\postgres.log`
+- `%APPDATA%\com.elms.desktop\logs\backend.stdout.log`
+- `%APPDATA%\com.elms.desktop\logs\backend.stderr.log`
+- `%APPDATA%\com.elms.desktop\backend-connection.json`
+
+If your installation stores data under `%LOCALAPPDATA%`, use the same paths there instead.
+
+Triage order:
+
+1. Confirm bootstrap reaches `ready` in `desktop-bootstrap.log`.
+2. Confirm `http://127.0.0.1:7854/api/health` became reachable.
+3. Check `backend-connection.json` for custom backend URL overrides that may be unreachable.
+
 ### Linux Startup Repair (Version Mismatch / Upgrade Failures)
 
 If startup fails after upgrading ELMS, the app may detect that the old local PostgreSQL data directory was created by a different PostgreSQL major version.

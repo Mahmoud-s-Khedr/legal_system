@@ -20,6 +20,12 @@ const REQUIRED_POSTGRES_EXECUTABLES = [
   "pg_isready",
 ];
 
+const REQUIRED_WINDOWS_POSTGRES_RUNTIME_DLLS = [
+  "vcruntime140.dll",
+  "vcruntime140_1.dll",
+  "msvcp140.dll",
+];
+
 function fail(message) {
   throw new Error(message);
 }
@@ -213,6 +219,15 @@ function verifyPostgresBundle(postgresDir) {
       [join(binDir, executable), join(binDir, `${executable}.exe`)],
       `Bundled PostgreSQL executable ${executable}`
     );
+  }
+
+  const windowsPostgresPayload =
+    pathExists(join(binDir, "postgres.exe"), "file") ||
+    pathExists(join(binDir, "initdb.exe"), "file");
+  if (windowsPostgresPayload) {
+    for (const runtimeDll of REQUIRED_WINDOWS_POSTGRES_RUNTIME_DLLS) {
+      ensureFileExists(join(binDir, runtimeDll), `Bundled PostgreSQL VC++ runtime ${runtimeDll}`);
+    }
   }
 
   const pkgLibFiles = listFiles(pkgLibDir);

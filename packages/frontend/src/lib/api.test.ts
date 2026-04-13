@@ -58,4 +58,162 @@ describe("apiDownload", () => {
       message: "Authentication required"
     });
   });
+
+  it("falls back to default desktop backend when saved override is unreachable", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
+    vi.stubEnv("VITE_DESKTOP_RUNTIME_VARIANT", "embedded");
+    vi.stubEnv("VITE_API_BASE_URL", "");
+    window.localStorage.setItem("elms.desktopBackendBaseUrl", "http://10.10.10.10:9000");
+
+    const invokeMock = vi.fn(async (command: string, args?: Record<string, unknown>) => {
+      if (command === "desktop_get_backend_connection") {
+        return { baseUrl: "http://10.10.10.10:9000" };
+      }
+      if (command === "desktop_set_backend_connection") {
+        expect(args).toEqual({ baseUrl: null });
+        return { ok: true, code: null };
+      }
+      return { phase: "ready" };
+    });
+
+    vi.doMock("@tauri-apps/api/core", () => ({
+      invoke: invokeMock
+    }));
+
+    const addToast = vi.fn();
+    vi.doMock("../store/toastStore", () => ({
+      useToastStore: {
+        getState: () => ({ addToast })
+      }
+    }));
+
+    const blob = new Blob(["fallback"], { type: "application/pdf" });
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "http://10.10.10.10:9000/api/health") {
+        throw new TypeError("NetworkError");
+      }
+
+      if (url === "http://127.0.0.1:7854/api/health") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ "Content-Type": "application/json" }),
+          json: vi.fn().mockResolvedValue({ ok: true })
+        } satisfies Partial<Response>;
+      }
+
+      if (url === "http://127.0.0.1:7854/api/reports/case-status/export?format=pdf") {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({
+            "Content-Type": "application/pdf",
+            "Content-Disposition": "attachment; filename=fallback.pdf"
+          }),
+          blob: vi.fn().mockResolvedValue(blob)
+        } satisfies Partial<Response>;
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { apiDownload } = await import("./api");
+    const result = await apiDownload("/api/reports/case-status/export?format=pdf");
+
+    expect(result.filename).toBe("fallback.pdf");
+    expect(window.localStorage.getItem("elms.desktopBackendBaseUrl")).toBeNull();
+    expect(addToast).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledWith("desktop_set_backend_connection", { baseUrl: null });
+  });
+
+  it("maps network fetch failures to BACKEND_UNREACHABLE", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
+    vi.stubEnv("VITE_DESKTOP_RUNTIME_VARIANT", "embedded");
+    vi.stubEnv("VITE_API_BASE_URL", "");
+    window.localStorage.setItem("elms.desktopBackendBaseUrl", "http://10.10.10.10:9000");
+
+    const invokeMock = vi.fn(async (command: string) => {
+      if (command === "desktop_get_backend_connection") {
+        return { baseUrl: "http://10.10.10.10:9000" };
+      }
+      if (command === "desktop_bootstrap_status") {
+        return { phase: "ready" };
+      }
+      return { ok: true, code: null };
+    });
+
+    vi.doMock("@tauri-apps/api/core", () => ({
+      invoke: invokeMock
+    }));
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "http://10.10.10.10:9000/api/health" || url === "http://127.0.0.1:7854/api/health") {
+        throw new TypeError("NetworkError");
+      }
+
+      if (url === "http://10.10.10.10:9000/api/auth/login") {
+        throw new TypeError("NetworkError");
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { apiFetch, ApiError } = await import("./api");
+
+    await expect(
+      apiFetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: "x@test.com", password: "pw" })
+      })
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      status: 503
+    });
+  });
+
+  it("blocks auth calls when desktop bootstrap has failed", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
+    vi.stubEnv("VITE_DESKTOP_RUNTIME_VARIANT", "embedded");
+    vi.stubEnv("VITE_API_BASE_URL", "http://127.0.0.1:7854");
+
+    const invokeMock = vi.fn(async (command: string) => {
+      if (command === "desktop_get_backend_connection") {
+        return { baseUrl: null };
+      }
+      if (command === "desktop_bootstrap_status") {
+        return {
+          phase: "failed",
+          message: "Backend health check failed",
+          failureCode: "postgres_startup_failed"
+        };
+      }
+      return { ok: true, code: null };
+    });
+
+    vi.doMock("@tauri-apps/api/core", () => ({
+      invoke: invokeMock
+    }));
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { apiFetch, ApiError } = await import("./api");
+
+    await expect(
+      apiFetch("/api/auth/me")
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      status: 503
+    });
+
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "http://127.0.0.1:7854/api/auth/me",
+      expect.anything()
+    );
+  });
 });
