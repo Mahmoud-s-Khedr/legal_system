@@ -17,7 +17,11 @@ export function DocumentUploadPage() {
       <SectionCard title={t("documents.uploadTitle")} description={t("documents.uploadHelp")}>
         <DocumentUploadForm
           invalidateKey={["documents"]}
-          onSuccess={() => void navigate({ to: "/app/documents" })}
+          onSuccess={(summary) => {
+            if (summary.successCount > 0 && summary.failedCount === 0) {
+              void navigate({ to: "/app/documents" });
+            }
+          }}
         />
       </SectionCard>
     </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch, apiFormFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
+import { runUploadQueue } from "../../lib/uploadQueue";
 import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useHasPermission } from "../../store/authStore";
@@ -175,15 +176,6 @@ function emptyTask(): DraftTask {
   };
 }
 
-function emptyDocument(): DraftDocument {
-  return {
-    id: makeId("document"),
-    title: "",
-    type: "GENERAL",
-    file: null
-  };
-}
-
 function hasText(value: string | null | undefined) {
   return Boolean(value?.trim());
 }
@@ -247,6 +239,7 @@ export function CaseQuickIntakePage() {
     message: string;
   } | null>(null);
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
+  const documentPickerRef = useRef<HTMLInputElement>(null);
 
   const [clientForm, setClientForm] = useState<ClientFormState>({
     name: "",
@@ -280,7 +273,7 @@ export function CaseQuickIntakePage() {
   const [assignments, setAssignments] = useState<DraftAssignment[]>([emptyAssignment()]);
   const [hearings, setHearings] = useState<DraftHearing[]>([emptyHearing()]);
   const [tasks, setTasks] = useState<DraftTask[]>([emptyTask()]);
-  const [documents, setDocuments] = useState<DraftDocument[]>([emptyDocument()]);
+  const [documents, setDocuments] = useState<DraftDocument[]>([]);
 
   const quickIntakeDirty = isQuickIntakeDirty({
     caseForm,
@@ -477,8 +470,18 @@ export function CaseQuickIntakePage() {
     setTasks((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
   }
 
-  function addDocumentRow() {
-    setDocuments((prev) => [...prev, emptyDocument()]);
+  function addDocumentFiles(files: FileList | null) {
+    if (!files?.length) return;
+    const rows = Array.from(files).map((file) => ({
+      id: makeId("document"),
+      title: file.name,
+      type: "GENERAL",
+      file
+    }));
+    setDocuments((prev) => [...prev, ...rows]);
+    if (documentPickerRef.current) {
+      documentPickerRef.current.value = "";
+    }
   }
 
   function updateDocumentRow(id: string, patch: Partial<DraftDocument>) {
@@ -486,7 +489,7 @@ export function CaseQuickIntakePage() {
   }
 
   function removeDocumentRow(id: string) {
-    setDocuments((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+    setDocuments((prev) => prev.filter((row) => row.id !== id));
   }
 
   async function postCourt(caseId: string, row: DraftCourt) {
@@ -694,8 +697,12 @@ export function CaseQuickIntakePage() {
 
       const docRows = documents.filter((row) => row.file !== null);
       if (docRows.length) {
-        const result = await Promise.allSettled(docRows.map((row) => postDocument(caseId, row)));
-        if (result.some((r) => r.status === "rejected")) {
+        const docSummary = await runUploadQueue({
+          items: docRows,
+          concurrency: 3,
+          upload: async (row) => postDocument(caseId, row)
+        });
+        if (docSummary.failedCount > 0) {
           failedSections.push("documents");
         }
       }
@@ -1152,6 +1159,23 @@ export function CaseQuickIntakePage() {
 
         <SectionCard title={t("quickIntake.section.documents")} description={t("quickIntake.documentsHelp")}>
           <div className="space-y-3">
+            <div>
+              <button
+                type="button"
+                className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm"
+                onClick={() => documentPickerRef.current?.click()}
+              >
+                {t("documents.chooseFiles")}
+              </button>
+              <input
+                ref={documentPickerRef}
+                className="hidden"
+                type="file"
+                multiple
+                accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff"
+                onChange={(event) => addDocumentFiles(event.target.files)}
+              />
+            </div>
             {documents.map((row) => (
               <div key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
                 <div className="grid gap-3 md:grid-cols-2">
@@ -1166,27 +1190,13 @@ export function CaseQuickIntakePage() {
                     onChange={(value) => updateDocumentRow(row.id, { type: value })}
                     options={documentTypeOptions}
                   />
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-semibold">{t("documents.chooseFile")}</label>
-                    <input
-                      className="mt-2 block w-full rounded-xl border border-slate-200 p-2"
-                      type="file"
-                      accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0] ?? null;
-                        updateDocumentRow(row.id, { file });
-                      }}
-                    />
-                  </div>
+                  <p className="md:col-span-2 text-sm text-slate-600">{row.file?.name ?? t("documents.noFileSelected")}</p>
                 </div>
                 <button type="button" className="text-sm text-red-600" onClick={() => removeDocumentRow(row.id)}>
                   {t("actions.delete")}
                 </button>
               </div>
             ))}
-            <button type="button" className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm" onClick={addDocumentRow}>
-              {t("quickIntake.addDocument")}
-            </button>
           </div>
         </SectionCard>
 
