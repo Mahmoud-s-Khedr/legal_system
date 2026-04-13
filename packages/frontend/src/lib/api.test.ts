@@ -162,7 +162,7 @@ describe("apiDownload", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { apiFetch, ApiError } = await import("./api");
+    const { apiFetch } = await import("./api");
 
     await expect(
       apiFetch("/api/auth/login", {
@@ -202,7 +202,7 @@ describe("apiDownload", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    const { apiFetch, ApiError } = await import("./api");
+    const { apiFetch } = await import("./api");
 
     await expect(
       apiFetch("/api/auth/me")
