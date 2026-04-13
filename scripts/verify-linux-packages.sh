@@ -63,15 +63,31 @@ run_postgres_runtime_smoke() {
   local mount_dir="$2"
   local bundle_root="$3"
   local label="$4"
+  local smoke_uid
+  local smoke_gid
 
-  echo "Running PostgreSQL runtime smoke in $label: $bundle_root"
+  smoke_uid="$(id -u)"
+  smoke_gid="$(id -g)"
+  if [[ -z "$smoke_uid" || -z "$smoke_gid" ]]; then
+    die "Failed to resolve host UID/GID for PostgreSQL smoke container."
+  fi
+
+  echo "Running PostgreSQL runtime smoke in $label: $bundle_root (container uid:gid ${smoke_uid}:${smoke_gid})"
 
   docker run --rm \
+    --user "${smoke_uid}:${smoke_gid}" \
     -v "$mount_dir:/bundle:ro" \
     "$image" \
     bash -lc '
       set -euo pipefail
       BUNDLE_ROOT="$1"
+      EFFECTIVE_UID="$(id -u)"
+      EFFECTIVE_GID="$(id -g)"
+      echo "PostgreSQL smoke effective uid:gid ${EFFECTIVE_UID}:${EFFECTIVE_GID}"
+      if [[ "$EFFECTIVE_UID" -eq 0 ]]; then
+        echo "PostgreSQL smoke must not run as root; initdb rejects UID 0." >&2
+        exit 1
+      fi
       POSTGRES_ROOT="$BUNDLE_ROOT/postgres"
       [[ -f "$POSTGRES_ROOT/.layout.env" ]] || { echo "Missing $POSTGRES_ROOT/.layout.env" >&2; exit 1; }
       # shellcheck disable=SC1090
@@ -90,6 +106,7 @@ run_postgres_runtime_smoke() {
 
       export LD_LIBRARY_PATH="$RUNTIME_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
       SMOKE_ROOT="$(mktemp -d -t elms-pg-smoke-XXXXXX)"
+      [[ -d "$SMOKE_ROOT" ]] || { echo "Failed to create smoke temp dir as uid:gid ${EFFECTIVE_UID}:${EFFECTIVE_GID}" >&2; exit 1; }
       DATA_DIR="$SMOKE_ROOT/data"
       LOG_FILE="$SMOKE_ROOT/postgres.log"
       SOCK_DIR="$SMOKE_ROOT/socket"
