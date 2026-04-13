@@ -21,6 +21,7 @@ const child = spawn(
       ...process.env,
       VITE_DESKTOP_SHELL: "true",
       VITE_DESKTOP_RUNTIME_VARIANT: "embedded",
+      VITE_API_BASE_URL: desktopBackendUrl,
       DESKTOP_BACKEND_URL: desktopBackendUrl,
     },
     stdio: "inherit",

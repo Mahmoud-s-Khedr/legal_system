@@ -4,6 +4,11 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(() => {
   const isDesktopShell = process.env.VITE_DESKTOP_SHELL === "true";
+  const disableWorkspaceIsolation =
+    /^(1|true|yes|on)$/i.test(process.env.ELMS_DISABLE_WORKSPACE_DEV_ISOLATION ?? "");
+  const defaultDesktopBackendUrl = disableWorkspaceIsolation
+    ? "http://127.0.0.1:7854"
+    : "http://127.0.0.1:17854";
 
   return {
     base: isDesktopShell ? "./" : "/",
@@ -89,7 +94,7 @@ export default defineConfig(() => {
       port: Number(process.env.FRONTEND_PORT ?? 5173),
       proxy: {
         "/api": {
-          target: process.env.DESKTOP_BACKEND_URL ?? "http://127.0.0.1:7854",
+          target: process.env.DESKTOP_BACKEND_URL ?? defaultDesktopBackendUrl,
           changeOrigin: true
         }
       }

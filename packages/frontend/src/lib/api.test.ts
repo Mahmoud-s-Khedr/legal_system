@@ -67,6 +67,9 @@ describe("apiDownload", () => {
     window.localStorage.setItem("elms.desktopBackendBaseUrl", "http://10.10.10.10:9000");
 
     const invokeMock = vi.fn(async (command: string, args?: Record<string, unknown>) => {
+      if (command === "desktop_get_runtime_backend_url") {
+        return { baseUrl: "http://127.0.0.1:17854" };
+      }
       if (command === "desktop_get_backend_connection") {
         return { baseUrl: "http://10.10.10.10:9000" };
       }
@@ -94,7 +97,7 @@ describe("apiDownload", () => {
         throw new TypeError("NetworkError");
       }
 
-      if (url === "http://127.0.0.1:7854/api/health") {
+      if (url === "http://127.0.0.1:17854/api/health") {
         return {
           ok: true,
           status: 200,
@@ -103,7 +106,7 @@ describe("apiDownload", () => {
         } satisfies Partial<Response>;
       }
 
-      if (url === "http://127.0.0.1:7854/api/reports/case-status/export?format=pdf") {
+      if (url === "http://127.0.0.1:17854/api/reports/case-status/export?format=pdf") {
         return {
           ok: true,
           status: 200,
@@ -136,6 +139,9 @@ describe("apiDownload", () => {
     window.localStorage.setItem("elms.desktopBackendBaseUrl", "http://10.10.10.10:9000");
 
     const invokeMock = vi.fn(async (command: string) => {
+      if (command === "desktop_get_runtime_backend_url") {
+        return { baseUrl: "http://127.0.0.1:17854" };
+      }
       if (command === "desktop_get_backend_connection") {
         return { baseUrl: "http://10.10.10.10:9000" };
       }
@@ -150,7 +156,7 @@ describe("apiDownload", () => {
     }));
 
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === "http://10.10.10.10:9000/api/health" || url === "http://127.0.0.1:7854/api/health") {
+      if (url === "http://10.10.10.10:9000/api/health" || url === "http://127.0.0.1:17854/api/health") {
         throw new TypeError("NetworkError");
       }
 
@@ -182,6 +188,9 @@ describe("apiDownload", () => {
     vi.stubEnv("VITE_API_BASE_URL", "http://127.0.0.1:7854");
 
     const invokeMock = vi.fn(async (command: string) => {
+      if (command === "desktop_get_runtime_backend_url") {
+        return { baseUrl: "http://127.0.0.1:17854" };
+      }
       if (command === "desktop_get_backend_connection") {
         return { baseUrl: null };
       }
@@ -212,7 +221,7 @@ describe("apiDownload", () => {
     });
 
     expect(fetchMock).not.toHaveBeenCalledWith(
-      "http://127.0.0.1:7854/api/auth/me",
+      "http://127.0.0.1:17854/api/auth/me",
       expect.anything()
     );
   });

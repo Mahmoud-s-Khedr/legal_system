@@ -1,7 +1,7 @@
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
 const desktopRuntimeVariant = (import.meta.env.VITE_DESKTOP_RUNTIME_VARIANT as string | undefined) ?? "embedded";
-const DESKTOP_EMBEDDED_DEFAULT_BASE_URL = "http://127.0.0.1:7854";
+const DESKTOP_EMBEDDED_FALLBACK_BASE_URL = "http://127.0.0.1:7854";
 const LOCAL_SESSION_STORAGE_KEY = "elms.localSessionToken";
 const DESKTOP_BACKEND_BASE_URL_CACHE_KEY = "elms.desktopBackendBaseUrl";
 const DESKTOP_CONNECTIVITY_SNAPSHOT_KEY = "elms.desktopBackendConnectivity";
@@ -24,7 +24,13 @@ interface DesktopBootstrapStatus {
   failureCode?: string | null;
 }
 
+interface DesktopRuntimeBackendUrl {
+  baseUrl: string;
+}
+
 let desktopApiBaseUrlOverride = readDesktopBackendBaseUrlCache();
+let desktopRuntimeBaseUrl: string | null = normalizeBaseUrl(apiBaseUrl);
+let desktopRuntimeBaseUrlPromise: Promise<void> | null = null;
 let desktopBackendConnectionPromise: Promise<void> | null = null;
 let desktopBackendConnectionValidatedPromise: Promise<void> | null = null;
 let desktopBackendFallbackToastShown = false;
@@ -176,13 +182,12 @@ function isEmbeddedDesktopRuntime() {
 }
 
 function getDesktopDefaultApiBaseUrl() {
-  const normalizedConfiguredBase = normalizeBaseUrl(apiBaseUrl);
-  if (normalizedConfiguredBase) {
-    return normalizedConfiguredBase;
+  if (desktopRuntimeBaseUrl) {
+    return desktopRuntimeBaseUrl;
   }
 
   if (isEmbeddedDesktopRuntime()) {
-    return DESKTOP_EMBEDDED_DEFAULT_BASE_URL;
+    return DESKTOP_EMBEDDED_FALLBACK_BASE_URL;
   }
 
   return null;
@@ -398,10 +403,38 @@ async function loadDesktopBackendConnection() {
   }
 }
 
+async function loadDesktopRuntimeBackendUrl() {
+  if (!isEmbeddedDesktopRuntime()) {
+    return;
+  }
+
+  try {
+    const result = await invokeDesktop<DesktopRuntimeBackendUrl>("desktop_get_runtime_backend_url");
+    const normalized = normalizeBaseUrl(result.baseUrl);
+    if (normalized) {
+      desktopRuntimeBaseUrl = normalized;
+      return;
+    }
+  } catch {
+    // Fall back to configured default below.
+  }
+
+  if (!desktopRuntimeBaseUrl) {
+    desktopRuntimeBaseUrl = DESKTOP_EMBEDDED_FALLBACK_BASE_URL;
+  }
+}
+
 async function ensureDesktopBackendConnectionLoaded() {
   if (!isDesktopShell) {
     return;
   }
+
+  if (!desktopRuntimeBaseUrlPromise) {
+    desktopRuntimeBaseUrlPromise = loadDesktopRuntimeBackendUrl().finally(() => {
+      desktopRuntimeBaseUrlPromise = null;
+    });
+  }
+  await desktopRuntimeBaseUrlPromise;
 
   if (!desktopBackendConnectionPromise) {
     desktopBackendConnectionPromise = loadDesktopBackendConnection().finally(() => {

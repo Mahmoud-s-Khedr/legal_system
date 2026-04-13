@@ -11,7 +11,7 @@
   },
   "app": {
     "security": {
-      "csp": "default-src 'self' tauri: asset: http://127.0.0.1:7854; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' asset: data:; img-src 'self' asset: data: blob:; connect-src 'self' http://127.0.0.1:7854 ws://127.0.0.1:7854"
+      "csp": "default-src 'self' tauri: asset: http://127.0.0.1:7854 http://127.0.0.1:17854; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' asset: data:; img-src 'self' asset: data: blob:; connect-src 'self' http://127.0.0.1:7854 ws://127.0.0.1:7854 http://127.0.0.1:17854 ws://127.0.0.1:17854"
     },
     "windows": [
       {

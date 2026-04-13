@@ -1655,6 +1655,71 @@ fn should_use_workspace_runtime() -> bool {
         .unwrap_or(false)
 }
 
+fn normalize_http_base_url(value: &str) -> Option<String> {
+    let trimmed = value.trim().trim_end_matches('/');
+    if !(trimmed.starts_with("http://") || trimmed.starts_with("https://")) {
+        return None;
+    }
+
+    let without_scheme = trimmed
+        .strip_prefix("http://")
+        .or_else(|| trimmed.strip_prefix("https://"))
+        .unwrap_or_default();
+    if without_scheme.is_empty() || without_scheme.starts_with('/') {
+        return None;
+    }
+
+    Some(trimmed.to_string())
+}
+
+fn resolve_runtime_backend_base_url() -> String {
+    let use_workspace_runtime = should_use_workspace_runtime();
+    let isolate_workspace_runtime = use_workspace_runtime && workspace_dev_isolation_enabled();
+    if isolate_workspace_runtime {
+        return "http://127.0.0.1:17854".to_string();
+    }
+
+    if use_workspace_runtime {
+        if let Some(root) = workspace_root() {
+            let env_file = resolve_workspace_desktop_env_file(&root);
+            if env_file.exists() {
+                let values = parse_env_file(&env_file);
+                if let Some(raw_url) = values.get("DESKTOP_BACKEND_URL") {
+                    if let Some(url) = normalize_http_base_url(raw_url) {
+                        return url;
+                    }
+                }
+                if let Some(raw_port) = values.get("BACKEND_PORT") {
+                    if let Ok(port) = raw_port.parse::<u16>() {
+                        return format!("http://127.0.0.1:{port}");
+                    }
+                }
+            }
+        }
+    }
+
+    if let Ok(raw_url) = std::env::var("DESKTOP_BACKEND_URL") {
+        if let Some(url) = normalize_http_base_url(&raw_url) {
+            return url;
+        }
+    }
+
+    "http://127.0.0.1:7854".to_string()
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeBackendUrl {
+    pub base_url: String,
+}
+
+#[tauri::command]
+pub fn desktop_get_runtime_backend_url() -> RuntimeBackendUrl {
+    RuntimeBackendUrl {
+        base_url: resolve_runtime_backend_base_url(),
+    }
+}
+
 fn validate_packaged_runtime_resources(app: &AppHandle, log_file: &Path) -> Result<(), String> {
     let path = app
         .path()

@@ -8,7 +8,17 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
     ? env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 
-  const devOrigins: (string | RegExp)[] = [/localhost$/, /127\.0\.0\.1$/];
+  const devOrigins: (string | RegExp)[] = [
+    /^https?:\/\/localhost(?::\d+)?$/,
+    /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
+    "tauri://localhost",
+    "https://tauri.localhost"
+  ];
+  const desktopFrontendOrigin = env.DESKTOP_FRONTEND_URL?.trim();
+  if (desktopFrontendOrigin) {
+    devOrigins.push(desktopFrontendOrigin);
+  }
+
   const allowedOrigins: (string | RegExp)[] =
     env.NODE_ENV === "production" ? extraOrigins : [...devOrigins, ...extraOrigins];
 

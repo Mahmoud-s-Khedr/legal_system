@@ -51,6 +51,7 @@ fn main() {
             sidecar::repair_bootstrap_migrations,
             sidecar::reset_local_database,
             sidecar::repair_postgres_runtime,
+            sidecar::desktop_get_runtime_backend_url,
             desktop_backup::desktop_get_backup_policy,
             desktop_backup::desktop_set_backup_policy,
             desktop_backup::desktop_choose_backup_directory,
