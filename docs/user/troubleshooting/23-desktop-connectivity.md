@@ -30,6 +30,29 @@ This message means the embedded PostgreSQL database (which runs on port 5433) is
 > [!NOTE]
 > The embedded database uses port 5433 on your computer. If another application is using that port, the desktop app will not start correctly. Contact your ELMS provider if you suspect a port conflict.
 
+### Linux Diagnostic Logs
+
+If startup keeps failing on Linux, collect these files before contacting support:
+
+- `~/.local/share/com.elms.desktop/logs/desktop-bootstrap.log`
+- `~/.local/share/com.elms.desktop/logs/postgres.log`
+
+These logs include the exact bootstrap phase, `pg_ctl` command failures, and PostgreSQL server output.
+
+### Linux Startup Repair (Version Mismatch / Upgrade Failures)
+
+If startup fails after upgrading ELMS, the app may detect that the old local PostgreSQL data directory was created by a different PostgreSQL major version.
+
+Use the **Repair startup** action in the startup error dialog. The app will:
+
+1. Move the existing local cluster directory into `~/.local/share/com.elms.desktop/postgres-backups/`.
+2. Recreate a fresh compatible local PostgreSQL cluster.
+3. Restart the local runtime.
+
+> [!WARNING]
+> Repair startup does not perform an automatic in-place PostgreSQL major upgrade.  
+> Always keep regular backups before upgrades so you can restore old data manually if needed.
+
 ---
 
 ## Working Without Internet Access
@@ -98,4 +121,3 @@ The desktop app checks for updates automatically when it starts, using the updat
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

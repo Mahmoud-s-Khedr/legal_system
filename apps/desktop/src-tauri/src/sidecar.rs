@@ -29,6 +29,10 @@ const DESKTOP_JWT_PRIVATE_KEY_FILE: &str = "jwt-private.pem";
 const DESKTOP_JWT_PUBLIC_KEY_FILE: &str = "jwt-public.pem";
 const DESKTOP_DB_MARKER_FILE: &str = "desktop-database-name";
 const MIGRATION_VERSION_MARKER_FILE: &str = "migration_version";
+const FAILURE_CODE_POSTGRES_CLUSTER_VERSION_MISMATCH: &str = "postgres_cluster_version_mismatch";
+const FAILURE_CODE_POSTGRES_STARTUP_FAILED: &str = "postgres_startup_failed";
+const FAILURE_CODE_PREFIX: &str = "__ELMS_FAILURE_CODE__=";
+const FAILURE_DETAIL_PREFIX: &str = "__ELMS_FAILURE_DETAIL__=";
 
 const PRISMA_RUNTIME_PACKAGES: &[&str] = &[
     "@prisma/config",
@@ -81,6 +85,51 @@ fn parse_truthy(value: &str) -> bool {
         value.trim().to_ascii_lowercase().as_str(),
         "1" | "true" | "yes" | "on"
     )
+}
+
+fn encode_bootstrap_failure(code: &str, message: &str, detail: Option<&str>) -> String {
+    let mut encoded = format!("{FAILURE_CODE_PREFIX}{code}\n");
+    if let Some(detail_text) = detail {
+        encoded.push_str(FAILURE_DETAIL_PREFIX);
+        encoded.push_str(detail_text);
+        encoded.push('\n');
+    }
+    encoded.push_str(message);
+    encoded
+}
+
+fn decode_bootstrap_failure(error: &str) -> (String, Option<String>, Option<String>) {
+    let mut failure_code = None;
+    let mut failure_detail = None;
+    let mut remaining_lines = Vec::new();
+
+    for line in error.lines() {
+        if failure_code.is_none() && line.starts_with(FAILURE_CODE_PREFIX) {
+            failure_code = Some(line[FAILURE_CODE_PREFIX.len()..].trim().to_string());
+            continue;
+        }
+        if failure_detail.is_none() && line.starts_with(FAILURE_DETAIL_PREFIX) {
+            failure_detail = Some(line[FAILURE_DETAIL_PREFIX.len()..].trim().to_string());
+            continue;
+        }
+        remaining_lines.push(line);
+    }
+
+    if failure_code.is_none() {
+        let lower = error.to_ascii_lowercase();
+        if lower.contains("pg_ctl failed") || lower.contains("embedded postgresql failed") {
+            failure_code = Some(FAILURE_CODE_POSTGRES_STARTUP_FAILED.to_string());
+        }
+    }
+
+    let cleaned = remaining_lines.join("\n").trim().to_string();
+    let message = if cleaned.is_empty() {
+        error.trim().to_string()
+    } else {
+        cleaned
+    };
+
+    (message, failure_code, failure_detail)
 }
 
 fn ensure_packaged_jwt_keys(
@@ -243,6 +292,53 @@ fn clear_reset_markers(app_data_dir: &Path, log_file: &Path) {
     }
 }
 
+fn backup_and_reset_postgres_cluster(
+    app_data_dir: &Path,
+    postgres_data_dir: &Path,
+    log_file: &Path,
+) -> Result<(), String> {
+    if !postgres_data_dir.exists() {
+        log_startup_diagnostic(
+            log_file,
+            &format!(
+                "PostgreSQL repair found no cluster directory to backup: {}",
+                postgres_data_dir.display()
+            ),
+        );
+        return Ok(());
+    }
+
+    let backups_dir = app_data_dir.join("postgres-backups");
+    fs::create_dir_all(&backups_dir)
+        .map_err(|error| format!("Unable to create PostgreSQL backup directory: {error}"))?;
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    let backup_dir = backups_dir.join(format!(
+        "cluster-pre-repair-{timestamp}-{}",
+        std::process::id()
+    ));
+
+    fs::rename(postgres_data_dir, &backup_dir).map_err(|error| {
+        format!(
+            "Unable to backup PostgreSQL data directory before repair ({} -> {}): {error}",
+            postgres_data_dir.display(),
+            backup_dir.display()
+        )
+    })?;
+
+    log_startup_diagnostic(
+        log_file,
+        &format!(
+            "PostgreSQL repair moved existing cluster to backup: {}",
+            backup_dir.display()
+        ),
+    );
+    Ok(())
+}
+
 fn env_requests_skip_migrations(desktop_env: &HashMap<String, String>) -> bool {
     desktop_env
         .get("ELMS_SKIP_MIGRATIONS")
@@ -326,6 +422,8 @@ fn apply_desktop_runtime_safety_env(effective_env: &mut HashMap<String, String>,
 pub struct BootstrapStatus {
     phase: String,
     message: Option<String>,
+    failure_code: Option<String>,
+    failure_detail: Option<String>,
 }
 
 impl BootstrapStatus {
@@ -333,6 +431,22 @@ impl BootstrapStatus {
         Self {
             phase: phase.into(),
             message,
+            failure_code: None,
+            failure_detail: None,
+        }
+    }
+
+    fn failed(
+        phase: impl Into<String>,
+        message: Option<String>,
+        failure_code: Option<String>,
+        failure_detail: Option<String>,
+    ) -> Self {
+        Self {
+            phase: phase.into(),
+            message,
+            failure_code,
+            failure_detail,
         }
     }
 }
@@ -362,12 +476,23 @@ struct RuntimeStateInner {
     shutting_down: AtomicBool,
     migration_repair_requested: AtomicBool,
     reset_database_requested: AtomicBool,
+    postgres_runtime_repair_requested: AtomicBool,
 }
 
 impl RuntimeStateInner {
     fn set_status(&self, phase: &str, message: Option<String>) {
         let mut status = self.status.lock().expect("runtime status mutex poisoned");
         *status = BootstrapStatus::new(phase, message);
+    }
+
+    fn set_failed_status(
+        &self,
+        message: Option<String>,
+        failure_code: Option<String>,
+        failure_detail: Option<String>,
+    ) {
+        let mut status = self.status.lock().expect("runtime status mutex poisoned");
+        *status = BootstrapStatus::failed("failed", message, failure_code, failure_detail);
     }
 
     fn snapshot(&self) -> BootstrapStatus {
@@ -404,6 +529,21 @@ impl RuntimeStateInner {
         self.reset_database_requested.store(false, Ordering::SeqCst);
     }
 
+    fn request_postgres_runtime_repair(&self) {
+        self.postgres_runtime_repair_requested
+            .store(true, Ordering::SeqCst);
+    }
+
+    fn take_postgres_runtime_repair_request(&self) -> bool {
+        self.postgres_runtime_repair_requested
+            .swap(false, Ordering::SeqCst)
+    }
+
+    fn clear_postgres_runtime_repair_request(&self) {
+        self.postgres_runtime_repair_requested
+            .store(false, Ordering::SeqCst);
+    }
+
     fn is_bootstrapping(&self) -> bool {
         self.is_bootstrapping.load(Ordering::SeqCst)
     }
@@ -428,6 +568,7 @@ impl Default for RuntimeState {
                 shutting_down: AtomicBool::new(false),
                 migration_repair_requested: AtomicBool::new(false),
                 reset_database_requested: AtomicBool::new(false),
+                postgres_runtime_repair_requested: AtomicBool::new(false),
             }),
         }
     }
@@ -456,6 +597,7 @@ pub fn retry_bootstrap(app: AppHandle, state: State<'_, RuntimeState>) -> Result
 
     state.inner.clear_migration_repair_request();
     state.inner.clear_database_reset_request();
+    state.inner.clear_postgres_runtime_repair_request();
 
     state
         .inner
@@ -474,6 +616,7 @@ pub fn repair_bootstrap_migrations(
     }
 
     state.inner.clear_database_reset_request();
+    state.inner.clear_postgres_runtime_repair_request();
     state.inner.request_migration_repair();
     state.inner.set_status(
         "recovering",
@@ -490,10 +633,31 @@ pub fn reset_local_database(app: AppHandle, state: State<'_, RuntimeState>) -> R
     }
 
     state.inner.clear_migration_repair_request();
+    state.inner.clear_postgres_runtime_repair_request();
     state.inner.request_database_reset();
     state.inner.set_status(
         "recovering",
         Some("Resetting local database and restarting desktop runtime".to_string()),
+    );
+    start_runtime_bootstrap(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn repair_postgres_runtime(
+    app: AppHandle,
+    state: State<'_, RuntimeState>,
+) -> Result<(), String> {
+    if state.inner.is_bootstrapping.load(Ordering::SeqCst) {
+        return Ok(());
+    }
+
+    state.inner.clear_migration_repair_request();
+    state.inner.clear_database_reset_request();
+    state.inner.request_postgres_runtime_repair();
+    state.inner.set_status(
+        "recovering",
+        Some("Repairing PostgreSQL runtime (backup + reset cluster)".to_string()),
     );
     start_runtime_bootstrap(&app);
     Ok(())
@@ -528,7 +692,8 @@ pub fn start_runtime_bootstrap(app: &AppHandle) {
                 start_monitor_loop(app_handle, inner);
             }
             Err(error) => {
-                inner.set_status("failed", Some(error));
+                let (message, failure_code, failure_detail) = decode_bootstrap_failure(&error);
+                inner.set_failed_status(Some(message), failure_code, failure_detail);
             }
         }
     });
@@ -571,8 +736,12 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
 
     fs::create_dir_all(&log_dir).map_err(|error| error.to_string())?;
     let bootstrap_log_file = log_dir.join("desktop-bootstrap.log");
+    let should_repair_postgres_runtime = inner.take_postgres_runtime_repair_request();
     let should_reset_database = inner.take_database_reset_request();
-    if should_reset_database {
+    if should_repair_postgres_runtime {
+        backup_and_reset_postgres_cluster(&app_data_dir, &postgres_data_dir, &bootstrap_log_file)?;
+        clear_reset_markers(&app_data_dir, &bootstrap_log_file);
+    } else if should_reset_database {
         if postgres_data_dir.exists() {
             fs::remove_dir_all(&postgres_data_dir).map_err(|error| {
                 format!("Unable to reset local PostgreSQL data directory: {error}")
@@ -640,6 +809,12 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
         log_startup_diagnostic(
             &bootstrap_log_file,
             "Reset local PostgreSQL data directory by user request",
+        );
+    }
+    if should_repair_postgres_runtime {
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            "Repaired PostgreSQL runtime by backing up and resetting local cluster",
         );
     }
 
@@ -770,19 +945,20 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     let migration_version_file = app_data_dir.join(MIGRATION_VERSION_MARKER_FILE);
     let schema_already_current = !allow_migration_repair
         && !should_reset_database
+        && !should_repair_postgres_runtime
         && fs::read_to_string(&migration_version_file)
             .map(|v| v.trim() == LATEST_MIGRATION_NAME)
             .unwrap_or(false);
     let env_skip_requested = env_requests_skip_migrations(&desktop_env);
     let skip_migrations = should_skip_migrations(
-        should_reset_database,
+        should_reset_database || should_repair_postgres_runtime,
         schema_already_current,
         env_skip_requested,
     );
-    if should_reset_database && env_skip_requested {
+    if (should_reset_database || should_repair_postgres_runtime) && env_skip_requested {
         log_startup_diagnostic(
             &bootstrap_log_file,
-            "Ignoring ELMS_SKIP_MIGRATIONS because reset-local-database was requested",
+            "Ignoring ELMS_SKIP_MIGRATIONS because local PostgreSQL reset was requested",
         );
     }
 
@@ -1630,6 +1806,72 @@ fn workspace_root() -> Option<PathBuf> {
         .ok()
 }
 
+fn parse_postgres_major_version(input: &str) -> Option<u32> {
+    input.split_whitespace().find_map(|token| {
+        let major_digits = token
+            .chars()
+            .take_while(|ch| ch.is_ascii_digit())
+            .collect::<String>();
+        if major_digits.is_empty() {
+            return None;
+        }
+        major_digits.parse::<u32>().ok()
+    })
+}
+
+fn detect_postgres_cluster_version_mismatch(
+    app: &AppHandle,
+    data_dir: &Path,
+) -> Result<Option<(u32, u32)>, String> {
+    let data_version_text = fs::read_to_string(data_dir.join("PG_VERSION"))
+        .map_err(|error| format!("Unable to read PostgreSQL data directory version: {error}"))?;
+    let data_major = parse_postgres_major_version(&data_version_text)
+        .ok_or_else(|| format!("Unable to parse PG_VERSION contents: {data_version_text}"))?;
+
+    let binary = resolve_postgres_binary(app, "postgres");
+    let output = Command::new(&binary)
+        .arg("-V")
+        .output()
+        .map_err(|error| format!("Unable to inspect bundled PostgreSQL version: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "Unable to inspect bundled PostgreSQL version from {} (status={})",
+            binary.display(),
+            output.status
+        ));
+    }
+
+    let version_output = String::from_utf8_lossy(&output.stdout).to_string();
+    let bundled_major = parse_postgres_major_version(&version_output).ok_or_else(|| {
+        format!(
+            "Unable to parse bundled PostgreSQL version output from {}: {}",
+            binary.display(),
+            version_output.trim()
+        )
+    })?;
+
+    if bundled_major != data_major {
+        return Ok(Some((bundled_major, data_major)));
+    }
+
+    Ok(None)
+}
+
+fn read_log_tail(log_file: &Path, max_lines: usize, max_chars: usize) -> Option<String> {
+    let content = fs::read_to_string(log_file).ok()?;
+    let mut lines = content.lines().rev().take(max_lines).collect::<Vec<_>>();
+    lines.reverse();
+    let mut tail = lines.join("\n");
+    if tail.len() > max_chars {
+        let start = tail.len().saturating_sub(max_chars);
+        tail = format!("...{}", &tail[start..]);
+    }
+    if tail.trim().is_empty() {
+        return None;
+    }
+    Some(tail)
+}
+
 fn ensure_postgres_ready(
     app: &AppHandle,
     data_dir: &Path,
@@ -1645,7 +1887,9 @@ fn ensure_postgres_ready(
         &format!("data_dir={}", data_dir.display()),
     );
 
-    if !data_dir.join("PG_VERSION").exists() {
+    let has_existing_cluster = data_dir.join("PG_VERSION").exists();
+
+    if !has_existing_cluster {
         log_bootstrap_checkpoint(
             bootstrap_log_file,
             "postgres",
@@ -1699,6 +1943,48 @@ fn ensure_postgres_ready(
         .get("DESKTOP_POSTGRES_PORT")
         .map(String::as_str)
         .unwrap_or("5433");
+
+    if has_existing_cluster {
+        match detect_postgres_cluster_version_mismatch(app, data_dir) {
+            Ok(Some((bundled_major, data_major))) => {
+                let detail = format!(
+                    "bundled_major={bundled_major}; data_major={data_major}; data_dir={}",
+                    data_dir.display()
+                );
+                log_bootstrap_checkpoint(
+                    bootstrap_log_file,
+                    "postgres",
+                    "cluster_version",
+                    "inspect",
+                    "failed",
+                    &detail,
+                );
+                return Err(encode_bootstrap_failure(
+                    FAILURE_CODE_POSTGRES_CLUSTER_VERSION_MISMATCH,
+                    "Embedded PostgreSQL version does not match the existing local cluster version.",
+                    Some(&detail),
+                ));
+            }
+            Ok(None) => {
+                log_bootstrap_checkpoint(
+                    bootstrap_log_file,
+                    "postgres",
+                    "cluster_version",
+                    "inspect",
+                    "ok",
+                    "existing cluster major version matches bundled PostgreSQL",
+                );
+            }
+            Err(error) => {
+                append_bootstrap_log_line(
+                    bootstrap_log_file,
+                    &format!(
+                        "Warning: unable to verify PostgreSQL major version compatibility: {error}"
+                    ),
+                );
+            }
+        }
+    }
 
     // On Unix, redirect the socket directory to the app data dir to avoid
     // permission errors with the compiled-in default (/var/run/postgresql).
@@ -1766,7 +2052,17 @@ fn ensure_postgres_ready(
         // the start actually succeeded. Do a final readiness check before
         // propagating the error.
         if !postgres_is_ready(app, env, bootstrap_log_file) {
-            return Err(pg_ctl_error);
+            let log_tail = read_log_tail(&log_file, 25, 2000);
+            let mut detail = pg_ctl_error;
+            if let Some(tail) = log_tail {
+                detail.push_str("; postgres.log tail=");
+                detail.push_str(&tail.replace('\n', " | "));
+            }
+            return Err(encode_bootstrap_failure(
+                FAILURE_CODE_POSTGRES_STARTUP_FAILED,
+                "Embedded PostgreSQL failed to start via pg_ctl.",
+                Some(&detail),
+            ));
         }
 
         log_bootstrap_checkpoint(
@@ -3316,8 +3612,12 @@ pub(crate) fn strip_unc_prefix(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::apply_desktop_storage_path_policy;
+    use super::backup_and_reset_postgres_cluster;
     use super::clear_reset_markers;
     use super::compute_desktop_env_candidates;
+    use super::decode_bootstrap_failure;
+    use super::encode_bootstrap_failure;
+    use super::parse_postgres_major_version;
     use super::remove_file_if_present;
     use super::should_skip_migrations;
     use super::workspace_backend_launch;
@@ -3503,6 +3803,60 @@ mod tests {
 
         assert!(remove_file_if_present(&marker).expect("remove should succeed"));
         assert!(!remove_file_if_present(&marker).expect("missing should be treated as ok"));
+        let _ = fs::remove_dir_all(&app_data_dir);
+    }
+
+    #[test]
+    fn parse_postgres_major_version_extracts_major() {
+        assert_eq!(
+            parse_postgres_major_version("postgres (PostgreSQL) 18.1"),
+            Some(18)
+        );
+        assert_eq!(parse_postgres_major_version("16"), Some(16));
+        assert_eq!(parse_postgres_major_version("invalid"), None);
+    }
+
+    #[test]
+    fn decode_bootstrap_failure_extracts_code_and_detail() {
+        let encoded = encode_bootstrap_failure(
+            "postgres_cluster_version_mismatch",
+            "Version mismatch",
+            Some("bundled_major=18; data_major=16"),
+        );
+
+        let (message, code, detail) = decode_bootstrap_failure(&encoded);
+        assert_eq!(message, "Version mismatch");
+        assert_eq!(code.as_deref(), Some("postgres_cluster_version_mismatch"));
+        assert_eq!(detail.as_deref(), Some("bundled_major=18; data_major=16"));
+    }
+
+    #[test]
+    fn backup_and_reset_postgres_cluster_moves_existing_cluster() {
+        let app_data_dir = test_temp_dir("postgres-runtime-repair");
+        let postgres_data_dir = app_data_dir.join("postgres");
+        fs::create_dir_all(&postgres_data_dir).expect("postgres dir should exist");
+        fs::write(postgres_data_dir.join("PG_VERSION"), "16")
+            .expect("pg version should be written");
+        let log_file = app_data_dir.join("bootstrap.log");
+
+        backup_and_reset_postgres_cluster(&app_data_dir, &postgres_data_dir, &log_file)
+            .expect("repair backup should succeed");
+
+        assert!(
+            !postgres_data_dir.exists(),
+            "original postgres dir should be moved away"
+        );
+        let backups_dir = app_data_dir.join("postgres-backups");
+        let entries = fs::read_dir(&backups_dir)
+            .expect("backup dir should exist")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("backup dir should be readable");
+        assert_eq!(entries.len(), 1, "exactly one backup directory expected");
+        assert!(
+            entries[0].path().join("PG_VERSION").exists(),
+            "backup should preserve pg cluster content"
+        );
+
         let _ = fs::remove_dir_all(&app_data_dir);
     }
 }

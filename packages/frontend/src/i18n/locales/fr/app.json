@@ -732,6 +732,8 @@
     "retry": "Relancer",
     "repair": "Reparer la base locale",
     "repairing": "Reparation de l'etat local des migrations",
+    "repairRuntime": "Reparer le demarrage",
+    "repairingRuntime": "Sauvegarde et reinitialisation du runtime PostgreSQL local",
     "resetDatabase": "Reinitialiser la base locale",
     "resetting": "Reinitialisation de la base locale et redemarrage",
     "resetConfirm": "Cette action supprimera les donnees locales de la base desktop sur cet appareil. Continuer ?",
@@ -748,6 +750,9 @@
     "failed": {
       "title": "Le démarrage demande une intervention",
       "description": "Le runtime desktop ne s'est pas rétabli. Vérifiez l'environnement local puis relancez."
+    },
+    "failureCodes": {
+      "postgres_cluster_version_mismatch": "Les fichiers de base locale proviennent d'une autre version majeure de PostgreSQL. Utilisez \"Reparer le demarrage\" pour sauvegarder l'ancien cluster puis initialiser un cluster compatible."
     },
     "ready": {
       "title": "Prêt",

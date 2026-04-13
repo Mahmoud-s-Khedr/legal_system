@@ -696,6 +696,8 @@
     "retry": "Retry startup",
     "repair": "Repair database",
     "repairing": "Repairing local migration state",
+    "repairRuntime": "Repair startup",
+    "repairingRuntime": "Backing up and resetting local PostgreSQL runtime",
     "resetDatabase": "Reset local database",
     "resetting": "Resetting local database and restarting",
     "resetConfirm": "This will delete local desktop database data on this device. Continue?",
@@ -712,6 +714,9 @@
     "failed": {
       "title": "Startup needs attention",
       "description": "The desktop runtime did not recover. Review the local environment and try startup again."
+    },
+    "failureCodes": {
+      "postgres_cluster_version_mismatch": "The local database files were created by a different PostgreSQL major version. Use Repair startup to back up the old cluster and initialize a compatible runtime cluster."
     },
     "ready": {
       "title": "Ready",

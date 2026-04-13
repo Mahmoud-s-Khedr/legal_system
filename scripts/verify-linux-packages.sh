@@ -58,6 +58,41 @@ verify_bundle_root() {
   node "$ROOT_DIR/scripts/verify-packaged-desktop-tree.mjs" "$bundle_root"
 }
 
+run_postgres_runtime_smoke() {
+  local image="$1"
+  local mount_dir="$2"
+  local bundle_root="$3"
+  local label="$4"
+
+  echo "Running PostgreSQL runtime smoke in $label: $bundle_root"
+
+  docker run --rm \
+    -v "$mount_dir:/bundle:ro" \
+    "$image" \
+    bash -lc '
+      set -euo pipefail
+      BUNDLE_ROOT="$1"
+      POSTGRES_ROOT="$BUNDLE_ROOT/postgres"
+      [[ -f "$POSTGRES_ROOT/.layout.env" ]] || { echo "Missing $POSTGRES_ROOT/.layout.env" >&2; exit 1; }
+      # shellcheck disable=SC1090
+      source "$POSTGRES_ROOT/.layout.env"
+
+      BIN_DIR="$POSTGRES_ROOT/$POSTGRES_BIN_DIR"
+      SMOKE_ROOT="$(mktemp -d -t elms-pg-smoke-XXXXXX)"
+      DATA_DIR="$SMOKE_ROOT/data"
+      LOG_FILE="$SMOKE_ROOT/postgres.log"
+      SOCK_DIR="$SMOKE_ROOT/socket"
+      PORT=55439
+      mkdir -p "$SOCK_DIR"
+
+      "$BIN_DIR/postgres" -V >/dev/null
+      "$BIN_DIR/initdb" -D "$DATA_DIR" -A trust -U elms --no-sync >/dev/null
+      "$BIN_DIR/pg_ctl" -D "$DATA_DIR" -l "$LOG_FILE" -o "-p $PORT -k $SOCK_DIR" start >/dev/null
+      "$BIN_DIR/pg_isready" -h 127.0.0.1 -p "$PORT" -t 1 >/dev/null
+      "$BIN_DIR/pg_ctl" -D "$DATA_DIR" -m fast stop >/dev/null
+    ' _ "$bundle_root"
+}
+
 verify_appimage() {
   local appimage_file="$1"
   local extract_dir="$TMP_DIR/appimage"
@@ -73,6 +108,7 @@ verify_appimage() {
   )
 
   verify_bundle_root "$extract_dir/squashfs-root/usr/lib/ELMS"
+  run_postgres_runtime_smoke "ubuntu:24.04" "$extract_dir/squashfs-root" "/bundle/usr/lib/ELMS" "Ubuntu container (AppImage)"
 }
 
 verify_deb() {
@@ -93,6 +129,7 @@ verify_deb() {
     '
 
   verify_bundle_root "$extract_dir/usr/lib/ELMS"
+  run_postgres_runtime_smoke "ubuntu:24.04" "$extract_dir" "/bundle/usr/lib/ELMS" "Ubuntu container (.deb)"
 }
 
 verify_rpm() {
@@ -113,6 +150,7 @@ verify_rpm() {
     '
 
   verify_bundle_root "$install_root/usr/lib/ELMS"
+  run_postgres_runtime_smoke "fedora:41" "$install_root" "/bundle/usr/lib/ELMS" "Fedora container (.rpm)"
 }
 
 IFS=',' read -r -a bundle_types <<<"$VERIFY_LINUX_BUNDLES"

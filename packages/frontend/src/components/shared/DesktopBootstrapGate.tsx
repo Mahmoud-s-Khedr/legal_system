@@ -6,6 +6,8 @@ import { confirmAction } from "../../lib/dialog";
 interface BootstrapStatus {
   phase: "starting" | "ready" | "recovering" | "failed";
   message?: string | null;
+  failureCode?: string | null;
+  failureDetail?: string | null;
 }
 
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
@@ -85,6 +87,8 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
   }, [t]);
 
   const failureMessage = status.message ?? "";
+  const isPostgresVersionMismatch =
+    status.phase === "failed" && status.failureCode === "postgres_cluster_version_mismatch";
   const isRecoverableMigrationFailure =
     status.phase === "failed" &&
     (failureMessage.includes("P3009") || failureMessage.toLowerCase().includes("migration failed"));
@@ -101,10 +105,32 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
         </p>
         <h1 className="mt-4 font-heading text-3xl">{t(`desktopBootstrap.${status.phase}.title`)}</h1>
         <p className="mt-4 text-sm leading-7 text-slate-600">
-          {status.message || t(`desktopBootstrap.${status.phase}.description`)}
+          {isPostgresVersionMismatch
+            ? t("desktopBootstrap.failureCodes.postgres_cluster_version_mismatch")
+            : status.message || t(`desktopBootstrap.${status.phase}.description`)}
         </p>
+        {status.phase === "failed" && status.failureDetail ? (
+          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            {status.failureDetail}
+          </p>
+        ) : null}
         {status.phase === "failed" ? (
           <div className="mt-6 flex gap-3">
+            {isPostgresVersionMismatch ? (
+              <button
+                className="rounded-2xl bg-amber-700 px-5 py-3 font-semibold text-white hover:bg-amber-800"
+                onClick={() => {
+                  setStatus({
+                    phase: "recovering",
+                    message: t("desktopBootstrap.repairingRuntime")
+                  });
+                  void invokeDesktopCommand("repair_postgres_runtime");
+                }}
+                type="button"
+              >
+                {t("desktopBootstrap.repairRuntime")}
+              </button>
+            ) : null}
             {isRecoverableMigrationFailure ? (
               <button
                 className="rounded-2xl bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-800"
