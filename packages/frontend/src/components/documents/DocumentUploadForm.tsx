@@ -108,45 +108,49 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
     setSummary(null);
     setError(null);
     setIsUploading(true);
+    try {
+      const uploadSummary = await runUploadQueue<SelectedUploadFile, DocumentDto>({
+        items: targets,
+        concurrency: 3,
+        upload: async (entry) => {
+          const formData = new FormData();
+          formData.append("title", entry.file.name);
+          formData.append("type", type);
+          if (caseId) formData.append("caseId", caseId);
+          if (clientId) formData.append("clientId", clientId);
+          formData.append("file", entry.file);
 
-    const uploadSummary = await runUploadQueue<SelectedUploadFile, DocumentDto>({
-      items: targets,
-      concurrency: 3,
-      upload: async (entry) => {
-        const formData = new FormData();
-        formData.append("title", entry.file.name);
-        formData.append("type", type);
-        if (caseId) formData.append("caseId", caseId);
-        if (clientId) formData.append("clientId", clientId);
-        formData.append("file", entry.file);
+          return apiFormFetch<DocumentDto>("/api/documents", { method: "POST", body: formData });
+        },
+        onStatusChange: (index, status, uploadError) => {
+          const target = targets[index];
+          if (!target) return;
+          setFileStates((prev) => ({
+            ...prev,
+            [target.id]: { status, error: uploadError }
+          }));
+        }
+      });
 
-        return apiFormFetch<DocumentDto>("/api/documents", { method: "POST", body: formData });
-      },
-      onStatusChange: (index, status, uploadError) => {
-        const target = targets[index];
-        if (!target) return;
-        setFileStates((prev) => ({
-          ...prev,
-          [target.id]: { status, error: uploadError }
-        }));
+      if (uploadSummary.successCount > 0) {
+        await queryClient.invalidateQueries({ queryKey: invalidateKey });
       }
-    });
 
-    if (uploadSummary.successCount > 0) {
-      await queryClient.invalidateQueries({ queryKey: invalidateKey });
-    }
-
-    setSummary(uploadSummary);
-    if (uploadSummary.failedCount === 0) {
-      setSelectedFiles([]);
-      setFileStates({});
-      if (fileRef.current) {
-        fileRef.current.value = "";
+      setSummary(uploadSummary);
+      if (uploadSummary.failedCount === 0) {
+        setSelectedFiles([]);
+        setFileStates({});
+        if (fileRef.current) {
+          fileRef.current.value = "";
+        }
       }
-    }
 
-    onSuccess?.(uploadSummary);
-    setIsUploading(false);
+      onSuccess?.(uploadSummary);
+    } catch (uploadError) {
+      setError((uploadError as Error)?.message ?? t("errors.fallback"));
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   return (

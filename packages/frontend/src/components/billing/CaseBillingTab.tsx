@@ -11,9 +11,11 @@ import {
 } from "../../lib/billing";
 import { DataTable, EmptyState, ErrorState, FormAlert, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatCurrency } from "../../routes/app/ui";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { useToastStore } from "../../store/toastStore";
 
 export function CaseBillingTab({ caseId }: { caseId: string }) {
   const { t } = useTranslation("app");
+  const addToast = useToastStore((state) => state.addToast);
   const summary = useCaseBillingSummary(caseId);
   const invoices = useInvoices({ caseId });
   const expenses = useExpenses({ caseId });
@@ -43,7 +45,16 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
   return (
     <div className="space-y-4">
       {/* Summary cards */}
-      {summary.data && (
+      {summary.isLoading ? (
+        <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+      ) : summary.isError ? (
+        <ErrorState
+          title={t("errors.title")}
+          description={(summary.error as Error)?.message ?? t("errors.fallback")}
+          retryLabel={t("errors.reload")}
+          onRetry={() => void summary.refetch()}
+        />
+      ) : summary.data ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[
             { label: t("billing.totalBilled"), value: summary.data.totalBilled },
@@ -58,7 +69,7 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Invoices */}
       <SectionCard
@@ -73,7 +84,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
             {t("actions.newInvoice")}
           </Link>
         </div>
-        {invoices.isError ? (
+        {invoices.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : invoices.isError ? (
           <ErrorState
             title={t("errors.title")}
             description={(invoices.error as Error)?.message ?? t("errors.fallback")}
@@ -194,7 +207,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
           </form>
         )}
 
-        {expenses.isError ? (
+        {expenses.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : expenses.isError ? (
           <ErrorState
             title={t("errors.title")}
             description={(expenses.error as Error)?.message ?? t("errors.fallback")}
@@ -222,7 +237,15 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                     <TableCell align="end">{formatCurrency(exp.amount)}</TableCell>
                     <TableCell align="end">
                       <button
-                        onClick={() => void deleteExpense.mutateAsync(exp.id)}
+                        onClick={() => {
+                          void (async () => {
+                            try {
+                              await deleteExpense.mutateAsync(exp.id);
+                            } catch (error) {
+                              addToast((error as Error)?.message ?? t("errors.fallback"), "error");
+                            }
+                          })();
+                        }}
                         disabled={deleteExpense.isPending}
                         className="text-xs text-red-500 hover:underline disabled:opacity-50"
                       >

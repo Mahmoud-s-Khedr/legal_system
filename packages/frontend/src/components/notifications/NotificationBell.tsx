@@ -9,7 +9,7 @@ import { apiFetch } from "../../lib/api";
 import { useAccessibleOverlay } from "../shared/useAccessibleOverlay";
 import { formatDate } from "../../routes/app/ui";
 
-function resolveNotificationPath(n: NotificationDto): string | null {
+export function resolveNotificationPath(n: NotificationDto): string | null {
   const id = n.entityId;
   if (!id) return null;
   switch (n.type) {
@@ -25,7 +25,7 @@ function resolveNotificationPath(n: NotificationDto): string | null {
       return `/app/invoices/${id}`;
     case NotificationType.DOCUMENT_INDEXED:
     case NotificationType.RESEARCH_COMPLETE:
-      return `/app/documents/${id}`;
+      return `/app/library/documents/${id}`;
     default:
       return null;
   }
@@ -135,7 +135,21 @@ export function NotificationBell() {
               {listQuery.isLoading && (
                 <p className="px-4 py-3 text-sm text-slate-500">{t("labels.loading")}</p>
               )}
-              {!listQuery.isLoading && !listQuery.data?.items.length && (
+              {listQuery.isError && (
+                <div className="space-y-2 px-4 py-4">
+                  <p className="text-sm text-red-600">
+                    {(listQuery.error as Error)?.message ?? t("errors.fallback")}
+                  </p>
+                  <button
+                    type="button"
+                    className="text-xs text-accent hover:underline"
+                    onClick={() => void listQuery.refetch()}
+                  >
+                    {t("errors.reload")}
+                  </button>
+                </div>
+              )}
+              {!listQuery.isLoading && !listQuery.isError && !listQuery.data?.items.length && (
                 <p className="px-4 py-6 text-center text-sm text-slate-500">{t("notifications.empty")}</p>
               )}
               {listQuery.data?.items.map((n) => (

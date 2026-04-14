@@ -16,7 +16,7 @@ export function buildPortalShellFooterLinks(t: Translate): ShellFooterLink[] {
   return [
     { id: "home", label: t("nav.home"), to: "/portal/dashboard" },
     { id: "dashboard", label: t("portal.dashboard"), to: "/portal/dashboard" },
-    { id: "logout", label: t("actions.logout"), to: "/login" },
+    { id: "logout", label: t("actions.logout"), action: "logout" },
     { id: "about", label: t("footer.about"), to: "/about" }
   ];
 }

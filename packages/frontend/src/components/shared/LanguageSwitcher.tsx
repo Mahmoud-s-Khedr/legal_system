@@ -8,15 +8,17 @@ const languages = [
 ];
 
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation("app");
+  const activeLanguage = (i18n.resolvedLanguage ?? i18n.language).split("-")[0]?.toUpperCase();
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2" role="group" aria-label={t("labels.language")}>
       {languages.map((language) => (
         <button
           key={language.value}
+          aria-pressed={activeLanguage === language.value}
           className={`rounded-full px-3 py-1 text-sm transition ${
-            i18n.language.toUpperCase() === language.value
+            activeLanguage === language.value
               ? "bg-accent font-semibold text-white"
               : "border border-slate-200 bg-white text-ink hover:bg-slate-100"
           }`}

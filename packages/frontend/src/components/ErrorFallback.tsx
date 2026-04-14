@@ -7,10 +7,18 @@ export function ErrorFallback({ error }: { error: Error }) {
   const isAppRoute = pathname.startsWith("/app");
   const isPortalRoute = pathname.startsWith("/portal");
   const safeHref = isAppRoute ? "/app/dashboard" : isPortalRoute ? "/portal/dashboard" : "/login";
-  const safeLabel = isAppRoute ? "Go to Dashboard" : isPortalRoute ? "Go to Portal Home" : "Go to Login";
+  const safeLabel = isAppRoute
+    ? "Go to Dashboard / اذهب إلى لوحة التحكم"
+    : isPortalRoute
+      ? "Go to Portal Home / اذهب إلى بوابة العملاء"
+      : "Go to Login / اذهب إلى تسجيل الدخول";
+  const pageDir =
+    typeof document !== "undefined" && document.documentElement.dir === "rtl"
+      ? "rtl"
+      : "ltr";
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center animate-fade-in bg-sand text-ink" dir="ltr">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center animate-fade-in bg-sand text-ink" dir={pageDir}>
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-2">
         <span className="text-2xl">⚠</span>
       </div>

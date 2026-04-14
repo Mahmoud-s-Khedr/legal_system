@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Search, X, Briefcase, Users, Plus } from "lucide-react";
 import type { CaseListResponseDto, ClientListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
+import { useAccessibleOverlay } from "../shared/useAccessibleOverlay";
 
 interface Props {
   open: boolean;
@@ -26,6 +27,25 @@ export function CommandPalette({ open, onClose }: Props) {
   const [debouncedQ, setDebouncedQ] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const wasOpenRef = useRef(false);
+
+  if (open && !wasOpenRef.current) {
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    wasOpenRef.current = true;
+  } else if (!open && wasOpenRef.current) {
+    wasOpenRef.current = false;
+  }
+
+  useAccessibleOverlay({
+    open,
+    mode: "modal",
+    contentRef: panelRef,
+    triggerRef: restoreFocusRef,
+    onClose
+  });
 
   // Debounce the search query
   useEffect(() => {
@@ -147,9 +167,11 @@ export function CommandPalette({ open, onClose }: Props) {
 
   const items = debouncedQ.trim() ? searchResults : quickActions;
 
+  const itemsSignature = items.map((item) => item.id).join("|");
+
   useEffect(() => {
     setActiveIndex(0);
-  }, [items.length]);
+  }, [debouncedQ, itemsSignature, q]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") { onClose(); return; }
@@ -173,15 +195,21 @@ export function CommandPalette({ open, onClose }: Props) {
   return (
     <div
       aria-modal="true"
+      aria-labelledby="command-palette-title"
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[15vh]"
       onClick={onClose}
       role="dialog"
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
+        <h2 id="command-palette-title" className="sr-only">
+          {t("search.placeholder")}
+        </h2>
         {/* Input */}
         <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
           <Search className="h-5 w-5 shrink-0 text-slate-400" />

@@ -38,8 +38,27 @@ const ALL_PERMISSIONS = [
   "documents:read",
   "documents:update",
   "documents:delete",
+  "invoices:create",
+  "invoices:read",
+  "invoices:update",
+  "invoices:delete",
+  "expenses:create",
+  "expenses:read",
+  "expenses:update",
+  "expenses:delete",
   "reports:read",
   "research:use",
+  "templates:create",
+  "templates:read",
+  "templates:update",
+  "templates:delete",
+  "library:read",
+  "library:manage",
+  "powers:create",
+  "powers:read",
+  "powers:update",
+  "powers:delete",
+  "powers:revoke",
   "lookups:read",
   "lookups:manage"
 ];
@@ -84,11 +103,18 @@ export function PermissionChecklist({ selected, onChange }: PermissionChecklistP
     <div className="space-y-4">
       {Object.entries(grouped).map(([resource, perms]) => {
         const allSelected = perms.every((p) => selectedSet.has(p));
+        const someSelected = perms.some((p) => selectedSet.has(p));
         return (
           <div key={resource}>
             <div className="mb-2 flex items-center gap-2">
               <input
                 checked={allSelected}
+                ref={(node) => {
+                  if (node) {
+                    node.indeterminate = someSelected && !allSelected;
+                  }
+                }}
+                aria-checked={someSelected && !allSelected ? "mixed" : allSelected}
                 className="rounded"
                 id={`group-${resource}`}
                 onChange={() => toggleGroup(resource, perms)}

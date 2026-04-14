@@ -67,7 +67,18 @@ export function PortalLayout() {
           <Outlet />
         </div>
       </main>
-      <ShellFooter ariaLabel={t("footer.navigation")} links={footerLinks} />
+      <ShellFooter
+        ariaLabel={t("footer.navigation")}
+        links={footerLinks}
+        onAction={(action) => {
+          if (action === "logout") {
+            void (async () => {
+              await logout();
+              void navigate({ to: "/login", replace: true });
+            })();
+          }
+        }}
+      />
       <BackToTopButton label={t("actions.backToTop")} />
     </div>
   );

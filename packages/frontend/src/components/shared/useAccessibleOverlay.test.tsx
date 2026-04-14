@@ -95,4 +95,28 @@ describe("useAccessibleOverlay", () => {
 
     expect(document.activeElement).toBe(first);
   });
+
+  it("hides background content from assistive tech when modal is open", () => {
+    const view = render(
+      <div>
+        <div id="outside">Outside</div>
+        <TestOverlay />
+      </div>
+    );
+    const outside = view.querySelector<HTMLElement>("#outside");
+    const openButton = view.querySelector<HTMLButtonElement>("#open-btn");
+    expect(outside?.getAttribute("aria-hidden")).toBeNull();
+
+    act(() => {
+      openButton?.click();
+    });
+
+    expect(outside?.getAttribute("aria-hidden")).toBe("true");
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+
+    expect(outside?.getAttribute("aria-hidden")).toBeNull();
+  });
 });

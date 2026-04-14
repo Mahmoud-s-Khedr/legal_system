@@ -1,4 +1,5 @@
 import type { DocumentSearchResultDto } from "@elms/shared";
+import { Fragment } from "react";
 import { formatDateTime } from "../../routes/app/ui";
 
 interface SearchResultCardProps {
@@ -6,6 +7,8 @@ interface SearchResultCardProps {
 }
 
 export function SearchResultCard({ result }: SearchResultCardProps) {
+  const headlineParts = splitHeadlineByMark(result.headline);
+
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-2">
       <div className="flex items-start justify-between gap-4">
@@ -19,13 +22,53 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
           </span>
         </div>
       </div>
-      {result.headline ? (
-        <p
-          className="text-sm text-slate-600 leading-relaxed [&_mark]:rounded [&_mark]:bg-yellow-200 [&_mark]:px-0.5"
-          dangerouslySetInnerHTML={{ __html: result.headline }}
-        />
+      {headlineParts.length > 0 ? (
+        <p className="text-sm text-slate-600 leading-relaxed">
+          {headlineParts.map((part, index) =>
+            part.highlight ? (
+              <mark key={`mark-${index}`} className="rounded bg-yellow-200 px-0.5">
+                {part.text}
+              </mark>
+            ) : (
+              <Fragment key={`text-${index}`}>{part.text}</Fragment>
+            )
+          )}
+        </p>
       ) : null}
       <p className="text-xs text-slate-400">{formatDateTime(result.createdAt)}</p>
     </div>
   );
+}
+
+interface HeadlinePart {
+  text: string;
+  highlight: boolean;
+}
+
+function splitHeadlineByMark(headline: string): HeadlinePart[] {
+  if (!headline.trim()) {
+    return [];
+  }
+
+  const tokens = headline.split(/(<mark>|<\/mark>)/gi);
+  const parts: HeadlinePart[] = [];
+  let highlight = false;
+
+  for (const token of tokens) {
+    if (!token) {
+      continue;
+    }
+    if (/^<mark>$/i.test(token)) {
+      highlight = true;
+      continue;
+    }
+    if (/^<\/mark>$/i.test(token)) {
+      highlight = false;
+      continue;
+    }
+
+    parts.push({ text: token, highlight });
+  }
+
+  return parts;
 }

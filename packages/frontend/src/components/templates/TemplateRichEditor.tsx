@@ -26,7 +26,19 @@ const PlaceholderToken = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: "span[data-placeholder-key]" }];
+    return [
+      {
+        tag: "span[data-placeholder-key]",
+        getAttrs: (node) => {
+          if (!(node instanceof HTMLElement)) {
+            return false;
+          }
+          return {
+            key: node.getAttribute("data-placeholder-key") ?? ""
+          };
+        }
+      }
+    ];
   },
 
   renderHTML({ HTMLAttributes }) {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Check, X, Pencil } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface SelectOption {
   label: string;
@@ -27,6 +28,7 @@ interface Props {
  * On click: switches to an input/select with confirm (✓) and cancel (✕) buttons.
  */
 export function InlineEditField({ value, onSave, type = "text", options, placeholder, className }: Props) {
+  const { t } = useTranslation("app");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -63,7 +65,12 @@ export function InlineEditField({ value, onSave, type = "text", options, placeho
         onClick={startEdit}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") startEdit(); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            startEdit();
+          }
+        }}
       >
         <span className={value ? "" : "italic text-slate-400"}>{value || placeholder || "—"}</span>
         <Pencil className="hidden h-3 w-3 shrink-0 text-slate-400 group-hover:inline" />
@@ -109,7 +116,7 @@ export function InlineEditField({ value, onSave, type = "text", options, placeho
         />
       )}
       <button
-        aria-label="Confirm"
+        aria-label={t("actions.save")}
         className="rounded-lg p-1 text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
         disabled={saving}
         onClick={() => void confirmEdit()}
@@ -118,7 +125,7 @@ export function InlineEditField({ value, onSave, type = "text", options, placeho
         <Check className="h-4 w-4" />
       </button>
       <button
-        aria-label="Cancel"
+        aria-label={t("actions.cancel")}
         className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
         onClick={cancelEdit}
         type="button"

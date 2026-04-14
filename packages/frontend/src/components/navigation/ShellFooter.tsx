@@ -2,20 +2,23 @@ import { Link } from "@tanstack/react-router";
 import { Linkedin, Mail, Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getDeveloperContact } from "../../lib/developerContact";
-import { handleExternalLinkClick } from "../../lib/externalLinks";
+import { copyTextToClipboard, handleExternalLinkClick } from "../../lib/externalLinks";
 
 export interface ShellFooterLink {
   id: string;
   label: string;
-  to: string;
+  to?: string;
+  action?: "logout";
 }
 
 export function ShellFooter({
   ariaLabel,
-  links
+  links,
+  onAction
 }: {
   ariaLabel: string;
   links: ShellFooterLink[];
+  onAction?: (action: NonNullable<ShellFooterLink["action"]>) => void;
 }) {
   const { t } = useTranslation("app");
   const contact = getDeveloperContact();
@@ -28,13 +31,28 @@ export function ShellFooter({
           <span className="text-xs font-semibold text-slate-500">{ariaLabel}</span>
           <nav className="flex flex-wrap items-center gap-2" aria-label={ariaLabel}>
             {links.map((link) => (
-              <Link
-                key={link.id}
-                to={link.to}
-                className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-accent hover:text-accent"
-              >
-                {link.label}
-              </Link>
+              link.to ? (
+                <Link
+                  key={link.id}
+                  to={link.to}
+                  className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-accent hover:text-accent"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <button
+                  key={link.id}
+                  type="button"
+                  className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-accent hover:text-accent"
+                  onClick={() => {
+                    if (link.action) {
+                      onAction?.(link.action);
+                    }
+                  }}
+                >
+                  {link.label}
+                </button>
+              )
             ))}
           </nav>
         </div>
@@ -44,7 +62,7 @@ export function ShellFooter({
             <button
               type="button"
               className="font-semibold text-slate-700 underline-offset-2 transition hover:text-accent hover:underline"
-              onClick={() => void navigator.clipboard.writeText(developerName)}
+              onClick={() => void copyTextToClipboard(developerName)}
               title={t("about.copy")}
             >
               {developerName}

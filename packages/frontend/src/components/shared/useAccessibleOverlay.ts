@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 type OverlayMode = "modal" | "popover";
 
@@ -6,7 +6,7 @@ interface UseAccessibleOverlayOptions {
   open: boolean;
   mode: OverlayMode;
   contentRef: RefObject<HTMLElement>;
-  triggerRef: RefObject<HTMLElement>;
+  triggerRef?: RefObject<HTMLElement | null>;
   onClose: () => void;
 }
 
@@ -32,6 +32,12 @@ export function useAccessibleOverlay({
   triggerRef,
   onClose
 }: UseAccessibleOverlayOptions) {
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -51,10 +57,57 @@ export function useAccessibleOverlay({
       document.body.style.overflow = "hidden";
     }
 
+    const cleanupFns: Array<() => void> = [];
+    if (mode === "modal") {
+      const updatedNodes: Array<{
+        element: HTMLElement;
+        hadAriaHidden: boolean;
+        previousAriaHidden: string | null;
+        hadInert: boolean;
+        previousInert: boolean;
+      }> = [];
+      let node: HTMLElement | null = content;
+      while (node && node.parentElement) {
+        const ancestorParent = node.parentElement as HTMLElement;
+        for (const sibling of Array.from(ancestorParent.children)) {
+          if (!(sibling instanceof HTMLElement) || sibling === node) {
+            continue;
+          }
+          updatedNodes.push({
+            element: sibling,
+            hadAriaHidden: sibling.hasAttribute("aria-hidden"),
+            previousAriaHidden: sibling.getAttribute("aria-hidden"),
+            hadInert: "inert" in sibling,
+            previousInert: Boolean((sibling as HTMLElement & { inert?: boolean }).inert)
+          });
+          sibling.setAttribute("aria-hidden", "true");
+          (sibling as HTMLElement & { inert?: boolean }).inert = true;
+        }
+        if (ancestorParent === document.body) {
+          break;
+        }
+        node = ancestorParent;
+      }
+      cleanupFns.push(() => {
+        for (const entry of updatedNodes) {
+          if (entry.hadAriaHidden) {
+            entry.element.setAttribute("aria-hidden", entry.previousAriaHidden ?? "true");
+          } else {
+            entry.element.removeAttribute("aria-hidden");
+          }
+          if (entry.hadInert) {
+            (entry.element as HTMLElement & { inert?: boolean }).inert = entry.previousInert;
+          } else {
+            (entry.element as HTMLElement & { inert?: boolean }).inert = false;
+          }
+        }
+      });
+    }
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -94,7 +147,10 @@ export function useAccessibleOverlay({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
-      triggerRef.current?.focus();
+      triggerRef?.current?.focus();
+      for (const cleanupFn of cleanupFns) {
+        cleanupFn();
+      }
     };
-  }, [contentRef, mode, onClose, open, triggerRef]);
+  }, [contentRef, mode, open, triggerRef]);
 }

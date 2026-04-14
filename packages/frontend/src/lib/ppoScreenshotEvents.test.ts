@@ -129,7 +129,7 @@ describe("startPpoScreenshotEventListener", () => {
     expect(addToast).toHaveBeenCalledWith("ppo.status.navigationFailed", "error");
   });
 
-  it("logs setup failure and shows fallback toast once", async () => {
+  it("logs setup failure and shows fallback toast for each failed setup attempt", async () => {
     const addToast = vi.fn();
     const error = new Error("bind failed");
     const importEventApi = vi.fn().mockRejectedValue(error);
@@ -152,7 +152,7 @@ describe("startPpoScreenshotEventListener", () => {
     await flush();
 
     expect(consoleError).toHaveBeenCalled();
-    expect(addToast).toHaveBeenCalledTimes(1);
+    expect(addToast).toHaveBeenCalledTimes(2);
     expect(addToast).toHaveBeenCalledWith("ppo.status.navigationFailed", "error");
   });
 });

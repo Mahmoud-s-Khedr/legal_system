@@ -227,5 +227,53 @@ describe("DocumentViewer", () => {
     const error = view.querySelector("p.text-red-600");
     expect(error).not.toBeNull();
     expect((error?.textContent ?? "").trim().length).toBeGreaterThan(0);
+    const fallbackText = view.querySelector("pre");
+    expect(fallbackText?.textContent).toContain("sample indexed text");
+  });
+
+  it("reloads preview when the same document receives a new version", async () => {
+    vi.mocked(apiDownload)
+      .mockResolvedValueOnce({
+        blob: new Blob(["first"], { type: "application/pdf" }),
+        filename: "first.pdf",
+        contentType: "application/pdf"
+      })
+      .mockResolvedValueOnce({
+        blob: new Blob(["second"], { type: "application/pdf" }),
+        filename: "second.pdf",
+        contentType: "application/pdf"
+      });
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => "blob:preview")
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn()
+    });
+
+    render(
+      <DocumentViewer
+        document={makeDoc({ id: "doc-1", updatedAt: "2026-03-01T00:00:00.000Z", versions: [{ id: "v1", documentId: "doc-1", versionNumber: 1, fileName: "a.pdf", storageKey: "k1", createdAt: "2026-03-01T00:00:00.000Z" }] })}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+    await flushAsyncWork();
+
+    act(() => {
+      root?.render(
+        <DocumentViewer
+          document={makeDoc({ id: "doc-1", updatedAt: "2026-03-02T00:00:00.000Z", versions: [{ id: "v2", documentId: "doc-1", versionNumber: 2, fileName: "b.pdf", storageKey: "k2", createdAt: "2026-03-02T00:00:00.000Z" }] })}
+          onClose={() => undefined}
+          onVersionUploaded={() => undefined}
+        />
+      );
+    });
+    await flushAsyncWork();
+
+    expect(apiDownload).toHaveBeenCalledTimes(2);
   });
 });

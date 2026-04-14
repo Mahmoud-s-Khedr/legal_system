@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Plus, Trash2, Search } from "lucide-react";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, PrimaryButton, SectionCard } from "../../routes/app/ui";
+import { EmptyState, ErrorState, PrimaryButton, SectionCard } from "../../routes/app/ui";
+import { useToastStore } from "../../store/toastStore";
 
 function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -41,6 +42,7 @@ interface SearchResult {
 export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
+  const addToast = useToastStore((state) => state.addToast);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [notes, setNotes] = useState("");
@@ -67,6 +69,9 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
       setSearchQ("");
       setNotes("");
       void queryClient.invalidateQueries({ queryKey: ["case-legal-refs", caseId] });
+    },
+    onError: (error) => {
+      addToast((error as Error)?.message ?? t("errors.fallback"), "error");
     }
   });
 
@@ -81,7 +86,16 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
   return (
     <SectionCard description={t("library.referencesHelp")} title={t("cases.tabs.references")}>
       <div className="space-y-3">
-        {!refsQuery.data?.length ? (
+        {refsQuery.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : refsQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(refsQuery.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void refsQuery.refetch()}
+          />
+        ) : !refsQuery.data?.length ? (
           <EmptyState description={t("empty.noReferencesHelp")} title={t("empty.noReferences")} />
         ) : (
           refsQuery.data.map((ref) => {
@@ -110,6 +124,7 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
                   aria-label={t("actions.unlink")}
                   className="rounded-lg p-1 text-slate-400 hover:text-red-500"
                   onClick={() => unlinkMutation.mutate(ref.id)}
+                  disabled={unlinkMutation.isPending}
                 >
                   <Trash2 aria-hidden="true" className="size-4" />
                 </button>
@@ -146,6 +161,7 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
                       const artId = result.kind === "article" ? result.id : undefined;
                       linkMutation.mutate({ documentId: docId, articleId: artId, notesVal: notes });
                     }}
+                    disabled={linkMutation.isPending}
                   >
                     <BookOpen aria-hidden="true" className="size-4 shrink-0 text-accent" />
                     <span className="font-medium">{result.title}</span>

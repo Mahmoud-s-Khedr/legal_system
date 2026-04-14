@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useHasPermission } from "../store/authStore";
+import { useAuthBootstrap, useHasPermission } from "../store/authStore";
 
 interface Props {
   permission: string;
@@ -12,15 +12,17 @@ interface Props {
  * Redirects to /app/dashboard otherwise.
  */
 export function PermissionGate({ permission, children }: Props) {
+  const isBootstrapped = useAuthBootstrap().isBootstrapped;
   const allowed = useHasPermission(permission);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!allowed) {
-      void navigate({ to: "/app/dashboard" });
+    if (!isBootstrapped || allowed) {
+      return;
     }
-  }, [allowed, navigate]);
+    void navigate({ to: "/app/dashboard", replace: true });
+  }, [allowed, isBootstrapped, navigate]);
 
-  if (!allowed) return null;
+  if (!isBootstrapped || !allowed) return null;
   return <>{children}</>;
 }

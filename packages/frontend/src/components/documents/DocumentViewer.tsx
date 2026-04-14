@@ -26,6 +26,7 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
   const isPdf = doc.mimeType === "application/pdf";
   const isImage = doc.mimeType.startsWith("image/");
   const canPreviewFile = isPdf || isImage;
+  const versionsKey = doc.versions.map((version) => version.id).join("|");
 
   useEffect(() => {
     function revokePreviewUrl() {
@@ -73,7 +74,7 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
       cancelled = true;
       revokePreviewUrl();
     };
-  }, [canPreviewFile, doc.id]);
+  }, [canPreviewFile, doc.id, doc.updatedAt, versionsKey]);
 
   async function handleDownload() {
     try {
@@ -132,7 +133,16 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
           {isPreviewLoading ? (
             <p className="text-sm text-slate-500">{t("documents.previewLoading")}</p>
           ) : previewError ? (
-            <p className="text-sm text-red-600">{t("documents.previewFailed")}</p>
+            doc.contentText ? (
+              <div className="space-y-3">
+                <p className="text-sm text-red-600">{t("documents.previewFailed")}</p>
+                <pre className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">
+                  {doc.contentText}
+                </pre>
+              </div>
+            ) : (
+              <p className="text-sm text-red-600">{t("documents.previewFailed")}</p>
+            )
           ) : isPdf && previewUrl ? (
             <PdfViewer url={previewUrl} />
           ) : isImage && previewUrl ? (

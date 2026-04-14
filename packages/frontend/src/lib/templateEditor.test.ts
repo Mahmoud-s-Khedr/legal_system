@@ -25,4 +25,13 @@ describe("templateEditor", () => {
   it("detects empty editor content", () => {
     expect(isTemplateHtmlEmpty("<p><br></p>")).toBe(true);
   });
+
+  it("keeps placeholder span keys during normalization", () => {
+    const html = normalizeTemplateHtml(
+      '<p><span data-placeholder-key="caseName">Custom label</span></p>'
+    );
+
+    expect(html).toContain('data-placeholder-key="caseName"');
+    expect(html).toContain("{{caseName}}");
+  });
 });

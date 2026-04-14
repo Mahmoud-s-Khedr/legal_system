@@ -79,6 +79,22 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
     }
   });
 
+  const handleDelete = async (doc: DocumentDto) => {
+    const approved = await confirmAction({
+      content: t("actions.delete"),
+      okButtonProps: { danger: true }
+    });
+    if (!approved) {
+      return;
+    }
+
+    try {
+      await deleteMutation.mutateAsync(doc.id);
+    } catch (error) {
+      addToast((error as Error)?.message ?? t("errors.fallback"), "error");
+    }
+  };
+
   const handleDownload = async (doc: DocumentDto) => {
     try {
       const { blob, filename } = await apiDownload(`/api/documents/${doc.id}/stream`);
@@ -173,6 +189,16 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
                 {t("actions.showIndexedText")}
               </button>
             ) : null}
+            <button
+              className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              onClick={() => {
+                void handleDelete(doc);
+              }}
+              type="button"
+              disabled={deleteMutation.isPending}
+            >
+              {t("actions.delete")}
+            </button>
           </>
         )}
       />
@@ -228,20 +254,12 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
                     <button
                       className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                       onClick={() => {
-                        void (async () => {
-                          const approved = await confirmAction({
-                            content: t("actions.delete"),
-                            okButtonProps: { danger: true }
-                          });
-                          if (!approved) {
-                            return;
-                          }
-                          await deleteMutation.mutateAsync(doc.id);
-                        })();
+                        void handleDelete(doc);
                       }}
                       type="button"
                       aria-label={`${t("actions.delete")} ${doc.title}`}
                       title={t("actions.delete")}
+                      disabled={deleteMutation.isPending}
                     >
                       ×
                     </button>

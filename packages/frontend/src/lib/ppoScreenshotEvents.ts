@@ -25,8 +25,6 @@ export interface PpoScreenshotEventListenerOptions {
   importEventApi?: () => Promise<EventApi>;
 }
 
-let hasShownSetupFailureToast = false;
-
 function onScreenshotEvent(
   payload: PpoScreenshotEventPayload | undefined,
   addToast: (message: string, variant?: ToastVariant) => void,
@@ -77,10 +75,7 @@ export function startPpoScreenshotEventListener({
     })
     .catch((error) => {
       console.error("[ppo] failed to register screenshot event listener", error);
-      if (!hasShownSetupFailureToast) {
-        hasShownSetupFailureToast = true;
-        addToast(t("ppo.status.navigationFailed"), "error");
-      }
+      addToast(t("ppo.status.navigationFailed"), "error");
     });
 
   return () => {
@@ -90,5 +85,5 @@ export function startPpoScreenshotEventListener({
 }
 
 export function __resetPpoScreenshotEventListenerForTests() {
-  hasShownSetupFailureToast = false;
+  // no-op
 }

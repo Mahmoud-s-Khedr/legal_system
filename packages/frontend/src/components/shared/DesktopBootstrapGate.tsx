@@ -71,7 +71,9 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
       } finally {
         if (!cancelled) {
           const isTerminal = nextPhase === "ready";
-          pollRef.current = window.setTimeout(poll, isTerminal ? 2500 : 750);
+          if (!isTerminal) {
+            pollRef.current = window.setTimeout(poll, 750);
+          }
         }
       }
     };
@@ -92,6 +94,21 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
   const isRecoverableMigrationFailure =
     status.phase === "failed" &&
     (failureMessage.includes("P3009") || failureMessage.toLowerCase().includes("migration failed"));
+
+  async function runRecoveryCommand(command: string, message: string) {
+    setStatus({
+      phase: "recovering",
+      message
+    });
+    try {
+      await invokeDesktopCommand(command);
+    } catch (error) {
+      setStatus({
+        phase: "failed",
+        message: (error as Error)?.message ?? t("desktopBootstrap.unreachable")
+      });
+    }
+  }
 
   if (!isDesktopShell || isDummyDesktopRuntime() || status.phase === "ready") {
     return <>{children}</>;
@@ -120,11 +137,7 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
               <button
                 className="rounded-2xl bg-amber-700 px-5 py-3 font-semibold text-white hover:bg-amber-800"
                 onClick={() => {
-                  setStatus({
-                    phase: "recovering",
-                    message: t("desktopBootstrap.repairingRuntime")
-                  });
-                  void invokeDesktopCommand("repair_postgres_runtime");
+                  void runRecoveryCommand("repair_postgres_runtime", t("desktopBootstrap.repairingRuntime"));
                 }}
                 type="button"
               >
@@ -135,11 +148,7 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
               <button
                 className="rounded-2xl bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-800"
                 onClick={() => {
-                  setStatus({
-                    phase: "recovering",
-                    message: t("desktopBootstrap.repairing")
-                  });
-                  void invokeDesktopCommand("repair_bootstrap_migrations");
+                  void runRecoveryCommand("repair_bootstrap_migrations", t("desktopBootstrap.repairing"));
                 }}
                 type="button"
               >
@@ -149,11 +158,7 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
             <button
               className="rounded-2xl bg-accent px-5 py-3 font-semibold text-white"
               onClick={() => {
-                setStatus({
-                  phase: "starting",
-                  message: t("desktopBootstrap.retrying")
-                });
-                void invokeDesktopCommand("retry_bootstrap");
+                void runRecoveryCommand("retry_bootstrap", t("desktopBootstrap.retrying"));
               }}
               type="button"
             >
@@ -176,7 +181,14 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
                       phase: "recovering",
                       message: t("desktopBootstrap.resetting")
                     });
-                    void invokeDesktopCommand("reset_local_database");
+                    try {
+                      await invokeDesktopCommand("reset_local_database");
+                    } catch (error) {
+                      setStatus({
+                        phase: "failed",
+                        message: (error as Error)?.message ?? t("desktopBootstrap.unreachable")
+                      });
+                    }
                   })();
                 }}
                 type="button"

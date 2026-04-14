@@ -314,7 +314,7 @@ export function AppLayout() {
         </main>
       </div>
       <ShellFooter ariaLabel={t("footer.navigation")} links={footerLinks} />
-      <BackToTopButton label={t("actions.backToTop")} />
+      <BackToTopButton label={t("actions.backToTop")} scrollContainerId="main-content" />
     </div>
   );
 }

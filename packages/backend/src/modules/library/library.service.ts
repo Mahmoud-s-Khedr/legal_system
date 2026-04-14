@@ -498,7 +498,20 @@ export async function listCaseLegalReferences(
     });
   });
 
-  return refs.map((r) => ({
+  return refs.map(mapCaseReferenceToDto);
+}
+
+function mapCaseReferenceToDto(r: {
+  id: string;
+  caseId: string;
+  documentId: string;
+  articleId: string | null;
+  notes: string | null;
+  createdAt: Date;
+  document: { title: string; type: string };
+  article: { articleNumber: string; title: string | null } | null;
+}): CaseLegalReferenceDto {
+  return {
     id: r.id,
     caseId: r.caseId,
     documentId: r.documentId,
@@ -507,7 +520,7 @@ export async function listCaseLegalReferences(
     document: { title: r.document.title, type: r.document.type },
     article: r.article ? { articleNumber: r.article.articleNumber, title: r.article.title } : null,
     createdAt: r.createdAt.toISOString()
-  }));
+  };
 }
 
 export async function linkDocumentToCase(
@@ -517,26 +530,44 @@ export async function linkDocumentToCase(
   articleId?: string,
   notes?: string
 ): Promise<CaseLegalReferenceDto> {
-  const ref = await withTenant(prisma, actor.firmId, async (tx) => {
-    return tx.caseLegalReference.create({
-      data: { caseId, documentId, articleId: articleId ?? null, notes: notes ?? null },
+  const reference = await withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.caseLegalReference.findFirst({
+      where: { caseId, documentId, articleId: articleId ?? null },
       include: {
         document: { select: { title: true, type: true } },
         article: { select: { articleNumber: true, title: true } }
       }
     });
+    if (existing) {
+      return existing;
+    }
+
+    try {
+      return await tx.caseLegalReference.create({
+        data: { caseId, documentId, articleId: articleId ?? null, notes: notes ?? null },
+        include: {
+          document: { select: { title: true, type: true } },
+          article: { select: { articleNumber: true, title: true } }
+        }
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const deduped = await tx.caseLegalReference.findFirst({
+          where: { caseId, documentId, articleId: articleId ?? null },
+          include: {
+            document: { select: { title: true, type: true } },
+            article: { select: { articleNumber: true, title: true } }
+          }
+        });
+        if (deduped) {
+          return deduped;
+        }
+      }
+      throw error;
+    }
   });
 
-  return {
-    id: ref.id,
-    caseId: ref.caseId,
-    documentId: ref.documentId,
-    articleId: ref.articleId,
-    notes: ref.notes,
-    document: { title: ref.document.title, type: ref.document.type },
-    article: ref.article ? { articleNumber: ref.article.articleNumber, title: ref.article.title } : null,
-    createdAt: ref.createdAt.toISOString()
-  };
+  return mapCaseReferenceToDto(reference);
 }
 
 export async function unlinkDocumentFromCase(actor: SessionUser, referenceId: string): Promise<boolean> {

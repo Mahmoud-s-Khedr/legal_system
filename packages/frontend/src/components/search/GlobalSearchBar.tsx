@@ -7,6 +7,10 @@ interface Props {
 
 export function GlobalSearchBar({ onOpenPalette }: Props) {
   const { t } = useTranslation("app");
+  const isMacPlatform =
+    typeof navigator !== "undefined" &&
+    /Mac|iPhone|iPad|iPod/i.test(navigator.platform);
+  const shortcutLabel = isMacPlatform ? "⌘K" : "Ctrl+K";
 
   return (
     <button
@@ -18,7 +22,9 @@ export function GlobalSearchBar({ onOpenPalette }: Props) {
     >
       <Search className="h-4 w-4 shrink-0" />
       <span className="flex-1 text-start">{t("search.placeholder")}</span>
-      <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 text-xs text-slate-400 sm:inline">⌘K</kbd>
+      <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 text-xs text-slate-400 sm:inline">
+        {shortcutLabel}
+      </kbd>
     </button>
   );
 }
