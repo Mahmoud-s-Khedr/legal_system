@@ -13,6 +13,19 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+function getMimeTypeFromStorageKey(storageKey: string): string {
+  const ext = storageKey.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "pdf") return "application/pdf";
+  if (ext === "docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (ext === "png") return "image/png";
+  if (ext === "tif" || ext === "tiff") return "image/tiff";
+  if (ext === "webp") return "image/webp";
+  if (ext === "bmp") return "image/bmp";
+  if (ext === "gif") return "image/gif";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  return "image/jpeg";
+}
+
 export async function runLibraryExtraction(
   libraryDocumentId: string,
   env: AppEnv,
@@ -31,13 +44,7 @@ export async function runLibraryExtraction(
     const buffer = await streamToBuffer(stream);
 
     // mimeType is not stored on LibraryDocument; derive from storageKey extension
-    const ext = doc.storageKey.split(".").pop()?.toLowerCase() ?? "";
-    const mimeType =
-      ext === "pdf"  ? "application/pdf" :
-      ext === "docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" :
-      ext === "png"  ? "image/png" :
-      ext === "tiff" ? "image/tiff" :
-      "image/jpeg";
+    const mimeType = getMimeTypeFromStorageKey(doc.storageKey);
 
     const adapter =
       doc.ocrBackend === "GOOGLE_VISION"

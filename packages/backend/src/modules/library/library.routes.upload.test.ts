@@ -26,7 +26,7 @@ vi.mock("../../middleware/requirePermission.js", () => ({
 }));
 
 vi.mock("../documents/documents.service.js", () => ({
-  ALLOWED_MIME_TYPES: ["application/pdf"]
+  ALLOWED_MIME_TYPES: ["application/pdf", "image/webp"]
 }));
 
 vi.mock("../../jobs/libraryExtractionDispatcher.js", () => ({
@@ -244,5 +244,34 @@ describe("library upload route authorization", () => {
     const createArgs = prisma.libraryDocument.create.mock.calls[0]?.[0];
     expect(createArgs?.data?.scope).toBe("SYSTEM");
     expect(createArgs?.data?.firmId).toBeNull();
+  });
+
+  it("accepts newly allowed image MIME types", async () => {
+    const app = createApp();
+    await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
+    const uploadCall = app.post.mock.calls.find((call) => call[0] === "/api/library/documents/upload");
+    const handler = uploadCall?.[2] as (request: unknown, reply: unknown) => Promise<unknown>;
+
+    fileTypeFromBuffer.mockResolvedValueOnce({ mime: "image/webp" });
+
+    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const request = {
+      sessionUser: actor,
+      file: vi.fn().mockResolvedValue({
+        filename: "scan.webp",
+        file: Readable.from(Buffer.from("webp-bytes")),
+        fields: {
+          title: { value: "WebP Scan" },
+          scope: { value: "FIRM" }
+        }
+      })
+    };
+    const reply = createReplyRecorder();
+
+    await handler(request, reply);
+
+    expect(reply.statusCode).toBe(201);
+    const createArgs = prisma.libraryDocument.create.mock.calls.at(-1)?.[0];
+    expect(createArgs?.data?.title).toBe("WebP Scan");
   });
 });

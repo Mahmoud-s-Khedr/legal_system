@@ -1172,7 +1172,7 @@ export function CaseQuickIntakePage() {
                 className="hidden"
                 type="file"
                 multiple
-                accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff"
+                accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif"
                 onChange={(event) => addDocumentFiles(event.target.files)}
               />
             </div>

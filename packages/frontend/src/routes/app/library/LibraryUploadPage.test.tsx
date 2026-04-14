@@ -63,4 +63,11 @@ describe("LibraryUploadPage", () => {
 
     expect(view.textContent).not.toContain(i18n.t("library.scope", { ns: "app" }));
   });
+
+  it("uses expanded safe image/scanner accept types", () => {
+    mockUseHasPermission.mockReturnValue(false);
+    const view = render(<LibraryUploadPage />);
+    const input = view.querySelector('input[type="file"]');
+    expect(input?.getAttribute("accept")).toBe(".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif");
+  });
 });

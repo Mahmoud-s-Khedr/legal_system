@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { apiFormFetch } from "../../lib/api";
 import { formatDateTime } from "../../routes/app/ui";
 
-const ACCEPTED_TYPES = ".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff";
+const ACCEPTED_TYPES = ".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif";
 
 interface VersionHistoryProps {
   document: DocumentDto;

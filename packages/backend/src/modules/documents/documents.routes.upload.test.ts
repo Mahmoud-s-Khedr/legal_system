@@ -23,7 +23,7 @@ vi.mock("../../utils/auditContext.js", () => ({
 }));
 
 vi.mock("./documents.service.js", () => ({
-  ALLOWED_MIME_TYPES: ["application/pdf"],
+  ALLOWED_MIME_TYPES: ["application/pdf", "image/webp"],
   createDocument,
   getDocument: vi.fn(),
   getDownloadUrl: vi.fn(),
@@ -129,6 +129,43 @@ describe("document upload route multipart field parsing", () => {
         clientId: "22222222-2222-2222-2222-222222222222",
         fileName: "evidence.pdf",
         mimeType: "application/pdf"
+      }),
+      expect.anything(),
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it("accepts newly allowed image MIME types", async () => {
+    const app = createApp();
+    await registerDocumentRoutes(app as never, {} as never);
+
+    const uploadCall = app.post.mock.calls.find((call) => call[0] === "/api/documents");
+    const handler = uploadCall?.[2] as (request: unknown, reply: unknown) => Promise<unknown>;
+
+    fileTypeFromBuffer.mockResolvedValueOnce({ mime: "image/webp" });
+
+    const request = {
+      sessionUser: makeSessionUser({ permissions: ["documents:create"] }),
+      file: vi.fn().mockResolvedValue({
+        filename: "scan.webp",
+        file: Readable.from(Buffer.from("webp-bytes")),
+        fields: {
+          title: { value: "Scanner Image" },
+          type: { value: "GENERAL" }
+        }
+      })
+    };
+    const reply = createReplyRecorder();
+
+    await handler(request, reply);
+
+    expect(reply.statusCode).toBe(201);
+    expect(createDocument).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        fileName: "scan.webp",
+        mimeType: "image/webp"
       }),
       expect.anything(),
       expect.anything(),

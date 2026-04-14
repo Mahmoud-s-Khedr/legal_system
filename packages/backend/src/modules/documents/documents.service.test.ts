@@ -110,6 +110,10 @@ describe("ALLOWED_MIME_TYPES", () => {
   it("includes common image types", () => {
     expect(ALLOWED_MIME_TYPES).toContain("image/jpeg");
     expect(ALLOWED_MIME_TYPES).toContain("image/png");
+    expect(ALLOWED_MIME_TYPES).toContain("image/tiff");
+    expect(ALLOWED_MIME_TYPES).toContain("image/webp");
+    expect(ALLOWED_MIME_TYPES).toContain("image/bmp");
+    expect(ALLOWED_MIME_TYPES).toContain("image/gif");
   });
 });
 

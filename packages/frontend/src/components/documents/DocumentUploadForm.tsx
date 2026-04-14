@@ -8,7 +8,7 @@ import { runUploadQueue, type UploadQueueStatus, type UploadQueueSummary } from 
 import { PrimaryButton, SelectField } from "../../routes/app/ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 
-const ACCEPTED_TYPES = ".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff";
+const ACCEPTED_TYPES = ".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif";
 
 type SelectedUploadFile = {
   id: string;

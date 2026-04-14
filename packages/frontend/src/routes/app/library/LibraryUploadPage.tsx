@@ -237,7 +237,7 @@ export function LibraryUploadPage() {
           </div>
           <input
             ref={fileInputRef}
-            accept=".pdf,.docx,.jpg,.jpeg,.png,.tiff"
+            accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif"
             className="hidden"
             type="file"
             multiple

@@ -103,4 +103,9 @@ describe("quick intake dirty state", () => {
     expect(navigateIndex).toBeGreaterThan(-1);
     expect(bypassIndex).toBeLessThan(navigateIndex);
   });
+
+  it("uses expanded safe image/scanner accept types for quick intake documents", () => {
+    const source = readFileSync(resolve(process.cwd(), "src/routes/app/CaseQuickIntakePage.tsx"), "utf8");
+    expect(source).toContain('accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif"');
+  });
 });

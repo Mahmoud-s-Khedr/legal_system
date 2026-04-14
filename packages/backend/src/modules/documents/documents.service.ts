@@ -27,7 +27,10 @@ export const ALLOWED_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "image/jpeg",
   "image/png",
-  "image/tiff"
+  "image/tiff",
+  "image/webp",
+  "image/bmp",
+  "image/gif"
 ] as const;
 
 function sanitizeFilename(name: string): string {
