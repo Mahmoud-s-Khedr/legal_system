@@ -798,6 +798,8 @@
     "uploadStatusSuccess": "Téléversé",
     "uploadStatusFailed": "Échec",
     "someUploadsFailed": "Certains fichiers ont échoué au téléversement.",
+    "previewLoading": "Chargement de l'aperçu...",
+    "previewFailed": "Échec du chargement de l'aperçu du document",
     "loadingPdf": "Chargement du PDF...",
     "pdfRenderFailed": "Échec du rendu du PDF",
     "indexedTextTitle": "Texte indexé — {{title}}",

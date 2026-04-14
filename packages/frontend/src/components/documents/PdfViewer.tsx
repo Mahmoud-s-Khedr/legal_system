@@ -14,7 +14,12 @@ export function PdfViewer({ url }: PdfViewerProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [url]);
+
+  useEffect(() => {
     let cancelled = false;
+    let renderTask: { promise: Promise<unknown>; cancel: () => void } | null = null;
 
     async function render() {
       try {
@@ -44,7 +49,8 @@ export function PdfViewer({ url }: PdfViewerProps) {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+        renderTask = page.render({ canvasContext: ctx, viewport, canvas });
+        await renderTask.promise;
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : t("documents.pdfRenderFailed"));
@@ -57,6 +63,7 @@ export function PdfViewer({ url }: PdfViewerProps) {
     void render();
     return () => {
       cancelled = true;
+      renderTask?.cancel();
     };
   }, [url, currentPage, t]);
 

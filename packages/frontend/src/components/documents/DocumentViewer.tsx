@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DocumentDto } from "@elms/shared";
-import { apiDownload, apiFetch } from "../../lib/api";
+import { apiDownload } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { showErrorDialog } from "../../lib/dialog";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
@@ -17,17 +17,63 @@ interface DocumentViewerProps {
 
 export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: DocumentViewerProps) {
   const { t } = useTranslation("app");
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-
-  useEffect(() => {
-    apiFetch<{ url: string; expiresAt: string | null }>(`/api/documents/${doc.id}/download`)
-      .then((res) => setDownloadUrl(res.url))
-      .catch(() => null);
-  }, [doc.id]);
+  const previewObjectUrlRef = useRef<string | null>(null);
 
   const isPdf = doc.mimeType === "application/pdf";
   const isImage = doc.mimeType.startsWith("image/");
+  const canPreviewFile = isPdf || isImage;
+
+  useEffect(() => {
+    function revokePreviewUrl() {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+        previewObjectUrlRef.current = null;
+      }
+    }
+
+    let cancelled = false;
+    revokePreviewUrl();
+    setPreviewUrl(null);
+    setPreviewError(false);
+
+    if (!canPreviewFile) {
+      setIsPreviewLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    async function loadPreview() {
+      try {
+        setIsPreviewLoading(true);
+        const { blob } = await apiDownload(`/api/documents/${doc.id}/stream`);
+        if (cancelled) {
+          return;
+        }
+        const objectUrl = URL.createObjectURL(blob);
+        previewObjectUrlRef.current = objectUrl;
+        setPreviewUrl(objectUrl);
+      } catch {
+        if (!cancelled) {
+          setPreviewError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPreviewLoading(false);
+        }
+      }
+    }
+
+    void loadPreview();
+    return () => {
+      cancelled = true;
+      revokePreviewUrl();
+    };
+  }, [canPreviewFile, doc.id]);
 
   async function handleDownload() {
     try {
@@ -61,18 +107,16 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
             </div>
           </div>
           <div className="ms-4 flex shrink-0 gap-2">
-            {downloadUrl ? (
-              <button
-                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                disabled={isDownloading}
-                onClick={() => {
-                  void handleDownload();
-                }}
-                type="button"
-              >
-                {t("actions.downloadDocument")}
-              </button>
-            ) : null}
+            <button
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+              disabled={isDownloading}
+              onClick={() => {
+                void handleDownload();
+              }}
+              type="button"
+            >
+              {t("actions.downloadDocument")}
+            </button>
             <button
               className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
               onClick={onClose}
@@ -85,10 +129,14 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {isPdf && downloadUrl ? (
-            <PdfViewer url={downloadUrl} />
-          ) : isImage && downloadUrl ? (
-            <img alt={doc.title} className="max-w-full rounded-xl" src={downloadUrl} />
+          {isPreviewLoading ? (
+            <p className="text-sm text-slate-500">{t("documents.previewLoading")}</p>
+          ) : previewError ? (
+            <p className="text-sm text-red-600">{t("documents.previewFailed")}</p>
+          ) : isPdf && previewUrl ? (
+            <PdfViewer url={previewUrl} />
+          ) : isImage && previewUrl ? (
+            <img alt={doc.title} className="max-w-full rounded-xl" src={previewUrl} />
           ) : doc.contentText ? (
             <pre className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">
               {doc.contentText}

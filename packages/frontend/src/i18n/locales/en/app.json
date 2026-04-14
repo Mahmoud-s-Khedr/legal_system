@@ -810,6 +810,8 @@
     "uploadStatusSuccess": "Uploaded",
     "uploadStatusFailed": "Failed",
     "someUploadsFailed": "Some files failed to upload.",
+    "previewLoading": "Loading preview...",
+    "previewFailed": "Failed to load document preview",
     "loadingPdf": "Loading PDF...",
     "pdfRenderFailed": "Failed to render PDF",
     "indexedTextTitle": "Indexed text — {{title}}",

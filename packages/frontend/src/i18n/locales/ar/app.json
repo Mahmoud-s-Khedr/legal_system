@@ -820,6 +820,8 @@
     "uploadStatusSuccess": "تم الرفع",
     "uploadStatusFailed": "فشل",
     "someUploadsFailed": "فشل رفع بعض الملفات.",
+    "previewLoading": "جارٍ تحميل المعاينة...",
+    "previewFailed": "تعذر تحميل معاينة المستند",
     "searchPlaceholder": "ابحث بالعنوان أو نوع الملف",
     "loadingPdf": "جارٍ تحميل ملف PDF...",
     "pdfRenderFailed": "تعذر عرض ملف PDF",
