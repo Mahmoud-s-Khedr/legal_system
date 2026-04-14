@@ -47,6 +47,10 @@ All contributors are expected to maintain a respectful and professional environm
    ```
 6. **Test your changes** — all checks must pass before opening a PR:
    ```bash
+   # Full CI-equivalent quality gate (recommended pre-push)
+   pnpm validate
+
+   # Or run checks individually while iterating
    pnpm lint
    pnpm typecheck
    pnpm test
