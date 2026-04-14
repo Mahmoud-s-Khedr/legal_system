@@ -1,6 +1,13 @@
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import type { IOcrAdapter, OcrExtractionContext } from "./IOcrAdapter.js";
+import type { AppEnv } from "../../../config/env.js";
+import {
+  extractEmbeddedDocxImageText,
+  extractEmbeddedPdfImageText,
+  resolveEmbeddedOcrLimits,
+  type EmbeddedOcrLimits
+} from "./EmbeddedImageOcr.js";
 
 const PDF_MIME = "application/pdf";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -32,13 +39,19 @@ function releaseImageExtractionSlot(): void {
 }
 
 export class TesseractAdapter implements IOcrAdapter {
+  private readonly limits: EmbeddedOcrLimits;
+
+  constructor(env?: Partial<Pick<AppEnv, "OCR_EMBEDDED_PDF_MAX_PAGES" | "OCR_EMBEDDED_DOCX_MAX_IMAGES" | "OCR_EMBEDDED_IMAGE_MAX_BYTES">>) {
+    this.limits = resolveEmbeddedOcrLimits(env);
+  }
+
   async extract(buffer: Buffer, mimeType: string, context?: OcrExtractionContext): Promise<string> {
     try {
       if (mimeType === PDF_MIME) {
-        return await extractPdf(buffer);
+        return await extractPdf(buffer, this.limits, context);
       }
       if (mimeType === DOCX_MIME) {
-        return await extractDocx(buffer);
+        return await extractDocx(buffer, this.limits, context);
       }
       // Images: jpeg, png, tiff
       return await extractImage(buffer, context);
@@ -92,17 +105,54 @@ function logTesseractFailure(
   });
 }
 
-async function extractPdf(buffer: Buffer): Promise<string> {
+async function extractPdfText(buffer: Buffer): Promise<string> {
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   const result = await parser.getText();
   return result.text ?? "";
 }
 
-async function extractDocx(buffer: Buffer): Promise<string> {
+function mergeTextBlocks(...blocks: string[]): string {
+  const normalized = blocks
+    .map((block) => block.trim())
+    .filter((block) => block.length > 0);
+  return normalized.join("\n\n");
+}
+
+async function extractPdf(
+  buffer: Buffer,
+  limits: EmbeddedOcrLimits,
+  context?: OcrExtractionContext
+): Promise<string> {
+  const parserText = await extractPdfText(buffer);
+  const embeddedImageTexts = await extractEmbeddedPdfImageText(
+    buffer,
+    limits,
+    async (imageBuffer) => extractImage(imageBuffer, context),
+    context
+  );
+  return mergeTextBlocks(parserText, ...embeddedImageTexts);
+}
+
+async function extractDocxText(buffer: Buffer): Promise<string> {
   const mammoth = await import("mammoth");
   const result = await mammoth.extractRawText({ buffer });
   return result.value ?? "";
+}
+
+async function extractDocx(
+  buffer: Buffer,
+  limits: EmbeddedOcrLimits,
+  context?: OcrExtractionContext
+): Promise<string> {
+  const parserText = await extractDocxText(buffer);
+  const embeddedImageTexts = await extractEmbeddedDocxImageText(
+    buffer,
+    limits,
+    async (imageBuffer) => extractImage(imageBuffer, context),
+    context
+  );
+  return mergeTextBlocks(parserText, ...embeddedImageTexts);
 }
 
 async function extractImage(buffer: Buffer, context?: OcrExtractionContext): Promise<string> {

@@ -51,6 +51,9 @@ const baseSchema = z.object({
   // OCR
   OCR_BACKEND: z.enum(["tesseract", "google_vision"]).default("tesseract"),
   GOOGLE_VISION_API_KEY: z.string().optional(),
+  OCR_EMBEDDED_PDF_MAX_PAGES: z.coerce.number().int().positive().default(2500),
+  OCR_EMBEDDED_DOCX_MAX_IMAGES: z.coerce.number().int().positive().default(3000),
+  OCR_EMBEDDED_IMAGE_MAX_BYTES: z.coerce.number().int().positive().default(1000 * 1024 * 1024),
   // CORS — comma-separated list of allowed origins for production (e.g. https://elms.firm.com)
   ALLOWED_ORIGINS: z.string().default(""),
   // Email (SMTP)

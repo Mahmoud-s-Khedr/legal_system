@@ -49,7 +49,7 @@ export async function runLibraryExtraction(
     const adapter =
       doc.ocrBackend === "GOOGLE_VISION"
         ? new GoogleVisionAdapter(env)
-        : new TesseractAdapter();
+        : new TesseractAdapter(env);
 
     const rawText = await adapter.extract(buffer, mimeType, {
       documentId: libraryDocumentId,

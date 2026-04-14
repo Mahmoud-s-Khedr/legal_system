@@ -94,7 +94,7 @@ interface ExtractionJobData {
 
 **Worker concurrency:** 3 parallel extractions per worker process.
 
-**Local/Desktop mode:** No Redis; extraction is dispatched synchronously via `extractionDispatcher.ts` during the same request cycle.
+**Local/Desktop mode:** No Redis; extraction is dispatched in-process after the upload response (queued locally for documents, `setImmediate` for library uploads).
 
 ## Phase 5: Text Extraction
 
@@ -102,11 +102,16 @@ interface ExtractionJobData {
 
 | Format | Library | Notes |
 |--------|---------|-------|
-| PDF (text-based) | `pdf-parse` | Direct text extraction, no OCR |
-| PDF (scanned / image) | Tesseract.js or Google Vision | Detected when pdf-parse yields no text |
-| Word (`.docx`) | `mammoth` | Converts DOCX → plain text |
-| Excel (`.xlsx`) | `exceljs` | Reads cell values row by row |
-| Images (`.jpg`, `.png`, `.tiff`) | Tesseract.js or Google Vision | Full OCR |
+| PDF (`.pdf`) | `pdf-parse` + embedded-image OCR | Parses selectable text, then OCRs rendered pages in local Tesseract mode and appends OCR text |
+| Word (`.docx`) | `mammoth` + embedded-image OCR | Extracts raw text, then OCRs `/word/media/*` images in local Tesseract mode and appends OCR text |
+| Images (`.jpg`, `.jpeg`, `.png`, `.tiff`, `.webp`, `.bmp`, `.gif`) | Tesseract.js or Google Vision | Full OCR |
+
+### Embedded-Image OCR Limits (Tesseract local path)
+
+The local Tesseract path applies bounded limits when OCRing embedded images:
+- `OCR_EMBEDDED_PDF_MAX_PAGES` (default `2500`)
+- `OCR_EMBEDDED_DOCX_MAX_IMAGES` (default `3000`)
+- `OCR_EMBEDDED_IMAGE_MAX_BYTES` (default `10,485,76000`)
 
 ### OCR Adapter Selection
 
@@ -203,4 +208,3 @@ Status becomes `"degraded"` when queue depth exceeds 100 jobs.
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

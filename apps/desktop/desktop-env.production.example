@@ -35,3 +35,6 @@ MAX_UPLOAD_BYTES=52428800
 # LOCAL_STORAGE_PATH is optional for workspace/dev runs.
 # Packaged desktop builds always force this to the per-user app-data uploads directory.
 OCR_BACKEND=tesseract
+OCR_EMBEDDED_PDF_MAX_PAGES=2500
+OCR_EMBEDDED_DOCX_MAX_IMAGES=3000
+OCR_EMBEDDED_IMAGE_MAX_BYTES=1048576000
