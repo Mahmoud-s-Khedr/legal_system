@@ -86,6 +86,13 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
         return reply.status(400).send({ message: "No file uploaded" });
       }
 
+      // Validate MIME type using file byte inspection (not the spoofable Content-Type header)
+      const fileBuffer = await readUploadBuffer(data.file);
+      const detectedMime = (await fileTypeFromBuffer(fileBuffer))?.mime ?? null;
+      if (!detectedMime || !ALLOWED_MIME_TYPES.includes(detectedMime as (typeof ALLOWED_MIME_TYPES)[number])) {
+        return reply.status(422).send({ message: `Unsupported or undetectable file type` });
+      }
+
       const fields = data.fields as Record<string, { value: string }>;
       const title = fields.title?.value ?? data.filename;
       const type = fields.type?.value ?? DocumentType.GENERAL;
@@ -95,13 +102,6 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
       // Validate type field
       if (!Object.values(DocumentType).includes(type as DocumentType)) {
         return reply.status(422).send({ message: `Invalid document type: ${type}` });
-      }
-
-      // Validate MIME type using file byte inspection (not the spoofable Content-Type header)
-      const fileBuffer = await readUploadBuffer(data.file);
-      const detectedMime = (await fileTypeFromBuffer(fileBuffer))?.mime ?? null;
-      if (!detectedMime || !ALLOWED_MIME_TYPES.includes(detectedMime as (typeof ALLOWED_MIME_TYPES)[number])) {
-        return reply.status(422).send({ message: `Unsupported or undetectable file type` });
       }
 
       const doc = await createDocument(

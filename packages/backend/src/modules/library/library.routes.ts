@@ -269,6 +269,13 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
         return reply.status(400).send({ message: "No file uploaded" });
       }
 
+      // Validate MIME type using file byte inspection
+      const fileBuffer = await readUploadBuffer(data.file);
+      const detectedMime = (await fileTypeFromBuffer(fileBuffer))?.mime ?? null;
+      if (!detectedMime || !ALLOWED_MIME_TYPES.includes(detectedMime as (typeof ALLOWED_MIME_TYPES)[number])) {
+        return reply.status(422).send({ message: "Unsupported or undetectable file type" });
+      }
+
       const fields = data.fields as Record<string, { value: string }>;
       const title    = fields.title?.value ?? data.filename;
       const type     = fields.type?.value ?? "LEGISLATION";
@@ -286,13 +293,6 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
       const author         = fields.author?.value || undefined;
       const publishedAt    = fields.publishedAt?.value || undefined;
       const legislationStatus = fields.legislationStatus?.value || undefined;
-
-      // Validate MIME type using file byte inspection
-      const fileBuffer = await readUploadBuffer(data.file);
-      const detectedMime = (await fileTypeFromBuffer(fileBuffer))?.mime ?? null;
-      if (!detectedMime || !ALLOWED_MIME_TYPES.includes(detectedMime as (typeof ALLOWED_MIME_TYPES)[number])) {
-        return reply.status(422).send({ message: "Unsupported or undetectable file type" });
-      }
 
       const docId = randomUUID();
       const safeFilename = sanitizeFilename(data.filename);

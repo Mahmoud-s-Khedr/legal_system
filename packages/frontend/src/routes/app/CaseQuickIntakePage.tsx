@@ -582,10 +582,10 @@ export function CaseQuickIntakePage() {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append("file", file);
     formData.append("title", row.title.trim() || file.name);
     formData.append("type", row.type || "GENERAL");
     formData.append("caseId", caseId);
+    formData.append("file", file);
 
     return apiFormFetch("/api/documents", {
       method: "POST",

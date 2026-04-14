@@ -147,6 +147,50 @@ describe("library upload route authorization", () => {
     expect(createArgs?.data?.firmId).toBe("firm-1");
   });
 
+  it("reads multipart fields after file stream consumption", async () => {
+    const app = createApp();
+    await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
+    const uploadCall = app.post.mock.calls.find((call) => call[0] === "/api/library/documents/upload");
+    const handler = uploadCall?.[2] as (request: unknown, reply: unknown) => Promise<unknown>;
+
+    let streamConsumed = false;
+    const file = new Readable({
+      read() {
+        if (streamConsumed) return;
+        this.push(Buffer.from("pdf-bytes"));
+        this.push(null);
+        streamConsumed = true;
+      }
+    });
+
+    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const request = {
+      sessionUser: actor,
+      file: vi.fn().mockResolvedValue({
+        filename: "law.pdf",
+        file,
+        get fields() {
+          return streamConsumed
+            ? {
+                title: { value: "Law Parsed After Stream" },
+                type: { value: "LEGISLATION" },
+                scope: { value: "FIRM" }
+              }
+            : {};
+        }
+      })
+    };
+    const reply = createReplyRecorder();
+
+    await handler(request, reply);
+
+    expect(reply.statusCode).toBe(201);
+    const createArgs = prisma.libraryDocument.create.mock.calls.at(-1)?.[0];
+    expect(createArgs?.data?.title).toBe("Law Parsed After Stream");
+    expect(createArgs?.data?.type).toBe("LEGISLATION");
+    expect(createArgs?.data?.scope).toBe("FIRM");
+  });
+
   it("rejects system-scope upload for non-managers", async () => {
     const app = createApp();
     await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);

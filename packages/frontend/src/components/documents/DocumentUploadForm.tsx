@@ -114,11 +114,11 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
       concurrency: 3,
       upload: async (entry) => {
         const formData = new FormData();
-        formData.append("file", entry.file);
         formData.append("title", entry.file.name);
         formData.append("type", type);
         if (caseId) formData.append("caseId", caseId);
         if (clientId) formData.append("clientId", clientId);
+        formData.append("file", entry.file);
 
         return apiFormFetch<DocumentDto>("/api/documents", { method: "POST", body: formData });
       },
