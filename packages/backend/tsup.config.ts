@@ -25,6 +25,9 @@ const DESKTOP_EXTERNALS = [
   "@fastify/swagger-ui",
 ];
 
+const DESKTOP_NO_EXTERNAL_PATTERN =
+  /^(?!(@prisma\/client(?:\/.*)?|\.prisma\/client(?:\/.*)?|tesseract\.js(?:\/.*)?|tesseract\.js-core(?:\/.*)?|@napi-rs\/canvas(?:\/.*)?|@napi-rs\/canvas-linux-x64-gnu(?:\/.*)?|@napi-rs\/canvas-linux-x64-musl(?:\/.*)?|msgpackr(?:\/.*)?|msgpackr-extract(?:\/.*)?|@msgpackr-extract\/msgpackr-extract-linux-x64(?:\/.*)?|@fastify\/swagger(?:\/.*)?|@fastify\/swagger-ui(?:\/.*)?)).+/;
+
 export default defineConfig(() => {
   const isDesktop = process.env.ELMS_BUILD_TARGET === "desktop";
   const outDir = isDesktop ? "dist/desktop" : "dist/cloud";
@@ -37,7 +40,7 @@ export default defineConfig(() => {
     dts: !isDesktop,
     splitting: !isDesktop,
     bundle: true,
-    noExternal: isDesktop ? [/(.*)/] : undefined,
+    noExternal: isDesktop ? [DESKTOP_NO_EXTERNAL_PATTERN] : undefined,
     external: isDesktop ? DESKTOP_EXTERNALS : undefined,
     banner: isDesktop
       ? {

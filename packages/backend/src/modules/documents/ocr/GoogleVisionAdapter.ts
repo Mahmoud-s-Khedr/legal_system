@@ -1,12 +1,12 @@
 import type { AppEnv } from "../../../config/env.js";
-import type { IOcrAdapter } from "./IOcrAdapter.js";
+import type { IOcrAdapter, OcrExtractionContext } from "./IOcrAdapter.js";
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 export class GoogleVisionAdapter implements IOcrAdapter {
   constructor(private readonly env: AppEnv) {}
 
-  async extract(buffer: Buffer, mimeType: string): Promise<string> {
+  async extract(buffer: Buffer, mimeType: string, _context?: OcrExtractionContext): Promise<string> {
     try {
       if (mimeType === DOCX_MIME) {
         // Vision API does not handle DOCX; fall back to mammoth

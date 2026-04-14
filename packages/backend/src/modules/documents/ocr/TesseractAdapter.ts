@@ -1,8 +1,12 @@
-import type { IOcrAdapter } from "./IOcrAdapter.js";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import type { IOcrAdapter, OcrExtractionContext } from "./IOcrAdapter.js";
 
 const PDF_MIME = "application/pdf";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const MAX_CONCURRENT_IMAGE_OCR = 1;
+const DEFAULT_LANGS = "ara+eng+fra";
+const DEFAULT_OEM = 1;
 
 let activeImageExtractions = 0;
 const pendingImageExtractionResolvers: Array<() => void> = [];
@@ -28,7 +32,7 @@ function releaseImageExtractionSlot(): void {
 }
 
 export class TesseractAdapter implements IOcrAdapter {
-  async extract(buffer: Buffer, mimeType: string): Promise<string> {
+  async extract(buffer: Buffer, mimeType: string, context?: OcrExtractionContext): Promise<string> {
     try {
       if (mimeType === PDF_MIME) {
         return await extractPdf(buffer);
@@ -37,11 +41,55 @@ export class TesseractAdapter implements IOcrAdapter {
         return await extractDocx(buffer);
       }
       // Images: jpeg, png, tiff
-      return await extractImage(buffer);
+      return await extractImage(buffer, context);
     } catch {
       return "";
     }
   }
+}
+
+type TesseractRuntimeOptions = {
+  workerPath: string;
+  corePath: string;
+};
+
+const runtimeRequire = createRequire(import.meta.url);
+const resolveModulePath = (specifier: string): string => runtimeRequire.resolve(specifier);
+
+export function resolveTesseractRuntimeOptions(
+  resolver: (specifier: string) => string = resolveModulePath
+): TesseractRuntimeOptions {
+  const packageJsonPath = resolver("tesseract.js/package.json");
+  const tesseractRoot = dirname(packageJsonPath);
+
+  return {
+    workerPath: join(tesseractRoot, "src", "worker-script", "node", "index.js"),
+    corePath: resolver("tesseract.js-core/tesseract-core.wasm.js"),
+  };
+}
+
+function getErrorCode(error: unknown): string | null {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const rawCode = (error as { code?: unknown }).code;
+    return typeof rawCode === "string" ? rawCode : String(rawCode);
+  }
+  return null;
+}
+
+function logTesseractFailure(
+  error: unknown,
+  runtimeOptions: TesseractRuntimeOptions,
+  context?: OcrExtractionContext
+): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error("[ocr:tesseract] Image extraction failed", {
+    documentId: context?.documentId ?? null,
+    source: context?.source ?? null,
+    workerPath: runtimeOptions.workerPath,
+    corePath: runtimeOptions.corePath,
+    errorCode: getErrorCode(error),
+    errorMessage: message,
+  });
 }
 
 async function extractPdf(buffer: Buffer): Promise<string> {
@@ -57,16 +105,24 @@ async function extractDocx(buffer: Buffer): Promise<string> {
   return result.value ?? "";
 }
 
-async function extractImage(buffer: Buffer): Promise<string> {
+async function extractImage(buffer: Buffer, context?: OcrExtractionContext): Promise<string> {
   await acquireImageExtractionSlot();
 
+  const runtimeOptions = resolveTesseractRuntimeOptions();
   const { createWorker } = await import("tesseract.js");
-  const worker = await createWorker("ara+eng+fra");
+  let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
+
   try {
+    worker = await createWorker(DEFAULT_LANGS, DEFAULT_OEM, runtimeOptions);
     const { data } = await worker.recognize(buffer);
     return data.text ?? "";
+  } catch (error) {
+    logTesseractFailure(error, runtimeOptions, context);
+    return "";
   } finally {
-    await worker.terminate();
+    if (worker) {
+      await worker.terminate().catch(() => undefined);
+    }
     releaseImageExtractionSlot();
   }
 }

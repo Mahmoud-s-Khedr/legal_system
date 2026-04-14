@@ -26,6 +26,14 @@ const REQUIRED_WINDOWS_POSTGRES_RUNTIME_DLLS = [
   "msvcp140.dll",
 ];
 
+const TESSERACT_WORKER_SCRIPT_RELATIVE_PATH =
+  "packages/backend/dist/desktop/node_modules/tesseract.js/src/worker-script/node/index.js";
+const TESSERACT_BUNDLED_CODE_MARKERS = [
+  "node_modules/.pnpm/tesseract.js@",
+  "tesseract.js/src/worker/node/defaultOptions.js",
+  "tesseract.js/src/worker-script/node/index.js",
+];
+
 function fail(message) {
   throw new Error(message);
 }
@@ -241,6 +249,28 @@ function verifyPostgresBundle(postgresDir) {
   }
 }
 
+function ensureServerDoesNotInlineTesseract(serverFilePath, label) {
+  ensureFileExists(serverFilePath, label);
+
+  const contents = readFileSync(serverFilePath, "utf8");
+  const matchedMarker = TESSERACT_BUNDLED_CODE_MARKERS.find((marker) => contents.includes(marker));
+  if (matchedMarker) {
+    fail(`${label} appears to inline tesseract.js runtime code (marker: ${matchedMarker})`);
+  }
+}
+
+function verifyDesktopBackendOcrRuntime(bundleRoot) {
+  ensureFileExists(
+    join(bundleRoot, TESSERACT_WORKER_SCRIPT_RELATIVE_PATH),
+    "Tesseract worker runtime script"
+  );
+
+  ensureServerDoesNotInlineTesseract(
+    join(bundleRoot, "packages/backend/dist/desktop/server.js"),
+    "Desktop backend server bundle"
+  );
+}
+
 function verifyPackagedDesktopTree(bundleRoot) {
   ensureDirectoryExists(bundleRoot, "Packaged desktop root");
 
@@ -279,6 +309,8 @@ function verifyPackagedDesktopTree(bundleRoot) {
   ) {
     fail("Packaged desktop bundle is missing Prisma migrations");
   }
+
+  verifyDesktopBackendOcrRuntime(bundleRoot);
 }
 
 function findPackagedDesktopTreeRoot(searchRoot) {
@@ -337,6 +369,11 @@ function findPackagedDesktopTreeRoot(searchRoot) {
 function verifySourceDesktopResources(repoRoot) {
   verifyNodeDirectory(join(repoRoot, "apps/desktop/resources/node"));
   verifyPostgresBundle(join(repoRoot, "apps/desktop/resources/postgres"));
+
+  const desktopServerBundlePath = join(repoRoot, "packages/backend/dist/desktop/server.js");
+  if (pathExists(desktopServerBundlePath, "file")) {
+    verifyDesktopBackendOcrRuntime(repoRoot);
+  }
 }
 
 export {

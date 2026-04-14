@@ -37,7 +37,10 @@ export async function runExtraction(
         ? new GoogleVisionAdapter(env)
         : new TesseractAdapter();
 
-    const rawText = await adapter.extract(buffer, doc.mimeType);
+    const rawText = await adapter.extract(buffer, doc.mimeType, {
+      documentId,
+      source: "documents",
+    });
     const contentText = normalizeArabic(rawText);
 
     await prisma.document.update({

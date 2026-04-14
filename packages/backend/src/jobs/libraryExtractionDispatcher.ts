@@ -12,7 +12,13 @@ export async function dispatchLibraryExtraction(
   if (env.STORAGE_DRIVER === "local") {
     // Run inline after response is sent — no Redis/BullMQ required for desktop
     setImmediate(() => {
-      void runLibraryExtraction(libraryDocumentId, env, storage);
+      void runLibraryExtraction(libraryDocumentId, env, storage).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("[library-extraction] local extraction task failed", {
+          libraryDocumentId,
+          errorMessage: message,
+        });
+      });
     });
   } else {
     await getLibraryExtractionQueue(env).add("extract-library", { libraryDocumentId, firmId });
