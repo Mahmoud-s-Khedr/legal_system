@@ -42,6 +42,13 @@ interface DesktopSetBackupPolicyInput {
   retentionCount: number;
 }
 
+function normalizeDesktopBackupErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.trim();
+  }
+  return String(error ?? "").replace(/^Error:\s*/i, "").trim();
+}
+
 function mapDesktopBackupError(message: string) {
   switch (message) {
     case "Desktop runtime is not ready for backup":
@@ -78,7 +85,7 @@ export async function getDesktopBackupPolicy(): Promise<DesktopBackupPolicyRespo
   try {
     return await invokeDesktop<DesktopBackupPolicyResponse>("desktop_get_backup_policy");
   } catch (error) {
-    throw new Error(mapDesktopBackupError(String(error)));
+    throw new Error(mapDesktopBackupError(normalizeDesktopBackupErrorMessage(error)));
   }
 }
 
@@ -98,7 +105,7 @@ export async function setDesktopBackupPolicy(policy: DesktopBackupPolicy): Promi
   try {
     return await invokeDesktop<DesktopBackupPolicyResponse>("desktop_set_backup_policy", { payload });
   } catch (error) {
-    throw new Error(mapDesktopBackupError(String(error)));
+    throw new Error(mapDesktopBackupError(normalizeDesktopBackupErrorMessage(error)));
   }
 }
 
@@ -110,7 +117,7 @@ export async function chooseDesktopBackupDirectory(): Promise<DesktopBackupPolic
   try {
     return await invokeDesktop<DesktopBackupPolicyResponse>("desktop_choose_backup_directory");
   } catch (error) {
-    throw new Error(mapDesktopBackupError(String(error)));
+    throw new Error(mapDesktopBackupError(normalizeDesktopBackupErrorMessage(error)));
   }
 }
 
@@ -122,7 +129,7 @@ export async function resetDesktopBackupDirectory(): Promise<DesktopBackupPolicy
   try {
     return await invokeDesktop<DesktopBackupPolicyResponse>("desktop_reset_backup_directory");
   } catch (error) {
-    throw new Error(mapDesktopBackupError(String(error)));
+    throw new Error(mapDesktopBackupError(normalizeDesktopBackupErrorMessage(error)));
   }
 }
 
@@ -134,7 +141,7 @@ export async function runDesktopBackupNow(): Promise<DesktopBackupOperationResul
   try {
     return await invokeDesktop<DesktopBackupOperationResult>("desktop_run_backup_now");
   } catch (error) {
-    throw new Error(mapDesktopBackupError(String(error)));
+    throw new Error(mapDesktopBackupError(normalizeDesktopBackupErrorMessage(error)));
   }
 }
 
@@ -148,6 +155,6 @@ export async function restoreDesktopBackup(backupPath: string): Promise<DesktopB
       payload: { backupPath }
     });
   } catch (error) {
-    throw new Error(mapDesktopBackupError(String(error)));
+    throw new Error(mapDesktopBackupError(normalizeDesktopBackupErrorMessage(error)));
   }
 }

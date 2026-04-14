@@ -5,7 +5,7 @@ import { AuthShell } from "./AuthShell";
 import {
   ApiError,
   captureDesktopConnectivitySnapshot,
-  getEffectiveApiBaseUrl,
+  getConfiguredApiBaseUrl,
   setApiBaseUrlOverride
 } from "../../lib/api";
 import { Field, FormAlert } from "../app/ui";
@@ -24,7 +24,7 @@ export function BackendConnectionPage() {
 
   useEffect(() => {
     void (async () => {
-      const current = await getEffectiveApiBaseUrl();
+      const current = await getConfiguredApiBaseUrl();
       setBaseUrl(current);
     })();
   }, []);
@@ -59,7 +59,7 @@ export function BackendConnectionPage() {
     setTestStatus("idle");
     setTestMessage(null);
     try {
-      const baseUrl = await getEffectiveApiBaseUrl();
+      const baseUrl = await getConfiguredApiBaseUrl();
       const requestUrl = `${baseUrl.replace(/\/+$/, "")}/api/health`;
       const response = await fetch(requestUrl, { credentials: "include" });
       if (!response.ok) {

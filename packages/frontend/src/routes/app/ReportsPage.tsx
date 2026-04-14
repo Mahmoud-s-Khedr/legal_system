@@ -11,16 +11,11 @@ import type {
   HearingOutcomeRow,
   LawyerWorkloadRow,
   OutstandingBalanceRow,
+  ReportType,
+  ReportListResponseByType,
   RevenueReportRow
 } from "../../lib/reports";
-
-type ReportType = "case-status" | "hearing-outcomes" | "lawyer-workload" | "revenue" | "outstanding-balances";
-interface ReportListResponse {
-  items: unknown[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
+import { parseReportListResponse } from "../../lib/reports";
 
 export function ReportsPage() {
   const { t } = useTranslation("app");
@@ -37,8 +32,12 @@ export function ReportsPage() {
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["reports", reportType, dateFrom, dateTo, table.state],
-    queryFn: () =>
-      apiFetch<ReportListResponse>(`/api/reports/${reportType}?${table.toApiQueryString({ dateFrom, dateTo })}`)
+    queryFn: async (): Promise<ReportListResponseByType<ReportType>> => {
+      const payload = await apiFetch<unknown>(
+        `/api/reports/${reportType}?${table.toApiQueryString({ dateFrom, dateTo })}`
+      );
+      return parseReportListResponse(reportType, payload);
+    }
   });
 
   const reportOptions: { value: ReportType; label: string }[] = [
@@ -196,7 +195,13 @@ export function ReportsPage() {
   );
 }
 
-function ReportTable({ reportType, data }: { reportType: ReportType; data: unknown }) {
+function ReportTable({
+  reportType,
+  data
+}: {
+  reportType: ReportType;
+  data: Array<CaseStatusRow | HearingOutcomeRow | LawyerWorkloadRow | RevenueReportRow | OutstandingBalanceRow>;
+}) {
   const { t } = useTranslation("app");
 
   if (reportType === "case-status") {

@@ -47,9 +47,31 @@ function mapDesktopDownloadError(code: string) {
   }
 }
 
+function normalizeDesktopDownloadErrorCode(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.trim();
+  }
+  return String(error ?? "").replace(/^Error:\s*/i, "").trim();
+}
+
 async function invokeDesktop<T>(command: string, args?: Record<string, unknown>) {
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<T>(command, args);
+}
+
+async function invokeDesktopDownloadCommand<T extends { ok: boolean; code?: string }>(
+  command: string,
+  args?: Record<string, unknown>
+): Promise<Extract<T, { ok: true }>> {
+  try {
+    const result = await invokeDesktop<T>(command, args);
+    if (!result.ok) {
+      throw new Error(result.code ?? "");
+    }
+    return result as Extract<T, { ok: true }>;
+  } catch (error) {
+    throw new Error(mapDesktopDownloadError(normalizeDesktopDownloadErrorCode(error)));
+  }
 }
 
 function toSettings(result: Extract<DesktopDownloadSettingsCommandResult, { ok: true }>): DesktopDownloadSettings {
@@ -66,14 +88,10 @@ export async function saveBlobToDownloads(blob: Blob, filename: string): Promise
   }
 
   const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
-  const result = await invokeDesktop<DesktopSaveDownloadCommandResult>("desktop_save_download_file", {
+  const result = await invokeDesktopDownloadCommand<DesktopSaveDownloadCommandResult>("desktop_save_download_file", {
     filename: normalizeFilename(filename),
     bytes
   });
-
-  if (!result.ok) {
-    throw new Error(mapDesktopDownloadError(result.code));
-  }
 
   return result.path;
 }
@@ -91,10 +109,7 @@ export async function getDesktopDownloadSettings(): Promise<DesktopDownloadSetti
     return null;
   }
 
-  const result = await invokeDesktop<DesktopDownloadSettingsCommandResult>("desktop_get_download_settings");
-  if (!result.ok) {
-    throw new Error(mapDesktopDownloadError(result.code));
-  }
+  const result = await invokeDesktopDownloadCommand<DesktopDownloadSettingsCommandResult>("desktop_get_download_settings");
 
   return toSettings(result);
 }
@@ -104,10 +119,9 @@ export async function chooseDesktopDownloadDirectory(): Promise<DesktopDownloadS
     return null;
   }
 
-  const result = await invokeDesktop<DesktopDownloadSettingsCommandResult>("desktop_choose_download_directory");
-  if (!result.ok) {
-    throw new Error(mapDesktopDownloadError(result.code));
-  }
+  const result = await invokeDesktopDownloadCommand<DesktopDownloadSettingsCommandResult>(
+    "desktop_choose_download_directory"
+  );
 
   return toSettings(result);
 }
@@ -117,10 +131,9 @@ export async function resetDesktopDownloadDirectory(): Promise<DesktopDownloadSe
     return null;
   }
 
-  const result = await invokeDesktop<DesktopDownloadSettingsCommandResult>("desktop_reset_download_directory");
-  if (!result.ok) {
-    throw new Error(mapDesktopDownloadError(result.code));
-  }
+  const result = await invokeDesktopDownloadCommand<DesktopDownloadSettingsCommandResult>(
+    "desktop_reset_download_directory"
+  );
 
   return toSettings(result);
 }

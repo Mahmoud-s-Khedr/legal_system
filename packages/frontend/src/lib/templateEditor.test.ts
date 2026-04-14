@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isTemplateHtmlEmpty, normalizeTemplateHtml } from "./templateEditor";
+import { isTemplateHtmlEmpty, normalizeTemplateHtml, sanitizeTemplateHtml } from "./templateEditor";
 
 describe("templateEditor", () => {
   it("normalizes known placeholder tokens into chips", () => {
@@ -33,5 +33,27 @@ describe("templateEditor", () => {
 
     expect(html).toContain('data-placeholder-key="caseName"');
     expect(html).toContain("{{caseName}}");
+  });
+
+  it("sanitizes executable markup during normalization", () => {
+    const html = normalizeTemplateHtml(
+      '<p onclick="alert(1)">Hello</p><img src="x" onerror="alert(1)"/><script>alert(1)</script>'
+    );
+
+    expect(html).not.toContain("onclick=");
+    expect(html).not.toContain("onerror=");
+    expect(html).not.toContain("<script");
+  });
+
+  it("does not count invalid placeholder spans as non-empty content", () => {
+    expect(
+      isTemplateHtmlEmpty('<p><span data-placeholder-key="unknown"></span></p>')
+    ).toBe(true);
+  });
+
+  it("sanitizes javascript URLs in preview html", () => {
+    const html = sanitizeTemplateHtml('<a href="javascript:alert(1)">Click</a>');
+    expect(html).toContain("<a");
+    expect(html).not.toContain("javascript:");
   });
 });

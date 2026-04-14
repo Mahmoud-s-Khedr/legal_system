@@ -1,4 +1,5 @@
 import { Link, Outlet, useMatches, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, LogOut } from "lucide-react";
 import { usePortalAuthStore } from "../../store/portalAuthStore";
@@ -9,7 +10,7 @@ import { buildPortalShellFooterLinks } from "../../components/navigation/shellFo
 
 export function PortalLayout() {
   const { t } = useTranslation("app");
-  const { user, logout } = usePortalAuthStore();
+  const { user, logout, bootstrap, isBootstrapped } = usePortalAuthStore();
   const navigate = useNavigate();
   const matches = useMatches();
   const footerLinks = buildPortalShellFooterLinks(t);
@@ -18,6 +19,24 @@ export function PortalLayout() {
     { label: t("nav.home"), to: "/portal/dashboard" },
     ...(inCasePage ? [{ label: t("portal.caseDetails") }] : [])
   ];
+
+  useEffect(() => {
+    if (!isBootstrapped) {
+      void bootstrap();
+    }
+  }, [bootstrap, isBootstrapped]);
+
+  if (!isBootstrapped) {
+    return (
+      <div className="min-h-screen bg-sand text-ink">
+        <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
+          <div className="rounded-3xl bg-white p-5 shadow-card sm:p-6">
+            <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-sand text-ink">

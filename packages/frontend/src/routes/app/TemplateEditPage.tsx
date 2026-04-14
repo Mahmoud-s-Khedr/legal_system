@@ -7,7 +7,7 @@ import { exportTemplateDocx, type TemplateDto, type UpdateTemplateDto } from "..
 import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 import { useTemplateRender } from "../../lib/templates";
 import { TemplateRichEditor } from "../../components/templates/TemplateRichEditor";
-import { isTemplateHtmlEmpty } from "../../lib/templateEditor";
+import { isTemplateHtmlEmpty, normalizeTemplateHtml, sanitizeTemplateHtml } from "../../lib/templateEditor";
 import { useToastStore } from "../../store/toastStore";
 
 const LANGUAGES = ["AR", "EN", "FR"];
@@ -69,12 +69,13 @@ export function TemplateEditPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (isTemplateHtmlEmpty(form.body ?? "")) {
+            const normalizedBody = normalizeTemplateHtml(form.body ?? "");
+            if (isTemplateHtmlEmpty(normalizedBody)) {
               setValidationError(t("templates.validation.bodyRequired"));
               return;
             }
             setValidationError(null);
-            update.mutate(form);
+            update.mutate({ ...form, body: normalizedBody });
           }}
         >
           <Field
@@ -137,7 +138,7 @@ export function TemplateEditPage() {
                 { caseId: renderCaseId },
                 {
                   onSuccess: (data) => {
-                    setPreviewHtml(data.renderedHtml);
+                    setPreviewHtml(sanitizeTemplateHtml(data.renderedHtml));
                     setPreviewText(data.renderedText);
                   }
                 }

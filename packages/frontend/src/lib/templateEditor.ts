@@ -17,6 +17,21 @@ export const TEMPLATE_PLACEHOLDERS: PlaceholderDefinition[] = [
 ];
 
 export const PLACEHOLDER_KEY_SET = new Set(TEMPLATE_PLACEHOLDERS.map((item) => item.key));
+const FORBIDDEN_TAGS = new Set([
+  "script",
+  "style",
+  "iframe",
+  "object",
+  "embed",
+  "link",
+  "meta",
+  "base",
+  "form",
+  "input",
+  "button",
+  "textarea",
+  "select"
+]);
 
 function looksLikeHtml(value: string): boolean {
   return /<\/?[a-z][\s\S]*>/i.test(value);
@@ -55,6 +70,8 @@ function normalizePlaceholderSpans(doc: Document): void {
   nodes.forEach((node) => {
     const key = node.getAttribute("data-placeholder-key")?.trim() ?? "";
     if (!PLACEHOLDER_KEY_SET.has(key)) {
+      node.removeAttribute("data-placeholder-key");
+      node.classList.remove("template-placeholder-chip");
       return;
     }
     node.setAttribute("data-placeholder-key", key);
@@ -116,6 +133,47 @@ function replaceRawTokensWithChips(doc: Document): void {
   textNodes.forEach((node) => replaceTextNodeWithChips(node));
 }
 
+function isUnsafeUrlAttribute(name: string, value: string): boolean {
+  if (!["href", "src", "xlink:href"].includes(name.toLowerCase())) {
+    return false;
+  }
+
+  return /^javascript:/i.test(value.trim());
+}
+
+function sanitizeTemplateDocument(doc: Document): void {
+  const nodes = Array.from(doc.body.querySelectorAll<HTMLElement>("*"));
+  nodes.forEach((node) => {
+    if (FORBIDDEN_TAGS.has(node.tagName.toLowerCase())) {
+      node.remove();
+      return;
+    }
+
+    for (const attr of Array.from(node.attributes)) {
+      const attrName = attr.name.toLowerCase();
+      const attrValue = attr.value;
+
+      if (attrName.startsWith("on") || attrName === "srcdoc") {
+        node.removeAttribute(attr.name);
+        continue;
+      }
+
+      if (attrName === "data-placeholder-key") {
+        const key = attrValue.trim();
+        if (!PLACEHOLDER_KEY_SET.has(key)) {
+          node.removeAttribute(attr.name);
+          node.classList.remove("template-placeholder-chip");
+        }
+        continue;
+      }
+
+      if (isUnsafeUrlAttribute(attrName, attrValue)) {
+        node.removeAttribute(attr.name);
+      }
+    }
+  });
+}
+
 export function normalizeTemplateHtml(input: string): string {
   const baseHtml = looksLikeHtml(input) ? input : convertLegacyTextToHtml(input);
   const parser = new DOMParser();
@@ -123,14 +181,25 @@ export function normalizeTemplateHtml(input: string): string {
 
   normalizePlaceholderSpans(doc);
   replaceRawTokensWithChips(doc);
+  sanitizeTemplateDocument(doc);
 
+  return doc.body.innerHTML;
+}
+
+export function sanitizeTemplateHtml(input: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(looksLikeHtml(input) ? input : convertLegacyTextToHtml(input), "text/html");
+  sanitizeTemplateDocument(doc);
   return doc.body.innerHTML;
 }
 
 export function isTemplateHtmlEmpty(input: string): boolean {
   const parser = new DOMParser();
   const doc = parser.parseFromString(looksLikeHtml(input) ? input : convertLegacyTextToHtml(input), "text/html");
-  const hasPlaceholder = doc.querySelector("[data-placeholder-key]") !== null;
+  sanitizeTemplateDocument(doc);
+  const hasPlaceholder = TEMPLATE_PLACEHOLDERS.some(
+    ({ key }) => doc.querySelector(`[data-placeholder-key="${key}"]`) !== null
+  );
   const text = (doc.body.textContent ?? "").replace(/\s+/g, "").trim();
   return !hasPlaceholder && text.length === 0;
 }

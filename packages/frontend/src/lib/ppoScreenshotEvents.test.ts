@@ -100,7 +100,7 @@ describe("startPpoScreenshotEventListener", () => {
     expect(addToast).toHaveBeenCalledWith("ppo.status.windowNotOpen", "error");
   });
 
-  it("shows generic navigation failure toast for unknown screenshot error", async () => {
+  it("maps screenshot save failures to screenshot-specific toast", async () => {
     const addToast = vi.fn();
     let handler: ((event: { payload: { ok?: boolean; code?: string } }) => void) | null = null;
 
@@ -126,7 +126,37 @@ describe("startPpoScreenshotEventListener", () => {
     const screenshotHandler = handler as (event: { payload: { ok?: boolean; code?: string } }) => void;
     screenshotHandler({ payload: { ok: false, code: "PPO_SCREENSHOT_SAVE_FAILED" } });
 
-    expect(addToast).toHaveBeenCalledWith("ppo.status.navigationFailed", "error");
+    expect(addToast).toHaveBeenCalledWith("ppo.status.screenshotSaveFailed", "error");
+  });
+
+  it("maps screenshot capture failures to screenshot-specific toast", async () => {
+    const addToast = vi.fn();
+    let handler: ((event: { payload: { ok?: boolean; code?: string } }) => void) | null = null;
+
+    const importEventApi = vi.fn().mockResolvedValue({
+      listen: vi.fn().mockImplementation((_eventName: string, nextHandler) => {
+        handler = nextHandler;
+        return Promise.resolve(() => {});
+      })
+    });
+
+    startPpoScreenshotEventListener({
+      isDesktopShell: true,
+      addToast,
+      t: (key) => key,
+      importEventApi
+    });
+
+    await flush();
+    expect(handler).not.toBeNull();
+    if (!handler) {
+      throw new Error("missing listener handler");
+    }
+
+    const screenshotHandler = handler as (event: { payload: { ok?: boolean; code?: string } }) => void;
+    screenshotHandler({ payload: { ok: false, code: "PPO_SCREENSHOT_CAPTURE_FAILED" } });
+
+    expect(addToast).toHaveBeenCalledWith("ppo.status.screenshotCaptureFailed", "error");
   });
 
   it("logs setup failure and shows fallback toast for each failed setup attempt", async () => {

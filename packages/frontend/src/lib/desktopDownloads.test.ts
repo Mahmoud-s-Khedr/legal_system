@@ -88,4 +88,13 @@ describe("desktopDownloads", () => {
       "Saving the downloaded file failed."
     );
   });
+
+  it("normalizes rejected desktop invoke errors", async () => {
+    const { getDesktopDownloadSettings } = await importDesktopDownloads(true);
+    invokeMock.mockRejectedValue(new Error("DESKTOP_DOWNLOAD_SETTINGS_UNAVAILABLE"));
+
+    await expect(getDesktopDownloadSettings()).rejects.toThrow(
+      "Desktop download settings are unavailable."
+    );
+  });
 });

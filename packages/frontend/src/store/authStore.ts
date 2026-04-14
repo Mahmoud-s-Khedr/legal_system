@@ -8,6 +8,7 @@ import type {
 } from "@elms/shared";
 import { AuthMode } from "@elms/shared";
 import { apiFetch, clearDesktopLocalSessionToken, persistDesktopLocalSessionToken } from "../lib/api";
+import { applyUserPreferredLanguage } from "../i18n";
 
 interface AuthState {
   user: SessionUser | null;
@@ -52,6 +53,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
           needsSetup,
           isBootstrapped: true
         });
+        await applyUserPreferredLanguage(response.session.user?.preferredLanguage);
       } catch {
         set({
           mode: null,
@@ -78,6 +80,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       user: response.session.user,
       isBootstrapped: true
     });
+    await applyUserPreferredLanguage(response.session.user?.preferredLanguage);
   },
   async setup(payload) {
     const response = await apiFetch<AuthResponseDto>("/api/auth/setup", {
@@ -93,6 +96,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       needsSetup: false,
       isBootstrapped: true
     });
+    await applyUserPreferredLanguage(response.session.user?.preferredLanguage);
   },
   async refreshSession() {
     const response = await apiFetch<AuthResponseDto>("/api/auth/me");
@@ -101,6 +105,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
       user: response.session.user,
       isBootstrapped: true
     });
+    await applyUserPreferredLanguage(response.session.user?.preferredLanguage);
   },
   async logout() {
     await apiFetch<{ success: true }>("/api/auth/logout", {
@@ -117,7 +122,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
   }
 }));
 
-export const useAuthBootstrap = () => useAuthStore();
+export const useAuthBootstrap = useAuthStore;
 
 /** Returns true if the current user has the given permission string. */
 export const useHasPermission = (permission: string) =>

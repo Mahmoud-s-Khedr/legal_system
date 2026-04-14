@@ -687,6 +687,8 @@
       "navigationFailed": "Navigation failed.",
       "screenshotSaved": "Screenshot saved.",
       "screenshotSavedAt": "Screenshot saved to {{path}}.",
+      "screenshotCaptureFailed": "Could not capture screenshot.",
+      "screenshotSaveFailed": "Could not save screenshot.",
       "windowNotOpen": "PPO window is not open.",
       "hostWarning": "Warning: current page is outside ppo.gov.eg.",
       "returnToHome": "Return to PPO Home"

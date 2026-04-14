@@ -286,6 +286,13 @@ fn parse_url(url: &str) -> Option<Url> {
     Url::parse(url).ok()
 }
 
+fn resolve_portal_url(url: Option<String>) -> Option<Url> {
+    match url {
+        Some(value) => parse_url(value.trim()),
+        None => parse_url(PPO_PORTAL_URL),
+    }
+}
+
 fn parse_toolbar_action(url: &Url) -> Option<String> {
     if url.scheme() != PPO_TOOLBAR_SCHEME {
         return None;
@@ -587,14 +594,19 @@ fn execute_portal_action(app: &AppHandle, action: &str) -> PpoPortalNavigateResu
 }
 
 #[tauri::command]
-pub async fn open_ppo_portal_window(app: AppHandle) -> OpenPpoPortalWindowResult {
+pub async fn open_ppo_portal_window(app: AppHandle, url: Option<String>) -> OpenPpoPortalWindowResult {
     #[cfg(target_os = "macos")]
     {
         let _ = app;
         return OpenPpoPortalWindowResult::error(PPO_TLS_BYPASS_UNSUPPORTED_MACOS);
     }
 
+    let Some(portal_url) = resolve_portal_url(url) else {
+        return OpenPpoPortalWindowResult::error(PPO_DESKTOP_LAUNCH_FAILED);
+    };
+
     if let Some(window) = app.get_webview_window(PPO_WINDOW_LABEL) {
+        let _ = window.navigate(portal_url);
         focus_window(&window);
         return OpenPpoPortalWindowResult::success(true);
     }
@@ -602,10 +614,6 @@ pub async fn open_ppo_portal_window(app: AppHandle) -> OpenPpoPortalWindowResult
     let Some(blank_url) = parse_url("about:blank") else {
         return OpenPpoPortalWindowResult::error(PPO_DESKTOP_LAUNCH_FAILED);
     };
-    let Some(portal_url) = parse_url(PPO_PORTAL_URL) else {
-        return OpenPpoPortalWindowResult::error(PPO_DESKTOP_LAUNCH_FAILED);
-    };
-
     #[allow(unused_mut)]
     let mut builder =
         tauri::WebviewWindowBuilder::new(&app, PPO_WINDOW_LABEL, WebviewUrl::External(blank_url))

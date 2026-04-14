@@ -1,4 +1,12 @@
-import type { SessionUser } from "@elms/shared";
+import type {
+  CaseProfitabilityDto,
+  CaseStatusRow,
+  HearingOutcomeRow,
+  LawyerWorkloadRow,
+  OutstandingBalanceRow,
+  RevenueReportRow,
+  SessionUser
+} from "@elms/shared";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 
@@ -7,13 +15,6 @@ export interface ReportFilter {
   dateTo?: string;
   caseId?: string;
   userId?: string;
-}
-
-// ── Case status distribution ─────────────────────────────────────────────────
-
-export interface CaseStatusRow {
-  status: string;
-  count: number;
 }
 
 export async function caseStatusDistribution(
@@ -32,13 +33,6 @@ export async function caseStatusDistribution(
     `;
     return rows.map((r) => ({ status: r.status, count: Number(r.count) }));
   });
-}
-
-// ── Hearing outcomes ─────────────────────────────────────────────────────────
-
-export interface HearingOutcomeRow {
-  outcome: string | null;
-  count: number;
 }
 
 export async function hearingOutcomes(
@@ -62,16 +56,6 @@ export async function hearingOutcomes(
     `;
     return rows.map((r) => ({ outcome: r.outcome, count: Number(r.count) }));
   });
-}
-
-// ── Lawyer workload ──────────────────────────────────────────────────────────
-
-export interface LawyerWorkloadRow {
-  userId: string;
-  fullName: string;
-  openCases: number;
-  openTasks: number;
-  upcomingHearings: number;
 }
 
 export async function lawyerWorkload(actor: SessionUser): Promise<LawyerWorkloadRow[]> {
@@ -123,14 +107,6 @@ export async function lawyerWorkload(actor: SessionUser): Promise<LawyerWorkload
   });
 }
 
-// ── Revenue report ───────────────────────────────────────────────────────────
-
-export interface RevenueReportRow {
-  month: string;
-  invoiced: string;
-  paid: string;
-}
-
 export async function revenueReport(
   actor: SessionUser,
   filter: ReportFilter
@@ -153,17 +129,6 @@ export async function revenueReport(
     `;
     return rows;
   });
-}
-
-// ── Outstanding balances ─────────────────────────────────────────────────────
-
-export interface OutstandingBalanceRow {
-  invoiceId: string;
-  invoiceNumber: string;
-  clientName: string | null;
-  totalAmount: string;
-  dueDate: string | null;
-  daysOverdue: number;
 }
 
 export async function outstandingBalances(actor: SessionUser): Promise<OutstandingBalanceRow[]> {
@@ -194,17 +159,6 @@ export async function outstandingBalances(actor: SessionUser): Promise<Outstandi
       };
     });
   });
-}
-
-// ── Case profitability ───────────────────────────────────────────────────────
-
-export interface CaseProfitabilityDto {
-  caseId: string;
-  caseTitle: string;
-  totalBilled: string;
-  totalPaid: string;
-  totalExpenses: string;
-  grossProfit: string;
 }
 
 export async function caseProfitability(

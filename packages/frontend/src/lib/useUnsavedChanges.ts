@@ -64,6 +64,7 @@ export function useUnsavedChanges(isDirty: boolean, options?: UseUnsavedChangesO
         return;
       }
       e.preventDefault();
+      e.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);

@@ -723,6 +723,8 @@
       "navigationFailed": "Échec de la navigation.",
       "screenshotSaved": "Capture d’écran enregistrée.",
       "screenshotSavedAt": "Capture d’écran enregistrée dans {{path}}.",
+      "screenshotCaptureFailed": "Impossible de capturer la capture d’écran.",
+      "screenshotSaveFailed": "Impossible d’enregistrer la capture d’écran.",
       "windowNotOpen": "La fenêtre PPO n’est pas ouverte.",
       "hostWarning": "Avertissement : la page actuelle est hors de ppo.gov.eg.",
       "returnToHome": "Retour à l’accueil PPO"

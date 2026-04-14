@@ -7,12 +7,12 @@
 
 import type {
   CaseStatusRow,
+  CaseProfitabilityDto,
   HearingOutcomeRow,
   LawyerWorkloadRow,
-  RevenueReportRow,
   OutstandingBalanceRow,
-  CaseProfitabilityDto
-} from "./reports.service.js";
+  RevenueReportRow
+} from "@elms/shared";
 
 // ── Report column definitions ─────────────────────────────────────────────────
 

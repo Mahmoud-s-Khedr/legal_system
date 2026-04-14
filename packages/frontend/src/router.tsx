@@ -3,7 +3,6 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  redirect,
   useNavigate
 } from "@tanstack/react-router";
 import { useEffect } from "react";
@@ -32,6 +31,8 @@ import { TaskDetailPage } from "./routes/app/TaskDetailPage";
 import { UsersPage } from "./routes/app/UsersPage";
 import { UserCreatePage } from "./routes/app/UserCreatePage";
 import { UserDetailPage } from "./routes/app/UserDetailPage";
+import { InvitationsPage } from "./routes/app/InvitationsPage";
+import { InvitationCreatePage } from "./routes/app/InvitationCreatePage";
 import { SettingsPage } from "./routes/app/SettingsPage";
 import { LookupSettingsPage } from "./routes/app/LookupSettingsPage";
 import { LookupSettingsDetailPage } from "./routes/app/LookupSettingsDetailPage";
@@ -53,6 +54,8 @@ import { TemplateEditPage } from "./routes/app/TemplateEditPage";
 import { ReportsPage } from "./routes/app/ReportsPage";
 import { ReportBuilderPage } from "./routes/app/ReportBuilderPage";
 import { PpoPortalPage } from "./routes/app/PpoPortalPage";
+import { ResearchPage } from "./routes/app/research/ResearchPage";
+import { ResearchSessionPage } from "./routes/app/research/ResearchSessionPage";
 import { LibraryPage } from "./routes/app/library/LibraryPage";
 import { LibraryDocumentPage } from "./routes/app/library/LibraryDocumentPage";
 import { LibrarySearchPage } from "./routes/app/library/LibrarySearchPage";
@@ -122,10 +125,6 @@ function LandingRedirect() {
     return <div className="p-8 text-center text-ink">{t("labels.loading")}</div>;
   }
 
-  return null;
-}
-
-function DisabledUiRoute() {
   return null;
 }
 
@@ -293,19 +292,13 @@ const userDetailRoute = createRoute({
 const invitationsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/invitations",
-  beforeLoad: () => {
-    throw redirect({ to: "/app/dashboard", replace: true });
-  },
-  component: DisabledUiRoute
+  component: () => <PermissionGate permission="invitations:read"><InvitationsPage /></PermissionGate>
 });
 
 const invitationCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/invitations/new",
-  beforeLoad: () => {
-    throw redirect({ to: "/app/dashboard", replace: true });
-  },
-  component: DisabledUiRoute
+  component: () => <PermissionGate permission="invitations:create"><InvitationCreatePage /></PermissionGate>
 });
 
 // Settings — requires settings:read permission
@@ -426,19 +419,13 @@ const ppoPortalRoute = createRoute({
 const researchRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/research",
-  beforeLoad: () => {
-    throw redirect({ to: "/app/dashboard", replace: true });
-  },
-  component: DisabledUiRoute
+  component: () => <PermissionGate permission="research:use"><ResearchPage /></PermissionGate>
 });
 
 const researchSessionRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/research/$sessionId",
-  beforeLoad: () => {
-    throw redirect({ to: "/app/dashboard", replace: true });
-  },
-  component: DisabledUiRoute
+  component: () => <PermissionGate permission="research:use"><ResearchSessionPage /></PermissionGate>
 });
 
 // Library

@@ -29,7 +29,7 @@ describe("launchPpoPortal", () => {
     const result = await launchPpoPortal({}, { desktopShell: true, invokeDesktopLaunch });
 
     expect(result).toEqual({ ok: true, destination: "desktop-window", reused: true });
-    expect(invokeDesktopLaunch).toHaveBeenCalledTimes(1);
+    expect(invokeDesktopLaunch).toHaveBeenCalledWith(DEFAULT_PPO_PORTAL_URL);
   });
 
   it("creates a desktop PPO window when command returns reused=false", async () => {
@@ -38,7 +38,15 @@ describe("launchPpoPortal", () => {
     const result = await launchPpoPortal({}, { desktopShell: true, invokeDesktopLaunch });
 
     expect(result).toEqual({ ok: true, destination: "desktop-window", reused: false });
-    expect(invokeDesktopLaunch).toHaveBeenCalledTimes(1);
+    expect(invokeDesktopLaunch).toHaveBeenCalledWith(DEFAULT_PPO_PORTAL_URL);
+  });
+
+  it("passes override url to desktop launch in desktop mode", async () => {
+    const invokeDesktopLaunch = vi.fn().mockResolvedValue({ ok: true, reused: false });
+
+    await launchPpoPortal({ url: "https://example.test/ppo" }, { desktopShell: true, invokeDesktopLaunch });
+
+    expect(invokeDesktopLaunch).toHaveBeenCalledWith("https://example.test/ppo");
   });
 
   it("maps macOS unsupported desktop launch code", async () => {

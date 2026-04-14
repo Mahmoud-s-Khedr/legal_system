@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useCreateTemplate, type CreateTemplateDto } from "../../lib/templates";
 import { Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 import { TemplateRichEditor } from "../../components/templates/TemplateRichEditor";
-import { isTemplateHtmlEmpty } from "../../lib/templateEditor";
+import { isTemplateHtmlEmpty, normalizeTemplateHtml } from "../../lib/templateEditor";
 
 const LANGUAGES = ["AR", "EN", "FR"];
 
@@ -30,12 +30,13 @@ export function TemplateCreatePage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (isTemplateHtmlEmpty(form.body)) {
+            const normalizedBody = normalizeTemplateHtml(form.body);
+            if (isTemplateHtmlEmpty(normalizedBody)) {
               setValidationError(t("templates.validation.bodyRequired"));
               return;
             }
             setValidationError(null);
-            create.mutate(form, { onSuccess: () => void navigate({ to: "/app/templates" }) });
+            create.mutate({ ...form, body: normalizedBody }, { onSuccess: () => void navigate({ to: "/app/templates" }) });
           }}
         >
           <Field

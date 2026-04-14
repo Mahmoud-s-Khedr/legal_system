@@ -66,7 +66,10 @@ export function useCreateInvoice() {
   return useMutation({
     mutationFn: (dto: CreateInvoiceDto) =>
       apiFetch<InvoiceDto>("/api/invoices", { method: "POST", body: JSON.stringify(dto) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["invoices"] })
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["invoices"] });
+      void qc.invalidateQueries({ queryKey: ["billing-summary"] });
+    }
   });
 }
 
@@ -77,6 +80,7 @@ export function useUpdateInvoice(id: string) {
       apiFetch<InvoiceDto>(`/api/invoices/${id}`, { method: "PUT", body: JSON.stringify(dto) }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["invoices"] });
+      void qc.invalidateQueries({ queryKey: ["billing-summary"] });
     }
   });
 }
@@ -85,7 +89,10 @@ export function useIssueInvoice(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => apiFetch<InvoiceDto>(`/api/invoices/${id}/issue`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["invoices"] })
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["invoices"] });
+      void qc.invalidateQueries({ queryKey: ["billing-summary"] });
+    }
   });
 }
 
@@ -93,7 +100,10 @@ export function useVoidInvoice(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => apiFetch<InvoiceDto>(`/api/invoices/${id}/void`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["invoices"] })
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["invoices"] });
+      void qc.invalidateQueries({ queryKey: ["billing-summary"] });
+    }
   });
 }
 
@@ -156,7 +166,10 @@ export function useUpdateExpense(id: string) {
   return useMutation({
     mutationFn: (dto: UpdateExpenseDto) =>
       apiFetch<{ id: string }>(`/api/expenses/${id}`, { method: "PUT", body: JSON.stringify(dto) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["expenses"] })
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["expenses"] });
+      void qc.invalidateQueries({ queryKey: ["billing-summary"] });
+    }
   });
 }
 

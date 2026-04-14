@@ -43,6 +43,16 @@ function onScreenshotEvent(
     return;
   }
 
+  if (payload?.code === "PPO_SCREENSHOT_CAPTURE_FAILED") {
+    addToast(t("ppo.status.screenshotCaptureFailed"), "error");
+    return;
+  }
+
+  if (payload?.code === "PPO_SCREENSHOT_SAVE_FAILED") {
+    addToast(t("ppo.status.screenshotSaveFailed"), "error");
+    return;
+  }
+
   addToast(t("ppo.status.navigationFailed"), "error");
 }
 

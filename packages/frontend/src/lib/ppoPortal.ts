@@ -26,7 +26,7 @@ type DesktopLaunchCommandResult =
 interface LaunchDeps {
   desktopShell?: boolean;
   openBrowserTab?: (url: string, target: string, features: string) => Window | null;
-  invokeDesktopLaunch?: () => Promise<DesktopLaunchCommandResult>;
+  invokeDesktopLaunch?: (url?: string) => Promise<DesktopLaunchCommandResult>;
 }
 
 function isDesktopShellEnabled() {
@@ -41,9 +41,9 @@ function normalizeErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-async function invokeDefaultDesktopLaunch(): Promise<DesktopLaunchCommandResult> {
+async function invokeDefaultDesktopLaunch(url?: string): Promise<DesktopLaunchCommandResult> {
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<DesktopLaunchCommandResult>("open_ppo_portal_window");
+  return invoke<DesktopLaunchCommandResult>("open_ppo_portal_window", { url });
 }
 
 export async function launchPpoPortal(
@@ -55,7 +55,7 @@ export async function launchPpoPortal(
   if (desktopShell) {
     try {
       const invokeDesktopLaunch = deps.invokeDesktopLaunch ?? invokeDefaultDesktopLaunch;
-      const desktopResult = await invokeDesktopLaunch();
+      const desktopResult = await invokeDesktopLaunch(url);
 
       if (desktopResult.ok) {
         return { ok: true, destination: "desktop-window", reused: desktopResult.reused };

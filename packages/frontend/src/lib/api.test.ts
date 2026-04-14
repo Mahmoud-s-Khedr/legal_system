@@ -234,6 +234,38 @@ describe("apiDownload", () => {
       "http://127.0.0.1:17854/api/auth/me",
       expect.anything()
     );
+    expect(invokeMock).not.toHaveBeenCalledWith("desktop_set_backend_connection", { baseUrl: null });
+  });
+
+  it("reads configured desktop base url without triggering fallback validation", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
+    vi.stubEnv("VITE_DESKTOP_RUNTIME_VARIANT", "embedded");
+    vi.stubEnv("VITE_API_BASE_URL", "");
+
+    const invokeMock = vi.fn(async (command: string) => {
+      if (command === "desktop_get_runtime_backend_url") {
+        return { baseUrl: "http://127.0.0.1:17854" };
+      }
+      if (command === "desktop_get_backend_connection") {
+        return { baseUrl: "http://10.10.10.10:9000" };
+      }
+      return { ok: true, code: null };
+    });
+
+    vi.doMock("@tauri-apps/api/core", () => ({
+      invoke: invokeMock
+    }));
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { getConfiguredApiBaseUrl } = await import("./api");
+    const baseUrl = await getConfiguredApiBaseUrl();
+
+    expect(baseUrl).toBe("http://10.10.10.10:9000");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(invokeMock).not.toHaveBeenCalledWith("desktop_set_backend_connection", { baseUrl: null });
   });
 
   it("does not duplicate /api when VITE_API_BASE_URL is /api", async () => {

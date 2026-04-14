@@ -126,4 +126,20 @@ describe("useUnsavedChanges", () => {
     });
     expect(bypassControls?.bypassRef.current).toBe(true);
   });
+
+  it("sets beforeunload returnValue when dirty", () => {
+    renderProbe(true);
+
+    const event = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    Object.defineProperty(event, "returnValue", {
+      configurable: true,
+      writable: true,
+      value: undefined
+    });
+
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(event.returnValue).toBe("");
+  });
 });

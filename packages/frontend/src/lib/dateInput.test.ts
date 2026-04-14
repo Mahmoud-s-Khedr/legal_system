@@ -23,4 +23,9 @@ describe("dateInput date picker helpers", () => {
     expect(toDatePickerValue("not-a-date", "date")).toBeNull();
     expect(fromDatePickerValue(null, "date")).toBe("");
   });
+
+  it("recovers date-only values from ISO timestamps using UTC date", () => {
+    const parsed = toDatePickerValue("2026-03-28T00:00:00.000Z", "date");
+    expect(parsed?.format("YYYY-MM-DD")).toBe("2026-03-28");
+  });
 });

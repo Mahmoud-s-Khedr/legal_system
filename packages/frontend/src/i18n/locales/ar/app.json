@@ -746,6 +746,8 @@
       "navigationFailed": "فشل التنقل.",
       "screenshotSaved": "تم حفظ لقطة الشاشة.",
       "screenshotSavedAt": "تم حفظ لقطة الشاشة في {{path}}.",
+      "screenshotCaptureFailed": "تعذر التقاط لقطة الشاشة.",
+      "screenshotSaveFailed": "تعذر حفظ لقطة الشاشة.",
       "windowNotOpen": "نافذة بوابة النيابة العامة غير مفتوحة.",
       "hostWarning": "تحذير: الصفحة الحالية خارج نطاق ppo.gov.eg.",
       "returnToHome": "العودة إلى الصفحة الرئيسية"

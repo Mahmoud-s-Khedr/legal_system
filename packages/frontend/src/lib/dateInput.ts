@@ -38,6 +38,17 @@ export function toDatePickerValue(
     return parsed;
   }
 
+  if (type === "date") {
+    const timestamp = Date.parse(value);
+    if (Number.isNaN(timestamp)) {
+      return null;
+    }
+
+    const utcDate = new Date(timestamp).toISOString().slice(0, 10);
+    const recovered = dayjs(utcDate, DATE_PICKER_DATE_FORMAT, true);
+    return recovered.isValid() ? recovered : null;
+  }
+
   const fallback = dayjs(value);
   return fallback.isValid() ? fallback : null;
 }

@@ -484,10 +484,11 @@ async function loadDesktopRuntimeBackendUrl() {
   }
 }
 
-async function ensureDesktopBackendConnectionLoaded() {
+async function ensureDesktopBackendConnectionLoaded(options?: { validateConnection?: boolean }) {
   if (!isDesktopShell) {
     return;
   }
+  const validateConnection = options?.validateConnection ?? true;
 
   if (!desktopRuntimeBaseUrlPromise) {
     desktopRuntimeBaseUrlPromise = loadDesktopRuntimeBackendUrl().finally(() => {
@@ -504,6 +505,10 @@ async function ensureDesktopBackendConnectionLoaded() {
 
   await desktopBackendConnectionPromise;
 
+  if (!validateConnection) {
+    return;
+  }
+
   if (!desktopBackendConnectionValidatedPromise) {
     desktopBackendConnectionValidatedPromise = validateDesktopBackendConnection().finally(() => {
       desktopBackendConnectionValidatedPromise = null;
@@ -514,6 +519,11 @@ async function ensureDesktopBackendConnectionLoaded() {
 
 export async function getEffectiveApiBaseUrl() {
   await ensureDesktopBackendConnectionLoaded();
+  return desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl;
+}
+
+export async function getConfiguredApiBaseUrl() {
+  await ensureDesktopBackendConnectionLoaded({ validateConnection: false });
   return desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl;
 }
 
@@ -635,9 +645,12 @@ export async function apiFetch<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
-  await ensureDesktopBackendConnectionLoaded();
-  if (isAuthApiPath(input)) {
+  const authApiPath = isAuthApiPath(input);
+  if (authApiPath) {
     await waitForDesktopBootstrapReady();
+    await ensureDesktopBackendConnectionLoaded({ validateConnection: false });
+  } else {
+    await ensureDesktopBackendConnectionLoaded();
   }
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);

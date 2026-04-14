@@ -111,12 +111,31 @@ export async function replayQueue(): Promise<{ replayed: number; failed: number 
  * Call once at app startup (cloud mode only).
  */
 export function startSyncQueueReplay(onComplete?: (result: { replayed: number; failed: number }) => void): () => void {
+  let replayInFlight: Promise<void> | null = null;
+
+  async function replayOnce() {
+    if (replayInFlight) {
+      return replayInFlight;
+    }
+
+    replayInFlight = (async () => {
+      const result = await replayQueue();
+      onComplete?.(result);
+    })().finally(() => {
+      replayInFlight = null;
+    });
+
+    return replayInFlight;
+  }
+
   async function handleOnline() {
-    const result = await replayQueue();
-    onComplete?.(result);
+    await replayOnce();
   }
 
   window.addEventListener("online", handleOnline);
+  if (navigator.onLine) {
+    void replayOnce();
+  }
 
   return () => {
     window.removeEventListener("online", handleOnline);
