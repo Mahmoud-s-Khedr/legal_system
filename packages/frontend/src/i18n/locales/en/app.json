@@ -9,7 +9,8 @@
     "fallback": "An unexpected error occurred. Please try again.",
     "reload": "Reload page",
     "requiredNameAndType": "Name and type are required",
-    "notFound": "Not found"
+    "notFound": "Not found",
+    "unauthorized": "You are not authorized to access this resource."
   },
   "greeting": {
     "morning": "Good morning",
@@ -62,7 +63,8 @@
     "showIndexedText": "Show indexed text",
     "copyText": "Copy text",
     "markDone": "Mark as done",
-    "backToTop": "Back to top"
+    "backToTop": "Back to top",
+    "view": "View"
   },
   "nav": {
     "home": "Home",
@@ -225,7 +227,10 @@
     "noData": "No data available."
   },
   "common": {
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "documentType": {
+      "GENERAL": "General"
+    }
   },
   "footer": {
     "navigation": "Quick navigation",
@@ -995,7 +1000,8 @@
     "recordPayment": "Record Payment",
     "void": "Void",
     "status": "Status",
-    "searchPlaceholder": "Search by invoice number or client"
+    "searchPlaceholder": "Search by invoice number or client",
+    "deleteExpenseConfirm": "Delete this expense?"
   },
   "reports": {
     "title": "Reports",

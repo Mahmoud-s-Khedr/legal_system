@@ -9,7 +9,8 @@
     "fallback": "Une erreur inattendue s'est produite. Veuillez réessayer.",
     "reload": "Recharger la page",
     "requiredNameAndType": "Le nom et le type sont requis",
-    "notFound": "Introuvable"
+    "notFound": "Introuvable",
+    "unauthorized": "Vous n'êtes pas autorisé à accéder à cette ressource."
   },
   "greeting": {
     "morning": "Bonjour",
@@ -62,7 +63,8 @@
     "showIndexedText": "Afficher le texte indexé",
     "copyText": "Copier le texte",
     "markDone": "Marquer comme fait",
-    "backToTop": "Haut de page"
+    "backToTop": "Haut de page",
+    "view": "Voir"
   },
   "nav": {
     "home": "Accueil",
@@ -225,7 +227,10 @@
     "noData": "Aucune donnée disponible."
   },
   "common": {
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "documentType": {
+      "GENERAL": "Général"
+    }
   },
   "footer": {
     "navigation": "Navigation rapide",
@@ -983,7 +988,8 @@
     "void": "Annuler",
     "status": "Statut",
     "invoiceNumber": "N° facture",
-    "searchPlaceholder": "Rechercher par numéro de facture ou client"
+    "searchPlaceholder": "Rechercher par numéro de facture ou client",
+    "deleteExpenseConfirm": "Supprimer cette dépense ?"
   },
   "reports": {
     "title": "Rapports",

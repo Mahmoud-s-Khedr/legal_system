@@ -594,7 +594,10 @@ fn execute_portal_action(app: &AppHandle, action: &str) -> PpoPortalNavigateResu
 }
 
 #[tauri::command]
-pub async fn open_ppo_portal_window(app: AppHandle, url: Option<String>) -> OpenPpoPortalWindowResult {
+pub async fn open_ppo_portal_window(
+    app: AppHandle,
+    url: Option<String>,
+) -> OpenPpoPortalWindowResult {
     #[cfg(target_os = "macos")]
     {
         let _ = app;

@@ -45,7 +45,7 @@ export function CaseDetailPage() {
     userId: "",
     roleOnCase: CaseRoleOnCase.LEAD
   });
-  const [courtFormResetToken, setCourtFormResetToken] = useState(0);
+  const [courtFormResetToken] = useState(0);
   const [showInlineHearingForm, setShowInlineHearingForm] = useState(false);
   const [showInlineTaskForm, setShowInlineTaskForm] = useState(false);
 

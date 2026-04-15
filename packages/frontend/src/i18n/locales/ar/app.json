@@ -9,7 +9,8 @@
     "fallback": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
     "reload": "إعادة تحميل الصفحة",
     "requiredNameAndType": "الاسم والنوع حقول مطلوبة",
-    "notFound": "غير موجود"
+    "notFound": "غير موجود",
+    "unauthorized": "ليست لديك صلاحية للوصول إلى هذا المورد."
   },
   "greeting": {
     "night": "تحية طيبة",
@@ -63,7 +64,8 @@
     "showIndexedText": "عرض النص المفهرس",
     "copyText": "نسخ النص",
     "markDone": "تمييز كمنجز",
-    "backToTop": "العودة للأعلى"
+    "backToTop": "العودة للأعلى",
+    "view": "عرض"
   },
   "nav": {
     "home": "الرئيسية",
@@ -226,7 +228,10 @@
     "noData": "لا توجد بيانات متاحة."
   },
   "common": {
-    "loading": "جارٍ التحميل…"
+    "loading": "جارٍ التحميل…",
+    "documentType": {
+      "GENERAL": "عام"
+    }
   },
   "footer": {
     "navigation": "تنقل سريع",
@@ -1006,7 +1011,8 @@
     "recordPayment": "تسجيل دفعة",
     "void": "إلغاء",
     "status": "الحالة",
-    "searchPlaceholder": "ابحث برقم الفاتورة أو العميل"
+    "searchPlaceholder": "ابحث برقم الفاتورة أو العميل",
+    "deleteExpenseConfirm": "هل تريد حذف هذا المصروف؟"
   },
   "reports": {
     "title": "التقارير",
