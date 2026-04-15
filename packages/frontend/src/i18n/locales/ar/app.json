@@ -849,6 +849,9 @@
     "rankLabel": "نتيجة",
     "commandPlaceholder": "ابحث أو اكتب أمرًا…",
     "quickActions": "إجراءات سريعة",
+    "resultTypes": {
+      "document": "مستند"
+    },
     "navigate": "تنقل",
     "select": "اختر",
     "dismiss": "إغلاق",

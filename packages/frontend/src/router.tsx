@@ -354,6 +354,9 @@ const documentUploadRoute = createRoute({
 const searchRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/search",
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === "string" ? search.q : ""
+  }),
   component: SearchPage
 });
 

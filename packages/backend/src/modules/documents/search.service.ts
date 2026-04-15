@@ -29,10 +29,11 @@ export async function searchDocuments(
   filters: SearchFilters
 ): Promise<DocumentSearchResponseDto> {
   const { q, caseId, clientId, type, page = 1, pageSize = 20 } = filters;
+  const normalizedQuery = q.trim();
   const offset = (page - 1) * pageSize;
 
-  if (!q || q.trim().length === 0) {
-    return { items: [], total: 0, query: q ?? "" };
+  if (!normalizedQuery) {
+    return { items: [], total: 0, query: "" };
   }
 
   const firmId = actor.firmId;
@@ -56,7 +57,7 @@ export async function searchDocuments(
         'MaxFragments=3,MaxWords=30,MinWords=10,StartSel=<mark>,StopSel=</mark>'
       ) AS headline
     FROM "Document" d,
-         websearch_to_tsquery('simple', unaccent(${q})) query
+         websearch_to_tsquery('simple', unaccent(${normalizedQuery})) query
     WHERE
       d."firmId" = ${firmId}::uuid
       AND d."deletedAt" IS NULL
@@ -65,14 +66,14 @@ export async function searchDocuments(
       AND (${caseId ?? null}::uuid IS NULL OR d."caseId" = ${caseId ?? null}::uuid)
       AND (${clientId ?? null}::uuid IS NULL OR d."clientId" = ${clientId ?? null}::uuid)
       AND (${type ?? null}::text IS NULL OR d.type::text = ${type ?? null}::text)
-    ORDER BY rank DESC
+    ORDER BY rank DESC, d."createdAt" DESC, d.id DESC
     LIMIT ${pageSize} OFFSET ${offset}
   `;
 
   const countRows = await prisma.$queryRaw<[{ total: bigint }]>`
     SELECT count(*) AS total
     FROM "Document" d,
-         websearch_to_tsquery('simple', unaccent(${q})) query
+         websearch_to_tsquery('simple', unaccent(${normalizedQuery})) query
     WHERE
       d."firmId" = ${firmId}::uuid
       AND d."deletedAt" IS NULL
@@ -99,5 +100,5 @@ export async function searchDocuments(
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt)
   }));
 
-  return { items, total, query: q };
+  return { items, total, query: normalizedQuery };
 }

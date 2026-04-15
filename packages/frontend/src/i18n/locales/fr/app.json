@@ -826,6 +826,9 @@
     "rankLabel": "résultats",
     "commandPlaceholder": "Rechercher ou saisir une commande…",
     "quickActions": "Actions rapides",
+    "resultTypes": {
+      "document": "Document"
+    },
     "navigate": "naviguer",
     "select": "sélectionner",
     "dismiss": "fermer",

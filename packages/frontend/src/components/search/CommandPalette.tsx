@@ -2,8 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Search, X, Briefcase, Users, Plus } from "lucide-react";
-import type { CaseListResponseDto, ClientListResponseDto } from "@elms/shared";
+import { Search, X, Briefcase, Users, Plus, FileText } from "lucide-react";
+import type {
+  CaseListResponseDto,
+  ClientListResponseDto,
+  DocumentSearchResponseDto
+} from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useAccessibleOverlay } from "../shared/useAccessibleOverlay";
 
@@ -16,6 +20,9 @@ interface PaletteItem {
   id: string;
   label: string;
   description?: string;
+  snippet?: string;
+  badge?: string;
+  score: number;
   icon: React.ReactNode;
   action: () => void;
 }
@@ -77,64 +84,83 @@ export function CommandPalette({ open, onClose }: Props) {
     enabled: open && debouncedQ.trim().length > 0
   });
 
+  const documentsQuery = useQuery({
+    queryKey: ["palette-documents", debouncedQ],
+    queryFn: () =>
+      apiFetch<DocumentSearchResponseDto>(
+        `/api/search/documents?q=${encodeURIComponent(debouncedQ)}&pageSize=5`
+      ),
+    enabled: open && debouncedQ.trim().length > 0
+  });
+
   const quickActions: PaletteItem[] = useMemo(() => [
     {
       id: "go-dashboard",
       label: t("search.escape.dashboard"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/dashboard" }); onClose(); }
     },
     {
       id: "go-cases",
       label: t("search.escape.cases"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/cases" }); onClose(); }
     },
     {
       id: "go-clients",
       label: t("search.escape.clients"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/clients" }); onClose(); }
     },
     {
       id: "go-search",
       label: t("search.escape.search"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/search" }); onClose(); }
     },
     {
       id: "go-settings",
       label: t("search.escape.settings"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/settings" }); onClose(); }
     },
     {
       id: "quick-intake",
       label: t("actions.quickIntake"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/cases/quick-new" }); onClose(); }
     },
     {
       id: "new-case",
       label: t("actions.newCase"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/cases/new" }); onClose(); }
     },
     {
       id: "new-hearing",
       label: t("actions.newHearing"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/hearings/new" }); onClose(); }
     },
     {
       id: "new-task",
       label: t("actions.newTask"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/tasks/new" }); onClose(); }
     },
     {
       id: "new-invoice",
       label: t("actions.newInvoice"),
+      score: 0,
       icon: <Plus className="h-4 w-4" />,
       action: () => { void navigate({ to: "/app/invoices/new" }); onClose(); }
     }
@@ -142,10 +168,39 @@ export function CommandPalette({ open, onClose }: Props) {
 
   const searchResults: PaletteItem[] = useMemo(() => {
     if (!debouncedQ.trim()) return [];
+    const normalizedQuery = debouncedQ.trim().toLowerCase();
+    const entityScore = (label: string) => {
+      const normalizedLabel = label.toLowerCase();
+      if (normalizedLabel.startsWith(normalizedQuery)) {
+        return 2.5;
+      }
+      if (normalizedLabel.includes(normalizedQuery)) {
+        return 2;
+      }
+      return 1;
+    };
+
+    const documentItems = (documentsQuery.data?.items ?? []).map((document) => ({
+      id: `document-${document.id}`,
+      label: document.title,
+      description: t("search.resultTypes.document"),
+      snippet: stripHeadlineMarkup(document.headline),
+      badge: document.type,
+      score: document.rank + 10,
+      icon: <FileText className="h-4 w-4 text-slate-400" />,
+      action: () => {
+        void navigate({
+          to: "/app/search",
+          search: { q: debouncedQ.trim() }
+        });
+        onClose();
+      }
+    }));
     const caseItems = (casesQuery.data?.items ?? []).map((c) => ({
       id: `case-${c.id}`,
       label: c.title,
       description: t("nav.cases"),
+      score: entityScore(c.title),
       icon: <Briefcase className="h-4 w-4 text-slate-400" />,
       action: () => {
         void navigate({ to: "/app/cases/$caseId", params: { caseId: c.id } });
@@ -156,14 +211,28 @@ export function CommandPalette({ open, onClose }: Props) {
       id: `client-${c.id}`,
       label: c.name,
       description: t("nav.clients"),
+      score: entityScore(c.name),
       icon: <Users className="h-4 w-4 text-slate-400" />,
       action: () => {
         void navigate({ to: "/app/clients/$clientId", params: { clientId: c.id } });
         onClose();
       }
     }));
-    return [...caseItems, ...clientItems];
-  }, [debouncedQ, casesQuery.data, clientsQuery.data, t, navigate, onClose]);
+    return [...documentItems, ...caseItems, ...clientItems].sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return a.label.localeCompare(b.label);
+    });
+  }, [
+    debouncedQ,
+    casesQuery.data,
+    clientsQuery.data,
+    documentsQuery.data,
+    t,
+    navigate,
+    onClose
+  ]);
 
   const items = debouncedQ.trim() ? searchResults : quickActions;
 
@@ -190,7 +259,9 @@ export function CommandPalette({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const isLoading = debouncedQ.trim() && (casesQuery.isFetching || clientsQuery.isFetching);
+  const isLoading =
+    debouncedQ.trim() &&
+    (casesQuery.isFetching || clientsQuery.isFetching || documentsQuery.isFetching);
 
   return (
     <div
@@ -244,18 +315,32 @@ export function CommandPalette({ open, onClose }: Props) {
           {items.map((item, idx) => (
             <li key={item.id} role="option" aria-selected={idx === activeIndex}>
               <button
-                className={`flex w-full items-center gap-3 px-4 py-2.5 text-start text-sm transition ${idx === activeIndex ? "bg-accent text-white" : "hover:bg-slate-50"}`}
+                className={`flex w-full items-start gap-3 px-4 py-2.5 text-start text-sm transition ${idx === activeIndex ? "bg-accent text-white" : "hover:bg-slate-50"}`}
                 onClick={item.action}
                 onMouseEnter={() => setActiveIndex(idx)}
                 type="button"
               >
-                <span className={idx === activeIndex ? "text-white" : ""}>{item.icon}</span>
-                <span className="flex-1 font-medium">{item.label}</span>
-                {item.description && (
-                  <span className={`text-xs ${idx === activeIndex ? "text-white/70" : "text-slate-400"}`}>
-                    {item.description}
-                  </span>
-                )}
+                <span className={`mt-0.5 ${idx === activeIndex ? "text-white" : ""}`}>{item.icon}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block truncate font-medium">{item.label}</span>
+                  {item.snippet && (
+                    <span className={`mt-0.5 block truncate text-xs ${idx === activeIndex ? "text-white/80" : "text-slate-500"}`}>
+                      {item.snippet}
+                    </span>
+                  )}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  {item.badge && (
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${idx === activeIndex ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.description && (
+                    <span className={`text-xs ${idx === activeIndex ? "text-white/70" : "text-slate-400"}`}>
+                      {item.description}
+                    </span>
+                  )}
+                </span>
               </button>
             </li>
           ))}
@@ -267,7 +352,11 @@ export function CommandPalette({ open, onClose }: Props) {
           <a
             className="hover:text-accent"
             href="/app/search"
-            onClick={(e) => { e.preventDefault(); void navigate({ to: "/app/search" }); onClose(); }}
+            onClick={(e) => {
+              e.preventDefault();
+              void navigate({ to: "/app/search", search: { q: debouncedQ.trim() } });
+              onClose();
+            }}
           >
             {t("search.advancedSearch", "Advanced search")} →
           </a>
@@ -275,4 +364,8 @@ export function CommandPalette({ open, onClose }: Props) {
       </div>
     </div>
   );
+}
+
+function stripHeadlineMarkup(value: string) {
+  return value.replace(/<\/?mark>/gi, "").replace(/\s+/g, " ").trim();
 }
