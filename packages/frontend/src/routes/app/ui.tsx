@@ -485,12 +485,11 @@ export function Field({
             const normalized = fromDatePickerValue(nextValue, type);
             if (isBlurCommit) {
               setDraftValue(normalized);
-              return;
             }
             onChange(normalized);
           }}
           onBlur={() => {
-            if (isBlurCommit && draftValue !== value) {
+            if (isBlurCommit && !isDateField && draftValue !== value) {
               onChange(draftValue);
             }
           }}

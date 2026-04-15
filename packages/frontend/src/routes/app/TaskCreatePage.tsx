@@ -11,6 +11,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
 import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField, TextAreaField } from "./ui";
@@ -110,7 +111,7 @@ export function TaskCreatePage() {
           ...payload,
           caseId: payload.caseId?.trim() ? payload.caseId : null,
           assignedToId: payload.assignedToId?.trim() ? payload.assignedToId : null,
-          dueAt: payload.dueAt?.trim() ? payload.dueAt : null,
+          dueAt: toIsoOrEmpty(payload.dueAt) || null,
           description: payload.description?.trim() ? payload.description : null
         } satisfies CreateTaskDto)
       }),
