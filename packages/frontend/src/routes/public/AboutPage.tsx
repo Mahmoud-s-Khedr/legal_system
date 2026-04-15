@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Copy, Linkedin, Mail, Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -6,7 +6,7 @@ import { getDeveloperContact } from "../../lib/developerContact";
 import { BackToTopButton } from "../../components/navigation/BackToTopButton";
 import { ShellFooter } from "../../components/navigation/ShellFooter";
 import { buildAuthShellFooterLinks } from "../../components/navigation/shellFooterLinks";
-import { handleExternalLinkClick } from "../../lib/externalLinks";
+import { copyTextToClipboard, handleExternalLinkClick } from "../../lib/externalLinks";
 
 type CopyField = "developer" | "email" | "phone" | null;
 
@@ -14,16 +14,31 @@ export function AboutPage() {
   const { t } = useTranslation("app");
   const contact = getDeveloperContact();
   const [copiedField, setCopiedField] = useState<CopyField>(null);
+  const resetTimerRef = useRef<number | null>(null);
   const footerLinks = buildAuthShellFooterLinks((key) => t(key));
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
 
   async function copyValue(field: Exclude<CopyField, null>, value: string) {
     if (!value) {
       return;
     }
 
-    await navigator.clipboard.writeText(value);
+    await copyTextToClipboard(value);
     setCopiedField(field);
-    window.setTimeout(() => setCopiedField((current) => (current === field ? null : current)), 1500);
+    if (resetTimerRef.current !== null) {
+      window.clearTimeout(resetTimerRef.current);
+    }
+    resetTimerRef.current = window.setTimeout(
+      () => setCopiedField((current) => (current === field ? null : current)),
+      1500
+    );
   }
 
   return (

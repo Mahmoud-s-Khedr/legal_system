@@ -682,12 +682,15 @@ model Notification {
   title     String
   body      String
   isRead    Boolean          @default(false)
+  entityType String?
+  entityId   String?         @db.Uuid
   createdAt DateTime         @default(now())
   firm      Firm             @relation(fields: [firmId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([firmId, userId, isRead, createdAt])
   @@index([firmId, userId, type, createdAt])
+  @@index([firmId, userId, entityType, entityId])
 }
 
 model NotificationPreference {

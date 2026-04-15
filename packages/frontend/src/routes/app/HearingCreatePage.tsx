@@ -16,10 +16,11 @@ import { Field, FormExitActions, PageHeader, SectionCard, SelectField, TextAreaF
 import { slotDateTime } from "./hearingCalendar";
 
 function normalizePayload(form: CreateHearingDto): CreateHearingDto {
+  const sessionDatetime = toIsoOrEmpty(form.sessionDatetime);
   return {
     ...form,
     assignedLawyerId: form.assignedLawyerId || null,
-    sessionDatetime: new Date(form.sessionDatetime).toISOString(),
+    sessionDatetime,
     nextSessionAt: toIsoOrEmpty(form.nextSessionAt) || null,
     notes: form.notes || null
   };
@@ -31,16 +32,25 @@ export function HearingCreatePage() {
   const search = useSearch({ strict: false }) as { caseId?: string };
   const queryClient = useQueryClient();
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
+  const initialSessionDatetime = slotDateTime(new Date());
 
   const [form, setForm] = useState<CreateHearingDto>({
     caseId: search.caseId ?? "",
     assignedLawyerId: "",
-    sessionDatetime: slotDateTime(new Date()),
+    sessionDatetime: initialSessionDatetime,
     nextSessionAt: "",
     outcome: null,
     notes: ""
   });
-  useUnsavedChanges(!!form.notes || form.outcome !== null, { bypassBlockRef: bypassRef });
+  const [initialForm, setInitialForm] = useState<CreateHearingDto>(() => ({
+    caseId: search.caseId ?? "",
+    assignedLawyerId: "",
+    sessionDatetime: initialSessionDatetime,
+    nextSessionAt: "",
+    outcome: null,
+    notes: ""
+  }));
+  useUnsavedChanges(JSON.stringify(form) !== JSON.stringify(initialForm), { bypassBlockRef: bypassRef });
 
   const [debouncedConflictInput, setDebouncedConflictInput] = useState({
     assignedLawyerId: "",
@@ -50,6 +60,7 @@ export function HearingCreatePage() {
   useEffect(() => {
     if (search.caseId) {
       setForm((current) => ({ ...current, caseId: search.caseId ?? "" }));
+      setInitialForm((current) => ({ ...current, caseId: search.caseId ?? "" }));
     }
   }, [search.caseId]);
 
@@ -155,6 +166,9 @@ export function HearingCreatePage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!isValidDateTimeInput(form.sessionDatetime)) {
+              return;
+            }
             createMutation.mutate(form);
           }}
         >

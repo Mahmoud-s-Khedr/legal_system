@@ -304,7 +304,9 @@
       "judgment": "Judgment",
       "circular": "Circular",
       "article": "Article",
-      "other": "Other"
+      "other": "Other",
+      "practiceGuide": "Practice Guide",
+      "commentary": "Commentary"
     },
     "uploadTitle": "Upload legal document",
     "uploadDescription": "Upload a legal source file and provide metadata for indexing.",

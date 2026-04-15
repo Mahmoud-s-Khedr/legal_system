@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { DocumentSearchResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, PageHeader } from "./ui";
+import { EmptyState, ErrorState, PageHeader } from "./ui";
 import { SearchResultCard } from "../../components/search/SearchResultCard";
 
 export function SearchPage() {
@@ -29,6 +29,13 @@ export function SearchPage() {
 
       {searchQuery.isLoading ? (
         <p className="text-sm text-slate-500">...</p>
+      ) : searchQuery.isError ? (
+        <ErrorState
+          title={t("errors.title")}
+          description={(searchQuery.error as Error)?.message ?? t("errors.fallback")}
+          retryLabel={t("errors.reload")}
+          onRetry={() => void searchQuery.refetch()}
+        />
       ) : searchQuery.data?.items.length === 0 || !q ? (
         <EmptyState
           description={q ? t("search.noResultsHelp") : t("search.placeholder")}

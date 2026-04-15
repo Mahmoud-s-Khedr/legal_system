@@ -21,9 +21,17 @@ interface PortalInvoice {
   dueDate: string | null;
 }
 
+class PortalRequestError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`request_failed_${status}`);
+    this.status = status;
+  }
+}
+
 async function portalFetch<T>(url: string): Promise<T> {
   const res = await fetch(resolveApiUrl(url), { credentials: "include" });
-  if (!res.ok) throw new Error("request_failed");
+  if (!res.ok) throw new PortalRequestError(res.status);
   return res.json() as Promise<T>;
 }
 
@@ -42,6 +50,7 @@ export function PortalDashboardPage() {
 
   const cases = casesQuery.data ?? [];
   const invoices = invoicesQuery.data ?? [];
+  const isLoading = casesQuery.isLoading || invoicesQuery.isLoading;
   const overdueInvoices = invoices.filter((inv) => inv.status === "ISSUED" && inv.dueDate && new Date(inv.dueDate) < new Date());
   const pageError = (casesQuery.error as Error | null) ?? (invoicesQuery.error as Error | null);
 
@@ -58,28 +67,34 @@ export function PortalDashboardPage() {
           <div className="absolute end-4 top-4 rounded-xl bg-blue-50 p-2 text-blue-600">
             <Briefcase className="size-4" />
           </div>
-          <StatCard label={t("portal.activeCases")} value={cases.length} />
+          <StatCard label={t("portal.activeCases")} value={isLoading ? "…" : cases.length} />
         </div>
         <div className="relative">
           <div className="absolute end-4 top-4 rounded-xl bg-amber-50 p-2 text-amber-600">
             <FileText className="size-4" />
           </div>
-          <StatCard label={t("portal.invoices")} value={invoices.length} />
+          <StatCard label={t("portal.invoices")} value={isLoading ? "…" : invoices.length} />
         </div>
         <div className="relative">
           <div className="absolute end-4 top-4 rounded-xl bg-red-100 p-2 text-red-600">
             <FileText className="size-4" />
           </div>
-          <StatCard label={t("portal.overdueInvoices")} value={overdueInvoices.length} />
+          <StatCard label={t("portal.overdueInvoices")} value={isLoading ? "…" : overdueInvoices.length} />
         </div>
       </div>
 
       {/* Cases */}
       <SectionCard title={t("portal.myCases")}>
-        {casesQuery.isError ? (
+        {isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : casesQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={pageError?.message === "request_failed" ? t("errors.fallback") : (pageError?.message ?? t("errors.fallback"))}
+            description={
+              pageError instanceof PortalRequestError && (pageError.status === 401 || pageError.status === 403)
+                ? t("errors.unauthorized")
+                : pageError?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void casesQuery.refetch()}
           />
@@ -112,10 +127,16 @@ export function PortalDashboardPage() {
 
       {/* Invoices */}
       <SectionCard title={t("portal.invoices")}>
-        {invoicesQuery.isError ? (
+        {isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : invoicesQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={pageError?.message === "request_failed" ? t("errors.fallback") : (pageError?.message ?? t("errors.fallback"))}
+            description={
+              pageError instanceof PortalRequestError && (pageError.status === 401 || pageError.status === 403)
+                ? t("errors.unauthorized")
+                : pageError?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void invoicesQuery.refetch()}
           />

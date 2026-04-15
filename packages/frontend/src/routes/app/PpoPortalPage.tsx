@@ -3,10 +3,12 @@ import { useTranslation } from "react-i18next";
 import {
   launchPpoPortal,
   navigatePpoPortal,
+  type PpoPortalNavErrorCode,
   type PpoPortalLaunchErrorCode,
   type PpoPortalLaunchResult
 } from "../../lib/ppoPortal";
 import { PageHeader, SectionCard } from "./ui";
+import { useToastStore } from "../../store/toastStore";
 
 type LaunchState =
   | { status: "idle" }
@@ -44,6 +46,17 @@ export function PpoPortalPage() {
   const [launchState, setLaunchState] = useState<LaunchState>({ status: "idle" });
   const [hasOpenedAtLeastOnce, setHasOpenedAtLeastOnce] = useState(false);
   const [isTakingScreenshot, setIsTakingScreenshot] = useState(false);
+  const addToast = useToastStore((state) => state.addToast);
+
+  function resolveNavError(code: PpoPortalNavErrorCode): string {
+    if (code === "PPO_WINDOW_NOT_OPEN") {
+      return t("ppo.status.windowNotOpen");
+    }
+    if (code === "PPO_NAVIGATION_FAILED") {
+      return t("ppo.status.screenshotCaptureFailed");
+    }
+    return t("ppo.status.screenshotSaveFailed");
+  }
 
   const openPortal = useCallback(async () => {
     setLaunchState({ status: "launching" });
@@ -67,11 +80,16 @@ export function PpoPortalPage() {
   const handleScreenshot = useCallback(async () => {
     setIsTakingScreenshot(true);
     try {
-      await navigatePpoPortal("screenshot");
+      const result = await navigatePpoPortal("screenshot");
+      if (!result.ok) {
+        addToast(resolveNavError(result.code), "error");
+        return;
+      }
+      addToast(t("ppo.status.screenshotSaved"), "success");
     } finally {
       setIsTakingScreenshot(false);
     }
-  }, []);
+  }, [addToast, t]);
 
   return (
     <div className="space-y-6">

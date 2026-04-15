@@ -33,7 +33,18 @@ export function TaskCreatePage() {
     dueAt: ""
   });
 
-  useUnsavedChanges(form.title !== "", { bypassBlockRef: bypassRef });
+  useUnsavedChanges(
+    Boolean(
+      form.title.trim() ||
+      form.description?.trim() ||
+      form.caseId?.trim() ||
+      form.assignedToId?.trim() ||
+      form.dueAt?.trim() ||
+      form.status !== TaskStatus.PENDING ||
+      form.priority !== TaskPriority.MEDIUM
+    ),
+    { bypassBlockRef: bypassRef }
+  );
 
   const casesQuery = useQuery({
     queryKey: ["cases"],
@@ -95,7 +106,13 @@ export function TaskCreatePage() {
     mutationFn: (payload: CreateTaskDto) =>
       apiFetch("/api/tasks", {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          caseId: payload.caseId?.trim() ? payload.caseId : null,
+          assignedToId: payload.assignedToId?.trim() ? payload.assignedToId : null,
+          dueAt: payload.dueAt?.trim() ? payload.dueAt : null,
+          description: payload.description?.trim() ? payload.description : null
+        } satisfies CreateTaskDto)
       }),
     onSuccess: async () => {
       feedback.success("messages.taskCreated");
@@ -171,7 +188,7 @@ export function TaskCreatePage() {
             cancelLabel={t("actions.cancel")}
             submitLabel={t("actions.createTask")}
             savingLabel={t("labels.saving")}
-            submitting={createMutation.isPending}
+            submitting={createMutation.isPending || form.title.trim().length < 2}
           />
           {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
         </form>

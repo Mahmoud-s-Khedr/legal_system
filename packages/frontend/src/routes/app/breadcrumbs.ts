@@ -53,7 +53,9 @@ const BREADCRUMB_META: BreadcrumbMeta[] = [
   { pattern: /^\/app\/library\/search$/, labelKey: "library.searchTitle" },
   { pattern: /^\/app\/library\/admin$/, labelKey: "library.adminTitle" },
   { pattern: /^\/app\/library\/upload$/, labelKey: "actions.uploadDocument" },
-  { pattern: /^\/app\/library\/documents\/[^/]+$/, labelKey: "library.title" }
+  { pattern: /^\/app\/library\/documents\/[^/]+$/, labelKey: "library.title" },
+  { pattern: /^\/app\/research$/, labelKey: "research.title" },
+  { pattern: /^\/app\/research\/[^/]+$/, labelKey: "research.title" }
 ];
 
 export function resolveBreadcrumbLabelKey(pathname: string): string | null {

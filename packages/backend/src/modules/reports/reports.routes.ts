@@ -24,6 +24,7 @@ import {
 import { generateReportExcel, generateReportPdf } from "./report.export.js";
 
 const reportTableQuerySchema = z.object({
+  format: z.enum(["excel", "pdf"]).optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   q: z.string().optional(),
@@ -44,8 +45,8 @@ function toTableResponse(
   rows: Array<Record<string, unknown>>,
   query: { q?: string; sortBy?: string; sortDir?: "asc" | "desc"; page: number; limit: number },
   options: {
-    searchable: string[];
-    sortable: string[];
+    searchable: readonly string[];
+    sortable: readonly string[];
     defaultSortBy: string;
     defaultSortDir: "asc" | "desc";
   }
@@ -72,6 +73,39 @@ function toTableResponse(
   };
 }
 
+const REPORT_CONFIG = {
+  "case-status": {
+    searchable: ["status"],
+    sortable: ["status", "count"],
+    defaultSortBy: "count",
+    defaultSortDir: "desc" as const
+  },
+  "hearing-outcomes": {
+    searchable: ["outcome"],
+    sortable: ["outcome", "count"],
+    defaultSortBy: "count",
+    defaultSortDir: "desc" as const
+  },
+  "lawyer-workload": {
+    searchable: ["fullName"],
+    sortable: ["fullName", "openCases", "openTasks", "upcomingHearings"],
+    defaultSortBy: "openCases",
+    defaultSortDir: "desc" as const
+  },
+  revenue: {
+    searchable: ["month"],
+    sortable: ["month", "invoiced", "paid"],
+    defaultSortBy: "month",
+    defaultSortDir: "asc" as const
+  },
+  "outstanding-balances": {
+    searchable: ["invoiceNumber", "clientName"],
+    sortable: ["invoiceNumber", "clientName", "totalAmount", "dueDate", "daysOverdue"],
+    defaultSortBy: "daysOverdue",
+    defaultSortDir: "desc" as const
+  }
+} as const;
+
 export async function registerReportRoutes(app: FastifyInstance) {
   app.get(
     "/api/reports/case-status",
@@ -83,12 +117,11 @@ export async function registerReportRoutes(app: FastifyInstance) {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo
       });
-      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
-        searchable: ["status"],
-        sortable: ["status", "count"],
-        defaultSortBy: "count",
-        defaultSortDir: "desc"
-      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["case-status"]
+      );
     }
   );
 
@@ -102,12 +135,11 @@ export async function registerReportRoutes(app: FastifyInstance) {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo
       });
-      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
-        searchable: ["outcome"],
-        sortable: ["outcome", "count"],
-        defaultSortBy: "count",
-        defaultSortDir: "desc"
-      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["hearing-outcomes"]
+      );
     }
   );
 
@@ -118,12 +150,11 @@ export async function registerReportRoutes(app: FastifyInstance) {
       const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(query);
       const rows = await lawyerWorkload(request.sessionUser!);
-      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
-        searchable: ["fullName"],
-        sortable: ["fullName", "openCases", "openTasks", "upcomingHearings"],
-        defaultSortBy: "openCases",
-        defaultSortDir: "desc"
-      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["lawyer-workload"]
+      );
     }
   );
 
@@ -137,12 +168,11 @@ export async function registerReportRoutes(app: FastifyInstance) {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo
       });
-      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
-        searchable: ["month"],
-        sortable: ["month", "invoiced", "paid"],
-        defaultSortBy: "month",
-        defaultSortDir: "asc"
-      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG.revenue
+      );
     }
   );
 
@@ -153,12 +183,11 @@ export async function registerReportRoutes(app: FastifyInstance) {
       const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(query);
       const rows = await outstandingBalances(request.sessionUser!);
-      return toTableResponse(toRowRecords(rows), { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit }, {
-        searchable: ["invoiceNumber", "clientName"],
-        sortable: ["invoiceNumber", "clientName", "totalAmount", "dueDate", "daysOverdue"],
-        defaultSortBy: "daysOverdue",
-        defaultSortDir: "desc"
-      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["outstanding-balances"]
+      );
     }
   );
 
@@ -184,40 +213,53 @@ export async function registerReportRoutes(app: FastifyInstance) {
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
       const { reportType } = request.params as { reportType: string };
-      const q = request.query as Record<string, string>;
-      const format = q.format === "pdf" ? "pdf" : "excel";
-      const filter = { dateFrom: q.dateFrom, dateTo: q.dateTo };
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const format = query.format === "pdf" ? "pdf" : "excel";
+      const filter = { dateFrom: query.dateFrom, dateTo: query.dateTo };
+      const { page, limit } = parsePaginationQuery(query);
       const generatedAt = new Date().toISOString().slice(0, 10);
 
-      let data: unknown;
+      let rows: unknown;
+      let tableConfig: (typeof REPORT_CONFIG)[keyof typeof REPORT_CONFIG];
       switch (reportType) {
         case "case-status":
-          data = await caseStatusDistribution(request.sessionUser!, filter);
+          rows = await caseStatusDistribution(request.sessionUser!, filter);
+          tableConfig = REPORT_CONFIG["case-status"];
           break;
         case "hearing-outcomes":
-          data = await hearingOutcomes(request.sessionUser!, filter);
+          rows = await hearingOutcomes(request.sessionUser!, filter);
+          tableConfig = REPORT_CONFIG["hearing-outcomes"];
           break;
         case "lawyer-workload":
-          data = await lawyerWorkload(request.sessionUser!);
+          rows = await lawyerWorkload(request.sessionUser!);
+          tableConfig = REPORT_CONFIG["lawyer-workload"];
           break;
         case "revenue":
-          data = await revenueReport(request.sessionUser!, filter);
+          rows = await revenueReport(request.sessionUser!, filter);
+          tableConfig = REPORT_CONFIG.revenue;
           break;
         case "outstanding-balances":
-          data = await outstandingBalances(request.sessionUser!);
+          rows = await outstandingBalances(request.sessionUser!);
+          tableConfig = REPORT_CONFIG["outstanding-balances"];
           break;
         default:
           return reply.status(400).send({ error: "Unknown report type" });
       }
 
+      const tableData = toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        tableConfig
+      ).items;
+
       if (format === "excel") {
-        const buf = await generateReportExcel(reportType, data, generatedAt);
+        const buf = await generateReportExcel(reportType, tableData, generatedAt);
         return reply
           .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
           .header("Content-Disposition", `attachment; filename="elms-report-${reportType}-${generatedAt}.xlsx"`)
           .send(buf);
       } else {
-        const buf = await generateReportPdf(reportType, data, generatedAt);
+        const buf = await generateReportPdf(reportType, tableData, generatedAt);
         return reply
           .header("Content-Type", "application/pdf")
           .header("Content-Disposition", `attachment; filename="elms-report-${reportType}-${generatedAt}.pdf"`)

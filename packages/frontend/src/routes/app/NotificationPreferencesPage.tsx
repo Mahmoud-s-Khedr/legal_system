@@ -25,7 +25,13 @@ export function NotificationPreferencesPage() {
 
   function isEnabled(type: NotificationType, channel: NotificationChannel) {
     const pref = prefs?.find((p) => p.type === type && p.channel === channel);
-    return pref?.enabled ?? true; // default enabled
+    if (pref) {
+      return pref.enabled;
+    }
+    if (!prefs?.length) {
+      return channel === NotificationChannel.IN_APP;
+    }
+    return false;
   }
 
   function toggle(type: NotificationType, channel: NotificationChannel, enabled: boolean) {

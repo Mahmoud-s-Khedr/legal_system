@@ -10,7 +10,7 @@ import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, Sele
 
 export function UsersPage() {
   const { t } = useTranslation("app");
-  const { mode } = useAuthBootstrap();
+  const { mode, user } = useAuthBootstrap();
   const table = useTableQueryState({
     defaultSortBy: "createdAt",
     defaultSortDir: "desc",
@@ -30,7 +30,7 @@ export function UsersPage() {
         title={t("users.title")}
         description={t("users.description")}
         actions={
-          mode === AuthMode.LOCAL ? (
+          mode === AuthMode.LOCAL && user?.permissions.includes("users:create") ? (
             <Link
               className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
               to="/app/users/new"
@@ -58,7 +58,9 @@ export function UsersPage() {
             ]}
           />
         </TableToolbar>
-        {usersQuery.isError ? (
+        {usersQuery.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : usersQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
             description={(usersQuery.error as Error)?.message ?? t("errors.fallback")}

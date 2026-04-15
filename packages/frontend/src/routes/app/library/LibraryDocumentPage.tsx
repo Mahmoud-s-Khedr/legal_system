@@ -58,6 +58,7 @@ export function LibraryDocumentPage() {
   const [linkCaseId, setLinkCaseId] = useState("");
   const [linkNotes, setLinkNotes] = useState("");
   const [showLinkForm, setShowLinkForm] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const docQuery = useQuery({
     queryKey: ["library-document", documentId],
@@ -71,8 +72,12 @@ export function LibraryDocumentPage() {
         body: JSON.stringify({ body })
       }),
     onSuccess: () => {
+      setActionError(null);
       setAnnotationBody("");
       void queryClient.invalidateQueries({ queryKey: ["library-document", documentId] });
+    },
+    onError: (error: Error) => {
+      setActionError(error.message || t("errors.fallback"));
     }
   });
 
@@ -83,8 +88,12 @@ export function LibraryDocumentPage() {
         body: JSON.stringify({ body })
       }),
     onSuccess: () => {
+      setActionError(null);
       setEditingAnnotationId(null);
       void queryClient.invalidateQueries({ queryKey: ["library-document", documentId] });
+    },
+    onError: (error: Error) => {
+      setActionError(error.message || t("errors.fallback"));
     }
   });
 
@@ -92,7 +101,11 @@ export function LibraryDocumentPage() {
     mutationFn: (id: string) =>
       apiFetch(`/api/library/annotations/${id}`, { method: "DELETE" }),
     onSuccess: () => {
+      setActionError(null);
       void queryClient.invalidateQueries({ queryKey: ["library-document", documentId] });
+    },
+    onError: (error: Error) => {
+      setActionError(error.message || t("errors.fallback"));
     }
   });
 
@@ -103,9 +116,14 @@ export function LibraryDocumentPage() {
         body: JSON.stringify({ documentId, notes })
       }),
     onSuccess: () => {
+      setActionError(null);
       setLinkCaseId("");
       setLinkNotes("");
       setShowLinkForm(false);
+      void queryClient.invalidateQueries({ queryKey: ["case-legal-refs", linkCaseId.trim()] });
+    },
+    onError: (error: Error) => {
+      setActionError(error.message || t("errors.fallback"));
     }
   });
 
@@ -209,6 +227,7 @@ export function LibraryDocumentPage() {
 
       {/* Annotations */}
       <SectionCard description={t("library.annotationsHelp")} title={t("library.annotations")}>
+        {actionError ? <p className="mb-3 text-sm text-red-600">{actionError}</p> : null}
         <div className="space-y-3">
           {!doc.annotations.length ? (
             <EmptyState description={t("empty.noAnnotationsHelp")} title={t("empty.noAnnotations")} />
@@ -224,6 +243,7 @@ export function LibraryDocumentPage() {
                   />
                   <div className="mt-2 flex gap-2">
                     <PrimaryButton
+                      disabled={updateAnnotationMutation.isPending}
                       onClick={() => updateAnnotationMutation.mutate({ id: ann.id, body: editingBody })}
                     >
                       {t("actions.save")}
@@ -250,6 +270,7 @@ export function LibraryDocumentPage() {
                     <button
                       aria-label={t("actions.delete")}
                       className="rounded-lg p-1 text-slate-400 hover:text-red-500"
+                      disabled={deleteAnnotationMutation.isPending}
                       onClick={() => deleteAnnotationMutation.mutate(ann.id)}
                     >
                       <Trash2 aria-hidden="true" className="size-4" />
@@ -271,7 +292,7 @@ export function LibraryDocumentPage() {
             onChange={(e) => setAnnotationBody(e.target.value)}
           />
           <PrimaryButton
-            disabled={!annotationBody.trim()}
+            disabled={!annotationBody.trim() || createAnnotationMutation.isPending}
             onClick={() => createAnnotationMutation.mutate(annotationBody.trim())}
           >
             <Plus aria-hidden="true" className="size-4" />
@@ -304,7 +325,7 @@ export function LibraryDocumentPage() {
             </FieldWrap>
             <div className="flex gap-2">
               <PrimaryButton
-                disabled={!linkCaseId.trim()}
+                disabled={!linkCaseId.trim() || linkToCaseMutation.isPending}
                 onClick={() => linkToCaseMutation.mutate({ caseId: linkCaseId.trim(), notes: linkNotes })}
               >
                 {t("actions.link")}

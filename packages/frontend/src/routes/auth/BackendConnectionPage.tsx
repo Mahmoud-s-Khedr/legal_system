@@ -59,8 +59,13 @@ export function BackendConnectionPage() {
     setTestStatus("idle");
     setTestMessage(null);
     try {
-      const baseUrl = await getConfiguredApiBaseUrl();
-      const requestUrl = `${baseUrl.replace(/\/+$/, "")}/api/health`;
+      const nextBaseUrl = baseUrl.trim();
+      if (!nextBaseUrl) {
+        setTestStatus("error");
+        setTestMessage(t("backendConnection.invalidUrl"));
+        return;
+      }
+      const requestUrl = `${nextBaseUrl.replace(/\/+$/, "")}/api/health`;
       const response = await fetch(requestUrl, { credentials: "include" });
       if (!response.ok) {
         captureDesktopConnectivitySnapshot({

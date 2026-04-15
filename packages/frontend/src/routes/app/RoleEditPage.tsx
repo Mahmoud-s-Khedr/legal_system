@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { RoleDto, RoleListResponseDto, SetRolePermissionsDto, UpdateRoleDto } from "@elms/shared";
+import type { RoleDto, UpdateRoleDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, Field, FormExitActions, PageHeader, SectionCard } from "./ui";
+import { EmptyState, ErrorState, Field, FormExitActions, PageHeader, SectionCard } from "./ui";
 import { PermissionChecklist } from "../../components/shared/PermissionChecklist";
 
 export function RoleEditPage() {
@@ -13,12 +13,12 @@ export function RoleEditPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const rolesQuery = useQuery({
-    queryKey: ["roles"],
-    queryFn: () => apiFetch<RoleListResponseDto>("/api/roles")
+  const roleQuery = useQuery({
+    queryKey: ["role", roleId],
+    queryFn: () => apiFetch<RoleDto>(`/api/roles/${roleId}`)
   });
 
-  const role: RoleDto | undefined = rolesQuery.data?.items.find((r) => r.id === roleId);
+  const role = roleQuery.data;
 
   const [name, setName] = useState("");
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -35,12 +35,7 @@ export function RoleEditPage() {
     mutationFn: async (payload: UpdateRoleDto) => {
       await apiFetch(`/api/roles/${roleId}`, {
         method: "PUT",
-        body: JSON.stringify(payload)
-      });
-      const setPermsPayload: SetRolePermissionsDto = { permissionKeys: permissions };
-      await apiFetch(`/api/roles/${roleId}/permissions`, {
-        method: "PUT",
-        body: JSON.stringify(setPermsPayload)
+        body: JSON.stringify({ ...payload, permissionKeys: permissions })
       });
     },
     onSuccess: async () => {
@@ -50,8 +45,19 @@ export function RoleEditPage() {
     onError: (err: Error) => setError(err.message)
   });
 
-  if (rolesQuery.isLoading) {
+  if (roleQuery.isLoading) {
     return null;
+  }
+
+  if (roleQuery.isError) {
+    return (
+      <ErrorState
+        title={t("errors.title")}
+        description={(roleQuery.error as Error)?.message ?? t("errors.fallback")}
+        retryLabel={t("errors.reload")}
+        onRetry={() => void roleQuery.refetch()}
+      />
+    );
   }
 
   if (!role) {

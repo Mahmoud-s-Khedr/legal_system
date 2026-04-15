@@ -6,7 +6,7 @@ import { ShellFooter } from "../../components/navigation/ShellFooter";
 import { buildAuthShellFooterLinks } from "../../components/navigation/shellFooterLinks";
 import { BackToTopButton } from "../../components/navigation/BackToTopButton";
 import { getDeveloperContact } from "../../lib/developerContact";
-import { handleExternalLinkClick } from "../../lib/externalLinks";
+import { copyTextToClipboard, handleExternalLinkClick } from "../../lib/externalLinks";
 
 export function AuthShell({
   title,
@@ -42,7 +42,7 @@ export function AuthShell({
               <button
                 type="button"
                 className="underline-offset-2 transition hover:underline"
-                onClick={() => void navigator.clipboard.writeText(developerName)}
+                onClick={() => void copyTextToClipboard(developerName)}
                 title={t("app:about.copy")}
               >
                 {developerName}

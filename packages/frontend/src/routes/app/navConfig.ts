@@ -65,7 +65,7 @@ export const navConfig: NavConfigItem[] = [
     icon: Wallet,
     group: "finance",
     order: 120,
-    requiredPermission: "invoices:read"
+    requiredPermission: "expenses:read"
   },
   {
     id: "reports",

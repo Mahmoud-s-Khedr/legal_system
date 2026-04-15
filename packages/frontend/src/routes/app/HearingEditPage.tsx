@@ -17,10 +17,11 @@ import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectFiel
 import { toDateTimeLocalValue } from "./hearingCalendar";
 
 function normalizePayload(form: CreateHearingDto): CreateHearingDto {
+  const sessionDatetime = toIsoOrEmpty(form.sessionDatetime);
   return {
     ...form,
     assignedLawyerId: form.assignedLawyerId || null,
-    sessionDatetime: new Date(form.sessionDatetime).toISOString(),
+    sessionDatetime,
     nextSessionAt: toIsoOrEmpty(form.nextSessionAt) || null,
     notes: form.notes || null
   };
@@ -55,7 +56,14 @@ export function HearingEditPage() {
     notes: ""
   });
   const loadedFormRef = useRef<CreateHearingDto | null>(null);
-  useUnsavedChanges(loadedFormRef.current !== null && JSON.stringify(form) !== JSON.stringify(loadedFormRef.current), {
+  useUnsavedChanges(loadedFormRef.current !== null && (
+    form.caseId !== loadedFormRef.current.caseId ||
+    (form.assignedLawyerId ?? "") !== (loadedFormRef.current.assignedLawyerId ?? "") ||
+    form.sessionDatetime !== loadedFormRef.current.sessionDatetime ||
+    (form.nextSessionAt ?? "") !== (loadedFormRef.current.nextSessionAt ?? "") ||
+    (form.outcome ?? null) !== (loadedFormRef.current.outcome ?? null) ||
+    (form.notes ?? "") !== (loadedFormRef.current.notes ?? "")
+  ), {
     bypassBlockRef: bypassRef
   });
 
@@ -76,7 +84,7 @@ export function HearingEditPage() {
         notes: h.notes ?? ""
       };
       setForm(loaded);
-      if (!loadedFormRef.current) loadedFormRef.current = loaded;
+      loadedFormRef.current = loaded;
     }
   }, [hearingQuery.data]);
 
@@ -162,7 +170,20 @@ export function HearingEditPage() {
     }
   });
 
-  if (!hearingQuery.data && !hearingQuery.isLoading) {
+  if (hearingQuery.isLoading) {
+    return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
+  }
+
+  if (hearingQuery.isError) {
+    return (
+      <EmptyState
+        title={t("errors.title")}
+        description={(hearingQuery.error as Error)?.message ?? t("errors.fallback")}
+      />
+    );
+  }
+
+  if (!hearingQuery.data) {
     return (
       <EmptyState
         title={t("empty.noHearings")}
@@ -183,6 +204,9 @@ export function HearingEditPage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!isValidDateTimeInput(form.sessionDatetime)) {
+              return;
+            }
             updateMutation.mutate(form);
           }}
         >

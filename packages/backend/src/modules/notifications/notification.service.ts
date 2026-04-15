@@ -30,6 +30,8 @@ function mapNotification(n: {
   title: string;
   body: string;
   isRead: boolean;
+  entityType: string | null;
+  entityId: string | null;
   createdAt: Date;
 }): NotificationDto {
   return {
@@ -40,6 +42,8 @@ function mapNotification(n: {
     title: n.title,
     body: n.body,
     isRead: n.isRead,
+    entityType: n.entityType,
+    entityId: n.entityId,
     createdAt: n.createdAt.toISOString()
   };
 }
@@ -108,7 +112,8 @@ export async function dispatchNotification(
   firmId: string,
   userId: string,
   type: NotificationType,
-  payload: Record<string, string> = {}
+  payload: Record<string, string> = {},
+  target?: { entityType?: string | null; entityId?: string | null }
 ): Promise<void> {
   const content = buildNotificationContent(type, payload);
 
@@ -151,7 +156,7 @@ export async function dispatchNotification(
 
   await withTenant(prisma, firmId, async (tx) => {
     if (supportedChannels.includes(NotificationChannel.IN_APP)) {
-      await sendInApp(tx, firmId, userId, type as PrismaType, content.title, content.body);
+      await sendInApp(tx, firmId, userId, type as PrismaType, content.title, content.body, target);
     }
   });
 

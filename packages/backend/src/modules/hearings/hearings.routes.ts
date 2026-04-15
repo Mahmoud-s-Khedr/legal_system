@@ -12,6 +12,7 @@ import {
   createHearing,
   getHearing,
   listHearings,
+  updateHearingOutcome,
   updateHearing
 } from "./hearings.service.js";
 import { pushHearingToCalendar } from "../integrations/googleCalendar.service.js";
@@ -36,6 +37,10 @@ const hearingListQuerySchema = z.object({
   to: z.string().datetime().optional(),
   sortBy: z.string().optional(),
   sortDir: z.enum(["asc", "desc"]).optional()
+});
+
+const hearingOutcomeSchema = z.object({
+  outcome: z.nativeEnum(SessionOutcome).nullable()
 });
 
 export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
@@ -113,5 +118,20 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
       }
       return hearing;
     }
+  );
+
+  app.patch(
+    "/api/hearings/:id/outcome",
+    {
+      schema: { response: { 200: hearingDtoSchema } },
+      preHandler: [requireAuth, requirePermission("hearings:update")]
+    },
+    async (request) =>
+      updateHearingOutcome(
+        request.sessionUser!,
+        (request.params as { id: string }).id,
+        hearingOutcomeSchema.parse(request.body),
+        getAuditContext(request)
+      )
   );
 }

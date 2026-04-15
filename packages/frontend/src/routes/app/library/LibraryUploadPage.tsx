@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { LibraryDocumentType } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { Upload, FileText, XCircle, Loader2 } from "lucide-react";
 import { apiFetch, apiFormFetch } from "../../../lib/api";
@@ -41,19 +42,12 @@ function flattenCategories(nodes: CategoryNode[], depth = 0): { id: string; labe
   ]);
 }
 
-const DOCUMENT_TYPES = [
-  "LEGISLATION",
-  "JUDGMENT",
-  "PRACTICE_GUIDE",
-  "ARTICLE",
-  "COMMENTARY",
-  "GENERAL"
-];
+const DOCUMENT_TYPES = Object.values(LibraryDocumentType);
 
 const LEGISLATION_STATUSES = ["ACTIVE", "AMENDED", "REPEALED"];
 
 const EMPTY_FORM = {
-  type: "LEGISLATION",
+  type: LibraryDocumentType.LEGISLATION,
   scope: "FIRM",
   categoryId: "",
   lawNumber: "",
@@ -92,6 +86,38 @@ export function LibraryUploadPage() {
     () => files.filter((entry) => fileStates[entry.id]?.status === "failed"),
     [files, fileStates]
   );
+
+  useEffect(() => {
+    setForm((current) => {
+      if (current.type === LibraryDocumentType.LEGISLATION) {
+        return {
+          ...current,
+          judgmentNumber: "",
+          judgmentDate: "",
+          author: "",
+          publishedAt: ""
+        };
+      }
+      if (current.type === LibraryDocumentType.JUDGMENT) {
+        return {
+          ...current,
+          lawNumber: "",
+          lawYear: "",
+          legislationStatus: "ACTIVE"
+        };
+      }
+      return {
+        ...current,
+        lawNumber: "",
+        lawYear: "",
+        legislationStatus: "ACTIVE",
+        judgmentNumber: "",
+        judgmentDate: "",
+        author: "",
+        publishedAt: ""
+      };
+    });
+  }, [form.type]);
 
   function getStatusLabel(status: UploadQueueStatus) {
     switch (status) {
@@ -277,7 +303,7 @@ export function LibraryUploadPage() {
             <SelectField
               label={t("library.type")}
               value={form.type}
-              onChange={(value) => setForm({ ...form, type: value })}
+              onChange={(value) => setForm({ ...form, type: value as LibraryDocumentType })}
               options={DOCUMENT_TYPES.map((dt) => ({ value: dt, label: dt }))}
             />
             {canManageLibrary ? (
@@ -302,7 +328,7 @@ export function LibraryUploadPage() {
             />
           </div>
 
-          {form.type === "LEGISLATION" && (
+          {form.type === LibraryDocumentType.LEGISLATION && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <label className="block space-y-1">
                 <span className="text-sm font-semibold">{t("library.lawNumber")}</span>
@@ -333,7 +359,7 @@ export function LibraryUploadPage() {
             </div>
           )}
 
-          {form.type === "JUDGMENT" && (
+          {form.type === LibraryDocumentType.JUDGMENT && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block space-y-1">
                 <span className="text-sm font-semibold">{t("library.judgmentNumber")}</span>

@@ -16,9 +16,10 @@ export function CaseCreatePage() {
   const feedback = useMutationFeedback();
   const search = useSearch({ strict: false }) as { clientId?: string };
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
+  const initialClientId = search.clientId ?? "";
 
   const [form, setForm] = useState<CreateCaseDto>({
-    clientId: search.clientId ?? "",
+    clientId: initialClientId,
     title: "",
     caseNumber: "",
     internalReference: "",
@@ -32,7 +33,17 @@ export function CaseCreatePage() {
   });
 
   const caseTypesQuery = useLookupOptions("CaseType");
-  useUnsavedChanges(form.title !== "" || form.clientId !== "", { bypassBlockRef: bypassRef });
+  useUnsavedChanges(
+    JSON.stringify(form) !== JSON.stringify({
+      clientId: initialClientId,
+      title: "",
+      caseNumber: "",
+      internalReference: "",
+      judicialYear: null,
+      type: "CIVIL"
+    } satisfies CreateCaseDto),
+    { bypassBlockRef: bypassRef }
+  );
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateCaseDto) =>
@@ -76,6 +87,9 @@ export function CaseCreatePage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            if (form.title.trim().length < 2) {
+              return;
+            }
             createMutation.mutate(form);
           }}
         >
@@ -116,7 +130,7 @@ export function CaseCreatePage() {
             cancelLabel={t("actions.cancel")}
             submitLabel={t("actions.createCase")}
             savingLabel={t("labels.saving")}
-            submitting={createMutation.isPending}
+            submitting={createMutation.isPending || form.title.trim().length < 2}
           />
           {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
         </form>

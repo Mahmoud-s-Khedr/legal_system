@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { LibraryDocumentType } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { Select } from "antd";
 import { Search, BookOpen } from "lucide-react";
@@ -65,12 +66,12 @@ export function LibrarySearchPage() {
           onChange={(value) => setTypeFilter(value)}
           options={[
             { value: "", label: t("library.allTypes") },
-            { value: "LEGISLATION", label: t("library.types.legislation") },
-            { value: "REGULATION", label: t("library.types.regulation") },
-            { value: "JUDGMENT", label: t("library.types.judgment") },
-            { value: "CIRCULAR", label: t("library.types.circular") },
-            { value: "ARTICLE", label: t("library.types.article") },
-            { value: "OTHER", label: t("library.types.other") }
+            { value: LibraryDocumentType.LEGISLATION, label: t("library.types.legislation") },
+            { value: LibraryDocumentType.JUDGMENT, label: t("library.types.judgment") },
+            { value: LibraryDocumentType.PRACTICE_GUIDE, label: t("library.types.practiceGuide") },
+            { value: LibraryDocumentType.ARTICLE, label: t("library.types.article") },
+            { value: LibraryDocumentType.COMMENTARY, label: t("library.types.commentary") },
+            { value: LibraryDocumentType.GENERAL, label: t("common.documentType.GENERAL") }
           ]}
           showSearch
           filterOption={(input, option) => selectLabelFilter(input, option)}

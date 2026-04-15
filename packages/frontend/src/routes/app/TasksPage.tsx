@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
+import { useToastStore } from "../../store/toastStore";
 import {
   DataTable,
   EmptyState,
@@ -30,6 +31,7 @@ type TaskViewMode = "table" | "kanban";
 
 export function TasksPage() {
   const { t, i18n } = useTranslation("app");
+  const addToast = useToastStore((state) => state.addToast);
   const [viewMode, setViewMode] = useState<TaskViewMode>("table");
   const queryClient = useQueryClient();
   const markDoneMutation = useMutation({
@@ -38,7 +40,10 @@ export function TasksPage() {
         method: "PATCH",
         body: JSON.stringify({ status: TaskStatus.DONE })
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+    onError: (error: Error) => {
+      addToast(error.message || t("errors.fallback"), "error");
+    }
   });
   const table = useTableQueryState({
     defaultSortBy: "dueAt",
@@ -52,6 +57,17 @@ export function TasksPage() {
     queryFn: () =>
       apiFetch<TaskListResponseDto>(`/api/tasks?${table.toApiQueryString()}`)
   });
+  const kanbanQuery = useQuery({
+    queryKey: ["tasks-kanban", table.state.q, table.state.filters.status],
+    queryFn: () =>
+      apiFetch<TaskListResponseDto>(
+        `/api/tasks?${table.toApiQueryString({
+          page: 1,
+          limit: 500
+        })}`
+      ),
+    enabled: viewMode === "kanban"
+  });
 
   const isRtl = i18n.resolvedLanguage === "ar";
 
@@ -61,10 +77,10 @@ export function TasksPage() {
       const ordered = isRtl ? [...statuses].reverse() : statuses;
       return ordered.map((status) => ({
         status,
-        items: (tasksQuery.data?.items ?? []).filter((task) => task.status === status)
+        items: (kanbanQuery.data?.items ?? []).filter((task) => task.status === status)
       }));
     },
-    [tasksQuery.data?.items, isRtl]
+    [kanbanQuery.data?.items, isRtl]
   );
 
   return (
@@ -127,7 +143,7 @@ export function TasksPage() {
           </div>
         ) : null}
 
-        {!tasksQuery.isError && !(tasksQuery.data?.items.length ?? 0) ? (
+        {!tasksQuery.isError && !tasksQuery.isLoading && !(tasksQuery.data?.items.length ?? 0) ? (
           <div className="mt-4">
             <EmptyState title={t("empty.noTasks")} description={t("empty.noTasksHelp")} />
           </div>
@@ -231,7 +247,7 @@ export function TasksPage() {
           </div>
         ) : null}
 
-        {!tasksQuery.isError && viewMode === "kanban" && !!tasksQuery.data?.items.length ? (
+        {!tasksQuery.isError && viewMode === "kanban" && (
           <div className="mt-4 grid gap-4 xl:grid-cols-5">
             {kanbanColumns.map((column) => (
               <div className="space-y-3" key={column.status}>
@@ -257,7 +273,7 @@ export function TasksPage() {
               </div>
             ))}
           </div>
-        ) : null}
+        )}
       </SectionCard>
     </div>
   );

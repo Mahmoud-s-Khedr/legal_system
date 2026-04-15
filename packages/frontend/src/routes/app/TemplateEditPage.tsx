@@ -69,6 +69,9 @@ export function TemplateEditPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
+            if (tpl.isSystem) {
+              return;
+            }
             const normalizedBody = normalizeTemplateHtml(form.body ?? "");
             if (isTemplateHtmlEmpty(normalizedBody)) {
               setValidationError(t("templates.validation.bodyRequired"));
@@ -83,12 +86,14 @@ export function TemplateEditPage() {
             onChange={(v) => setForm({ ...form, name: v })}
             required
             value={form.name ?? ""}
+            disabled={tpl.isSystem}
           />
           <SelectField
             label={t("labels.language")}
             value={form.language ?? "AR"}
             onChange={(v) => setForm({ ...form, language: v })}
             options={LANGUAGES.map((l) => ({ value: l, label: l }))}
+            disabled={tpl.isSystem}
           />
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -98,7 +103,12 @@ export function TemplateEditPage() {
             <TemplateRichEditor
               value={form.body ?? ""}
               language={form.language ?? "AR"}
-              onChange={(body) => setForm({ ...form, body })}
+              onChange={(body) => {
+                setForm({ ...form, body });
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
               disabled={tpl.isSystem}
             />
             {validationError ? <p className="mt-2 text-sm text-red-600">{validationError}</p> : null}

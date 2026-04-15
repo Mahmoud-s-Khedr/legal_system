@@ -31,7 +31,18 @@ export function InvoiceCreatePage() {
   const [dueDate, setDueDate] = useState("");
   const [items, setItems] = useState<ItemRow[]>([{ description: "", quantity: "1", unitPrice: "0" }]);
   const [error, setError] = useState("");
-  useUnsavedChanges(caseId !== "" || clientId !== "" || items.some((i) => i.description !== ""), { bypassBlockRef: bypassRef });
+  useUnsavedChanges(
+    Boolean(
+      caseId ||
+      clientId ||
+      feeType !== "FIXED" ||
+      dueDate ||
+      (parseFloat(taxAmount) || 0) !== 0 ||
+      (parseFloat(discountAmount) || 0) !== 0 ||
+      items.some((i) => i.description !== "" || i.quantity !== "1" || i.unitPrice !== "0")
+    ),
+    { bypassBlockRef: bypassRef }
+  );
 
   const casesQuery = useQuery({
     queryKey: ["cases"],
@@ -79,7 +90,7 @@ export function InvoiceCreatePage() {
         feeType,
         taxAmount,
         discountAmount,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        dueDate: dueDate ? new Date(`${dueDate}T09:00:00`).toISOString() : null,
         items: items.map((item) => ({
           description: item.description,
           quantity: parseInt(item.quantity, 10) || 1,

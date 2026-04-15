@@ -12,7 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField, TextAreaField } from "./ui";
+import { EmptyState, ErrorState, Field, PageHeader, PrimaryButton, SectionCard, SelectField, TextAreaField } from "./ui";
 
 export function TaskDetailPage() {
   const { t } = useTranslation("app");
@@ -109,7 +109,13 @@ export function TaskDetailPage() {
     mutationFn: (payload: CreateTaskDto) =>
       apiFetch(`/api/tasks/${taskId}`, {
         method: "PUT",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          caseId: payload.caseId?.trim() ? payload.caseId : null,
+          assignedToId: payload.assignedToId?.trim() ? payload.assignedToId : null,
+          dueAt: payload.dueAt?.trim() ? payload.dueAt : null,
+          description: payload.description?.trim() ? payload.description : null
+        } satisfies CreateTaskDto)
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -119,7 +125,22 @@ export function TaskDetailPage() {
     }
   });
 
-  if (!taskQuery.data && !taskQuery.isLoading) {
+  if (taskQuery.isLoading) {
+    return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
+  }
+
+  if (taskQuery.isError) {
+    return (
+      <ErrorState
+        title={t("errors.title")}
+        description={(taskQuery.error as Error)?.message ?? t("errors.fallback")}
+        retryLabel={t("errors.reload")}
+        onRetry={() => void taskQuery.refetch()}
+      />
+    );
+  }
+
+  if (!taskQuery.data) {
     return (
       <EmptyState
         title={t("empty.noTasks")}
@@ -187,7 +208,9 @@ export function TaskDetailPage() {
             commitMode="blur"
             value={form.dueAt ?? ""}
           />
-          <PrimaryButton type="submit">{t("actions.saveChanges")}</PrimaryButton>
+          <PrimaryButton type="submit" disabled={updateMutation.isPending || form.title.trim().length < 2}>
+            {t("actions.saveChanges")}
+          </PrimaryButton>
           {updateMutation.error ? (
             <p className="text-sm text-red-600">{(updateMutation.error as Error).message}</p>
           ) : null}

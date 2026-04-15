@@ -26,6 +26,10 @@ export interface CreateHearingDto {
 
 export type UpdateHearingDto = CreateHearingDto;
 
+export interface UpdateHearingOutcomeDto {
+  outcome: SessionOutcome | null;
+}
+
 export interface HearingConflictDto {
   hasConflict: boolean;
   conflictingHearingIds: string[];

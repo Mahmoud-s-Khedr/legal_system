@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Send, BookOpen, AlertCircle } from "lucide-react";
 import { apiFetch, resolveApiUrl } from "../../../lib/api";
+import { ErrorState } from "../ui";
 
 interface Source {
   id: string;
@@ -100,18 +101,33 @@ export function ResearchSessionPage() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let accumulated = "";
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          buffer += decoder.decode();
+        } else {
+          buffer += decoder.decode(value, { stream: true });
+        }
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
 
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") break;
+        for (const eventChunk of events) {
+          const dataLines = eventChunk
+            .split("\n")
+            .filter((line) => line.startsWith("data: "))
+            .map((line) => line.slice(6).trim());
+
+          if (!dataLines.length) {
+            continue;
+          }
+
+          const data = dataLines.join("\n");
+          if (data === "[DONE]") {
+            continue;
+          }
 
           try {
             const parsed = JSON.parse(data) as { token?: string; error?: string };
@@ -122,8 +138,12 @@ export function ResearchSessionPage() {
               setStreamingContent(accumulated);
             }
           } catch {
-            // ignore malformed SSE chunks
+            // ignore malformed SSE events
           }
+        }
+
+        if (done) {
+          break;
         }
       }
 
@@ -142,6 +162,16 @@ export function ResearchSessionPage() {
 
   if (sessionQuery.isLoading) {
     return <p className="p-6 text-sm text-slate-500">{t("common.loading")}</p>;
+  }
+  if (sessionQuery.isError) {
+    return (
+      <ErrorState
+        title={t("errors.title")}
+        description={(sessionQuery.error as Error)?.message ?? t("errors.fallback")}
+        retryLabel={t("errors.reload")}
+        onRetry={() => void sessionQuery.refetch()}
+      />
+    );
   }
   if (!session) {
     return <p className="p-6 text-sm text-red-600">{t("errors.notFound")}</p>;

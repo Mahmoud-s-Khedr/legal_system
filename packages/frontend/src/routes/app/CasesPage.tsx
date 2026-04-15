@@ -35,10 +35,8 @@ export function CasesPage() {
     defaultSortBy: "updatedAt",
     defaultSortDir: "desc",
     defaultLimit: 20,
-    filterKeys: ["status", "type", "assignedLawyerId"]
+    filterKeys: ["status", "type", "assignedLawyerId", "createdFrom", "createdTo"]
   });
-  const [createdFrom, setCreatedFrom] = useState("");
-  const [createdTo, setCreatedTo] = useState("");
   const [assignedToMe, setAssignedToMe] = useState(false);
 
   const caseTypesQuery = useLookupOptions("CaseType");
@@ -51,12 +49,12 @@ export function CasesPage() {
 
   const extraParams = new URLSearchParams();
   if (effectiveLawyerId) extraParams.set("assignedLawyerId", effectiveLawyerId);
-  if (createdFrom) extraParams.set("createdFrom", createdFrom);
-  if (createdTo) extraParams.set("createdTo", createdTo);
+  if (table.state.filters.createdFrom) extraParams.set("createdFrom", table.state.filters.createdFrom);
+  if (table.state.filters.createdTo) extraParams.set("createdTo", table.state.filters.createdTo);
   const extraStr = extraParams.toString();
 
   const casesQuery = useQuery({
-    queryKey: ["cases", table.state, effectiveLawyerId, createdFrom, createdTo],
+    queryKey: ["cases", table.state, effectiveLawyerId],
     queryFn: () => apiFetch<CaseListResponseDto>(`/api/cases?${table.toApiQueryString()}${extraStr ? `&${extraStr}` : ""}`)
   });
 
@@ -131,17 +129,19 @@ export function CasesPage() {
           <Field
             label={t("labels.from")}
             type="date"
-            value={createdFrom}
-            onChange={setCreatedFrom}
+            value={table.state.filters.createdFrom ?? ""}
+            onChange={(value) => table.setFilter("createdFrom", value)}
           />
           <Field
             label={t("labels.to")}
             type="date"
-            value={createdTo}
-            onChange={setCreatedTo}
+            value={table.state.filters.createdTo ?? ""}
+            onChange={(value) => table.setFilter("createdTo", value)}
           />
         </div>
-        {casesQuery.isError ? (
+        {casesQuery.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : casesQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
             description={(casesQuery.error as Error)?.message ?? t("errors.fallback")}

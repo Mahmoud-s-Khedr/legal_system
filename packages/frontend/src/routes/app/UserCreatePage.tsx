@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
-import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import { EmptyState, ErrorState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 export function UserCreatePage() {
   const { t } = useTranslation("app");
@@ -61,6 +61,15 @@ export function UserCreatePage() {
         description={t("users.createHelp")}
       />
       <SectionCard title={t("users.createTitle")} description={t("users.createHelp")}>
+        {rolesQuery.isLoading ? <p className="text-sm text-slate-500">{t("labels.loading")}</p> : null}
+        {rolesQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(rolesQuery.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void rolesQuery.refetch()}
+          />
+        ) : null}
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -117,7 +126,7 @@ export function UserCreatePage() {
             cancelLabel={t("actions.cancel")}
             submitLabel={t("actions.createUser")}
             savingLabel={t("labels.saving")}
-            submitting={createMutation.isPending}
+            submitting={createMutation.isPending || rolesQuery.isLoading || rolesQuery.isError || !rolesQuery.data?.items?.length}
           />
           {createMutation.error ? (
             <p className="text-sm text-red-600">

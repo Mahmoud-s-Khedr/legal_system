@@ -425,9 +425,11 @@ export const notificationDtoSchema = {
     title: { type: "string" },
     body: { type: "string" },
     isRead: { type: "boolean" },
+    entityType: { type: ["string", "null"] },
+    entityId: { type: ["string", "null"] },
     createdAt: { type: "string" }
   },
-  required: ["id", "firmId", "userId", "type", "title", "body", "isRead", "createdAt"],
+  required: ["id", "firmId", "userId", "type", "title", "body", "isRead", "entityType", "entityId", "createdAt"],
   additionalProperties: false
 } as const;
 

@@ -7,9 +7,18 @@ export async function sendInApp(
   userId: string,
   type: PrismaType,
   title: string,
-  body: string
+  body: string,
+  target?: { entityType?: string | null; entityId?: string | null }
 ) {
   await tx.notification.create({
-    data: { firmId, userId, type, title, body }
+    data: {
+      firmId,
+      userId,
+      type,
+      title,
+      body,
+      entityType: target?.entityType ?? null,
+      entityId: target?.entityId ?? null
+    }
   });
 }

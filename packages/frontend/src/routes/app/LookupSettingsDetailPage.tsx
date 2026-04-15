@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CreateLookupOptionDto, LookupOptionDto, LookupOptionListResponseDto, UpdateLookupOptionDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard } from "./ui";
+import { EmptyState, ErrorState, Field, PageHeader, PrimaryButton, SectionCard } from "./ui";
 
 const EMPTY_CREATE: CreateLookupOptionDto = {
   key: "",
@@ -67,7 +67,16 @@ export function LookupSettingsDetailPage() {
       />
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <SectionCard title={t("lookups.optionsList")} description={t("lookups.optionsListHelp")}>
-          {!items.length ? (
+          {optionsQuery.isLoading ? (
+            <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+          ) : optionsQuery.isError ? (
+            <ErrorState
+              title={t("errors.title")}
+              description={(optionsQuery.error as Error)?.message ?? t("errors.fallback")}
+              retryLabel={t("errors.reload")}
+              onRetry={() => void optionsQuery.refetch()}
+            />
+          ) : !items.length ? (
             <EmptyState title={t("empty.noLookupOptions")} description={t("empty.noLookupOptionsHelp")} />
           ) : (
             <div className="space-y-2">
@@ -189,6 +198,16 @@ function LookupEditForm({
     isActive: option.isActive,
     sortOrder: option.sortOrder
   });
+
+  useEffect(() => {
+    setForm({
+      labelAr: option.labelAr,
+      labelEn: option.labelEn,
+      labelFr: option.labelFr,
+      isActive: option.isActive,
+      sortOrder: option.sortOrder
+    });
+  }, [option]);
 
   return (
     <form

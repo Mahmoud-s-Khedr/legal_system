@@ -78,9 +78,8 @@ export function ReportsPage() {
 
   async function exportReport(format: "excel" | "pdf") {
     setExportError(null);
-    const exportQs = new URLSearchParams({ format });
-    if (dateFrom) exportQs.set("dateFrom", dateFrom);
-    if (dateTo) exportQs.set("dateTo", dateTo);
+    const exportQs = new URLSearchParams(table.toApiQueryString({ dateFrom, dateTo }));
+    exportQs.set("format", format);
     const fallbackFilename = `report-${reportType}.${format === "pdf" ? "pdf" : "xlsx"}`;
 
     try {
@@ -111,7 +110,18 @@ export function ReportsPage() {
           <SelectField
             label={t("reports.reportType")}
             value={reportType}
-            onChange={(v) => setReportType(v as ReportType)}
+            onChange={(v) => {
+              const nextType = v as ReportType;
+              setReportType(nextType);
+              const firstSort = sortOptions[nextType][0]?.value ?? "count:desc";
+              const [sortBy, sortDir] = firstSort.split(":");
+              table.update({
+                q: "",
+                sortBy,
+                sortDir: (sortDir as "asc" | "desc") ?? "desc",
+                page: 1
+              });
+            }}
             options={reportOptions}
           />
           <Field

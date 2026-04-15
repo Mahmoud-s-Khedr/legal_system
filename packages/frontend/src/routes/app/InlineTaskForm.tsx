@@ -46,7 +46,7 @@ export function InlineTaskForm({ caseId, onSuccess }: Props) {
         body: JSON.stringify({
           ...payload,
           assignedToId: payload.assignedToId || null,
-          dueAt: payload.dueAt || null,
+          dueAt: payload.dueAt ? new Date(`${payload.dueAt}T09:00:00`).toISOString() : null,
           description: payload.description || null
         })
       }),

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useExpenses, useCreateExpense, useDeleteExpense } from "../../lib/billing";
+import { confirmAction } from "../../lib/dialog";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper, formatCurrency } from "./ui";
 
@@ -28,6 +29,7 @@ export function ExpensesPage() {
   const [description, setDescription] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -143,6 +145,7 @@ export function ExpensesPage() {
         )}
         {!isLoading && !isError && !!data?.items.length && (
           <>
+            {deleteError ? <p className="text-sm text-red-600">{deleteError}</p> : null}
             <TableWrapper>
               <DataTable>
                 <TableHead>
@@ -163,7 +166,22 @@ export function ExpensesPage() {
                       <TableCell align="end">{formatCurrency(exp.amount)}</TableCell>
                       <TableCell align="end">
                         <button
-                          onClick={() => void deleteExpense.mutateAsync(exp.id)}
+                          onClick={() => {
+                            void (async () => {
+                              const approved = await confirmAction({
+                                content: t("billing.deleteExpenseConfirm", "Delete this expense?")
+                              });
+                              if (!approved) {
+                                return;
+                              }
+                              try {
+                                setDeleteError("");
+                                await deleteExpense.mutateAsync(exp.id);
+                              } catch (error) {
+                                setDeleteError((error as Error)?.message ?? t("errors.fallback"));
+                              }
+                            })();
+                          }}
                           disabled={deleteExpense.isPending}
                           className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 disabled:opacity-50"
                         >

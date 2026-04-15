@@ -304,7 +304,9 @@
       "judgment": "Jugement",
       "circular": "Circulaire",
       "article": "Article",
-      "other": "Autre"
+      "other": "Autre",
+      "practiceGuide": "Guide pratique",
+      "commentary": "Commentaire"
     },
     "uploadTitle": "Téléverser un document juridique",
     "uploadDescription": "Téléversez un fichier juridique et renseignez les métadonnées pour l'indexation.",

@@ -44,7 +44,10 @@ async function scanHearingReminders(env: AppEnv) {
     for (const session of sessions) {
       const { firmId, assignments, title } = session.case;
       for (const { userId } of assignments) {
-        await dispatchNotification(env, firmId, userId, type, { caseTitle: title });
+        await dispatchNotification(env, firmId, userId, type, { caseTitle: title }, {
+          entityType: "CaseSession",
+          entityId: session.id
+        });
       }
     }
   }
@@ -66,6 +69,9 @@ async function scanOverdueTasks(env: AppEnv) {
     if (!firmId || !task.assignedToId) continue;
     await dispatchNotification(env, firmId, task.assignedToId, NotificationType.TASK_OVERDUE, {
       taskTitle: task.title
+    }, {
+      entityType: "Task",
+      entityId: task.id
     });
   }
 }
@@ -131,6 +137,9 @@ async function scanOverdueInvoices(env: AppEnv) {
     for (const admin of invoice.firm.users) {
       await dispatchNotification(env, invoice.firmId, admin.id, NotificationType.INVOICE_OVERDUE, {
         invoiceNumber: invoice.invoiceNumber
+      }, {
+        entityType: "Invoice",
+        entityId: invoice.id
       });
     }
   }

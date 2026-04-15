@@ -34,6 +34,7 @@ export function InvoicesPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentRef, setPaymentRef] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const paymentMutation = useMutation({
     mutationFn: ({ invoiceId, dto }: { invoiceId: string; dto: CreatePaymentDto }) =>
@@ -45,15 +46,23 @@ export function InvoicesPage() {
       setPaymentRowId(null);
       setPaymentAmount("");
       setPaymentRef("");
+      setPaymentError(null);
       void queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: (error: Error) => {
+      setPaymentError(error.message || t("errors.fallback"));
     }
   });
 
   function openPaymentForm(invoice: InvoiceDto) {
+    const total = Number(invoice.totalAmount ?? 0);
+    const paid = invoice.payments?.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
+    const remaining = Math.max(total - paid, 0).toFixed(2);
     setPaymentRowId(invoice.id);
-    setPaymentAmount(invoice.totalAmount);
+    setPaymentAmount(remaining);
     setPaymentMethod("CASH");
     setPaymentRef("");
+    setPaymentError(null);
   }
 
   const table = useTableQueryState({
@@ -129,6 +138,7 @@ export function InvoicesPage() {
 
         {!isLoading && !isError && !!data?.items.length && (
           <div className="mt-4">
+            {paymentError ? <p className="mb-3 text-sm text-red-600">{paymentError}</p> : null}
             <ResponsiveDataList
               items={data.items}
               getItemKey={(item) => item.id}

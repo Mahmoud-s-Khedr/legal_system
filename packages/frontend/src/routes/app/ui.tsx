@@ -430,6 +430,7 @@ export function Field({
   maxLength,
   dir,
   required,
+  disabled,
   error,
   hint,
   ariaDescribedBy,
@@ -446,6 +447,7 @@ export function Field({
   maxLength?: number;
   dir?: "ltr" | "rtl" | "auto";
   required?: boolean;
+  disabled?: boolean;
   error?: string;
   hint?: string;
   ariaDescribedBy?: string;
@@ -496,9 +498,10 @@ export function Field({
           showTime={type === "datetime-local" ? { format: "HH:mm" } : false}
           needConfirm={false}
           style={dir && dir !== "auto" ? { direction: dir } : undefined}
-          aria-required={required}
+          aria-required={required && !disabled}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
+          disabled={disabled}
         />
       ) : (
         <input
@@ -525,7 +528,8 @@ export function Field({
           value={isBlurCommit ? draftValue : value}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
-          required={required}
+          required={required && !disabled}
+          disabled={disabled}
         />
       )}
       {isDateField ? (
@@ -535,7 +539,8 @@ export function Field({
           tabIndex={-1}
           readOnly
           value={isBlurCommit ? draftValue : value}
-          required={required}
+          required={required && !disabled}
+          disabled={disabled}
           aria-hidden="true"
         />
       ) : null}
@@ -561,6 +566,7 @@ export function SelectField({
   options,
   dir,
   required,
+  disabled,
   error,
   hint,
   ariaDescribedBy
@@ -572,6 +578,7 @@ export function SelectField({
   options: Array<{ value: string; label: string }>;
   dir?: "ltr" | "rtl" | "auto";
   required?: boolean;
+  disabled?: boolean;
   error?: string;
   hint?: string;
   ariaDescribedBy?: string;
@@ -602,9 +609,10 @@ export function SelectField({
         onChange={(nextValue) => onChange(nextValue)}
         style={selectStyle}
         aria-labelledby={labelId}
-        aria-required={required}
+        aria-required={required && !disabled}
         aria-invalid={Boolean(error)}
         aria-describedby={describedBy}
+        disabled={disabled}
       />
       <input
         className="sr-only"
@@ -612,7 +620,8 @@ export function SelectField({
         tabIndex={-1}
         readOnly
         value={value}
-        required={required}
+        required={required && !disabled}
+        disabled={disabled}
         aria-hidden="true"
       />
       {hint ? (

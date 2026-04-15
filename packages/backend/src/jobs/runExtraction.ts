@@ -52,6 +52,9 @@ export async function runExtraction(
     if (doc.uploadedById && doc.firmId) {
       await dispatchNotification(env, doc.firmId, doc.uploadedById, NotificationType.DOCUMENT_INDEXED, {
         documentTitle: doc.title
+      }, {
+        entityType: "Document",
+        entityId: doc.id
       }).catch(() => {}); // notifications are best-effort
     }
   } catch {

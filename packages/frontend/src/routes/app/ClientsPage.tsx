@@ -76,7 +76,9 @@ export function ClientsPage() {
           />
         </TableToolbar>
         <div className="mt-4 space-y-3">
-          {clientsQuery.isError ? (
+          {clientsQuery.isLoading ? (
+            <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+          ) : clientsQuery.isError ? (
             <ErrorState
               title={t("errors.title")}
               description={(clientsQuery.error as Error)?.message ?? t("errors.fallback")}
@@ -102,7 +104,7 @@ export function ClientsPage() {
                     params={{ clientId: item.id }}
                     to="/app/clients/$clientId"
                   >
-                    {t("actions.viewDocument")}
+                    {t("actions.view")}
                   </Link>
                 )}
               />
@@ -133,7 +135,7 @@ export function ClientsPage() {
                             params={{ clientId: client.id }}
                             to="/app/clients/$clientId"
                           >
-                            {t("actions.viewDocument")}
+                            {t("actions.view")}
                           </Link>
                         </TableCell>
                       </TableRow>

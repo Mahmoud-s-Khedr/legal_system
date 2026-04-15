@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { CreateRoleDto, SetRolePermissionsDto } from "@elms/shared";
+import type { CreateRoleDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { Field, FormExitActions, PageHeader, SectionCard } from "./ui";
@@ -18,18 +18,10 @@ export function RoleCreatePage() {
 
   const createMutation = useMutation({
     mutationFn: async (payload: CreateRoleDto) => {
-      const role = await apiFetch<{ id: string }>("/api/roles", {
+      return apiFetch<{ id: string }>("/api/roles", {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, permissionKeys: permissions })
       });
-      if (permissions.length > 0) {
-        const setPermsPayload: SetRolePermissionsDto = { permissionKeys: permissions };
-        await apiFetch(`/api/roles/${role.id}/permissions`, {
-          method: "PUT",
-          body: JSON.stringify(setPermsPayload)
-        });
-      }
-      return role;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["roles"] });

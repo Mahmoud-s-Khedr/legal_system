@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
+import { useToastStore } from "../../store/toastStore";
 import {
   DataTable,
   EmptyState,
@@ -28,20 +29,19 @@ import {
 function OutcomeCell({ hearing }: { hearing: HearingDto }) {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
+  const addToast = useToastStore((state) => state.addToast);
   const mutation = useMutation({
     mutationFn: (outcome: SessionOutcome | null) =>
-      apiFetch(`/api/hearings/${hearing.id}`, {
-        method: "PUT",
+      apiFetch(`/api/hearings/${hearing.id}/outcome`, {
+        method: "PATCH",
         body: JSON.stringify({
-          caseId: hearing.caseId,
-          assignedLawyerId: hearing.assignedLawyerId,
-          sessionDatetime: hearing.sessionDatetime,
-          nextSessionAt: hearing.nextSessionAt,
-          outcome,
-          notes: hearing.notes
+          outcome
         })
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hearings-management"] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hearings-management"] }),
+    onError: (error: Error) => {
+      addToast(error.message || t("errors.fallback"), "error");
+    }
   });
 
   return (

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, PageHeader, PrimaryButton, SectionCard, SelectField } from "../ui";
+import { EmptyState, ErrorState, PageHeader, PrimaryButton, SectionCard, SelectField } from "../ui";
 
 function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -83,10 +83,14 @@ export function LibraryAdminPage() {
     }
   });
 
-  function flattenCategories(nodes: CategoryNode[], depth = 0): { node: CategoryNode; depth: number }[] {
+  function flattenCategories(
+    nodes: CategoryNode[],
+    depth = 0,
+    parentId = ""
+  ): { node: CategoryNode; depth: number; parentId: string }[] {
     return nodes.flatMap((node) => [
-      { node, depth },
-      ...flattenCategories(node.children, depth + 1)
+      { node, depth, parentId },
+      ...flattenCategories(node.children, depth + 1, node.id)
     ]);
   }
 
@@ -104,6 +108,10 @@ export function LibraryAdminPage() {
 
   const allCategories = categoriesQuery.data ?? [];
   const flat = flattenCategories(allCategories);
+  const selectableParents = flat.map(({ node, depth }) => ({
+    id: node.id,
+    nameEn: `${"\u00A0".repeat(depth * 2)}${node.nameEn}`
+  }));
 
   return (
     <div className="space-y-6">
@@ -123,7 +131,7 @@ export function LibraryAdminPage() {
       {showForm && (
         <SectionCard title={t("library.newCategory")}>
           <CategoryForm
-            allCategories={allCategories}
+            allCategories={selectableParents}
             form={form}
             isPending={createMutation.isPending}
             submitLabel={t("actions.create")}
@@ -136,16 +144,25 @@ export function LibraryAdminPage() {
       )}
 
       <SectionCard title={t("library.categories")}>
-        {!flat.length ? (
+        {categoriesQuery.isLoading ? <p className="text-sm text-slate-500">{t("labels.loading")}</p> : null}
+        {categoriesQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(categoriesQuery.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void categoriesQuery.refetch()}
+          />
+        ) : null}
+        {!categoriesQuery.isLoading && !categoriesQuery.isError && !flat.length ? (
           <EmptyState description={t("empty.noCategoriesHelp")} title={t("empty.noCategories")} />
-        ) : (
+        ) : !categoriesQuery.isLoading && !categoriesQuery.isError ? (
           <div className="space-y-2">
-            {flat.map(({ node, depth }) => (
+            {flat.map(({ node, depth, parentId }) => (
               <div key={node.id}>
                 {editingId === node.id ? (
                   <div className="rounded-2xl border border-accent/30 bg-accentSoft p-4">
                     <CategoryForm
-                      allCategories={allCategories.filter((c) => c.id !== node.id)}
+                      allCategories={selectableParents.filter((category) => category.id !== node.id)}
                       form={form}
                       isPending={updateMutation.isPending}
                       submitLabel={t("actions.save")}
@@ -169,7 +186,7 @@ export function LibraryAdminPage() {
                     <button
                       aria-label={t("actions.edit")}
                       className="rounded-lg p-1 text-slate-400 hover:text-accent"
-                      onClick={() => startEdit(node)}
+                      onClick={() => startEdit(node, parentId)}
                     >
                       <Pencil aria-hidden="true" className="size-4" />
                     </button>
@@ -185,7 +202,7 @@ export function LibraryAdminPage() {
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </SectionCard>
     </div>
   );

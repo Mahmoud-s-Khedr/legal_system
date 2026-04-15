@@ -59,7 +59,12 @@ export function TemplateCreatePage() {
             <TemplateRichEditor
               value={form.body}
               language={form.language ?? "AR"}
-              onChange={(body) => setForm({ ...form, body })}
+              onChange={(body) => {
+                setForm({ ...form, body });
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
             />
             {validationError ? <p className="mt-2 text-sm text-red-600">{validationError}</p> : null}
             <p className="mt-2 text-xs text-slate-500">{t("templates.exportAfterSave")}</p>

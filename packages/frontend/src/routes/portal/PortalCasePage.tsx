@@ -18,9 +18,17 @@ interface PortalCaseDetail {
   lawyers: Array<{ fullName: string; role: string }>;
 }
 
+class PortalRequestError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`request_failed_${status}`);
+    this.status = status;
+  }
+}
+
 async function portalFetch<T>(url: string): Promise<T> {
   const res = await fetch(resolveApiUrl(url), { credentials: "include" });
-  if (!res.ok) throw new Error("request_failed");
+  if (!res.ok) throw new PortalRequestError(res.status);
   return res.json() as Promise<T>;
 }
 
@@ -40,12 +48,19 @@ export function PortalCasePage() {
   }
 
   if (caseQuery.isError) {
-    const message = (caseQuery.error as Error)?.message;
+    const error = caseQuery.error as Error;
+    const status = error instanceof PortalRequestError ? error.status : null;
     return (
       <div className="p-6">
         <ErrorState
-          title={t("errors.title")}
-          description={message === "request_failed" ? t("errors.fallback") : (message ?? t("errors.fallback"))}
+          title={status === 404 ? t("errors.notFound") : t("errors.title")}
+          description={
+            status === 404
+              ? t("errors.notFound")
+              : status === 401 || status === 403
+                ? t("errors.unauthorized")
+                : error.message || t("errors.fallback")
+          }
           retryLabel={t("errors.reload")}
           onRetry={() => void caseQuery.refetch()}
         />

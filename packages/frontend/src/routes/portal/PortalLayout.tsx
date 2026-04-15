@@ -10,7 +10,7 @@ import { buildPortalShellFooterLinks } from "../../components/navigation/shellFo
 
 export function PortalLayout() {
   const { t } = useTranslation("app");
-  const { user, logout, bootstrap, isBootstrapped } = usePortalAuthStore();
+  const { user, lastFirmId, logout, bootstrap, isBootstrapped } = usePortalAuthStore();
   const navigate = useNavigate();
   const matches = useMatches();
   const footerLinks = buildPortalShellFooterLinks(t);
@@ -26,7 +26,30 @@ export function PortalLayout() {
     }
   }, [bootstrap, isBootstrapped]);
 
+  useEffect(() => {
+    if (!isBootstrapped || user) {
+      return;
+    }
+    if (lastFirmId) {
+      void navigate({ to: "/portal/$firmId/login", params: { firmId: lastFirmId }, replace: true });
+      return;
+    }
+    void navigate({ to: "/login", replace: true });
+  }, [isBootstrapped, lastFirmId, navigate, user]);
+
   if (!isBootstrapped) {
+    return (
+      <div className="min-h-screen bg-sand text-ink">
+        <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
+          <div className="rounded-3xl bg-white p-5 shadow-card sm:p-6">
+            <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen bg-sand text-ink">
         <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
@@ -69,6 +92,10 @@ export function PortalLayout() {
                   className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-red-50 hover:text-red-600"
                   onClick={() => {
                     void logout();
+                    if (lastFirmId) {
+                      void navigate({ to: "/portal/$firmId/login", params: { firmId: lastFirmId } });
+                      return;
+                    }
                     void navigate({ to: "/login" });
                   }}
                   type="button"
@@ -93,6 +120,10 @@ export function PortalLayout() {
           if (action === "logout") {
             void (async () => {
               await logout();
+              if (lastFirmId) {
+                void navigate({ to: "/portal/$firmId/login", params: { firmId: lastFirmId }, replace: true });
+                return;
+              }
               void navigate({ to: "/login", replace: true });
             })();
           }

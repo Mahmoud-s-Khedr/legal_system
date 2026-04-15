@@ -64,12 +64,17 @@ export function NotificationsPage() {
     queryKey: ["notifications-full", table.state],
     queryFn: () => apiFetch<NotificationListResponseDto>(`/api/notifications?${table.toApiQueryString()}`)
   });
+  const unreadCountQuery = useQuery({
+    queryKey: ["notifications-unread-count"],
+    queryFn: () => apiFetch<{ count: number }>("/api/notifications/unread-count")
+  });
 
   const markAll = useMutation({
     mutationFn: () => apiFetch<{ success: boolean }>("/api/notifications/read-all", { method: "PATCH" }),
     onSuccess: () => {
       feedback.success("messages.notificationsUpdated");
       void qc.invalidateQueries({ queryKey: ["notifications-full"] });
+      void qc.invalidateQueries({ queryKey: ["notifications-unread-count"] });
     }
   });
 
@@ -79,10 +84,11 @@ export function NotificationsPage() {
     onSuccess: () => {
       feedback.success("messages.notificationMarkedRead");
       void qc.invalidateQueries({ queryKey: ["notifications-full"] });
+      void qc.invalidateQueries({ queryKey: ["notifications-unread-count"] });
     }
   });
 
-  const unread = data?.items.filter((n) => !n.isRead).length ?? 0;
+  const unread = unreadCountQuery.data?.count ?? 0;
 
   return (
     <div className="space-y-6">

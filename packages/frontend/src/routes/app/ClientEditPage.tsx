@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEgyptGovernorateOptions, withLegacyGovernorateOption } from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import { EmptyState, ErrorState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
 
 function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -90,7 +90,7 @@ export function ClientEditPage() {
         contacts: c.contacts ?? []
       };
       setForm(loaded);
-      if (!loadedFormRef.current) loadedFormRef.current = loaded;
+      loadedFormRef.current = loaded;
     }
   }, [clientQuery.data]);
 
@@ -108,7 +108,22 @@ export function ClientEditPage() {
     }
   });
 
-  if (!clientQuery.data && !clientQuery.isLoading) {
+  if (clientQuery.isLoading) {
+    return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
+  }
+
+  if (clientQuery.isError) {
+    return (
+      <ErrorState
+        title={t("errors.title")}
+        description={(clientQuery.error as Error)?.message ?? t("errors.fallback")}
+        retryLabel={t("errors.reload")}
+        onRetry={() => void clientQuery.refetch()}
+      />
+    );
+  }
+
+  if (!clientQuery.data) {
     return <EmptyState title={t("empty.noClientSelected")} description={t("empty.noClientSelectedHelp")} />;
   }
 

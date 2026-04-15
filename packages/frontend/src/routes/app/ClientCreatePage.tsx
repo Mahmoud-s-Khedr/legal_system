@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -70,10 +70,14 @@ export function ClientCreatePage() {
   useUnsavedChanges(form.name !== "" || form.type !== "", { bypassBlockRef: bypassRef });
 
   const dupCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dupCheckSeq = useRef(0);
 
-  const checkDuplicate = useCallback(async (q: string) => {
+  const checkDuplicate = useCallback(async (q: string, seq: number) => {
     if (!q.trim()) return;
     const result = await apiFetch<ClientListResponseDto>(`/api/clients?q=${encodeURIComponent(q.trim())}&limit=1`);
+    if (seq !== dupCheckSeq.current) {
+      return;
+    }
     if (result.items.length > 0) {
       setDuplicateWarning(t("clients.duplicateWarning", { name: result.items[0].name }));
     } else {
@@ -84,8 +88,19 @@ export function ClientCreatePage() {
   function scheduleCheck(q: string) {
     if (dupCheckTimer.current) clearTimeout(dupCheckTimer.current);
     setDuplicateWarning(null);
-    dupCheckTimer.current = setTimeout(() => { void checkDuplicate(q); }, 500);
+    dupCheckSeq.current += 1;
+    const seq = dupCheckSeq.current;
+    dupCheckTimer.current = setTimeout(() => { void checkDuplicate(q, seq); }, 500);
   }
+
+  useEffect(() => {
+    return () => {
+      if (dupCheckTimer.current) {
+        clearTimeout(dupCheckTimer.current);
+      }
+      dupCheckSeq.current += 1;
+    };
+  }, []);
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateClientDto) =>
@@ -124,7 +139,7 @@ export function ClientCreatePage() {
         >
           <Field
             label={t("labels.name")}
-            onChange={(value) => setForm({ ...form, name: value })}
+            onChange={(value) => { setForm({ ...form, name: value }); scheduleCheck(value); }}
             required
             value={form.name}
           />
@@ -173,7 +188,7 @@ export function ClientCreatePage() {
                 <Field
                   dir="ltr"
                   label={t("labels.nationalId")}
-                  onChange={(value) => { setForm({ ...form, nationalId: value }); scheduleCheck(value); }}
+                  onChange={(value) => { setForm({ ...form, nationalId: value }); }}
                   value={form.nationalId ?? ""}
                 />
               ) : null}

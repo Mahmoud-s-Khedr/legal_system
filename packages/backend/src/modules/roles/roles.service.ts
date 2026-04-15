@@ -34,6 +34,34 @@ const ROLE_INCLUDE = {
   }
 } as const;
 
+async function resolvePermissionIds(
+  tx: Parameters<Parameters<typeof withTenant>[2]>[0],
+  permissionKeys: string[]
+) {
+  const uniqueKeys = [...new Set(permissionKeys)];
+  if (uniqueKeys.length === 0) {
+    return { ids: [], keys: [] };
+  }
+
+  const permissions = await tx.permission.findMany({
+    where: { key: { in: uniqueKeys } }
+  });
+
+  const unknownKeys = uniqueKeys.filter(
+    (key) => !permissions.some((permission) => permission.key === key)
+  );
+  if (unknownKeys.length > 0) {
+    const err = new Error(`Unknown permission key(s): ${unknownKeys.join(", ")}`) as Error & { statusCode: number };
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return {
+    ids: permissions.map((permission) => permission.id),
+    keys: permissions.map((permission) => permission.key)
+  };
+}
+
 export async function listRoles(
   actor: SessionUser,
   pagination: { page: number; limit: number } = { page: 1, limit: 50 }
@@ -93,14 +121,32 @@ export async function createRole(
       include: ROLE_INCLUDE
     });
 
+    if (payload.permissionKeys) {
+      const resolved = await resolvePermissionIds(tx, payload.permissionKeys);
+      if (resolved.ids.length > 0) {
+        await tx.rolePermission.createMany({
+          data: resolved.ids.map((permissionId) => ({ roleId: role.id, permissionId }))
+        });
+      }
+    }
+
+    const roleWithPermissions = await tx.role.findFirstOrThrow({
+      where: { id: role.id },
+      include: ROLE_INCLUDE
+    });
+
     await writeAuditLog(tx, audit, {
       action: "roles.create",
       entityType: "Role",
       entityId: role.id,
-      newData: { key: payload.key, name: payload.name }
+      newData: {
+        key: payload.key,
+        name: payload.name,
+        permissionKeys: payload.permissionKeys ?? []
+      }
     });
 
-    return mapRole(role);
+    return mapRole(roleWithPermissions);
   });
 }
 
@@ -127,15 +173,33 @@ export async function updateRole(
       include: ROLE_INCLUDE
     });
 
+    if (payload.permissionKeys) {
+      const resolved = await resolvePermissionIds(tx, payload.permissionKeys);
+      await tx.rolePermission.deleteMany({ where: { roleId } });
+      if (resolved.ids.length > 0) {
+        await tx.rolePermission.createMany({
+          data: resolved.ids.map((permissionId) => ({ roleId, permissionId }))
+        });
+      }
+    }
+
+    const roleWithPermissions = await tx.role.findFirstOrThrow({
+      where: { id: roleId },
+      include: ROLE_INCLUDE
+    });
+
     await writeAuditLog(tx, audit, {
       action: "roles.update",
       entityType: "Role",
       entityId: roleId,
       oldData: { name: existing.name },
-      newData: { name: payload.name }
+      newData: {
+        name: payload.name,
+        permissionKeys: payload.permissionKeys ?? role.permissions.map((item) => item.permission.key)
+      }
     });
 
-    return mapRole(role);
+    return mapRole(roleWithPermissions);
   });
 }
 
@@ -192,31 +256,21 @@ export async function setRolePermissions(
       throw err;
     }
 
-    // Resolve permission IDs
-    const permissions = await tx.permission.findMany({
-      where: { key: { in: payload.permissionKeys } }
-    });
-
-    const unknownKeys = payload.permissionKeys.filter(
-      (k) => !permissions.some((p) => p.key === k)
-    );
-    if (unknownKeys.length > 0) {
-      const err = new Error(`Unknown permission key(s): ${unknownKeys.join(", ")}`) as Error & { statusCode: number };
-      err.statusCode = 400;
-      throw err;
-    }
+    const resolved = await resolvePermissionIds(tx, payload.permissionKeys);
 
     // Replace all permissions atomically
     await tx.rolePermission.deleteMany({ where: { roleId } });
-    await tx.rolePermission.createMany({
-      data: permissions.map((p) => ({ roleId, permissionId: p.id }))
-    });
+    if (resolved.ids.length > 0) {
+      await tx.rolePermission.createMany({
+        data: resolved.ids.map((permissionId) => ({ roleId, permissionId }))
+      });
+    }
 
     await writeAuditLog(tx, audit, {
       action: "roles.permissions.set",
       entityType: "Role",
       entityId: roleId,
-      newData: { permissionKeys: payload.permissionKeys }
+      newData: { permissionKeys: resolved.keys }
     });
 
     const role = await tx.role.findFirstOrThrow({

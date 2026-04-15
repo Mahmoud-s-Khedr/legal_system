@@ -22,7 +22,10 @@ export function ClientDetailPage() {
   const invoicesQuery = useInvoices({ clientId });
 
   async function patchClient(field: "email" | "phone", value: string) {
-    const current = clientQuery.data!;
+    const current = await queryClient.fetchQuery({
+      queryKey: ["client", clientId],
+      queryFn: () => apiFetch<ClientDto>(`/api/clients/${clientId}`)
+    });
     await apiFetch(`/api/clients/${clientId}`, {
       method: "PUT",
       body: JSON.stringify({
@@ -42,6 +45,21 @@ export function ClientDetailPage() {
   }
 
   const client = clientQuery.data;
+
+  if (clientQuery.isLoading) {
+    return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
+  }
+
+  if (clientQuery.isError) {
+    return (
+      <ErrorState
+        title={t("errors.title")}
+        description={(clientQuery.error as Error)?.message ?? t("errors.fallback")}
+        retryLabel={t("errors.reload")}
+        onRetry={() => void clientQuery.refetch()}
+      />
+    );
+  }
 
   if (!client) {
     return <EmptyState title={t("empty.noClientSelected")} description={t("empty.noClientSelectedHelp")} />;

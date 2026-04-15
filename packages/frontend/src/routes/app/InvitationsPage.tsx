@@ -82,6 +82,8 @@ export function InvitationsPage() {
               retryLabel={t("errors.reload")}
               onRetry={() => void invitationsQuery.refetch()}
             />
+          ) : invitationsQuery.isLoading ? (
+            <p className="text-sm text-slate-500">{t("labels.loading")}</p>
           ) : !invitationsQuery.data?.items.length ? (
             <EmptyState title={t("empty.noInvitations")} description={t("empty.noInvitationsHelp")} />
           ) : (
@@ -108,6 +110,7 @@ export function InvitationsPage() {
                           {invite.status === "PENDING" ? (
                             <button
                               className="rounded-full border border-slate-300 px-3 py-1 text-sm"
+                              disabled={revokeMutation.isPending}
                               onClick={() => revokeMutation.mutate(invite.id)}
                               type="button"
                             >

@@ -305,7 +305,9 @@
       "judgment": "حكم قضائي",
       "circular": "منشور",
       "article": "مقالة",
-      "other": "أخرى"
+      "other": "أخرى",
+      "practiceGuide": "دليل عملي",
+      "commentary": "تعليق قانوني"
     },
     "uploadTitle": "رفع مستند قانوني",
     "uploadDescription": "ارفع ملفًا قانونيًا وأدخل البيانات الوصفية لفهرسته.",

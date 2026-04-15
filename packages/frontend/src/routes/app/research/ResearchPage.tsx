@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2, MessageSquare } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, PageHeader, PrimaryButton, SectionCard, formatDate } from "../ui";
+import { EmptyState, ErrorState, PageHeader, PrimaryButton, SectionCard, formatDate } from "../ui";
 
 interface SessionSummary {
   id: string;
@@ -71,12 +71,12 @@ export function ResearchPage() {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") createMutation.mutate(newTitle);
+                if (e.key === "Enter") createMutation.mutate(newTitle.trim());
               }}
             />
             <PrimaryButton
               disabled={createMutation.isPending}
-              onClick={() => createMutation.mutate(newTitle)}
+              onClick={() => createMutation.mutate(newTitle.trim())}
             >
               {t("actions.create")}
             </PrimaryButton>
@@ -93,6 +93,13 @@ export function ResearchPage() {
       <SectionCard description={t("research.sessionsHelp")} title={t("research.sessions")}>
         {sessionsQuery.isLoading ? (
           <p className="text-sm text-slate-500">{t("common.loading")}</p>
+        ) : sessionsQuery.isError ? (
+          <ErrorState
+            title={t("errors.title")}
+            description={(sessionsQuery.error as Error)?.message ?? t("errors.fallback")}
+            retryLabel={t("errors.reload")}
+            onRetry={() => void sessionsQuery.refetch()}
+          />
         ) : !sessionsQuery.data?.length ? (
           <EmptyState description={t("empty.noSessionsHelp")} title={t("empty.noSessions")} />
         ) : (

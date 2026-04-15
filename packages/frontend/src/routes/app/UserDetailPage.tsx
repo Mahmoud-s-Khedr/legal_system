@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { useAuthBootstrap } from "../../store/authStore";
 import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
 
 interface UserEditForm {
@@ -26,8 +27,12 @@ interface UserEditForm {
 export function UserDetailPage() {
   const { t } = useTranslation("app");
   const { userId } = useParams({ from: "/app/users/$userId" });
+  const { user: currentUser } = useAuthBootstrap();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const canUpdateUsers = currentUser?.permissions.includes("users:update") ?? false;
+  const canDeleteUsers = currentUser?.permissions.includes("users:delete") ?? false;
+  const canReadRoles = currentUser?.permissions.includes("roles:read") ?? false;
 
   const userQuery = useQuery({
     queryKey: ["user", userId],
@@ -35,7 +40,8 @@ export function UserDetailPage() {
   });
   const rolesQuery = useQuery({
     queryKey: ["roles"],
-    queryFn: () => apiFetch<RoleListResponseDto>("/api/roles")
+    queryFn: () => apiFetch<RoleListResponseDto>("/api/roles?limit=1000"),
+    enabled: canReadRoles
   });
 
   const [form, setForm] = useState<UserEditForm>({
@@ -152,18 +158,20 @@ export function UserDetailPage() {
             value={form.email}
           />
           <div className="grid gap-4 md:grid-cols-2">
-            <SelectField
-              label={t("labels.role")}
-              onChange={(value) => setForm({ ...form, roleId: value })}
-              options={[
-                { value: "", label: t("labels.selectRole") },
-                ...(rolesQuery.data?.items ?? []).map((role) => ({
-                  value: role.id,
-                  label: role.name
-                }))
-              ]}
-              value={form.roleId}
-            />
+            {canReadRoles ? (
+              <SelectField
+                label={t("labels.role")}
+                onChange={(value) => setForm({ ...form, roleId: value })}
+                options={[
+                  { value: "", label: t("labels.selectRole") },
+                  ...(rolesQuery.data?.items ?? []).map((role) => ({
+                    value: role.id,
+                    label: role.name
+                  }))
+                ]}
+                value={form.roleId}
+              />
+            ) : null}
             <SelectField
               label={t("labels.status")}
               onChange={(value) => setForm({ ...form, status: value as UserStatus })}
@@ -184,38 +192,44 @@ export function UserDetailPage() {
             value={form.preferredLanguage}
           />
           <div className="flex flex-wrap gap-3">
-            <PrimaryButton type="submit">{t("actions.saveChanges")}</PrimaryButton>
-            <button
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
-              onClick={() =>
-                statusMutation.mutate(
-                  form.status === UserStatus.SUSPENDED ? UserStatus.ACTIVE : UserStatus.SUSPENDED
-                )
-              }
-              type="button"
-            >
-              {form.status === UserStatus.SUSPENDED
-                ? t("users.activateUser")
-                : t("users.deactivateUser")}
-            </button>
-            <button
-              className="rounded-2xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600"
-              onClick={() => {
-                void (async () => {
-                  const approved = await confirmAction({
-                    content: t("users.deleteConfirm"),
-                    okButtonProps: { danger: true }
-                  });
-                  if (!approved) {
-                    return;
-                  }
-                  await deleteMutation.mutateAsync();
-                })();
-              }}
-              type="button"
-            >
-              {t("users.deleteUser")}
-            </button>
+            {canUpdateUsers ? (
+              <PrimaryButton type="submit">{t("actions.saveChanges")}</PrimaryButton>
+            ) : null}
+            {canUpdateUsers ? (
+              <button
+                className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+                onClick={() =>
+                  statusMutation.mutate(
+                    form.status === UserStatus.SUSPENDED ? UserStatus.ACTIVE : UserStatus.SUSPENDED
+                  )
+                }
+                type="button"
+              >
+                {form.status === UserStatus.SUSPENDED
+                  ? t("users.activateUser")
+                  : t("users.deactivateUser")}
+              </button>
+            ) : null}
+            {canDeleteUsers ? (
+              <button
+                className="rounded-2xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600"
+                onClick={() => {
+                  void (async () => {
+                    const approved = await confirmAction({
+                      content: t("users.deleteConfirm"),
+                      okButtonProps: { danger: true }
+                    });
+                    if (!approved) {
+                      return;
+                    }
+                    await deleteMutation.mutateAsync();
+                  })();
+                }}
+                type="button"
+              >
+                {t("users.deleteUser")}
+              </button>
+            ) : null}
           </div>
           {updateMutation.error ? (
             <p className="text-sm text-red-600">{(updateMutation.error as Error).message}</p>
@@ -229,6 +243,7 @@ export function UserDetailPage() {
         </form>
       </SectionCard>
 
+      {canUpdateUsers ? (
       <SectionCard title={t("users.passwordTitle")} description={t("users.passwordHelp")}> 
         <form
           className="space-y-4"
@@ -250,6 +265,7 @@ export function UserDetailPage() {
           ) : null}
         </form>
       </SectionCard>
+      ) : null}
     </div>
   );
 }

@@ -26,7 +26,7 @@ describe("buildSidebarNavSections", () => {
   it("filters and orders permission-gated sections", () => {
     const sections = buildSidebarNavSections({
       t: (key) => key,
-      permissions: ["invoices:read", "reports:read", "users:read"]
+      permissions: ["invoices:read", "expenses:read", "reports:read", "users:read"]
     });
 
     expect(sections.map((section) => section.id)).toEqual(["core", "finance", "tools", "administration"]);

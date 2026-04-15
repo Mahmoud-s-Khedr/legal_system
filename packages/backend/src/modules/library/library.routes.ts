@@ -3,6 +3,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import type { FastifyInstance } from "fastify";
 import { fileTypeFromBuffer } from "file-type";
+import { LibraryDocumentType } from "@elms/shared";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import type { AppEnv } from "../../config/env.js";
@@ -103,9 +104,12 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request) => {
       const q = request.query as Record<string, string>;
+      const type = q.type && Object.values(LibraryDocumentType).includes(q.type as LibraryDocumentType)
+        ? q.type
+        : undefined;
       return listDocuments(
         request.sessionUser!,
-        { type: q.type, scope: q.scope, categoryId: q.categoryId, dateFrom: q.dateFrom, dateTo: q.dateTo, q: q.q },
+        { type, scope: q.scope, categoryId: q.categoryId, dateFrom: q.dateFrom, dateTo: q.dateTo, q: q.q },
         Number(q.page) || 1,
         Number(q.limit) || 20
       );
@@ -249,7 +253,11 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
       const results = await searchLibrary(
         request.sessionUser!,
         q.q,
-        { type: q.type, scope: q.scope, categoryId: q.categoryId },
+        {
+          type: q.type && Object.values(LibraryDocumentType).includes(q.type as LibraryDocumentType) ? q.type : undefined,
+          scope: q.scope,
+          categoryId: q.categoryId
+        },
         Number(q.limit) || 20
       );
       return { results };
@@ -278,7 +286,10 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
 
       const fields = data.fields as Record<string, { value: string }>;
       const title    = fields.title?.value ?? data.filename;
-      const type     = fields.type?.value ?? "LEGISLATION";
+      const submittedType = fields.type?.value;
+      const type = submittedType && Object.values(LibraryDocumentType).includes(submittedType as LibraryDocumentType)
+        ? submittedType
+        : LibraryDocumentType.LEGISLATION;
       const requestedScope = (fields.scope?.value ?? "FIRM") as "SYSTEM" | "FIRM";
       const canManageLibrary = actor.permissions.includes("library:manage");
       if (!canManageLibrary && requestedScope === "SYSTEM") {

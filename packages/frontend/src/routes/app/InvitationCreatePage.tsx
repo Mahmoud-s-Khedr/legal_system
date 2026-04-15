@@ -61,7 +61,7 @@ export function InvitationCreatePage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            createMutation.mutate(form);
+            createMutation.mutate({ ...form, email: form.email.trim().toLowerCase() });
           }}
         >
           <Field
@@ -84,7 +84,12 @@ export function InvitationCreatePage() {
             required
             value={form.roleId}
           />
-          <PrimaryButton type="submit">{t("actions.sendInvite")}</PrimaryButton>
+          <PrimaryButton
+            type="submit"
+            disabled={createMutation.isPending || !form.email.trim() || !form.roleId}
+          >
+            {t("actions.sendInvite")}
+          </PrimaryButton>
           {createMutation.error ? (
             <p className="text-sm text-red-600">{(createMutation.error as Error).message}</p>
           ) : null}

@@ -5,6 +5,7 @@ import type {
   HearingListResponseDto,
   SessionOutcome,
   SessionUser,
+  UpdateHearingOutcomeDto,
   UpdateHearingDto
 } from "@elms/shared";
 import { Prisma, SessionOutcome as PrismaSessionOutcome } from "@prisma/client";
@@ -363,5 +364,51 @@ export async function checkHearingConflict(
       hasConflict: conflicts.length > 0,
       conflictingHearingIds: conflicts.map((item) => item.id)
     };
+  });
+}
+
+export async function updateHearingOutcome(
+  actor: SessionUser,
+  hearingId: string,
+  payload: UpdateHearingOutcomeDto,
+  audit: AuditContext
+) {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.caseSession.findFirstOrThrow({
+      where: {
+        id: hearingId,
+        case: {
+          firmId: actor.firmId,
+          deletedAt: null
+        }
+      },
+      include: {
+        case: true
+      }
+    });
+
+    const hearing = await tx.caseSession.update({
+      where: { id: hearingId },
+      data: {
+        outcome: (payload.outcome as PrismaSessionOutcome) ?? null
+      },
+      include: {
+        case: true
+      }
+    });
+
+    await writeAuditLog(tx, audit, {
+      action: "hearings.outcome.update",
+      entityType: "CaseSession",
+      entityId: hearing.id,
+      oldData: {
+        outcome: existing.outcome
+      },
+      newData: {
+        outcome: hearing.outcome
+      }
+    });
+
+    return mapHearing(hearing, null);
   });
 }

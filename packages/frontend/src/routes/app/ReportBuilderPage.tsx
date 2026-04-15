@@ -53,6 +53,7 @@ export function ReportBuilderPage() {
   const [runResult, setRunResult] = useState<{ id: string; data: RunSessionResult } | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const table = useTableQueryState({
     defaultSortBy: "value",
     defaultSortDir: "asc",
@@ -76,9 +77,13 @@ export function ReportBuilderPage() {
         })
       }),
     onSuccess: () => {
+      setActionError(null);
       setForm(EMPTY_FORM);
       setShowForm(false);
       void queryClient.invalidateQueries({ queryKey: ["custom-reports"] });
+    },
+    onError: (error: Error) => {
+      setActionError(error.message || t("errors.fallback"));
     }
   });
 
@@ -89,9 +94,12 @@ export function ReportBuilderPage() {
 
   async function handleRun(id: string) {
     setRunningId(id);
+    setActionError(null);
     try {
       const data = await apiFetch<RunSessionResult>(`/api/reports/custom/${id}/run`, { method: "POST" });
       setRunResult({ id, data });
+    } catch (error) {
+      setActionError((error as Error)?.message ?? t("errors.fallback"));
     } finally {
       setRunningId(null);
     }
@@ -197,7 +205,12 @@ export function ReportBuilderPage() {
       {/* Saved reports list */}
       <SectionCard title={t("reports.savedReports")}>
         {exportError ? <FormAlert message={exportError} /> : null}
-        {!reports.length ? (
+        {actionError ? <FormAlert message={actionError} /> : null}
+        {reportsQuery.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : reportsQuery.isError ? (
+          <FormAlert message={(reportsQuery.error as Error)?.message ?? t("errors.fallback")} />
+        ) : !reports.length ? (
           <p className="text-sm text-slate-500">{t("empty.noCustomReports")}</p>
         ) : (
           <div className="space-y-2">

@@ -9,6 +9,7 @@ interface PortalUser {
 
 interface PortalAuthState {
   user: PortalUser | null;
+  lastFirmId: string | null;
   isBootstrapped: boolean;
   bootstrap: () => Promise<void>;
   login: (email: string, firmId: string, password: string) => Promise<void>;
@@ -17,6 +18,7 @@ interface PortalAuthState {
 
 export const usePortalAuthStore = create<PortalAuthState>((set) => ({
   user: null,
+  lastFirmId: null,
   isBootstrapped: false,
 
   bootstrap: async () => {
@@ -24,7 +26,7 @@ export const usePortalAuthStore = create<PortalAuthState>((set) => ({
       const res = await fetch(resolveApiUrl("/api/portal/auth/me"), { credentials: "include" });
       if (res.ok) {
         const data = await res.json() as PortalUser;
-        set({ user: data, isBootstrapped: true });
+        set({ user: data, lastFirmId: data.firmId, isBootstrapped: true });
       } else {
         set({ user: null, isBootstrapped: true });
       }
@@ -45,7 +47,7 @@ export const usePortalAuthStore = create<PortalAuthState>((set) => ({
       throw new Error((err as { message?: string }).message ?? "Login failed");
     }
     const data = await res.json() as PortalUser;
-    set({ user: data });
+    set({ user: data, lastFirmId: data.firmId });
   },
 
   logout: async () => {

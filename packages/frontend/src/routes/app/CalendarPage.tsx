@@ -63,6 +63,7 @@ import {
 } from "./calendarEvents";
 import {
   addDays,
+  getDayKey,
   getMonthGridDays,
   getVisibleRange,
   getWeekDays,
@@ -571,7 +572,12 @@ export function CalendarPage() {
             />
           </Form.Item>
           <Space>
-            <Button type="primary" htmlType="submit" loading={createTaskMutation.isPending}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={createTaskMutation.isPending}
+              disabled={!quickTaskForm.title.trim() || !quickTaskForm.dueAt}
+            >
               {t("actions.create")}
             </Button>
             <Button onClick={() => setDrawerOpen(true)}>{t("actions.more")}</Button>
@@ -607,7 +613,12 @@ export function CalendarPage() {
             />
           </Form.Item>
           <Space>
-            <Button type="primary" htmlType="submit" loading={createHearingMutation.isPending}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={createHearingMutation.isPending}
+              disabled={!quickHearingForm.caseId || !quickHearingForm.sessionDatetime}
+            >
               {t("actions.create")}
             </Button>
             <Button onClick={() => setDrawerOpen(true)}>{t("actions.more")}</Button>
@@ -706,7 +717,7 @@ export function CalendarPage() {
         {!hasError ? (
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             {view === "month" ? (
-              <div className={mobileMode === "agenda" ? "hidden md:block" : "block"}>
+              <div className={mobileMode === "timeline" ? "hidden md:block" : "block"}>
                 <div className="calendar-month-grid">
                   {monthColumns.map((label) => (
                     <div className="calendar-weekday-header" key={label}>
@@ -715,7 +726,7 @@ export function CalendarPage() {
                   ))}
 
                   {monthDays.map((day) => {
-                    const dayKey = day.toISOString().slice(0, 10);
+                    const dayKey = getDayKey(day);
                     const dayEvents = eventsByDay.get(dayKey) ?? [];
                     const outsideMonth = day.getMonth() !== focusDate.getMonth();
 
@@ -758,7 +769,7 @@ export function CalendarPage() {
             ) : null}
 
             {(view === "week" || view === "day") ? (
-              <div className={mobileMode === "agenda" ? "hidden md:block" : "block"}>
+              <div className={mobileMode === "timeline" ? "hidden md:block" : "block"}>
                 <div className="calendar-timeline-shell">
                   <div className="calendar-time-label-col">
                     <div className="h-10" />
@@ -906,7 +917,12 @@ export function CalendarPage() {
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" htmlType="submit" loading={createHearingMutation.isPending}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={createHearingMutation.isPending}
+                  disabled={!quickHearingForm.caseId || !quickHearingForm.sessionDatetime}
+                >
                   {t("actions.create")}
                 </Button>
                 <Button onClick={() => void navigate({ to: "/app/hearings/new" })}>{t("actions.more")}</Button>
@@ -951,7 +967,12 @@ export function CalendarPage() {
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" htmlType="submit" loading={createTaskMutation.isPending}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={createTaskMutation.isPending}
+                  disabled={!quickTaskForm.title.trim() || !quickTaskForm.dueAt}
+                >
                   {t("actions.create")}
                 </Button>
                 <Button onClick={() => void navigate({ to: "/app/tasks/new" })}>{t("actions.more")}</Button>

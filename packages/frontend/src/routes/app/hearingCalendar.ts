@@ -15,14 +15,22 @@ export function addDays(date: Date, amount: number) {
 }
 
 export function resolveWeekStartIndex(locale: string) {
-  const value = locale.toLowerCase();
-  if (value.startsWith("ar")) {
-    return 6; // Saturday in Arabic locales.
+  try {
+    const weekInfo = (new Intl.Locale(locale) as Intl.Locale & { weekInfo?: { firstDay?: number } }).weekInfo;
+    if (weekInfo?.firstDay) {
+      return weekInfo.firstDay % 7;
+    }
+  } catch {
+    // Fallback to the legacy rules below when Intl.Locale/`weekInfo` is unavailable.
   }
-  if (value.startsWith("fr")) {
-    return 1; // Monday for French locales.
+  const normalized = locale.toLowerCase();
+  if (normalized.startsWith("ar")) {
+    return 6;
   }
-  return 0; // Sunday default.
+  if (normalized.startsWith("fr")) {
+    return 1;
+  }
+  return 0;
 }
 
 export function startOfWeek(date: Date, weekStartsOn = 0) {
@@ -89,7 +97,10 @@ export function buildDayRange(from: Date, to: Date) {
 
 export function getDayKey(date: Date | string) {
   const value = typeof date === "string" ? new Date(date) : date;
-  return value.toISOString().slice(0, 10);
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function toDateTimeLocalValue(value: string | null | undefined) {
@@ -110,7 +121,7 @@ export function toDateTimeLocalValue(value: string | null | undefined) {
 export function slotDateTime(date: Date, hour = 9) {
   const slot = new Date(date);
   slot.setHours(hour, 0, 0, 0);
-  return toDateTimeLocalValue(slot.toISOString());
+  return toDateTimeLocalValue(slot.toString());
 }
 
 export function shiftFocusDate(view: CalendarView, focusDate: Date, direction: -1 | 1) {
@@ -147,5 +158,12 @@ export function isSameDay(left: Date, right: Date) {
 
 export function hourSlots(day: Date) {
   const start = startOfDay(day);
-  return Array.from({ length: 24 }, (_, index) => addMinutes(start, index * 60));
+  const nextDay = addDays(start, 1);
+  const slots: Date[] = [];
+  let cursor = new Date(start);
+  while (cursor < nextDay) {
+    slots.push(new Date(cursor));
+    cursor = addMinutes(cursor, 60);
+  }
+  return slots;
 }

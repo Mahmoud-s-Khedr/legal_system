@@ -30,11 +30,13 @@ const roleDtoSchema = {
 
 const createRoleSchema = z.object({
   key: z.string().min(1).max(64).regex(/^[a-z0-9_]+$/, "Key must be lowercase alphanumeric with underscores"),
-  name: z.string().min(2).max(100)
+  name: z.string().min(2).max(100),
+  permissionKeys: z.array(z.string().min(1)).optional()
 });
 
 const updateRoleSchema = z.object({
-  name: z.string().min(2).max(100)
+  name: z.string().min(2).max(100),
+  permissionKeys: z.array(z.string().min(1)).optional()
 });
 
 const setPermissionsSchema = z.object({

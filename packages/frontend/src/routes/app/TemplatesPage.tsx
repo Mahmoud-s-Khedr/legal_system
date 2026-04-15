@@ -4,10 +4,12 @@ import { useTranslation } from "react-i18next";
 import { useTemplates, useDeleteTemplate } from "../../lib/templates";
 import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { useToastStore } from "../../store/toastStore";
 
 export function TemplatesPage() {
   const { t } = useTranslation("app");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const addToast = useToastStore((state) => state.addToast);
 
   const { data: templates, isLoading, isError, error, refetch } = useTemplates();
   const deleteMutation = useDeleteTemplate();
@@ -65,11 +67,18 @@ export function TemplatesPage() {
                       <button
                         onClick={() => {
                           if (deleting === tpl.id) {
-                            void deleteMutation.mutateAsync(tpl.id).then(() => setDeleting(null));
+                            void deleteMutation
+                              .mutateAsync(tpl.id)
+                              .then(() => setDeleting(null))
+                              .catch((error) => {
+                                setDeleting(null);
+                                addToast((error as Error)?.message ?? t("errors.fallback"), "error");
+                              });
                           } else {
                             setDeleting(tpl.id);
                           }
                         }}
+                        disabled={deleteMutation.isPending}
                         className="rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
                       >
                         {deleting === tpl.id ? t("templates.confirmDelete") : t("actions.delete")}

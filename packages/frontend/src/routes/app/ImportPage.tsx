@@ -133,6 +133,12 @@ export function ImportPage() {
     setPreview(null);
     setResult(null);
     setError(null);
+    table.update({
+      q: "",
+      page: 1,
+      limit: 20,
+      filters: { status: "" }
+    });
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -266,6 +272,14 @@ export function ImportPage() {
             </TableToolbar>
 
             <div className="max-h-80 overflow-auto rounded-2xl border border-slate-200">
+              {previewRowsQuery.isLoading ? (
+                <p className="p-3 text-sm text-slate-500">{t("labels.loading")}</p>
+              ) : null}
+              {previewRowsQuery.isError ? (
+                <p className="p-3 text-sm text-red-600">
+                  {(previewRowsQuery.error as Error)?.message ?? t("errors.fallback")}
+                </p>
+              ) : null}
               <table className="w-full text-sm">
                 <thead className="border-b bg-slate-50">
                   <tr>

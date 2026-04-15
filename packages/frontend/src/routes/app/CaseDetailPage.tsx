@@ -85,6 +85,7 @@ export function CaseDetailPage() {
       });
       feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["cases"] });
     }
   });
 
@@ -96,8 +97,12 @@ export function CaseDetailPage() {
       }),
     onSuccess: async () => {
       feedback.success("messages.saved");
-      setCourtFormResetToken((value) => value + 1);
+      setAssignmentForm({
+        userId: "",
+        roleOnCase: CaseRoleOnCase.LEAD
+      });
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["cases"] });
     }
   });
 
@@ -110,6 +115,7 @@ export function CaseDetailPage() {
     onSuccess: async () => {
       feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["cases"] });
     }
   });
 
@@ -123,6 +129,7 @@ export function CaseDetailPage() {
       setEditingCourt(null);
       feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["cases"] });
     }
   });
 
@@ -132,6 +139,7 @@ export function CaseDetailPage() {
     onSuccess: async () => {
       feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["cases"] });
     }
   });
 
@@ -142,6 +150,21 @@ export function CaseDetailPage() {
     queryFn: () => apiFetch<ClientDto>(`/api/clients/${caseItem!.clientId}`),
     enabled: !!caseItem?.clientId
   });
+
+  if (caseQuery.isLoading) {
+    return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
+  }
+
+  if (caseQuery.isError) {
+    return (
+      <ErrorState
+        title={t("errors.title")}
+        description={(caseQuery.error as Error)?.message ?? t("errors.fallback")}
+        retryLabel={t("errors.reload")}
+        onRetry={() => void caseQuery.refetch()}
+      />
+    );
+  }
 
   if (!caseItem) {
     return <EmptyState title={t("empty.noCaseSelected")} description={t("empty.noCaseSelectedHelp")} />;
@@ -205,6 +228,7 @@ export function CaseDetailPage() {
                       body: JSON.stringify({ title: v, caseNumber: caseItem.caseNumber, internalReference: caseItem.internalReference, judicialYear: caseItem.judicialYear, type: caseItem.type, clientId: caseItem.clientId })
                     });
                     await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+                    await queryClient.invalidateQueries({ queryKey: ["cases"] });
                   }}
                   value={caseItem.title}
                 />
@@ -220,6 +244,7 @@ export function CaseDetailPage() {
                       body: JSON.stringify({ status: v })
                     });
                     await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+                    await queryClient.invalidateQueries({ queryKey: ["cases"] });
                   }}
                   options={Object.values(CaseStatus).map((v) => ({ value: v, label: getEnumLabel(t, "CaseStatus", v) }))}
                   type="select"
@@ -237,14 +262,7 @@ export function CaseDetailPage() {
       {activeTab === "courts" ? (
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <SectionCard title={t("cases.courts")} description={t("cases.courtsHelp")}>
-            {caseQuery.isError ? (
-              <ErrorState
-                title={t("errors.title")}
-                description={(caseQuery.error as Error)?.message ?? t("errors.fallback")}
-                retryLabel={t("errors.reload")}
-                onRetry={() => void caseQuery.refetch()}
-              />
-            ) : !caseItem.courts.length ? (
+            {!caseItem.courts.length ? (
               <EmptyState title={t("empty.noCourts")} description={t("empty.noCourtsHelp")} />
             ) : (
               <TableWrapper>

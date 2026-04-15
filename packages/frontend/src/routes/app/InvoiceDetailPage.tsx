@@ -21,6 +21,7 @@ export function InvoiceDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentError, setPaymentError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
@@ -94,8 +95,13 @@ export function InvoiceDetailPage() {
             {canIssue && (
               <button
                 onClick={async () => {
-                  await issueInvoice.mutateAsync();
-                  addToast(t("messages.invoiceIssued"), "success");
+                  try {
+                    setActionError("");
+                    await issueInvoice.mutateAsync();
+                    addToast(t("messages.invoiceIssued"), "success");
+                  } catch (error) {
+                    setActionError((error as Error)?.message ?? t("errors.fallback"));
+                  }
                 }}
                 disabled={issueInvoice.isPending}
                 className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
@@ -114,8 +120,13 @@ export function InvoiceDetailPage() {
             {canVoid && (
               <button
                 onClick={async () => {
-                  await voidInvoice.mutateAsync();
-                  addToast(t("messages.invoiceVoided"), "success");
+                  try {
+                    setActionError("");
+                    await voidInvoice.mutateAsync();
+                    addToast(t("messages.invoiceVoided"), "success");
+                  } catch (error) {
+                    setActionError((error as Error)?.message ?? t("errors.fallback"));
+                  }
                 }}
                 disabled={voidInvoice.isPending}
                 className="rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
@@ -128,6 +139,7 @@ export function InvoiceDetailPage() {
       />
 
       {/* Totals */}
+      {actionError ? <FormAlert message={actionError} /> : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           { label: t("billing.subtotal"), value: currentInvoice.subtotalAmount },

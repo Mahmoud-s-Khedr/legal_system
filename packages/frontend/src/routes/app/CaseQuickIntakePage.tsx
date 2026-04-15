@@ -190,8 +190,10 @@ export function isPartyPristine(party: DraftParty): boolean {
 }
 
 export function isQuickIntakeDirty(state: {
-  caseForm: Pick<CreateCaseDto, "title" | "caseNumber">;
+  caseForm: Pick<CreateCaseDto, "title" | "caseNumber"> & Partial<Pick<CreateCaseDto, "internalReference" | "type">>;
+  statusForm?: { status: CaseStatus; note: string };
   existingClientId: string;
+  initialExistingClientId?: string;
   clientForm: Pick<ClientFormState, "name">;
   courts: DraftCourt[];
   parties: DraftParty[];
@@ -203,7 +205,11 @@ export function isQuickIntakeDirty(state: {
   return (
     hasText(state.caseForm.title) ||
     hasText(state.caseForm.caseNumber) ||
-    hasText(state.existingClientId) ||
+    hasText(state.caseForm.internalReference) ||
+    (state.caseForm.type ?? "CIVIL") !== "CIVIL" ||
+    state.existingClientId !== (state.initialExistingClientId ?? "") ||
+    (state.statusForm?.status ?? CaseStatus.ACTIVE) !== CaseStatus.ACTIVE ||
+    hasText(state.statusForm?.note) ||
     hasText(state.clientForm.name) ||
     state.courts.some((court) => hasText(court.courtName) || hasText(court.courtLevel) || hasText(court.caseNumber) || hasText(court.startedAt) || hasText(court.circuit) || hasText(court.notes)) ||
     state.parties.some((party) => !isPartyPristine(party)) ||
@@ -231,7 +237,8 @@ export function CaseQuickIntakePage() {
   const canCreateTasks = useHasPermission("tasks:create");
 
   const [clientMode, setClientMode] = useState<ClientMode>(canReadClients ? "existing" : "new");
-  const [existingClientId, setExistingClientId] = useState(search.clientId ?? "");
+  const initialExistingClientId = search.clientId ?? "";
+  const [existingClientId, setExistingClientId] = useState(initialExistingClientId);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [submitSummary, setSubmitSummary] = useState<{
     caseId: string | null;
@@ -277,7 +284,9 @@ export function CaseQuickIntakePage() {
 
   const quickIntakeDirty = isQuickIntakeDirty({
     caseForm,
+    statusForm,
     existingClientId,
+    initialExistingClientId,
     clientForm,
     courts,
     parties,
@@ -631,7 +640,7 @@ export function CaseQuickIntakePage() {
         clientId: resolvedClientId,
         title: caseForm.title.trim(),
         caseNumber: caseForm.caseNumber.trim(),
-        internalReference: toNullable(caseForm.internalReference) ?? "",
+        internalReference: toNullable(caseForm.internalReference),
         judicialYear: caseForm.judicialYear
       });
 

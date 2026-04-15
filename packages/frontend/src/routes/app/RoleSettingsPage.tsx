@@ -5,15 +5,17 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, PageHeader, SectionCard } from "./ui";
+import { useToastStore } from "../../store/toastStore";
+import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
 
 export function RoleSettingsPage() {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
+  const addToast = useToastStore((state) => state.addToast);
 
   const rolesQuery = useQuery({
     queryKey: ["roles"],
-    queryFn: () => apiFetch<RoleListResponseDto>("/api/roles")
+    queryFn: () => apiFetch<RoleListResponseDto>("/api/roles?limit=1000")
   });
 
   const deleteMutation = useMutation({
@@ -21,6 +23,9 @@ export function RoleSettingsPage() {
       apiFetch(`/api/roles/${roleId}`, { method: "DELETE" }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["roles"] });
+    },
+    onError: (error: Error) => {
+      addToast(error.message || t("errors.fallback"), "error");
     }
   });
 
@@ -44,7 +49,17 @@ export function RoleSettingsPage() {
         description={t("roles.description")}
       />
 
-      {firmRoles.length > 0 ? (
+      {rolesQuery.isLoading ? <p className="text-sm text-slate-500">{t("labels.loading")}</p> : null}
+      {rolesQuery.isError ? (
+        <ErrorState
+          title={t("errors.title")}
+          description={(rolesQuery.error as Error)?.message ?? t("errors.fallback")}
+          retryLabel={t("errors.reload")}
+          onRetry={() => void rolesQuery.refetch()}
+        />
+      ) : null}
+
+      {!rolesQuery.isLoading && !rolesQuery.isError && firmRoles.length > 0 ? (
         <SectionCard title={t("roles.firmRoles")} description={t("roles.firmRolesHelp")}>
           <div className="space-y-3">
             {firmRoles.map((role) => (
@@ -89,13 +104,14 @@ export function RoleSettingsPage() {
             ))}
           </div>
         </SectionCard>
-      ) : (
+      ) : !rolesQuery.isLoading && !rolesQuery.isError ? (
         <SectionCard title={t("roles.firmRoles")} description={t("roles.firmRolesHelp")}>
           <EmptyState title={t("empty.noFirmRoles")} description={t("empty.noFirmRolesHelp")} />
         </SectionCard>
-      )}
+      ) : null}
 
-      <SectionCard title={t("roles.systemRoles")} description={t("roles.systemRolesHelp")}>
+      {!rolesQuery.isLoading && !rolesQuery.isError ? (
+        <SectionCard title={t("roles.systemRoles")} description={t("roles.systemRolesHelp")}>
         <div className="space-y-3">
           {systemRoles.map((role) => (
             <article
@@ -115,6 +131,7 @@ export function RoleSettingsPage() {
           ))}
         </div>
       </SectionCard>
+      ) : null}
     </div>
   );
 }
