@@ -32,6 +32,7 @@
     "release:desktop:dummy:binary": "pnpm --filter @elms/desktop package:binary:dummy",
     "seed:dev": "NODE_ENV=development pnpm --filter @elms/backend seed:dev",
     "i18n:check": "pnpm --filter @elms/frontend i18n:check",
+    "schema:usage:audit": "pnpm tsx scripts/schema-runtime-usage-audit.ts",
     "docs:verify": "node ./scripts/docs/verify-docs-truth.mjs && pnpm structure:check",
     "structure:audit": "node ./scripts/docs/structure-audit.mjs",
     "structure:check": "node ./scripts/docs/structure-check.mjs"
