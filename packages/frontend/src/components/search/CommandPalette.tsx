@@ -120,7 +120,7 @@ export function CommandPalette({ open, onClose }: Props) {
       label: t("search.escape.search"),
       score: 0,
       icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/search" }); onClose(); }
+      action: () => { void navigate({ to: "/app/search", search: { q: "" } }); onClose(); }
     },
     {
       id: "go-settings",

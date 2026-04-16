@@ -8,12 +8,12 @@ const mockUseNavigate = vi.fn(() => mockNavigate);
 const mockUseQuery = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
-  useSearch: (...args: unknown[]) => mockUseSearch(...args),
-  useNavigate: (...args: unknown[]) => mockUseNavigate(...args)
+  useSearch: mockUseSearch,
+  useNavigate: mockUseNavigate
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (...args: unknown[]) => mockUseQuery(...args)
+  useQuery: mockUseQuery
 }));
 
 vi.mock("react-i18next", () => ({
