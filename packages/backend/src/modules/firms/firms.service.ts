@@ -8,11 +8,16 @@ import {
   type Language,
   type SessionUser
 } from "@elms/shared";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { isTrialEnabled } from "../editions/editionPolicy.js";
 import { resolveTrialDates } from "../editions/trialDates.js";
 import { appError } from "../../errors/appError.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  getFirmSubscriptionByIdOrThrow,
+  getFirmWithSettingsByIdOrThrow,
+  requestFirmEditionChange,
+  upsertFirmSettingsForEditionChange
+} from "../../repositories/firms/firms.repository.js";
 
 const SELF_SERVE_EDITION_CHANGE_TARGETS = new Set<EditionKey>([
   EditionKey.SOLO_OFFLINE,
@@ -22,13 +27,8 @@ const SELF_SERVE_EDITION_CHANGE_TARGETS = new Set<EditionKey>([
 ]);
 
 export async function getCurrentFirm(actor: SessionUser): Promise<FirmMeResponseDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const firm = await tx.firm.findUniqueOrThrow({
-      where: { id: actor.firmId },
-      include: {
-        settings: true
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const firm = await getFirmWithSettingsByIdOrThrow(tx, actor.firmId);
 
     const trialEndsAt = getTrialEndsAtIsoOrNull({
       trialEnabled: isTrialEnabled(firm.editionKey),
@@ -68,20 +68,8 @@ export async function getCurrentFirm(actor: SessionUser): Promise<FirmMeResponse
 }
 
 export async function getCurrentFirmSubscription(actor: SessionUser): Promise<FirmSubscriptionDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const firm = await tx.firm.findUniqueOrThrow({
-      where: { id: actor.firmId },
-      select: {
-        createdAt: true,
-        trialStartedAt: true,
-        editionKey: true,
-        pendingEditionKey: true,
-        lifecycleStatus: true,
-        trialEndsAt: true,
-        graceEndsAt: true,
-        deletionDueAt: true
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const firm = await getFirmSubscriptionByIdOrThrow(tx, actor.firmId);
 
     const trialEndsAt = getTrialEndsAtIsoOrNull({
       trialEnabled: isTrialEnabled(firm.editionKey),
@@ -118,42 +106,11 @@ export async function requestEditionChange(
     throw makeHttpError("Edition change target is not supported for self-serve", 400);
   }
 
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    await tx.firmSettings.upsert({
-      where: { firmId: actor.firmId },
-      create: {
-        firmId: actor.firmId,
-        timezone: "Africa/Cairo",
-        licenseKeyHash: null,
-        licenseActivatedAt: null
-      },
-      update: {
-        licenseKeyHash: null,
-        licenseActivatedAt: null
-      }
-    });
-    await tx.firm.update({
-      where: { id: actor.firmId },
-      data: {
-        pendingEditionKey: payload.editionKey,
-        lifecycleStatus: FirmLifecycleStatus.ACTIVE,
-        suspendedAt: null
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    await upsertFirmSettingsForEditionChange(tx, actor.firmId);
+    await requestFirmEditionChange(tx, actor.firmId, payload.editionKey);
 
-    const firm = await tx.firm.findUniqueOrThrow({
-      where: { id: actor.firmId },
-      select: {
-        createdAt: true,
-        trialStartedAt: true,
-        editionKey: true,
-        pendingEditionKey: true,
-        lifecycleStatus: true,
-        trialEndsAt: true,
-        graceEndsAt: true,
-        deletionDueAt: true
-      }
-    });
+    const firm = await getFirmSubscriptionByIdOrThrow(tx, actor.firmId);
 
     const trialEndsAt = getTrialEndsAtIsoOrNull({
       trialEnabled: isTrialEnabled(firm.editionKey),

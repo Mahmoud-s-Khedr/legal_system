@@ -7,38 +7,22 @@ import type {
   SessionUser,
   UpdateClientDto
 } from "@elms/shared";
-import { Language } from "@prisma/client";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  createFirmClient,
+  findPotentialConflictParties,
+  getFirmClientByIdOrThrow,
+  getFirmClientRowByIdOrThrow,
+  listFirmClients,
+  replaceClientContacts,
+  softDeleteClientById,
+  updateFirmClientById,
+  type ClientRecord
+} from "../../repositories/clients/clients.repository.js";
 
-function mapClient(client: {
-  id: string;
-  name: string;
-  type: "INDIVIDUAL" | "COMPANY" | "GOVERNMENT";
-  phone: string | null;
-  email: string | null;
-  governorate: string | null;
-  preferredLanguage: string;
-  nationalId: string | null;
-  commercialRegister: string | null;
-  taxNumber: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  contacts: Array<{
-    id: string;
-    name: string;
-    phone: string;
-    email: string | null;
-    role: string | null;
-  }>;
-  _count: {
-    parties: number;
-    invoices: number;
-    documents: number;
-  };
-}): ClientDto {
+function mapClient(client: ClientRecord): ClientDto {
   return {
     id: client.id,
     name: client.name,
@@ -56,23 +40,6 @@ function mapClient(client: {
     documentCount: client._count.documents,
     createdAt: client.createdAt.toISOString(),
     updatedAt: client.updatedAt.toISOString()
-  };
-}
-
-function contactCreateMany(
-  contacts: CreateClientDto["contacts"]
-): { data: Array<{ name: string; phone: string; email?: string | null; role?: string | null }> } | undefined {
-  if (!contacts?.length) {
-    return undefined;
-  }
-
-  return {
-    data: contacts.map((contact) => ({
-      name: contact.name,
-      phone: contact.phone,
-      email: contact.email ?? null,
-      role: contact.role ?? null
-    }))
   };
 }
 
@@ -98,88 +65,23 @@ export async function listClients(
   const sortBy = normalizeSort(query.sortBy, ["name", "email", "createdAt", "updatedAt", "type"] as const, "createdAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
 
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const where = {
-      firmId: actor.firmId,
-      deletedAt: null,
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" as const } },
-              { email: { contains: q, mode: "insensitive" as const } }
-            ]
-          }
-        : {}),
-      ...(query.type ? { type: query.type as ClientType } : {})
-    };
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const { total, items } = await listFirmClients(tx, actor.firmId, {
+      q,
+      type: query.type,
+      sortBy,
+      sortDir,
+      page,
+      limit
+    });
 
-    const [total, clients] = await Promise.all([
-      tx.client.count({ where }),
-      tx.client.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          phone: true,
-          email: true,
-          governorate: true,
-          preferredLanguage: true,
-          nationalId: true,
-          commercialRegister: true,
-          taxNumber: true,
-          createdAt: true,
-          updatedAt: true,
-          contacts: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              email: true,
-              role: true
-            }
-          },
-          _count: {
-            select: { parties: true, invoices: true, documents: true }
-          }
-        },
-        orderBy: { [sortBy]: sortDir },
-        skip: (page - 1) * limit,
-        take: limit
-      })
-    ]);
-
-    return { items: clients.map(mapClient), total, page, pageSize: limit };
+    return { items: items.map(mapClient), total, page, pageSize: limit };
   });
 }
 
 export async function getClient(actor: SessionUser, clientId: string): Promise<ClientDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const client = await tx.client.findFirstOrThrow({
-      where: {
-        id: clientId,
-        firmId: actor.firmId,
-        deletedAt: null
-      },
-      include: {
-        contacts: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            email: true,
-            role: true
-          }
-        },
-        _count: {
-          select: {
-            parties: true,
-            invoices: true,
-            documents: true
-          }
-        }
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const client = await getFirmClientByIdOrThrow(tx, actor.firmId, clientId);
 
     return mapClient(client);
   });
@@ -195,23 +97,7 @@ export async function checkClientConflictOnIntake(
   name: string,
   nationalId?: string | null
 ): Promise<ConflictWarningDto[]> {
-  const parties = await prisma.caseParty.findMany({
-    where: {
-      case: { firmId, deletedAt: null },
-      isOurClient: false,
-      OR: [
-        { name: { contains: name, mode: "insensitive" } },
-        ...(nationalId
-          ? [{ client: { nationalId } }]
-          : [])
-      ]
-    },
-    select: {
-      name: true,
-      case: { select: { id: true, title: true } }
-    },
-    take: 10
-  });
+  const parties = await findPotentialConflictParties(firmId, name, nationalId);
 
   return parties.map((p) => ({
     name: p.name,
@@ -231,46 +117,8 @@ export async function createClient(
     payload.nationalId
   );
 
-  const client = await withTenant(prisma, actor.firmId, async (tx) => {
-    const contacts = contactCreateMany(payload.contacts);
-
-    const client = await tx.client.create({
-      data: {
-        firmId: actor.firmId,
-        name: payload.name,
-        type: payload.type,
-        phone: payload.phone ?? null,
-        email: payload.email ?? null,
-        governorate: payload.governorate ?? null,
-        preferredLanguage: (payload.preferredLanguage as Language | undefined) ?? Language.AR,
-        nationalId: payload.nationalId ?? null,
-        commercialRegister: payload.commercialRegister ?? null,
-        taxNumber: payload.taxNumber ?? null,
-        contacts: contacts
-          ? {
-              createMany: contacts
-            }
-          : undefined
-      },
-      include: {
-        contacts: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            email: true,
-            role: true
-          }
-        },
-        _count: {
-          select: {
-            parties: true,
-            invoices: true,
-            documents: true
-          }
-        }
-      }
-    });
+  const client = await inTenantTransaction(actor.firmId, async (tx) => {
+    const client = await createFirmClient(tx, actor.firmId, payload);
 
     await writeAuditLog(tx, audit, {
       action: "clients.create",
@@ -294,60 +142,12 @@ export async function updateClient(
   payload: UpdateClientDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const contacts = contactCreateMany(payload.contacts);
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmClientRowByIdOrThrow(tx, actor.firmId, clientId);
 
-    const existing = await tx.client.findFirstOrThrow({
-      where: {
-        id: clientId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+    await replaceClientContacts(tx, clientId, payload.contacts);
 
-    await tx.clientContact.deleteMany({
-      where: {
-        clientId
-      }
-    });
-
-    const client = await tx.client.update({
-      where: { id: clientId },
-      data: {
-        name: payload.name,
-        type: payload.type,
-        phone: payload.phone ?? null,
-        email: payload.email ?? null,
-        governorate: payload.governorate ?? null,
-        preferredLanguage: (payload.preferredLanguage as Language | undefined) ?? Language.AR,
-        nationalId: payload.nationalId ?? null,
-        commercialRegister: payload.commercialRegister ?? null,
-        taxNumber: payload.taxNumber ?? null,
-        contacts: contacts
-          ? {
-              createMany: contacts
-            }
-          : undefined
-      },
-      include: {
-        contacts: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            email: true,
-            role: true
-          }
-        },
-        _count: {
-          select: {
-            parties: true,
-            invoices: true,
-            documents: true
-          }
-        }
-      }
-    });
+    const client = await updateFirmClientById(tx, clientId, payload);
 
     await writeAuditLog(tx, audit, {
       action: "clients.update",
@@ -372,23 +172,10 @@ export async function removeClient(
   clientId: string,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.client.findFirstOrThrow({
-      where: {
-        id: clientId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmClientRowByIdOrThrow(tx, actor.firmId, clientId);
 
-    await tx.client.update({
-      where: {
-        id: clientId
-      },
-      data: {
-        deletedAt: new Date()
-      }
-    });
+    await softDeleteClientById(tx, clientId);
 
     await writeAuditLog(tx, audit, {
       action: "clients.delete",

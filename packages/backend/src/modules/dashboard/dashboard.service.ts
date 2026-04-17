@@ -1,23 +1,15 @@
 import type { DashboardSummaryDto, SessionUser } from "@elms/shared";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { listHearings } from "../hearings/hearings.service.js";
 import { listTasks } from "../tasks/tasks.service.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import { listRecentAuditActivity } from "../../repositories/dashboard/dashboard.repository.js";
 
 export async function getDashboardSummary(actor: SessionUser): Promise<DashboardSummaryDto> {
   const upcomingHearings = await listHearings(actor, {}, { page: 1, limit: 20 });
   const overdueTasks = await listTasks(actor, { overdue: "true" }, { page: 1, limit: 20 });
 
-  const recentActivity = await withTenant(prisma, actor.firmId, async (tx) => {
-    const logs = await tx.auditLog.findMany({
-      where: {
-        firmId: actor.firmId
-      },
-      orderBy: {
-        createdAt: "desc"
-      },
-      take: 10
-    });
+  const recentActivity = await inTenantTransaction(actor.firmId, async (tx) => {
+    const logs = await listRecentAuditActivity(tx, actor.firmId, 10);
 
     return logs.map((log) => ({
       id: log.id,

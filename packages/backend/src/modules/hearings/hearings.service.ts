@@ -9,24 +9,26 @@ import type {
   UpdateHearingDto
 } from "@elms/shared";
 import { Prisma, SessionOutcome as PrismaSessionOutcome } from "@prisma/client";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 import { appError } from "../../errors/appError.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  createHearingRecord,
+  findFirmUserNameById,
+  findFirmUserNamesByIds,
+  findFirmUsersByName,
+  findHearingConflicts,
+  getFirmHearingByIdOrThrow,
+  getFirmHearingRowByIdOrThrow,
+  listFirmHearings,
+  updateHearingOutcomeById,
+  updateHearingRecordById,
+  upsertHearingEvent,
+  type HearingRecord
+} from "../../repositories/hearings/hearings.repository.js";
 
-function mapHearing(session: {
-  id: string;
-  caseId: string;
-  assignedLawyerId: string | null;
-  sessionDatetime: Date;
-  nextSessionAt: Date | null;
-  outcome: string | null;
-  notes: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  case: { title: string };
-}, assignedLawyerName: string | null = null): HearingDto {
+function mapHearing(session: HearingRecord, assignedLawyerName: string | null = null): HearingDto {
   return {
     id: session.id,
     caseId: session.caseId,
@@ -43,30 +45,19 @@ function mapHearing(session: {
 }
 
 async function checkConflictInTx(
-  tx: Parameters<Parameters<typeof withTenant>[2]>[0],
+  tx: Prisma.TransactionClient,
   firmId: string,
   assignedLawyerId: string,
   sessionDatetime: Date,
   excludeId?: string
 ): Promise<string[]> {
-  const start = new Date(sessionDatetime.getTime() - 60 * 60 * 1000);
-  const end = new Date(sessionDatetime.getTime() + 60 * 60 * 1000);
-
-  const conflicts = await tx.caseSession.findMany({
-    where: {
-      assignedLawyerId,
-      case: { firmId, deletedAt: null },
-      ...(excludeId ? { id: { not: excludeId } } : {}),
-      sessionDatetime: { gte: start, lte: end }
-    },
-    select: { id: true }
-  });
+  const conflicts = await findHearingConflicts(tx, firmId, assignedLawyerId, sessionDatetime, excludeId);
 
   return conflicts.map((c) => c.id);
 }
 
 async function syncEvent(
-  tx: Parameters<Parameters<typeof withTenant>[2]>[0],
+  tx: Prisma.TransactionClient,
   hearing: {
     id: string;
     caseId: string;
@@ -74,26 +65,7 @@ async function syncEvent(
     case: { title: string; firmId: string };
   }
 ) {
-  const endsAt = new Date(hearing.sessionDatetime.getTime() + 60 * 60 * 1000);
-  await tx.event.upsert({
-    where: {
-      sessionId: hearing.id
-    },
-    update: {
-      caseId: hearing.caseId,
-      title: `Hearing: ${hearing.case.title}`,
-      startsAt: hearing.sessionDatetime,
-      endsAt
-    },
-    create: {
-      firmId: hearing.case.firmId,
-      caseId: hearing.caseId,
-      sessionId: hearing.id,
-      title: `Hearing: ${hearing.case.title}`,
-      startsAt: hearing.sessionDatetime,
-      endsAt
-    }
-  });
+  await upsertHearingEvent(tx, hearing);
 }
 
 export async function listHearings(
@@ -115,7 +87,7 @@ export async function listHearings(
   const sortBy = normalizeSort(filters.sortBy, ["sessionDatetime", "createdAt", "outcome"] as const, "sessionDatetime");
   const sortDir = toPrismaSortOrder(filters.sortDir ?? "asc");
 
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     const where: Prisma.CaseSessionWhereInput = {
       case: { firmId: actor.firmId, deletedAt: null },
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
@@ -125,14 +97,7 @@ export async function listHearings(
     };
 
     if (q) {
-      const matchedUsers = await tx.user.findMany({
-        where: {
-          firmId: actor.firmId,
-          deletedAt: null,
-          fullName: { contains: q, mode: "insensitive" }
-        },
-        select: { id: true }
-      });
+      const matchedUsers = await findFirmUsersByName(tx, actor.firmId, q);
       const qUpper = q.toUpperCase();
       const maybeOutcome =
         (Object.values(PrismaSessionOutcome) as string[]).includes(qUpper)
@@ -146,24 +111,10 @@ export async function listHearings(
       ];
     }
 
-    const [total, items] = await Promise.all([
-      tx.caseSession.count({ where }),
-      tx.caseSession.findMany({
-        where,
-        include: { case: true },
-        orderBy: { [sortBy]: sortDir },
-        skip: (page - 1) * limit,
-        take: limit
-      })
-    ]);
+    const { total, items } = await listFirmHearings(tx, where, { [sortBy]: sortDir }, { page, limit });
 
     const assignedLawyerIds = [...new Set(items.map((item) => item.assignedLawyerId).filter(Boolean))] as string[];
-    const assignedLawyers = assignedLawyerIds.length
-      ? await tx.user.findMany({
-          where: { id: { in: assignedLawyerIds }, firmId: actor.firmId, deletedAt: null },
-          select: { id: true, fullName: true }
-        })
-      : [];
+    const assignedLawyers = await findFirmUserNamesByIds(tx, actor.firmId, assignedLawyerIds);
     const assignedLawyerNameById = new Map(assignedLawyers.map((lawyer) => [lawyer.id, lawyer.fullName]));
 
     return {
@@ -190,25 +141,11 @@ export function buildSessionDatetimeFilter(filters: { from?: string; to?: string
 }
 
 export async function getHearing(actor: SessionUser, hearingId: string): Promise<HearingDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const item = await tx.caseSession.findFirstOrThrow({
-      where: {
-        id: hearingId,
-        case: {
-          firmId: actor.firmId,
-          deletedAt: null
-        }
-      },
-      include: {
-        case: true
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const item = await getFirmHearingByIdOrThrow(tx, actor.firmId, hearingId);
 
     const assignedLawyer = item.assignedLawyerId
-      ? await tx.user.findFirst({
-          where: { id: item.assignedLawyerId, firmId: actor.firmId, deletedAt: null },
-          select: { fullName: true }
-        })
+      ? await findFirmUserNameById(tx, actor.firmId, item.assignedLawyerId)
       : null;
 
     return mapHearing(item, assignedLawyer?.fullName ?? null);
@@ -220,7 +157,7 @@ export async function createHearing(
   payload: CreateHearingDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     const sessionDatetime = new Date(payload.sessionDatetime);
 
     if (payload.assignedLawyerId) {
@@ -230,18 +167,13 @@ export async function createHearing(
       }
     }
 
-    const hearing = await tx.caseSession.create({
-      data: {
-        caseId: payload.caseId,
-        assignedLawyerId: payload.assignedLawyerId ?? null,
-        sessionDatetime,
-        nextSessionAt: payload.nextSessionAt ? new Date(payload.nextSessionAt) : null,
-        outcome: (payload.outcome as PrismaSessionOutcome) ?? null,
-        notes: payload.notes ?? null
-      },
-      include: {
-        case: true
-      }
+    const hearing = await createHearingRecord(tx, {
+      caseId: payload.caseId,
+      assignedLawyerId: payload.assignedLawyerId ?? null,
+      sessionDatetime,
+      nextSessionAt: payload.nextSessionAt ? new Date(payload.nextSessionAt) : null,
+      outcome: (payload.outcome as PrismaSessionOutcome) ?? null,
+      notes: payload.notes ?? null
     });
 
     await syncEvent(tx, hearing);
@@ -266,16 +198,8 @@ export async function updateHearing(
   payload: UpdateHearingDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.caseSession.findFirstOrThrow({
-      where: {
-        id: hearingId,
-        case: {
-          firmId: actor.firmId,
-          deletedAt: null
-        }
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmHearingRowByIdOrThrow(tx, actor.firmId, hearingId);
 
     const sessionDatetime = new Date(payload.sessionDatetime);
 
@@ -286,19 +210,13 @@ export async function updateHearing(
       }
     }
 
-    const hearing = await tx.caseSession.update({
-      where: { id: hearingId },
-      data: {
-        caseId: payload.caseId,
-        assignedLawyerId: payload.assignedLawyerId ?? null,
-        sessionDatetime,
-        nextSessionAt: payload.nextSessionAt ? new Date(payload.nextSessionAt) : null,
-        outcome: (payload.outcome as PrismaSessionOutcome) ?? null,
-        notes: payload.notes ?? null
-      },
-      include: {
-        case: true
-      }
+    const hearing = await updateHearingRecordById(tx, hearingId, {
+      caseId: payload.caseId,
+      assignedLawyerId: payload.assignedLawyerId ?? null,
+      sessionDatetime,
+      nextSessionAt: payload.nextSessionAt ? new Date(payload.nextSessionAt) : null,
+      outcome: (payload.outcome as PrismaSessionOutcome) ?? null,
+      notes: payload.notes ?? null
     });
 
     await syncEvent(tx, hearing);
@@ -334,28 +252,17 @@ export async function checkHearingConflict(
     };
   }
 
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const target = new Date(params.sessionDatetime!);
-    const start = new Date(target.getTime() - 60 * 60 * 1000);
-    const end = new Date(target.getTime() + 60 * 60 * 1000);
+  const assignedLawyerId = params.assignedLawyerId;
+  const sessionDatetime = new Date(params.sessionDatetime);
 
-    const conflicts = await tx.caseSession.findMany({
-      where: {
-        assignedLawyerId: params.assignedLawyerId,
-        case: {
-          firmId: actor.firmId,
-          deletedAt: null
-        },
-        ...(params.excludeId ? { id: { not: params.excludeId } } : {}),
-        sessionDatetime: {
-          gte: start,
-          lte: end
-        }
-      },
-      select: {
-        id: true
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const conflicts = await findHearingConflicts(
+      tx,
+      actor.firmId,
+      assignedLawyerId,
+      sessionDatetime,
+      params.excludeId
+    );
 
     return {
       hasConflict: conflicts.length > 0,
@@ -370,29 +277,10 @@ export async function updateHearingOutcome(
   payload: UpdateHearingOutcomeDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.caseSession.findFirstOrThrow({
-      where: {
-        id: hearingId,
-        case: {
-          firmId: actor.firmId,
-          deletedAt: null
-        }
-      },
-      include: {
-        case: true
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmHearingByIdOrThrow(tx, actor.firmId, hearingId);
 
-    const hearing = await tx.caseSession.update({
-      where: { id: hearingId },
-      data: {
-        outcome: (payload.outcome as PrismaSessionOutcome) ?? null
-      },
-      include: {
-        case: true
-      }
-    });
+    const hearing = await updateHearingOutcomeById(tx, hearingId, (payload.outcome as PrismaSessionOutcome) ?? null);
 
     await writeAuditLog(tx, audit, {
       action: "hearings.outcome.update",

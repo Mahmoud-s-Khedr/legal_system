@@ -4,25 +4,20 @@ import type {
   InvitationListResponseDto,
   SessionUser
 } from "@elms/shared";
-import { InvitationStatus } from "@prisma/client";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { createInvitationToken } from "../auth/inviteToken.js";
 import { assertCanCreateInvitation } from "../editions/editionPolicy.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  createFirmInvitation,
+  getFirmInvitationByIdOrThrow,
+  listFirmInvitations,
+  markInvitationRevokedById,
+  type InvitationRecord
+} from "../../repositories/invitations/invitations.repository.js";
 
-function mapInvitation(invitation: {
-  id: string;
-  email: string;
-  token: string;
-  status: InvitationStatus;
-  expiresAt: Date;
-  acceptedAt: Date | null;
-  createdAt: Date;
-  roleId: string;
-  role: { name: string };
-}): InvitationDto {
+function mapInvitation(invitation: InvitationRecord): InvitationDto {
   return {
     id: invitation.id,
     roleId: invitation.roleId,
@@ -49,39 +44,21 @@ export async function listInvitations(
 ): Promise<InvitationListResponseDto> {
   const page = query.page ?? 1;
   const limit = query.limit ?? 50;
-  const q = query.q?.trim();
   const sortBy = normalizeSort(query.sortBy, ["createdAt", "expiresAt", "email", "status"] as const, "createdAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
 
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const where = {
-      firmId: actor.firmId,
-      ...(query.status ? { status: query.status as InvitationStatus } : {}),
-      ...(q
-        ? {
-            OR: [
-              { email: { contains: q, mode: "insensitive" as const } },
-              { role: { name: { contains: q, mode: "insensitive" as const } } }
-            ]
-          }
-        : {})
-    };
-
-    const [total, invitations] = await Promise.all([
-      tx.invitation.count({ where }),
-      tx.invitation.findMany({
-        where,
-        include: {
-          role: true
-        },
-        orderBy: { [sortBy]: sortDir },
-        skip: (page - 1) * limit,
-        take: limit
-      })
-    ]);
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const { total, items } = await listFirmInvitations(tx, actor.firmId, {
+      q: query.q,
+      status: query.status,
+      sortBy,
+      sortDir,
+      page,
+      limit
+    });
 
     return {
-      items: invitations.map(mapInvitation),
+      items: items.map(mapInvitation),
       total,
       page,
       pageSize: limit
@@ -94,23 +71,17 @@ export async function createInvitation(
   payload: CreateInvitationDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     await assertCanCreateInvitation(tx, actor);
 
-    const invitation = await tx.invitation.create({
-      data: {
-        firmId: actor.firmId,
-        roleId: payload.roleId,
-        invitedById: actor.id,
-        email: payload.email,
-        token: createInvitationToken(),
-        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
-        status: InvitationStatus.PENDING
-      },
-      include: {
-        role: true
-      }
-    });
+    const invitation = await createFirmInvitation(
+      tx,
+      actor.firmId,
+      actor.id,
+      payload,
+      createInvitationToken(),
+      new Date(Date.now() + 48 * 60 * 60 * 1000)
+    );
 
     await writeAuditLog(tx, audit, {
       action: "invitations.create",
@@ -132,28 +103,10 @@ export async function revokeInvitation(
   invitationId: string,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.invitation.findFirstOrThrow({
-      where: {
-        id: invitationId,
-        firmId: actor.firmId
-      },
-      include: {
-        role: true
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmInvitationByIdOrThrow(tx, actor.firmId, invitationId);
 
-    const invitation = await tx.invitation.update({
-      where: {
-        id: invitationId
-      },
-      data: {
-        status: InvitationStatus.REVOKED
-      },
-      include: {
-        role: true
-      }
-    });
+    const invitation = await markInvitationRevokedById(tx, invitationId);
 
     await writeAuditLog(tx, audit, {
       action: "invitations.revoke",

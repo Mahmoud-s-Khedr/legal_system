@@ -5,9 +5,8 @@ import { requirePermission } from "../../middleware/requirePermission.js";
 import { getAuditContext } from "../../utils/auditContext.js";
 import { listResponseSchema, successSchema } from "../../schemas/index.js";
 import { appError } from "../../errors/appError.js";
+import { LOOKUP_ENTITIES, type LookupEntity } from "./lookups.types.js";
 import {
-  LOOKUP_ENTITIES,
-  type LookupEntity,
   createLookupOption,
   deleteLookupOption,
   listLookupOptions,

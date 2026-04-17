@@ -8,28 +8,22 @@ import type {
   TaskStatus as SharedTaskStatus,
   UpdateTaskDto
 } from "@elms/shared";
-import { Prisma, TaskPriority, TaskStatus } from "@prisma/client";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
+import { Prisma, TaskStatus } from "@prisma/client";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  createFirmTask,
+  getFirmTaskByIdOrThrow,
+  getFirmTaskRowByIdOrThrow,
+  listFirmTasks,
+  softDeleteTaskById,
+  updateTaskById,
+  updateTaskStatusById,
+  type TaskRecord
+} from "../../repositories/tasks/tasks.repository.js";
 
-function mapTask(task: {
-  id: string;
-  caseId: string | null;
-  title: string;
-  description: string | null;
-  status: string;
-  priority: string;
-  assignedToId: string | null;
-  createdById: string | null;
-  dueAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  case: { title: string } | null;
-  assignedTo: { fullName: string } | null;
-  createdBy: { fullName: string } | null;
-}): TaskDto {
+function mapTask(task: TaskRecord): TaskDto {
   return {
     id: task.id,
     caseId: task.caseId,
@@ -73,7 +67,7 @@ export async function listTasks(
       ? [{ dueAt: sortDir }, { createdAt: "desc" }]
       : { [sortBy]: sortDir };
 
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     const dueAtFilter: { lt?: Date; gte?: Date; lte?: Date } = {};
     if (filters.overdue === "true") {
       dueAtFilter.lt = new Date();
@@ -111,23 +105,10 @@ export async function listTasks(
         : {})
     };
 
-    const [total, tasks] = await Promise.all([
-      tx.task.count({ where }),
-      tx.task.findMany({
-        where,
-        include: {
-          case: true,
-          assignedTo: true,
-          createdBy: true
-        },
-        orderBy,
-        skip: (page - 1) * limit,
-        take: limit
-      })
-    ]);
+    const { total, items } = await listFirmTasks(tx, where, orderBy, { page, limit });
 
     return {
-      items: tasks.map(mapTask),
+      items: items.map(mapTask),
       total,
       page,
       pageSize: limit
@@ -136,19 +117,8 @@ export async function listTasks(
 }
 
 export async function getTask(actor: SessionUser, taskId: string): Promise<TaskDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const task = await tx.task.findFirstOrThrow({
-      where: {
-        id: taskId,
-        firmId: actor.firmId,
-        deletedAt: null
-      },
-      include: {
-        case: true,
-        assignedTo: true,
-        createdBy: true
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const task = await getFirmTaskByIdOrThrow(tx, actor.firmId, taskId);
 
     return mapTask(task);
   });
@@ -159,25 +129,8 @@ export async function createTask(
   payload: CreateTaskDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const task = await tx.task.create({
-      data: {
-        firmId: actor.firmId,
-        caseId: payload.caseId ?? null,
-        title: payload.title,
-        description: payload.description ?? null,
-        status: (payload.status as TaskStatus | undefined) ?? TaskStatus.PENDING,
-        priority: (payload.priority as TaskPriority | undefined) ?? TaskPriority.MEDIUM,
-        assignedToId: payload.assignedToId ?? null,
-        createdById: actor.id,
-        dueAt: payload.dueAt ? new Date(payload.dueAt) : null
-      },
-      include: {
-        case: true,
-        assignedTo: true,
-        createdBy: true
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const task = await createFirmTask(tx, actor.firmId, actor.id, payload);
 
     await writeAuditLog(tx, audit, {
       action: "tasks.create",
@@ -199,31 +152,12 @@ export async function updateTask(
   payload: UpdateTaskDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.task.findFirstOrThrow({
-      where: {
-        id: taskId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmTaskRowByIdOrThrow(tx, actor.firmId, taskId);
 
-    const task = await tx.task.update({
-      where: { id: taskId },
-      data: {
-        caseId: payload.caseId ?? null,
-        title: payload.title,
-        description: payload.description ?? null,
-        status: (payload.status as TaskStatus | undefined) ?? existing.status,
-        priority: (payload.priority as TaskPriority | undefined) ?? existing.priority,
-        assignedToId: payload.assignedToId ?? null,
-        dueAt: payload.dueAt ? new Date(payload.dueAt) : null
-      },
-      include: {
-        case: true,
-        assignedTo: true,
-        createdBy: true
-      }
+    const task = await updateTaskById(tx, taskId, payload, {
+      status: existing.status,
+      priority: existing.priority
     });
 
     await writeAuditLog(tx, audit, {
@@ -250,26 +184,10 @@ export async function changeTaskStatus(
   payload: ChangeTaskStatusDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.task.findFirstOrThrow({
-      where: {
-        id: taskId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmTaskRowByIdOrThrow(tx, actor.firmId, taskId);
 
-    const task = await tx.task.update({
-      where: { id: taskId },
-      data: {
-        status: payload.status as never
-      },
-      include: {
-        case: true,
-        assignedTo: true,
-        createdBy: true
-      }
-    });
+    const task = await updateTaskStatusById(tx, taskId, payload.status as TaskStatus);
 
     await writeAuditLog(tx, audit, {
       action: "tasks.status",
@@ -292,21 +210,10 @@ export async function deleteTask(
   taskId: string,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.task.findFirstOrThrow({
-      where: {
-        id: taskId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmTaskRowByIdOrThrow(tx, actor.firmId, taskId);
 
-    await tx.task.update({
-      where: { id: taskId },
-      data: {
-        deletedAt: new Date()
-      }
-    });
+    await softDeleteTaskById(tx, taskId);
 
     await writeAuditLog(tx, audit, {
       action: "tasks.delete",

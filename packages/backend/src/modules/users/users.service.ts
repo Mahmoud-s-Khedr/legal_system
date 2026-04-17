@@ -8,18 +8,26 @@ import type {
   UserDto,
   UserListResponseDto
 } from "@elms/shared";
-import { Language, UserStatus } from "@prisma/client";
+import { UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { assertCanCreateLocalUser } from "../editions/editionPolicy.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 import { appError } from "../../errors/appError.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  createFirmUser,
+  getFirmActiveUserByIdOrThrow,
+  getFirmActiveUserRowByIdOrThrow,
+  listFirmUsers,
+  softDeleteUserById,
+  updateFirmUserById,
+  updateFirmUserStatusById,
+  updateUserPasswordHashById
+} from "../../repositories/users/users.repository.js";
 import {
   toSessionUser,
-  type UserWithRole,
-  userWithRoleInclude
+  type UserWithRole
 } from "../auth/sessionUser.js";
 
 function mapUser(user: UserWithRole): UserDto {
@@ -45,39 +53,22 @@ export async function listUsers(
 ): Promise<UserListResponseDto> {
   const page = query.page ?? 1;
   const limit = query.limit ?? 50;
-  const q = query.q?.trim();
   const sortBy = normalizeSort(query.sortBy, ["fullName", "email", "createdAt", "status"] as const, "createdAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
 
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const where = {
-      firmId: actor.firmId,
-      deletedAt: null,
-      ...(query.status ? { status: query.status as UserStatus } : {}),
-      ...(query.roleId ? { roleId: query.roleId } : {}),
-      ...(q
-        ? {
-            OR: [
-              { fullName: { contains: q, mode: "insensitive" as const } },
-              { email: { contains: q, mode: "insensitive" as const } }
-            ]
-          }
-        : {})
-    };
-
-    const [total, users] = await Promise.all([
-      tx.user.count({ where }),
-      tx.user.findMany({
-        where,
-        include: userWithRoleInclude,
-        orderBy: { [sortBy]: sortDir },
-        skip: (page - 1) * limit,
-        take: limit
-      })
-    ]);
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const { total, items } = await listFirmUsers(tx, actor.firmId, {
+      q: query.q,
+      status: query.status,
+      roleId: query.roleId,
+      sortBy,
+      sortDir,
+      page,
+      limit
+    });
 
     return {
-      items: users.map(mapUser),
+      items: items.map(mapUser),
       total,
       page,
       pageSize: limit
@@ -86,15 +77,8 @@ export async function listUsers(
 }
 
 export async function getUser(actor: SessionUser, userId: string): Promise<UserDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const user = await tx.user.findFirstOrThrow({
-      where: {
-        id: userId,
-        firmId: actor.firmId,
-        deletedAt: null
-      },
-      include: userWithRoleInclude
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const user = await getFirmActiveUserByIdOrThrow(tx, actor.firmId, userId);
 
     return mapUser(user);
   });
@@ -105,22 +89,11 @@ export async function createLocalUser(
   payload: CreateLocalUserDto,
   audit: AuditContext
 ): Promise<UserDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     await assertCanCreateLocalUser(tx, actor);
 
     const passwordHash = await bcrypt.hash(payload.password, 12);
-    const user = await tx.user.create({
-      data: {
-        firmId: actor.firmId,
-        roleId: payload.roleId,
-        email: payload.email,
-        fullName: payload.fullName,
-        passwordHash,
-        preferredLanguage: (payload.preferredLanguage as Language | undefined) ?? Language.AR,
-        status: UserStatus.ACTIVE
-      },
-      include: userWithRoleInclude
-    });
+    const user = await createFirmUser(tx, actor.firmId, payload, passwordHash);
 
     await writeAuditLog(tx, audit, {
       action: "users.create",
@@ -147,32 +120,19 @@ export async function updateUser(
   payload: UpdateUserDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     const canManageUsers = actor.permissions.includes("users:update");
-    const existing = await tx.user.findFirstOrThrow({
-      where: {
-        id: userId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+    const existing = await getFirmActiveUserRowByIdOrThrow(tx, actor.firmId, userId);
 
     if (actor.id !== userId && !canManageUsers) {
       throw httpError("You do not have permission to update this user", 403);
     }
 
-    const user = await tx.user.update({
-      where: { id: userId },
-      data: {
-        fullName: payload.fullName,
-        email: payload.email,
-        roleId: canManageUsers ? payload.roleId : existing.roleId,
-        preferredLanguage: (payload.preferredLanguage as Language | undefined) ?? Language.AR,
-        status: canManageUsers
-          ? (payload.status as UserStatus | undefined) ?? existing.status
-          : existing.status
-      },
-      include: userWithRoleInclude
+    const user = await updateFirmUserById(tx, userId, payload, {
+      roleId: canManageUsers ? payload.roleId : existing.roleId,
+      status: canManageUsers
+        ? (payload.status as UserStatus | undefined) ?? existing.status
+        : existing.status
     });
 
     await writeAuditLog(tx, audit, {
@@ -202,14 +162,8 @@ export async function changeOwnPassword(
   payload: ChangeOwnPasswordDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const user = await tx.user.findFirstOrThrow({
-      where: {
-        id: actor.id,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const user = await getFirmActiveUserRowByIdOrThrow(tx, actor.firmId, actor.id);
 
     if (!user.passwordHash) {
       throw httpError("Password update is unavailable for this account", 400);
@@ -221,10 +175,7 @@ export async function changeOwnPassword(
     }
 
     const passwordHash = await bcrypt.hash(payload.newPassword, 12);
-    await tx.user.update({
-      where: { id: user.id },
-      data: { passwordHash }
-    });
+    await updateUserPasswordHashById(tx, user.id, passwordHash);
 
     await writeAuditLog(tx, audit, {
       action: "users.change_password",
@@ -242,24 +193,15 @@ export async function adminSetPassword(
   payload: AdminSetPasswordDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     if (!actor.permissions.includes("users:update")) {
       throw httpError("You do not have permission to update user passwords", 403);
     }
 
-    const user = await tx.user.findFirstOrThrow({
-      where: {
-        id: userId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+    const user = await getFirmActiveUserRowByIdOrThrow(tx, actor.firmId, userId);
 
     const passwordHash = await bcrypt.hash(payload.newPassword, 12);
-    await tx.user.update({
-      where: { id: user.id },
-      data: { passwordHash }
-    });
+    await updateUserPasswordHashById(tx, user.id, passwordHash);
 
     await writeAuditLog(tx, audit, {
       action: "users.admin_set_password",
@@ -280,7 +222,7 @@ export async function updateUserStatus(
   payload: UpdateUserStatusDto,
   audit: AuditContext
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     if (!actor.permissions.includes("users:update")) {
       throw httpError("You do not have permission to change user status", 403);
     }
@@ -289,23 +231,11 @@ export async function updateUserStatus(
       throw httpError("You cannot deactivate your own account", 400);
     }
 
-    const existing = await tx.user.findFirstOrThrow({
-      where: {
-        id: userId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
+    const existing = await getFirmActiveUserRowByIdOrThrow(tx, actor.firmId, userId);
 
     const nextStatus = payload.status as UserStatus;
 
-    const user = await tx.user.update({
-      where: { id: userId },
-      data: {
-        status: nextStatus
-      },
-      include: userWithRoleInclude
-    });
+    const user = await updateFirmUserStatusById(tx, userId, nextStatus);
 
     await writeAuditLog(tx, audit, {
       action: "users.status",
@@ -320,7 +250,7 @@ export async function updateUserStatus(
 }
 
 export async function removeUser(actor: SessionUser, userId: string, audit: AuditContext) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     if (!actor.permissions.includes("users:delete")) {
       throw httpError("You do not have permission to delete users", 403);
     }
@@ -329,21 +259,8 @@ export async function removeUser(actor: SessionUser, userId: string, audit: Audi
       throw httpError("You cannot delete your own account", 400);
     }
 
-    const existing = await tx.user.findFirstOrThrow({
-      where: {
-        id: userId,
-        firmId: actor.firmId,
-        deletedAt: null
-      }
-    });
-
-    await tx.user.update({
-      where: { id: userId },
-      data: {
-        status: UserStatus.SUSPENDED,
-        deletedAt: new Date()
-      }
-    });
+    const existing = await getFirmActiveUserRowByIdOrThrow(tx, actor.firmId, userId);
+    await softDeleteUserById(tx, userId);
 
     await writeAuditLog(tx, audit, {
       action: "users.delete",

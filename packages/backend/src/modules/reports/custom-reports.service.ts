@@ -4,7 +4,6 @@
  * Execution delegates to the existing report functions in reports.service.ts.
  */
 import type { SessionUser } from "@elms/shared";
-import { prisma } from "../../db/prisma.js";
 import {
   caseStatusDistribution,
   hearingOutcomes,
@@ -14,6 +13,13 @@ import {
 } from "./reports.service.js";
 import { applyArrayTableQuery, normalizeSort, type SortDir } from "../../utils/tableQuery.js";
 import { createTableSession, getTableSession } from "../../utils/tableSessionStore.js";
+import {
+  createCustomReportForFirm,
+  deleteCustomReportById,
+  findCustomReportByIdForFirm,
+  listCustomReportsByFirm,
+  updateCustomReportById
+} from "../../repositories/reports/custom-reports.repository.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -109,10 +115,7 @@ function validateConfig(config: unknown): CustomReportConfig {
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
 
 export async function listCustomReports(actor: SessionUser): Promise<CustomReportDto[]> {
-  const reports = await prisma.customReport.findMany({
-    where: { firmId: actor.firmId },
-    orderBy: { updatedAt: "desc" }
-  });
+  const reports = await listCustomReportsByFirm(actor.firmId);
   return reports.map(toDto);
 }
 
@@ -124,15 +127,13 @@ export async function createCustomReport(
     throw Object.assign(new Error(`Unsupported report type: ${data.reportType}`), { statusCode: 422 });
   }
   const validatedConfig = validateConfig(data.config ?? {});
-  const report = await prisma.customReport.create({
-    data: {
-      firmId: actor.firmId,
-      name: data.name,
-      description: data.description ?? null,
-      reportType: data.reportType,
-      config: validatedConfig as object,
-      createdById: actor.id
-    }
+  const report = await createCustomReportForFirm({
+    firmId: actor.firmId,
+    name: data.name,
+    description: data.description ?? null,
+    reportType: data.reportType,
+    config: validatedConfig as object,
+    createdById: actor.id
   });
   return toDto(report);
 }
@@ -142,9 +143,7 @@ export async function updateCustomReport(
   id: string,
   data: { name?: string; description?: string; reportType?: string; config?: unknown }
 ): Promise<CustomReportDto | null> {
-  const existing = await prisma.customReport.findFirst({
-    where: { id, firmId: actor.firmId }
-  });
+  const existing = await findCustomReportByIdForFirm(id, actor.firmId);
   if (!existing) return null;
 
   if (data.reportType && !SUPPORTED_REPORT_TYPES.includes(data.reportType as (typeof SUPPORTED_REPORT_TYPES)[number])) {
@@ -155,22 +154,19 @@ export async function updateCustomReport(
     ? validateConfig(data.config)
     : (existing.config as CustomReportConfig);
 
-  const updated = await prisma.customReport.update({
-    where: { id },
-    data: {
-      name: data.name ?? existing.name,
-      description: data.description !== undefined ? (data.description ?? null) : existing.description,
-      reportType: data.reportType ?? existing.reportType,
-      config: validatedConfig as object
-    }
+  const updated = await updateCustomReportById(id, {
+    name: data.name ?? existing.name,
+    description: data.description !== undefined ? (data.description ?? null) : existing.description,
+    reportType: data.reportType ?? existing.reportType,
+    config: validatedConfig as object
   });
   return toDto(updated);
 }
 
 export async function deleteCustomReport(actor: SessionUser, id: string): Promise<boolean> {
-  const existing = await prisma.customReport.findFirst({ where: { id, firmId: actor.firmId } });
+  const existing = await findCustomReportByIdForFirm(id, actor.firmId);
   if (!existing) return false;
-  await prisma.customReport.delete({ where: { id } });
+  await deleteCustomReportById(id);
   return true;
 }
 
@@ -180,7 +176,7 @@ export async function runCustomReport(
   actor: SessionUser,
   id: string
 ): Promise<CustomReportRunResult | null> {
-  const report = await prisma.customReport.findFirst({ where: { id, firmId: actor.firmId } });
+  const report = await findCustomReportByIdForFirm(id, actor.firmId);
   if (!report) return null;
 
   const config = report.config as CustomReportConfig;

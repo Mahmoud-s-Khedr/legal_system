@@ -15,11 +15,30 @@ import type {
 } from "@elms/shared";
 import { InvoiceStatus } from "@elms/shared";
 import type { InvoiceStatus as PrismaInvoiceStatus, Prisma } from "@prisma/client";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { Decimal } from "@prisma/client/runtime/library";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  createExpense as createExpenseRecord,
+  createInvoiceWithItems,
+  createPayment,
+  deleteExpenseById,
+  deleteInvoiceById,
+  getFirmExpenseByIdOrThrow,
+  getFirmInvoiceByIdOrThrow,
+  getFirmInvoiceRowByIdOrThrow,
+  listCaseExpenses,
+  listCaseInvoicesWithPayments,
+  listFirmExpenses,
+  listFirmInvoices,
+  listInvoicePayments,
+  findLatestInvoiceNumberWithPrefix,
+  replaceInvoiceItems,
+  updateExpenseById,
+  updateFirmInvoiceById,
+  updateInvoiceById
+} from "../../repositories/billing/billing.repository.js";
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
@@ -131,28 +150,13 @@ function mapExpense(exp: {
   };
 }
 
-const invoiceInclude = {
-  case: { select: { title: true } },
-  client: { select: { name: true } },
-  items: true,
-  payments: true
-} as const;
-
-const expenseInclude = {
-  case: { select: { title: true } }
-} as const;
-
 // ── Invoice Number ────────────────────────────────────────────────────────────
 
 async function nextInvoiceNumber(tx: Prisma.TransactionClient, firmId: string): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `INV-${year}-`;
-  const latest = await tx.invoice.findFirst({
-    where: { firmId, invoiceNumber: { startsWith: prefix } },
-    orderBy: { invoiceNumber: "desc" },
-    select: { invoiceNumber: true }
-  });
-  const seq = latest ? parseInt(latest.invoiceNumber.slice(prefix.length), 10) + 1 : 1;
+  const latest = await findLatestInvoiceNumberWithPrefix(tx, firmId, prefix);
+  const seq = latest ? parseInt(latest.slice(prefix.length), 10) + 1 : 1;
   return `${prefix}${String(seq).padStart(4, "0")}`;
 }
 
@@ -202,7 +206,7 @@ export async function listInvoices(
     "createdAt"
   );
   const sortDir = toPrismaSortOrder(filters.sortDir ?? "desc");
-  const where = {
+  const where: Prisma.InvoiceWhereInput = {
     firmId: actor.firmId,
     ...(filters.caseId ? { caseId: filters.caseId } : {}),
     ...(filters.clientId ? { clientId: filters.clientId } : {}),
@@ -241,25 +245,23 @@ export async function listInvoices(
         }
       : {})
   };
-  const [items, total] = await Promise.all([
-    prisma.invoice.findMany({
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const { items, total } = await listFirmInvoices(
+      tx,
       where,
-      include: invoiceInclude,
-      orderBy: sortBy === "dueDate" ? [{ dueDate: sortDir }, { createdAt: "desc" }] : { [sortBy]: sortDir },
-      skip: (page - 1) * limit,
-      take: limit
-    }),
-    prisma.invoice.count({ where })
-  ]);
-  return { items: items.map(mapInvoice), total, page, pageSize: limit };
+      sortBy === "dueDate" ? [{ dueDate: sortDir }, { createdAt: "desc" }] : { [sortBy]: sortDir },
+      { page, limit }
+    );
+
+    return { items: items.map(mapInvoice), total, page, pageSize: limit };
+  });
 }
 
 export async function getInvoice(actor: SessionUser, id: string): Promise<InvoiceDto> {
-  const inv = await prisma.invoice.findFirstOrThrow({
-    where: { id, firmId: actor.firmId },
-    include: invoiceInclude
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const inv = await getFirmInvoiceByIdOrThrow(tx, actor.firmId, id);
+    return mapInvoice(inv);
   });
-  return mapInvoice(inv);
 }
 
 export async function createInvoice(
@@ -267,7 +269,7 @@ export async function createInvoice(
   payload: CreateInvoiceDto,
   audit: AuditContext
 ): Promise<InvoiceDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
+  return inTenantTransaction(actor.firmId, async (tx) => {
     const invoiceNumber = await nextInvoiceNumber(tx, actor.firmId);
     const taxAmount = new Decimal(payload.taxAmount ?? "0");
     const discountAmount = new Decimal(payload.discountAmount ?? "0");
@@ -280,23 +282,20 @@ export async function createInvoice(
     const subtotal = computeSubtotal(itemsData.map((i) => ({ quantity: i.quantity, unitPrice: i.unitPrice.toFixed(2) })));
     const total = computeTotal(subtotal, taxAmount, discountAmount);
 
-    const inv = await tx.invoice.create({
-      data: {
-        firmId: actor.firmId,
-        caseId: payload.caseId ?? null,
-        clientId: payload.clientId ?? null,
-        invoiceNumber,
-        status: "DRAFT",
-        feeType: payload.feeType ?? "FIXED",
-        subtotalAmount: subtotal,
-        taxAmount,
-        discountAmount,
-        totalAmount: total,
-        issuedAt: payload.issuedAt ? new Date(payload.issuedAt) : null,
-        dueDate: payload.dueDate ? new Date(payload.dueDate) : null,
-        items: { create: itemsData }
-      },
-      include: invoiceInclude
+    const inv = await createInvoiceWithItems(tx, {
+      firmId: actor.firmId,
+      caseId: payload.caseId ?? null,
+      clientId: payload.clientId ?? null,
+      invoiceNumber,
+      status: "DRAFT",
+      feeType: payload.feeType ?? "FIXED",
+      subtotalAmount: subtotal,
+      taxAmount,
+      discountAmount,
+      totalAmount: total,
+      issuedAt: payload.issuedAt ? new Date(payload.issuedAt) : null,
+      dueDate: payload.dueDate ? new Date(payload.dueDate) : null,
+      items: itemsData
     });
 
     await writeAuditLog(tx, audit, { action: "invoice.created", entityType: "Invoice", entityId: inv.id });
@@ -311,8 +310,8 @@ export async function updateInvoice(
   payload: UpdateInvoiceDto,
   audit: AuditContext
 ): Promise<InvoiceDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.invoice.findFirstOrThrow({ where: { id, firmId: actor.firmId } });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
     if (existing.status === "VOID") throw new Error("Cannot update a voided invoice");
 
     const taxAmount = new Decimal(payload.taxAmount ?? existing.taxAmount.toFixed(2));
@@ -327,7 +326,6 @@ export async function updateInvoice(
     };
 
     if (payload.items) {
-      await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
       const itemsData = payload.items.map((i) => ({
         invoiceId: id,
         description: i.description,
@@ -335,7 +333,7 @@ export async function updateInvoice(
         unitPrice: new Decimal(i.unitPrice),
         total: new Decimal(i.unitPrice).mul(i.quantity ?? 1)
       }));
-      await tx.invoiceItem.createMany({ data: itemsData });
+      await replaceInvoiceItems(tx, id, itemsData);
       const subtotal = computeSubtotal(
         itemsData.map((i) => ({ quantity: i.quantity, unitPrice: i.unitPrice.toFixed(2) }))
       );
@@ -345,7 +343,7 @@ export async function updateInvoice(
       updateData.totalAmount = computeTotal(existing.subtotalAmount, taxAmount, discountAmount);
     }
 
-    const inv = await tx.invoice.update({ where: { id }, data: updateData, include: invoiceInclude });
+    const inv = await updateInvoiceById(tx, id, updateData as Prisma.InvoiceUpdateInput);
 
     await writeAuditLog(tx, audit, { action: "invoice.updated", entityType: "Invoice", entityId: id });
 
@@ -354,13 +352,12 @@ export async function updateInvoice(
 }
 
 export async function issueInvoice(actor: SessionUser, id: string, audit: AuditContext): Promise<InvoiceDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.invoice.findFirstOrThrow({ where: { id, firmId: actor.firmId } });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
     if (existing.status !== "DRAFT") throw new Error("Only DRAFT invoices can be issued");
-    const inv = await tx.invoice.update({
-      where: { id },
-      data: { status: "ISSUED", issuedAt: existing.issuedAt ?? new Date() },
-      include: invoiceInclude
+    const inv = await updateInvoiceById(tx, id, {
+      status: "ISSUED",
+      issuedAt: existing.issuedAt ?? new Date()
     });
     await writeAuditLog(tx, audit, { action: "invoice.issued", entityType: "Invoice", entityId: id });
     return mapInvoice(inv);
@@ -368,22 +365,18 @@ export async function issueInvoice(actor: SessionUser, id: string, audit: AuditC
 }
 
 export async function voidInvoice(actor: SessionUser, id: string, audit: AuditContext): Promise<InvoiceDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const inv = await tx.invoice.update({
-      where: { id, firmId: actor.firmId },
-      data: { status: "VOID" },
-      include: invoiceInclude
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const inv = await updateFirmInvoiceById(tx, id, actor.firmId, { status: "VOID" });
     await writeAuditLog(tx, audit, { action: "invoice.voided", entityType: "Invoice", entityId: id });
     return mapInvoice(inv);
   });
 }
 
 export async function deleteInvoice(actor: SessionUser, id: string, audit: AuditContext): Promise<void> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.invoice.findFirstOrThrow({ where: { id, firmId: actor.firmId } });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
     if (existing.status !== "DRAFT") throw new Error("Only DRAFT invoices can be deleted");
-    await tx.invoice.delete({ where: { id } });
+    await deleteInvoiceById(tx, id);
     await writeAuditLog(tx, audit, { action: "invoice.deleted", entityType: "Invoice", entityId: id });
   });
 }
@@ -396,30 +389,21 @@ export async function addPayment(
   payload: CreatePaymentDto,
   audit: AuditContext
 ): Promise<InvoiceDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const invoice = await tx.invoice.findFirstOrThrow({
-      where: { id: invoiceId, firmId: actor.firmId },
-      include: { payments: true }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const invoice = await getFirmInvoiceByIdOrThrow(tx, actor.firmId, invoiceId);
     if (invoice.status === "VOID") throw new Error("Cannot add payment to a voided invoice");
 
-    await tx.payment.create({
-      data: {
-        invoiceId,
-        amount: new Decimal(payload.amount),
-        method: payload.method,
-        referenceNumber: payload.referenceNumber ?? null,
-        paidAt: payload.paidAt ? new Date(payload.paidAt) : new Date()
-      }
+    await createPayment(tx, {
+      invoiceId,
+      amount: new Decimal(payload.amount),
+      method: payload.method,
+      referenceNumber: payload.referenceNumber ?? null,
+      paidAt: payload.paidAt ? new Date(payload.paidAt) : new Date()
     });
 
-    const allPayments = await tx.payment.findMany({ where: { invoiceId } });
+    const allPayments = await listInvoicePayments(tx, invoiceId);
     const newStatus = deriveStatus(invoice.totalAmount, allPayments);
-    const inv = await tx.invoice.update({
-      where: { id: invoiceId },
-      data: { status: newStatus },
-      include: invoiceInclude
-    });
+    const inv = await updateInvoiceById(tx, invoiceId, { status: newStatus });
 
     await writeAuditLog(tx, audit, { action: "payment.added", entityType: "Invoice", entityId: invoiceId });
     return mapInvoice(inv);
@@ -443,7 +427,7 @@ export async function listExpenses(
   const q = filters.q?.trim();
   const sortBy = normalizeSort(filters.sortBy, ["createdAt", "updatedAt", "amount", "category"] as const, "createdAt");
   const sortDir = toPrismaSortOrder(filters.sortDir ?? "desc");
-  const where = {
+  const where: Prisma.ExpenseWhereInput = {
     firmId: actor.firmId,
     ...(filters.caseId ? { caseId: filters.caseId } : {}),
     ...(filters.category ? { category: filters.category } : {}),
@@ -457,25 +441,17 @@ export async function listExpenses(
         }
       : {})
   };
-  const [items, total] = await Promise.all([
-    prisma.expense.findMany({
-      where,
-      include: expenseInclude,
-      orderBy: { [sortBy]: sortDir },
-      skip: (page - 1) * limit,
-      take: limit
-    }),
-    prisma.expense.count({ where })
-  ]);
-  return { items: items.map(mapExpense), total, page, pageSize: limit };
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const { items, total } = await listFirmExpenses(tx, where, { [sortBy]: sortDir }, { page, limit });
+    return { items: items.map(mapExpense), total, page, pageSize: limit };
+  });
 }
 
 export async function getExpense(actor: SessionUser, id: string): Promise<ExpenseDto> {
-  const exp = await prisma.expense.findFirstOrThrow({
-    where: { id, firmId: actor.firmId },
-    include: expenseInclude
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const exp = await getFirmExpenseByIdOrThrow(tx, actor.firmId, id);
+    return mapExpense(exp);
   });
-  return mapExpense(exp);
 }
 
 export async function createExpense(
@@ -483,17 +459,14 @@ export async function createExpense(
   payload: CreateExpenseDto,
   audit: AuditContext
 ): Promise<ExpenseDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const exp = await tx.expense.create({
-      data: {
-        firmId: actor.firmId,
-        caseId: payload.caseId ?? null,
-        category: payload.category,
-        amount: new Decimal(payload.amount),
-        description: payload.description ?? null,
-        receiptDocumentId: payload.receiptDocumentId ?? null
-      },
-      include: expenseInclude
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const exp = await createExpenseRecord(tx, {
+      firmId: actor.firmId,
+      caseId: payload.caseId ?? null,
+      category: payload.category,
+      amount: new Decimal(payload.amount),
+      description: payload.description ?? null,
+      receiptDocumentId: payload.receiptDocumentId ?? null
     });
     await writeAuditLog(tx, audit, { action: "expense.created", entityType: "Expense", entityId: exp.id });
     return mapExpense(exp);
@@ -506,17 +479,13 @@ export async function updateExpense(
   payload: UpdateExpenseDto,
   audit: AuditContext
 ): Promise<ExpenseDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const exp = await tx.expense.update({
-      where: { id, firmId: actor.firmId },
-      data: {
-        ...(payload.caseId !== undefined ? { caseId: payload.caseId } : {}),
-        ...(payload.category !== undefined ? { category: payload.category } : {}),
-        ...(payload.amount !== undefined ? { amount: new Decimal(payload.amount) } : {}),
-        ...(payload.description !== undefined ? { description: payload.description } : {}),
-        ...(payload.receiptDocumentId !== undefined ? { receiptDocumentId: payload.receiptDocumentId } : {})
-      },
-      include: expenseInclude
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const exp = await updateExpenseById(tx, id, actor.firmId, {
+      ...(payload.caseId !== undefined ? { caseId: payload.caseId } : {}),
+      ...(payload.category !== undefined ? { category: payload.category } : {}),
+      ...(payload.amount !== undefined ? { amount: new Decimal(payload.amount) } : {}),
+      ...(payload.description !== undefined ? { description: payload.description } : {}),
+      ...(payload.receiptDocumentId !== undefined ? { receiptDocumentId: payload.receiptDocumentId } : {})
     });
     await writeAuditLog(tx, audit, { action: "expense.updated", entityType: "Expense", entityId: id });
     return mapExpense(exp);
@@ -524,8 +493,8 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(actor: SessionUser, id: string, audit: AuditContext): Promise<void> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    await tx.expense.delete({ where: { id, firmId: actor.firmId } });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    await deleteExpenseById(tx, id, actor.firmId);
     await writeAuditLog(tx, audit, { action: "expense.deleted", entityType: "Expense", entityId: id });
   });
 }
@@ -533,15 +502,13 @@ export async function deleteExpense(actor: SessionUser, id: string, audit: Audit
 // ── Billing Summary ───────────────────────────────────────────────────────────
 
 export async function getCaseBillingSummary(actor: SessionUser, caseId: string): Promise<BillingSummaryDto> {
-  const [invoices, expenses] = await Promise.all([
-    prisma.invoice.findMany({
-      where: { caseId, firmId: actor.firmId, status: { not: "VOID" } },
-      include: { payments: true }
-    }),
-    prisma.expense.findMany({
-      where: { caseId, firmId: actor.firmId }
-    })
-  ]);
+  const { invoices, expenses } = await inTenantTransaction(actor.firmId, async (tx) => {
+    const [invoiceRows, expenseRows] = await Promise.all([
+      listCaseInvoicesWithPayments(tx, actor.firmId, caseId),
+      listCaseExpenses(tx, actor.firmId, caseId)
+    ]);
+    return { invoices: invoiceRows, expenses: expenseRows };
+  });
 
   const totalBilled = invoices.reduce((sum, inv) => sum.add(inv.totalAmount), new Decimal(0));
   const totalPaid = invoices.reduce(

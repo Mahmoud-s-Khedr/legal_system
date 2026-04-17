@@ -1,36 +1,19 @@
 import type { LookupOptionDto, LookupOptionListResponseDto, CreateLookupOptionDto, UpdateLookupOptionDto, SessionUser } from "@elms/shared";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { appError } from "../../errors/appError.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import type { LookupEntity } from "./lookups.types.js";
+import {
+  createFirmLookupOption,
+  deleteLookupOptionById,
+  findFirmLookupOptionByKey,
+  getFirmLookupOptionByIdOrThrow,
+  listActiveLookupOptionsByEntity,
+  type LookupOptionRecord,
+  updateLookupOptionById
+} from "../../repositories/lookups/lookups.repository.js";
 
-export const LOOKUP_ENTITIES = [
-  "CaseType",
-  "CourtLevel",
-  "PartyRole",
-  "DocumentType",
-  "PaymentMethod",
-  "FeeType",
-  "ExpenseCategory",
-  "LibraryDocType"
-] as const;
-
-export type LookupEntity = (typeof LOOKUP_ENTITIES)[number];
-
-function mapLookupOption(row: {
-  id: string;
-  firmId: string | null;
-  entity: string;
-  key: string;
-  labelAr: string;
-  labelEn: string;
-  labelFr: string;
-  isSystem: boolean;
-  isActive: boolean;
-  sortOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
-}): LookupOptionDto {
+function mapLookupOption(row: LookupOptionRecord): LookupOptionDto {
   return {
     id: row.id,
     firmId: row.firmId,
@@ -51,15 +34,8 @@ export async function listLookupOptions(
   actor: SessionUser,
   entity: LookupEntity
 ): Promise<LookupOptionListResponseDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const items = await tx.lookupOption.findMany({
-      where: {
-        entity,
-        isActive: true,
-        OR: [{ firmId: null }, { firmId: actor.firmId }]
-      },
-      orderBy: [{ isSystem: "desc" }, { sortOrder: "asc" }, { key: "asc" }]
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const items = await listActiveLookupOptionsByEntity(tx, actor.firmId, entity);
 
     return {
       items: items.map(mapLookupOption),
@@ -76,27 +52,13 @@ export async function createLookupOption(
   payload: CreateLookupOptionDto,
   audit: AuditContext
 ): Promise<LookupOptionDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.lookupOption.findFirst({
-      where: { firmId: actor.firmId, entity, key: payload.key }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await findFirmLookupOptionByKey(tx, actor.firmId, entity, payload.key);
     if (existing) {
       throw appError(`A ${entity} option with key "${payload.key}" already exists`, 409);
     }
 
-    const option = await tx.lookupOption.create({
-      data: {
-        firmId: actor.firmId,
-        entity,
-        key: payload.key,
-        labelAr: payload.labelAr,
-        labelEn: payload.labelEn,
-        labelFr: payload.labelFr,
-        isSystem: false,
-        isActive: true,
-        sortOrder: payload.sortOrder ?? 99
-      }
-    });
+    const option = await createFirmLookupOption(tx, actor.firmId, entity, payload);
 
     await writeAuditLog(tx, audit, {
       action: "lookups.create",
@@ -116,25 +78,14 @@ export async function updateLookupOption(
   payload: UpdateLookupOptionDto,
   audit: AuditContext
 ): Promise<LookupOptionDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.lookupOption.findFirstOrThrow({
-      where: { id: optionId, entity, firmId: actor.firmId }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmLookupOptionByIdOrThrow(tx, actor.firmId, entity, optionId);
 
     if (existing.isSystem) {
       throw appError("System lookup options cannot be modified", 403);
     }
 
-    const option = await tx.lookupOption.update({
-      where: { id: optionId },
-      data: {
-        labelAr: payload.labelAr,
-        labelEn: payload.labelEn,
-        labelFr: payload.labelFr,
-        isActive: payload.isActive,
-        sortOrder: payload.sortOrder
-      }
-    });
+    const option = await updateLookupOptionById(tx, optionId, payload);
 
     await writeAuditLog(tx, audit, {
       action: "lookups.update",
@@ -153,16 +104,14 @@ export async function deleteLookupOption(
   optionId: string,
   audit: AuditContext
 ): Promise<{ success: true }> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.lookupOption.findFirstOrThrow({
-      where: { id: optionId, entity, firmId: actor.firmId }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmLookupOptionByIdOrThrow(tx, actor.firmId, entity, optionId);
 
     if (existing.isSystem) {
       throw appError("System lookup options cannot be deleted", 403);
     }
 
-    await tx.lookupOption.delete({ where: { id: optionId } });
+    await deleteLookupOptionById(tx, optionId);
 
     await writeAuditLog(tx, audit, {
       action: "lookups.delete",
