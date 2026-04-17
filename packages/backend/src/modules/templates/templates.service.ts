@@ -298,14 +298,26 @@ export async function updateTemplate(
       return null;
     }
 
-    const updated = await tx.documentTemplate.update({
-      where: { id: templateId },
+    const updateResult = await tx.documentTemplate.updateMany({
+      where: { id: templateId, firmId: actor.firmId, isSystem: false },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.language !== undefined && { language: dto.language as Language }),
         ...(dto.body !== undefined && { body: dto.body })
       }
     });
+
+    if (updateResult.count === 0) {
+      return null;
+    }
+
+    const updated = await tx.documentTemplate.findFirst({
+      where: { id: templateId, firmId: actor.firmId, isSystem: false }
+    });
+
+    if (!updated) {
+      return null;
+    }
 
     await writeAuditLog(tx, audit, {
       action: "UPDATE",
@@ -323,15 +335,13 @@ export async function deleteTemplate(
   audit: AuditContext
 ): Promise<boolean> {
   return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.documentTemplate.findFirst({
+    const deleteResult = await tx.documentTemplate.deleteMany({
       where: { id: templateId, firmId: actor.firmId, isSystem: false }
     });
 
-    if (!existing) {
+    if (deleteResult.count === 0) {
       return false;
     }
-
-    await tx.documentTemplate.delete({ where: { id: templateId } });
 
     await writeAuditLog(tx, audit, {
       action: "DELETE",

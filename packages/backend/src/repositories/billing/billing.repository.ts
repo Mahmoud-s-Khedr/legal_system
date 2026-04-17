@@ -127,14 +127,6 @@ export async function replaceInvoiceItems(
   await tx.invoiceItem.createMany({ data: items });
 }
 
-export async function updateInvoiceById(
-  tx: RepositoryTx,
-  id: string,
-  data: Prisma.InvoiceUpdateInput
-): Promise<InvoiceRecord> {
-  return tx.invoice.update({ where: { id }, data, include: invoiceInclude });
-}
-
 export async function updateFirmInvoiceById(
   tx: RepositoryTx,
   id: string,
@@ -144,8 +136,8 @@ export async function updateFirmInvoiceById(
   return tx.invoice.update({ where: { id, firmId }, data, include: invoiceInclude });
 }
 
-export async function deleteInvoiceById(tx: RepositoryTx, id: string): Promise<void> {
-  await tx.invoice.delete({ where: { id } });
+export async function deleteInvoiceById(tx: RepositoryTx, id: string, firmId: string): Promise<void> {
+  await tx.invoice.delete({ where: { id, firmId } });
 }
 
 export async function createPayment(

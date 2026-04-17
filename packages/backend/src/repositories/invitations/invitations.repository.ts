@@ -90,14 +90,23 @@ export async function getFirmInvitationByIdOrThrow(
 
 export async function markInvitationRevokedById(
   tx: RepositoryTx,
+  firmId: string,
   invitationId: string
 ): Promise<InvitationRecord> {
-  return tx.invitation.update({
+  await tx.invitation.updateMany({
     where: {
-      id: invitationId
+      id: invitationId,
+      firmId
     },
     data: {
       status: InvitationStatus.REVOKED
+    }
+  });
+
+  return tx.invitation.findFirstOrThrow({
+    where: {
+      id: invitationId,
+      firmId
     },
     include: INVITATION_INCLUDE
   });

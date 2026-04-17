@@ -27,11 +27,12 @@ export async function findCustomReportByIdForFirm(id: string, firmId: string) {
 
 export async function updateCustomReportById(
   id: string,
+  firmId: string,
   data: Prisma.CustomReportUpdateInput
 ) {
-  return prisma.customReport.update({ where: { id }, data });
+  return prisma.customReport.update({ where: { id, firmId }, data });
 }
 
-export async function deleteCustomReportById(id: string): Promise<void> {
-  await prisma.customReport.delete({ where: { id } });
+export async function deleteCustomReportById(id: string, firmId: string): Promise<void> {
+  await prisma.customReport.delete({ where: { id, firmId } });
 }

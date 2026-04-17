@@ -36,8 +36,7 @@ import {
   findLatestInvoiceNumberWithPrefix,
   replaceInvoiceItems,
   updateExpenseById,
-  updateFirmInvoiceById,
-  updateInvoiceById
+  updateFirmInvoiceById
 } from "../../repositories/billing/billing.repository.js";
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
@@ -343,7 +342,7 @@ export async function updateInvoice(
       updateData.totalAmount = computeTotal(existing.subtotalAmount, taxAmount, discountAmount);
     }
 
-    const inv = await updateInvoiceById(tx, id, updateData as Prisma.InvoiceUpdateInput);
+    const inv = await updateFirmInvoiceById(tx, id, actor.firmId, updateData as Prisma.InvoiceUpdateInput);
 
     await writeAuditLog(tx, audit, { action: "invoice.updated", entityType: "Invoice", entityId: id });
 
@@ -355,7 +354,7 @@ export async function issueInvoice(actor: SessionUser, id: string, audit: AuditC
   return inTenantTransaction(actor.firmId, async (tx) => {
     const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
     if (existing.status !== "DRAFT") throw new Error("Only DRAFT invoices can be issued");
-    const inv = await updateInvoiceById(tx, id, {
+    const inv = await updateFirmInvoiceById(tx, id, actor.firmId, {
       status: "ISSUED",
       issuedAt: existing.issuedAt ?? new Date()
     });
@@ -376,7 +375,7 @@ export async function deleteInvoice(actor: SessionUser, id: string, audit: Audit
   return inTenantTransaction(actor.firmId, async (tx) => {
     const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
     if (existing.status !== "DRAFT") throw new Error("Only DRAFT invoices can be deleted");
-    await deleteInvoiceById(tx, id);
+    await deleteInvoiceById(tx, id, actor.firmId);
     await writeAuditLog(tx, audit, { action: "invoice.deleted", entityType: "Invoice", entityId: id });
   });
 }
@@ -403,7 +402,7 @@ export async function addPayment(
 
     const allPayments = await listInvoicePayments(tx, invoiceId);
     const newStatus = deriveStatus(invoice.totalAmount, allPayments);
-    const inv = await updateInvoiceById(tx, invoiceId, { status: newStatus });
+    const inv = await updateFirmInvoiceById(tx, invoiceId, actor.firmId, { status: newStatus });
 
     await writeAuditLog(tx, audit, { action: "payment.added", entityType: "Invoice", entityId: invoiceId });
     return mapInvoice(inv);

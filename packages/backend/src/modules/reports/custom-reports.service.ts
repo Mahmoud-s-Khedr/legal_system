@@ -154,7 +154,7 @@ export async function updateCustomReport(
     ? validateConfig(data.config)
     : (existing.config as CustomReportConfig);
 
-  const updated = await updateCustomReportById(id, {
+  const updated = await updateCustomReportById(id, actor.firmId, {
     name: data.name ?? existing.name,
     description: data.description !== undefined ? (data.description ?? null) : existing.description,
     reportType: data.reportType ?? existing.reportType,
@@ -166,7 +166,7 @@ export async function updateCustomReport(
 export async function deleteCustomReport(actor: SessionUser, id: string): Promise<boolean> {
   const existing = await findCustomReportByIdForFirm(id, actor.firmId);
   if (!existing) return false;
-  await deleteCustomReportById(id);
+  await deleteCustomReportById(id, actor.firmId);
   return true;
 }
 

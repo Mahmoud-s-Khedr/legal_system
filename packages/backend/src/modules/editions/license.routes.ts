@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { type ActivateLicenseDto } from "@elms/shared";
 import { requireAuth } from "../../middleware/requireAuth.js";
+import { requirePermission } from "../../middleware/requirePermission.js";
 import { activateLicense, LicenseServiceError } from "./license.service.js";
 
 const activateLicenseSchema = z.object({
@@ -12,7 +13,7 @@ export async function registerLicenseRoutes(app: FastifyInstance) {
   app.post(
     "/api/licenses/activate",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, requirePermission("settings:update")]
     },
     async (request, reply) => {
       const payload = activateLicenseSchema.parse(request.body) as ActivateLicenseDto;

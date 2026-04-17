@@ -217,7 +217,7 @@ export async function updatePower(
 
   await withTenant(prisma, actor.firmId, async (tx) => {
     const updated = await tx.powerOfAttorney.update({
-      where: { id },
+      where: { id, firmId: actor.firmId },
       data: {
         number: dto.number ?? undefined,
         issuedAt: dto.issuedAt ? new Date(dto.issuedAt) : undefined,
@@ -265,7 +265,7 @@ export async function revokePower(
 
   await withTenant(prisma, actor.firmId, async (tx) => {
     const updated = await tx.powerOfAttorney.update({
-      where: { id },
+      where: { id, firmId: actor.firmId },
       data: {
         status: PoaStatus.REVOKED as unknown as PrismaPoaStatus,
         revokedAt: now,
@@ -300,7 +300,7 @@ export async function deletePower(
   if (!existing) throw httpError("Power of attorney not found", 404);
 
   await withTenant(prisma, actor.firmId, async (tx) => {
-    await tx.powerOfAttorney.delete({ where: { id } });
+    await tx.powerOfAttorney.delete({ where: { id, firmId: actor.firmId } });
     await writeAuditLog(tx, audit, {
       action: "DELETE",
       entityType: "PowerOfAttorney",

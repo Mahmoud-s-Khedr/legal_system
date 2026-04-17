@@ -151,8 +151,8 @@ export async function updateCategory(
   });
   if (!existing) return null;
 
-  const updated = await prisma.legalCategory.update({
-    where: { id: categoryId },
+  const updateResult = await prisma.legalCategory.updateMany({
+    where: { id: categoryId, firmId: actor.firmId },
     data: {
       nameAr: data.nameAr ?? existing.nameAr,
       nameEn: data.nameEn ?? existing.nameEn,
@@ -161,6 +161,15 @@ export async function updateCategory(
       parentId: data.parentId !== undefined ? data.parentId : existing.parentId
     }
   });
+
+  if (updateResult.count === 0) return null;
+
+  const updated = await prisma.legalCategory.findFirst({
+    where: { id: categoryId, firmId: actor.firmId }
+  });
+
+  if (!updated) return null;
+
   return {
     id: updated.id,
     nameAr: updated.nameAr,
@@ -173,12 +182,10 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(actor: SessionUser, categoryId: string): Promise<boolean> {
-  const existing = await prisma.legalCategory.findFirst({
+  const deleted = await prisma.legalCategory.deleteMany({
     where: { id: categoryId, firmId: actor.firmId }
   });
-  if (!existing) return false;
-  await prisma.legalCategory.delete({ where: { id: categoryId } });
-  return true;
+  return deleted.count > 0;
 }
 
 // ── Documents ─────────────────────────────────────────────────────────────────

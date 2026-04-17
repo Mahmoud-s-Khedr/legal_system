@@ -36,8 +36,8 @@ export async function registerPortalAuthRoutes(app: FastifyInstance, env: AppEnv
       return reply.status(401).send({ message: "Invalid email or password" });
     }
 
-    await prisma.client.update({
-      where: { id: client.id },
+    await prisma.client.updateMany({
+      where: { id: client.id, firmId: client.firmId, deletedAt: null },
       data: { portalLastLoginAt: new Date() }
     });
 
@@ -77,16 +77,21 @@ export async function registerPortalAuthRoutes(app: FastifyInstance, env: AppEnv
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    await prisma.$transaction([
-      prisma.client.update({
-        where: { id: invite.clientId },
+    await prisma.$transaction(async (tx) => {
+      const clientResult = await tx.client.updateMany({
+        where: { id: invite.clientId, firmId: invite.firmId, deletedAt: null },
         data: { portalEmail: invite.email, portalPasswordHash: passwordHash }
-      }),
-      prisma.clientPortalInvite.update({
-        where: { id: invite.id },
+      });
+
+      const inviteResult = await tx.clientPortalInvite.updateMany({
+        where: { id: invite.id, firmId: invite.firmId, usedAt: null },
         data: { usedAt: new Date() }
-      })
-    ]);
+      });
+
+      if (clientResult.count === 0 || inviteResult.count === 0) {
+        throw new Error("Invite link is invalid or expired");
+      }
+    });
 
     return { ok: true };
   });
@@ -188,7 +193,7 @@ export async function registerPortalAuthRoutes(app: FastifyInstance, env: AppEnv
         where: { id: clientId, firmId: actor.firmId },
         data: { portalPasswordHash: null, portalEmail: null, portalLastLoginAt: null }
       });
-      await prisma.clientPortalInvite.deleteMany({ where: { clientId } });
+      await prisma.clientPortalInvite.deleteMany({ where: { clientId, firmId: actor.firmId } });
 
       return { success: true };
     }

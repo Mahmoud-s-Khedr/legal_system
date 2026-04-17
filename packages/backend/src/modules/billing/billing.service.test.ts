@@ -261,7 +261,10 @@ describe("issueInvoice", () => {
     const result = await issueInvoice(actor, "inv-1", audit);
 
     expect(mockInvoice.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "ISSUED" }) })
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "inv-1", firmId: "firm-1" }),
+        data: expect.objectContaining({ status: "ISSUED" })
+      })
     );
     expect(result.status).toBe("ISSUED");
   });
@@ -282,7 +285,10 @@ describe("voidInvoice", () => {
     const result = await voidInvoice(actor, "inv-1", audit);
 
     expect(mockInvoice.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "VOID" }) })
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "inv-1", firmId: "firm-1" }),
+        data: expect.objectContaining({ status: "VOID" })
+      })
     );
     expect(result.status).toBe("VOID");
   });
@@ -296,7 +302,7 @@ describe("deleteInvoice", () => {
     mockInvoice.delete = vi.fn().mockResolvedValue({});
 
     await expect(deleteInvoice(actor, "inv-1", audit)).resolves.not.toThrow();
-    expect(mockInvoice.delete).toHaveBeenCalledWith({ where: { id: "inv-1" } });
+    expect(mockInvoice.delete).toHaveBeenCalledWith({ where: { id: "inv-1", firmId: "firm-1" } });
   });
 
   it("rejects deleting a non-DRAFT invoice", async () => {
@@ -320,7 +326,10 @@ describe("addPayment", () => {
     const result = await addPayment(actor, "inv-1", { amount: "1100.00", method: "BANK_TRANSFER" }, audit);
 
     expect(mockInvoice.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "PAID" }) })
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "inv-1", firmId: "firm-1" }),
+        data: expect.objectContaining({ status: "PAID" })
+      })
     );
     expect(result.status).toBe("PAID");
   });
@@ -336,7 +345,10 @@ describe("addPayment", () => {
     const result = await addPayment(actor, "inv-1", { amount: "500.00", method: "CASH" }, audit);
 
     expect(mockInvoice.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "PARTIALLY_PAID" }) })
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "inv-1", firmId: "firm-1" }),
+        data: expect.objectContaining({ status: "PARTIALLY_PAID" })
+      })
     );
     expect(result.status).toBe("PARTIALLY_PAID");
   });

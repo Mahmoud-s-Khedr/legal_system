@@ -138,24 +138,40 @@ export function createCloudAuthService(app: FastifyInstance, env: AppEnv): AuthS
         throw new Error("Invitation is invalid or expired");
       }
 
-      const user = await prisma.user.create({
-        data: {
-          firmId: invitation.firmId,
-          roleId: invitation.roleId,
-          email: invitation.email,
-          fullName: payload.fullName,
-          passwordHash: await bcrypt.hash(payload.password, 12),
-          preferredLanguage: Language.AR,
-          status: UserStatus.ACTIVE
-        }
-      });
+      const passwordHash = await bcrypt.hash(payload.password, 12);
 
-      await prisma.invitation.update({
-        where: { id: invitation.id },
-        data: {
-          acceptedAt: new Date(),
-          status: InvitationStatus.ACCEPTED
+      const user = await prisma.$transaction(async (tx) => {
+        const acceptedAt = new Date();
+        const invitationUpdate = await tx.invitation.updateMany({
+          where: {
+            id: invitation.id,
+            firmId: invitation.firmId,
+            status: InvitationStatus.PENDING,
+            expiresAt: {
+              gt: acceptedAt
+            }
+          },
+          data: {
+            acceptedAt,
+            status: InvitationStatus.ACCEPTED
+          }
+        });
+
+        if (invitationUpdate.count === 0) {
+          throw new Error("Invitation is invalid or expired");
         }
+
+        return tx.user.create({
+          data: {
+            firmId: invitation.firmId,
+            roleId: invitation.roleId,
+            email: invitation.email,
+            fullName: payload.fullName,
+            passwordHash,
+            preferredLanguage: Language.AR,
+            status: UserStatus.ACTIVE
+          }
+        });
       });
 
       const tokenBundle = await issueTokens(user.id);

@@ -8,7 +8,7 @@ const mockInvitationDb = {
   findMany: vi.fn(),
   findFirstOrThrow: vi.fn(),
   create: vi.fn(),
-  update: vi.fn()
+  updateMany: vi.fn()
 };
 
 const mockUserDb = { count: vi.fn() };
@@ -136,23 +136,29 @@ describe("revokeInvitation", () => {
   it("updates invitation status to REVOKED", async () => {
     const existing = makeInvitationRecord({ status: "PENDING" });
     const revoked = makeInvitationRecord({ status: "REVOKED" });
-    mockInvitationDb.findFirstOrThrow.mockResolvedValue(existing);
-    mockInvitationDb.update.mockResolvedValue(revoked);
+    mockInvitationDb.findFirstOrThrow
+      .mockResolvedValueOnce(existing)
+      .mockResolvedValueOnce(revoked);
+    mockInvitationDb.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await revokeInvitation(actor, "invite-1", audit);
 
     expect(result.status).toBe("REVOKED");
-    expect(mockInvitationDb.update).toHaveBeenCalledWith(
+    expect(mockInvitationDb.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "invite-1" },
+        where: { id: "invite-1", firmId: "firm-1" },
         data: expect.objectContaining({ status: "REVOKED" })
       })
     );
   });
 
   it("enforces firmId scope when finding the invitation", async () => {
-    mockInvitationDb.findFirstOrThrow.mockResolvedValue(makeInvitationRecord());
-    mockInvitationDb.update.mockResolvedValue(makeInvitationRecord({ status: "REVOKED" }));
+    const existing = makeInvitationRecord();
+    const revoked = makeInvitationRecord({ status: "REVOKED" });
+    mockInvitationDb.findFirstOrThrow
+      .mockResolvedValueOnce(existing)
+      .mockResolvedValueOnce(revoked);
+    mockInvitationDb.updateMany.mockResolvedValue({ count: 1 });
 
     await revokeInvitation(actor, "invite-1", audit);
 

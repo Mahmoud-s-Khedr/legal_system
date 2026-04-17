@@ -79,10 +79,11 @@ export async function getFirmRoleByIdOrThrow(
 export async function updateRoleNameById(
   tx: RepositoryTx,
   roleId: string,
+  firmId: string,
   name: string
 ): Promise<RoleWithPermissions> {
   return tx.role.update({
-    where: { id: roleId },
+    where: { id: roleId, firmId },
     data: { name },
     include: ROLE_INCLUDE
   });
@@ -143,6 +144,6 @@ export async function countUsersByRoleId(tx: RepositoryTx, roleId: string): Prom
   return tx.user.count({ where: { roleId } });
 }
 
-export async function deleteRoleById(tx: RepositoryTx, roleId: string): Promise<void> {
-  await tx.role.delete({ where: { id: roleId } });
+export async function deleteRoleById(tx: RepositoryTx, roleId: string, firmId: string): Promise<void> {
+  await tx.role.delete({ where: { id: roleId, firmId } });
 }

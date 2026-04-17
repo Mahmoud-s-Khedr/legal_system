@@ -207,7 +207,7 @@ describe("deleteCustomReport", () => {
     const result = await deleteCustomReport(actor, "report-1");
 
     expect(result).toBe(true);
-    expect(mockCustomReport.delete).toHaveBeenCalledWith({ where: { id: "report-1" } });
+    expect(mockCustomReport.delete).toHaveBeenCalledWith({ where: { id: "report-1", firmId: "firm-1" } });
   });
 });
 

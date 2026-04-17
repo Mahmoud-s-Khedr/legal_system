@@ -112,8 +112,8 @@ async function getValidAccessToken(userId: string, env: AppEnv): Promise<string 
   try {
     const tokens = await refreshAccessToken(refreshToken, env);
     const newExpiry = new Date(Date.now() + tokens.expires_in * 1000);
-    await prisma.googleCalendarToken.update({
-      where: { userId },
+    await prisma.googleCalendarToken.updateMany({
+      where: { userId, firmId: stored.firmId },
       data: {
         encryptedAccessToken: encrypt(tokens.access_token, env),
         expiresAt: newExpiry
@@ -181,7 +181,7 @@ export async function revokeCalendarAccess(userId: string, env: AppEnv): Promise
       errorMessage: message
     });
   }
-  await prisma.googleCalendarToken.delete({ where: { userId } });
+  await prisma.googleCalendarToken.deleteMany({ where: { userId, firmId: stored.firmId } });
 }
 
 export async function getConnectionStatus(userId: string): Promise<{ connected: boolean; calendarId?: string }> {

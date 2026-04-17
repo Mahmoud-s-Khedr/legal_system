@@ -81,7 +81,7 @@ Useful alternatives:
 
 ## Adding a new database migration
 
-After adding a migration with `prisma migrate dev`, update the `LATEST_MIGRATION_NAME` constant in [apps/desktop/src-tauri/src/sidecar.rs](apps/desktop/src-tauri/src/sidecar.rs) to match the new migration folder name (e.g. `"0014_your_migration_name"`). This constant is used to skip the `prisma migrate deploy` step on subsequent startups when no new migrations are pending — keeping app startup fast.
+After adding a migration with `prisma migrate dev`, update the `LATEST_MIGRATION_NAME` constant in [apps/desktop/src-tauri/src/sidecar.rs](apps/desktop/src-tauri/src/sidecar.rs) to match the new migration folder name (e.g. `"0016_your_migration_name"`). This constant is used to skip the `prisma migrate deploy` step on subsequent startups when no new migrations are pending — keeping app startup fast.
 
 ## Source of truth
 

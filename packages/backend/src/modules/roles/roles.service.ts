@@ -127,7 +127,7 @@ export async function updateRole(
       throw appError("System roles cannot be modified", 403);
     }
 
-    await updateRoleNameById(tx, roleId, payload.name);
+    await updateRoleNameById(tx, roleId, actor.firmId, payload.name);
 
     if (payload.permissionKeys) {
       const resolved = await resolvePermissionIds(tx, payload.permissionKeys);
@@ -169,7 +169,7 @@ export async function deleteRole(
       throw appError(`Cannot delete a role with ${userCount} assigned user(s). Reassign users first.`, 422);
     }
 
-    await deleteRoleById(tx, roleId);
+    await deleteRoleById(tx, roleId, actor.firmId);
 
     await writeAuditLog(tx, audit, {
       action: "roles.delete",

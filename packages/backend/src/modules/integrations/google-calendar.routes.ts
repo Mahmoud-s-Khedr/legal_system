@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requireEditionFeature } from "../../middleware/requireEditionFeature.js";
@@ -9,6 +10,61 @@ import {
   getConnectionStatus
 } from "./googleCalendar.service.js";
 
+const OAUTH_STATE_TTL_SECONDS = 10 * 60;
+
+type OAuthStatePayload = {
+  userId: string;
+  firmId: string;
+  exp: number;
+};
+
+function signOAuthStatePayload(encodedPayload: string, env: AppEnv): string {
+  const secret = env.GOOGLE_OAUTH_CLIENT_SECRET;
+  if (!secret) {
+    throw new Error("Google Calendar integration is not configured");
+  }
+  return createHmac("sha256", secret).update(encodedPayload).digest("base64url");
+}
+
+function encodeOAuthState(userId: string, firmId: string, env: AppEnv): string {
+  const payload: OAuthStatePayload = {
+    userId,
+    firmId,
+    exp: Math.floor(Date.now() / 1000) + OAUTH_STATE_TTL_SECONDS
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = signOAuthStatePayload(encodedPayload, env);
+  return `${encodedPayload}.${signature}`;
+}
+
+function decodeOAuthState(state: string, env: AppEnv): OAuthStatePayload {
+  const [encodedPayload, providedSignature] = state.split(".");
+  if (!encodedPayload || !providedSignature) {
+    throw new Error("Invalid state parameter");
+  }
+
+  const expectedSignature = signOAuthStatePayload(encodedPayload, env);
+  const providedSignatureBuffer = Buffer.from(providedSignature);
+  const expectedSignatureBuffer = Buffer.from(expectedSignature);
+
+  if (
+    providedSignatureBuffer.length !== expectedSignatureBuffer.length ||
+    !timingSafeEqual(providedSignatureBuffer, expectedSignatureBuffer)
+  ) {
+    throw new Error("Invalid state signature");
+  }
+
+  const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString()) as OAuthStatePayload;
+  if (!payload.userId || !payload.firmId || typeof payload.exp !== "number") {
+    throw new Error("Invalid state payload");
+  }
+  if (payload.exp < Math.floor(Date.now() / 1000)) {
+    throw new Error("State expired");
+  }
+
+  return payload;
+}
+
 export async function registerGoogleCalendarRoutes(app: FastifyInstance, env: AppEnv) {
   // ── OAuth initiation ──────────────────────────────────────────────────────────
 
@@ -18,13 +74,12 @@ export async function registerGoogleCalendarRoutes(app: FastifyInstance, env: Ap
       preHandler: [requireAuth, requireEditionFeature("google_calendar_sync")]
     },
     async (request, reply) => {
-      if (!env.GOOGLE_OAUTH_CLIENT_ID || !env.GOOGLE_OAUTH_REDIRECT_URI) {
+      if (!env.GOOGLE_OAUTH_CLIENT_ID || !env.GOOGLE_OAUTH_REDIRECT_URI || !env.GOOGLE_OAUTH_CLIENT_SECRET) {
         return reply.status(503).send({ error: "Google Calendar integration is not configured" });
       }
 
       const actor = request.sessionUser!;
-      // State contains a signed user identifier so the callback can verify the session
-      const state = Buffer.from(JSON.stringify({ userId: actor.id, firmId: actor.firmId })).toString("base64url");
+      const state = encodeOAuthState(actor.id, actor.firmId, env);
       const url = buildAuthUrl(env, state);
       return reply.redirect(url);
     }
@@ -35,6 +90,10 @@ export async function registerGoogleCalendarRoutes(app: FastifyInstance, env: Ap
   app.get(
     "/api/integrations/google-calendar/callback",
     async (request, reply) => {
+      if (!env.GOOGLE_OAUTH_CLIENT_SECRET) {
+        return reply.status(503).send({ error: "Google Calendar integration is not configured" });
+      }
+
       const q = request.query as Record<string, string>;
       if (q.error) {
         return reply.redirect(`/app/settings?calendarError=${encodeURIComponent(q.error)}`);
@@ -47,7 +106,7 @@ export async function registerGoogleCalendarRoutes(app: FastifyInstance, env: Ap
       let userId: string;
       let firmId: string;
       try {
-        const decoded = JSON.parse(Buffer.from(q.state, "base64url").toString()) as { userId: string; firmId: string };
+        const decoded = decodeOAuthState(q.state, env);
         userId = decoded.userId;
         firmId = decoded.firmId;
       } catch {

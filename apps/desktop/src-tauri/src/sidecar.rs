@@ -23,7 +23,7 @@ const PRISMA_ENGINE_RECURSIVE_SEARCH_DEPTH: usize = 6;
 /// Name of the latest migration in prisma/migrations. Update this whenever a
 /// new migration is added — the marker file written after a successful run lets
 /// the next startup skip the Prisma CLI spawn entirely.
-const LATEST_MIGRATION_NAME: &str = "0015_notification_targets";
+const LATEST_MIGRATION_NAME: &str = "0016_tenant_rls_backfill";
 const PRISMA_QUERY_ENGINE_PREFIXES: &[&str] = &["libquery_engine", "query_engine"];
 const DESKTOP_JWT_PRIVATE_KEY_FILE: &str = "jwt-private.pem";
 const DESKTOP_JWT_PUBLIC_KEY_FILE: &str = "jwt-public.pem";

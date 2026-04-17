@@ -106,7 +106,7 @@ export async function revokeInvitation(
   return inTenantTransaction(actor.firmId, async (tx) => {
     const existing = await getFirmInvitationByIdOrThrow(tx, actor.firmId, invitationId);
 
-    const invitation = await markInvitationRevokedById(tx, invitationId);
+    const invitation = await markInvitationRevokedById(tx, actor.firmId, invitationId);
 
     await writeAuditLog(tx, audit, {
       action: "invitations.revoke",
