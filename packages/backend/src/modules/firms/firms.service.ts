@@ -12,6 +12,7 @@ import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { isTrialEnabled } from "../editions/editionPolicy.js";
 import { resolveTrialDates } from "../editions/trialDates.js";
+import { appError } from "../../errors/appError.js";
 
 const SELF_SERVE_EDITION_CHANGE_TARGETS = new Set<EditionKey>([
   EditionKey.SOLO_OFFLINE,
@@ -106,9 +107,7 @@ export async function getCurrentFirmSubscription(actor: SessionUser): Promise<Fi
 }
 
 function makeHttpError(message: string, statusCode: number) {
-  const error = new Error(message) as Error & { statusCode: number };
-  error.statusCode = statusCode;
-  return error;
+  return appError(message, statusCode);
 }
 
 export async function requestEditionChange(

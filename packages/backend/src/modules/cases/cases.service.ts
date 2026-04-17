@@ -22,6 +22,7 @@ import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { appError } from "../../errors/appError.js";
 
 function mapCourt(court: {
   id: string;
@@ -439,9 +440,7 @@ export async function changeCaseStatus(
     const toStatus = payload.status as CaseStatus;
     const allowed = ALLOWED_STATUS_TRANSITIONS[existing.status] ?? [];
     if (!allowed.includes(toStatus)) {
-      const err = new Error(`Cannot transition case from ${existing.status} to ${toStatus}`) as Error & { statusCode: number };
-      err.statusCode = 422;
-      throw err;
+      throw appError(`Cannot transition case from ${existing.status} to ${toStatus}`, 422);
     }
 
     await tx.case.update({
@@ -625,9 +624,7 @@ export async function addCaseAssignment(
       where: { caseId, userId: payload.userId, unassignedAt: null }
     });
     if (existing) {
-      const err = new Error("User is already assigned to this case") as Error & { statusCode: number };
-      err.statusCode = 409;
-      throw err;
+      throw appError("User is already assigned to this case", 409);
     }
 
     const assignment = await tx.caseAssignment.create({
@@ -956,9 +953,10 @@ export async function removeCaseCourt(
       where: { caseCourtId: courtId }
     });
     if (sessionCount > 0) {
-      const err = new Error(`Cannot delete court stage with ${sessionCount} linked hearing(s). Unlink or move hearings first.`) as Error & { statusCode: number };
-      err.statusCode = 422;
-      throw err;
+      throw appError(
+        `Cannot delete court stage with ${sessionCount} linked hearing(s). Unlink or move hearings first.`,
+        422
+      );
     }
 
     await tx.caseCourt.delete({ where: { id: courtId } });

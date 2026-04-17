@@ -29,7 +29,15 @@ export class LocalStorageAdapter implements IStorageAdapter {
 
   async delete(key: string): Promise<void> {
     const filePath = this.resolvePath(key);
-    await fsPromises.unlink(filePath).catch(() => undefined);
+    try {
+      await fsPromises.unlink(filePath);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") {
+        return;
+      }
+      throw error;
+    }
   }
 
   async getSignedUrl(_key: string, _expiresInSeconds: number): Promise<string> {

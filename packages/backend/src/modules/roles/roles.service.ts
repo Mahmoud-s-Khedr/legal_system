@@ -9,6 +9,7 @@ import type {
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
+import { appError } from "../../errors/appError.js";
 
 function mapRole(role: {
   id: string;
@@ -51,9 +52,7 @@ async function resolvePermissionIds(
     (key) => !permissions.some((permission) => permission.key === key)
   );
   if (unknownKeys.length > 0) {
-    const err = new Error(`Unknown permission key(s): ${unknownKeys.join(", ")}`) as Error & { statusCode: number };
-    err.statusCode = 400;
-    throw err;
+    throw appError(`Unknown permission key(s): ${unknownKeys.join(", ")}`, 400);
   }
 
   return {
@@ -106,9 +105,7 @@ export async function createRole(
       where: { firmId: actor.firmId, key: payload.key }
     });
     if (existing) {
-      const err = new Error(`A role with key "${payload.key}" already exists for this firm`) as Error & { statusCode: number };
-      err.statusCode = 409;
-      throw err;
+      throw appError(`A role with key "${payload.key}" already exists for this firm`, 409);
     }
 
     const role = await tx.role.create({
@@ -162,9 +159,7 @@ export async function updateRole(
     });
 
     if (existing.scope === "SYSTEM") {
-      const err = new Error("System roles cannot be modified") as Error & { statusCode: number };
-      err.statusCode = 403;
-      throw err;
+      throw appError("System roles cannot be modified", 403);
     }
 
     const role = await tx.role.update({
@@ -214,16 +209,12 @@ export async function deleteRole(
     });
 
     if (existing.scope === "SYSTEM") {
-      const err = new Error("System roles cannot be deleted") as Error & { statusCode: number };
-      err.statusCode = 403;
-      throw err;
+      throw appError("System roles cannot be deleted", 403);
     }
 
     const userCount = await tx.user.count({ where: { roleId } });
     if (userCount > 0) {
-      const err = new Error(`Cannot delete a role with ${userCount} assigned user(s). Reassign users first.`) as Error & { statusCode: number };
-      err.statusCode = 422;
-      throw err;
+      throw appError(`Cannot delete a role with ${userCount} assigned user(s). Reassign users first.`, 422);
     }
 
     await tx.role.delete({ where: { id: roleId } });
@@ -251,9 +242,7 @@ export async function setRolePermissions(
     });
 
     if (existing.scope === "SYSTEM") {
-      const err = new Error("System role permissions cannot be modified via this endpoint") as Error & { statusCode: number };
-      err.statusCode = 403;
-      throw err;
+      throw appError("System role permissions cannot be modified via this endpoint", 403);
     }
 
     const resolved = await resolvePermissionIds(tx, payload.permissionKeys);

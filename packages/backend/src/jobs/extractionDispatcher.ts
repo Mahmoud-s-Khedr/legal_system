@@ -20,7 +20,15 @@ async function drainLocalExtractionQueue(): Promise<void> {
     }
 
     // Serialize local extraction to avoid allocator pressure from concurrent OCR workers.
-    await runExtraction(task.documentId, task.env, task.storage).catch(() => undefined);
+    try {
+      await runExtraction(task.documentId, task.env, task.storage);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[extraction] local extraction task failed", {
+        documentId: task.documentId,
+        errorMessage: message
+      });
+    }
   }
 
   localQueueDraining = false;

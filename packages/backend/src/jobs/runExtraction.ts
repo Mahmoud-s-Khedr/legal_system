@@ -6,6 +6,7 @@ import type { IStorageAdapter } from "../storage/IStorageAdapter.js";
 import type { AppEnv } from "../config/env.js";
 import { dispatchNotification } from "../modules/notifications/notification.service.js";
 import { NotificationType } from "@elms/shared";
+import { captureBackendException } from "../monitoring/sentry.js";
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -50,14 +51,30 @@ export async function runExtraction(
 
     // Notify the uploader that their document is now searchable
     if (doc.uploadedById && doc.firmId) {
-      await dispatchNotification(env, doc.firmId, doc.uploadedById, NotificationType.DOCUMENT_INDEXED, {
-        documentTitle: doc.title
-      }, {
-        entityType: "Document",
-        entityId: doc.id
-      }).catch(() => {}); // notifications are best-effort
+      try {
+        await dispatchNotification(env, doc.firmId, doc.uploadedById, NotificationType.DOCUMENT_INDEXED, {
+          documentTitle: doc.title
+        }, {
+          entityType: "Document",
+          entityId: doc.id
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn("[extraction] notification dispatch failed", {
+          documentId,
+          uploaderId: doc.uploadedById,
+          errorMessage: message
+        });
+      }
     }
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[extraction] runExtraction failed", {
+      documentId,
+      errorMessage: message
+    });
+    captureBackendException(error);
+
     await prisma.document.update({
       where: { id: documentId },
       data: { extractionStatus: "FAILED" }

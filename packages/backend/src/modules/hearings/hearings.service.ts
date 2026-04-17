@@ -13,6 +13,7 @@ import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { appError } from "../../errors/appError.js";
 
 function mapHearing(session: {
   id: string;
@@ -225,9 +226,7 @@ export async function createHearing(
     if (payload.assignedLawyerId) {
       const conflictIds = await checkConflictInTx(tx, actor.firmId, payload.assignedLawyerId, sessionDatetime);
       if (conflictIds.length > 0) {
-        const err = new Error("Hearing conflicts with an existing session for this lawyer") as Error & { statusCode: number };
-        err.statusCode = 409;
-        throw err;
+        throw appError("Hearing conflicts with an existing session for this lawyer", 409);
       }
     }
 
@@ -283,9 +282,7 @@ export async function updateHearing(
     if (payload.assignedLawyerId) {
       const conflictIds = await checkConflictInTx(tx, actor.firmId, payload.assignedLawyerId, sessionDatetime, hearingId);
       if (conflictIds.length > 0) {
-        const err = new Error("Hearing conflicts with an existing session for this lawyer") as Error & { statusCode: number };
-        err.statusCode = 409;
-        throw err;
+        throw appError("Hearing conflicts with an existing session for this lawyer", 409);
       }
     }
 

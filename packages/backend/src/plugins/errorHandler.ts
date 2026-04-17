@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import { captureBackendException } from "../monitoring/sentry.js";
+import { isAppError } from "../errors/appError.js";
 
 function getPrismaErrorCode(error: unknown): string | null {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -42,16 +43,8 @@ export function registerErrorHandler(app: FastifyInstance) {
       return reply.status(500).send({ message: "Internal server error" });
     }
 
-    // Propagate explicit statusCode set by service layer (e.g. 409 conflict, 422 unsupported type)
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "statusCode" in error &&
-      typeof error.statusCode === "number" &&
-      error.statusCode < 500
-    ) {
-      const errorWithStatus = error as Error & { statusCode: number };
-      return reply.status(errorWithStatus.statusCode).send({ message: errorWithStatus.message });
+    if (isAppError(error) && error.statusCode < 500) {
+      return reply.status(error.statusCode).send({ message: error.message });
     }
 
     request.log.error(error);

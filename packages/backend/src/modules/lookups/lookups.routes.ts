@@ -4,6 +4,7 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { getAuditContext } from "../../utils/auditContext.js";
 import { listResponseSchema, successSchema } from "../../schemas/index.js";
+import { appError } from "../../errors/appError.js";
 import {
   LOOKUP_ENTITIES,
   type LookupEntity,
@@ -51,9 +52,10 @@ const updateLookupSchema = z.object({
 
 function assertValidEntity(entity: string): asserts entity is LookupEntity {
   if (!(LOOKUP_ENTITIES as readonly string[]).includes(entity)) {
-    const err = new Error(`Unknown lookup entity: "${entity}". Valid entities: ${LOOKUP_ENTITIES.join(", ")}`) as Error & { statusCode: number };
-    err.statusCode = 400;
-    throw err;
+    throw appError(
+      `Unknown lookup entity: "${entity}". Valid entities: ${LOOKUP_ENTITIES.join(", ")}`,
+      400
+    );
   }
 }
 

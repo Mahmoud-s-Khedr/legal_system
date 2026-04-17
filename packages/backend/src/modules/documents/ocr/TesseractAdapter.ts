@@ -171,7 +171,11 @@ async function extractImage(buffer: Buffer, context?: OcrExtractionContext): Pro
     return "";
   } finally {
     if (worker) {
-      await worker.terminate().catch(() => undefined);
+      try {
+        await worker.terminate();
+      } catch (error) {
+        logTesseractFailure(error, runtimeOptions, context);
+      }
     }
     releaseImageExtractionSlot();
   }

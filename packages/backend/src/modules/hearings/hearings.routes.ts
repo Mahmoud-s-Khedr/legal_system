@@ -70,7 +70,16 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
       const userId = request.sessionUser!.id;
       if (hasEditionFeature(request.sessionUser!.editionKey, "google_calendar_sync")) {
         setImmediate(() => {
-          void pushHearingToCalendar(hearing.id, userId, env).catch(() => {});
+          void pushHearingToCalendar(hearing.id, userId, env).catch((error) => {
+            request.log.warn(
+              {
+                err: error,
+                hearingId: hearing.id,
+                userId
+              },
+              "Failed to sync hearing to Google Calendar after create"
+            );
+          });
         });
       }
       return hearing;
@@ -113,7 +122,16 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
       const userId = request.sessionUser!.id;
       if (hasEditionFeature(request.sessionUser!.editionKey, "google_calendar_sync")) {
         setImmediate(() => {
-          void pushHearingToCalendar(hearing.id, userId, env).catch(() => {});
+          void pushHearingToCalendar(hearing.id, userId, env).catch((error) => {
+            request.log.warn(
+              {
+                err: error,
+                hearingId: hearing.id,
+                userId
+              },
+              "Failed to sync hearing to Google Calendar after update"
+            );
+          });
         });
       }
       return hearing;

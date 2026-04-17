@@ -8,6 +8,7 @@ import {
   type Prisma,
   type PrismaClient
 } from "@prisma/client";
+import { appError } from "../../errors/appError.js";
 
 export type EditionFeature =
   | "multi_user"
@@ -104,9 +105,7 @@ export function getAiMonthlyLimit(editionKey: EditionKey | string): number | nul
 }
 
 function httpError(message: string, statusCode: number) {
-  const error = new Error(message) as Error & { statusCode: number };
-  error.statusCode = statusCode;
-  return error;
+  return appError(message, statusCode);
 }
 
 type DbClient = PrismaClient | Prisma.TransactionClient;

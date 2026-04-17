@@ -21,6 +21,7 @@ import type { AppEnv } from "../../config/env.js";
 import type { FastifyReply } from "fastify";
 import { hasEditionFeature } from "../editions/editionPolicy.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { appError } from "../../errors/appError.js";
 
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
@@ -183,9 +184,7 @@ export async function createDocument(
   audit: AuditContext
 ): Promise<DocumentDto> {
   if (!ALLOWED_MIME_TYPES.includes(payload.mimeType as (typeof ALLOWED_MIME_TYPES)[number])) {
-    const err = new Error(`Unsupported file type: ${payload.mimeType}`) as Error & { statusCode: number };
-    err.statusCode = 422;
-    throw err;
+    throw appError(`Unsupported file type: ${payload.mimeType}`, 422);
   }
 
   const safeFilename = sanitizeFilename(payload.fileName);
@@ -239,7 +238,16 @@ export async function createDocument(
       return created;
     });
   } catch (err) {
-    await storage.delete(storageKey).catch(() => {});
+    try {
+      await storage.delete(storageKey);
+    } catch (cleanupError) {
+      const message = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+      console.warn("[documents] Failed to clean up storage object after createDocument rollback", {
+        documentId: docId,
+        storageKey,
+        errorMessage: message
+      });
+    }
     throw err;
   }
 
@@ -299,9 +307,7 @@ export async function uploadNewVersion(
   audit: AuditContext
 ): Promise<DocumentDto> {
   if (!ALLOWED_MIME_TYPES.includes(payload.mimeType as (typeof ALLOWED_MIME_TYPES)[number])) {
-    const err = new Error(`Unsupported file type: ${payload.mimeType}`) as Error & { statusCode: number };
-    err.statusCode = 422;
-    throw err;
+    throw appError(`Unsupported file type: ${payload.mimeType}`, 422);
   }
 
   const safeFilename = sanitizeFilename(payload.fileName);
@@ -353,7 +359,16 @@ export async function uploadNewVersion(
       return updated;
     });
   } catch (err) {
-    await storage.delete(newStorageKey).catch(() => {});
+    try {
+      await storage.delete(newStorageKey);
+    } catch (cleanupError) {
+      const message = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+      console.warn("[documents] Failed to clean up storage object after uploadNewVersion rollback", {
+        documentId,
+        storageKey: newStorageKey,
+        errorMessage: message
+      });
+    }
     throw err;
   }
 

@@ -10,6 +10,7 @@ import type { AppEnv } from "../../config/env.js";
 import { ALLOWED_MIME_TYPES } from "../documents/documents.service.js";
 import { dispatchLibraryExtraction } from "../../jobs/libraryExtractionDispatcher.js";
 import { prisma } from "../../db/prisma.js";
+import { readUploadBuffer } from "../../utils/upload.js";
 import {
   listCategories,
   createCategory,
@@ -33,14 +34,6 @@ import { hasEditionFeature } from "../editions/editionPolicy.js";
 
 function sanitizeFilename(name: string): string {
   return path.basename(name).replace(/[^a-zA-Z0-9._-]/g, "_");
-}
-
-async function readUploadBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
-  const chunks: Uint8Array[] = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks);
 }
 
 export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
@@ -339,7 +332,18 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
           }
         });
       } catch (err) {
-        await app.storage.delete(storageKey).catch(() => {});
+        try {
+          await app.storage.delete(storageKey);
+        } catch (cleanupError) {
+          request.log.warn(
+            {
+              err: cleanupError,
+              storageKey,
+              documentId: docId
+            },
+            "Failed to clean up library storage object after DB create failure"
+          );
+        }
         throw err;
       }
 

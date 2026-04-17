@@ -15,6 +15,7 @@ import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { assertCanCreateLocalUser } from "../editions/editionPolicy.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { appError } from "../../errors/appError.js";
 import {
   toSessionUser,
   type UserWithRole,
@@ -137,9 +138,7 @@ export async function createLocalUser(
 }
 
 function httpError(message: string, statusCode: number) {
-  const error = new Error(message) as Error & { statusCode: number };
-  error.statusCode = statusCode;
-  return error;
+  return appError(message, statusCode);
 }
 
 export async function updateUser(

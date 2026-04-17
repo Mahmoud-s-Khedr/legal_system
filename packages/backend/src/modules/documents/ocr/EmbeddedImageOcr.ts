@@ -141,7 +141,15 @@ export async function extractEmbeddedPdfImageText(
 
       return collected;
     } finally {
-      await loadingTask.destroy?.().catch(() => undefined);
+      try {
+        await loadingTask.destroy?.();
+      } catch (error) {
+        logEmbeddedImageExtractionFailure(
+          "[ocr:tesseract] Failed to destroy PDF loading task",
+          error,
+          context
+        );
+      }
     }
   } catch (error) {
     logEmbeddedImageExtractionFailure(

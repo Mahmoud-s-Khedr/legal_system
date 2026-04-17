@@ -172,7 +172,15 @@ export async function revokeCalendarAccess(userId: string, env: AppEnv): Promise
   if (!stored) return;
 
   const accessToken = decrypt(stored.encryptedAccessToken, env);
-  await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(accessToken)}`).catch(() => {});
+  try {
+    await fetch(`${GOOGLE_REVOKE_URL}?token=${encodeURIComponent(accessToken)}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("[google-calendar] Failed to revoke access token", {
+      userId,
+      errorMessage: message
+    });
+  }
   await prisma.googleCalendarToken.delete({ where: { userId } });
 }
 
@@ -276,11 +284,23 @@ export async function deleteHearingFromCalendar(
   const hearing = await prisma.caseSession.findUnique({ where: { id: hearingId } });
   if (!hearing?.googleCalendarEventId) return;
 
-  await calendarRequest(
-    "DELETE",
-    `/calendars/${encodeURIComponent(stored.calendarId)}/events/${hearing.googleCalendarEventId}`,
-    accessToken
-  ).catch(() => {}); // Ignore 410 Gone
+  try {
+    await calendarRequest(
+      "DELETE",
+      `/calendars/${encodeURIComponent(stored.calendarId)}/events/${hearing.googleCalendarEventId}`,
+      accessToken
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("(410)")) {
+      console.warn("[google-calendar] Failed to delete hearing event", {
+        hearingId,
+        userId,
+        eventId: hearing.googleCalendarEventId,
+        errorMessage: message
+      });
+    }
+  }
 
   await prisma.caseSession.update({
     where: { id: hearingId },

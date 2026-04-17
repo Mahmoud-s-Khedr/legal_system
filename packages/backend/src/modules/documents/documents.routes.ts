@@ -8,6 +8,7 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { getAuditContext } from "../../utils/auditContext.js";
 import { parsePaginationQuery } from "../../utils/pagination.js";
+import { readUploadBuffer } from "../../utils/upload.js";
 import type { AppEnv } from "../../config/env.js";
 import {
   ALLOWED_MIME_TYPES,
@@ -27,14 +28,6 @@ const updateDocumentSchema = z.object({
   caseId: z.string().uuid().nullable().optional(),
   clientId: z.string().uuid().nullable().optional()
 });
-
-async function readUploadBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
-  const chunks: Uint8Array[] = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks);
-}
 
 const listDocumentsQuerySchema = z.object({
   q: z.string().optional(),

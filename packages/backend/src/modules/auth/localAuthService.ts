@@ -5,16 +5,15 @@ import type { AppEnv } from "../../config/env.js";
 import { LOCAL_SESSION_COOKIE, SYSTEM_ROLE_KEYS } from "../../config/constants.js";
 import { prisma } from "../../db/prisma.js";
 import { ensureSystemSecurityModel } from "../../security/bootstrap.js";
+import { appError } from "../../errors/appError.js";
 import { isTrialEnabled } from "../editions/editionPolicy.js";
 import { resolveTrialDates } from "../editions/trialDates.js";
 import type { AuthService } from "./auth.types.js";
 import { localSessionStore } from "./localSessionStore.js";
 import { getUserWithRoleAndPermissions, toSessionUser } from "./sessionUser.js";
 
-function httpError(message: string, statusCode: number): Error & { statusCode: number } {
-  const err = new Error(message) as Error & { statusCode: number };
-  err.statusCode = statusCode;
-  return err;
+function httpError(message: string, statusCode: number) {
+  return appError(message, statusCode);
 }
 
 function isP2002Error(error: unknown): boolean {

@@ -2,6 +2,7 @@ import type { LookupOptionDto, LookupOptionListResponseDto, CreateLookupOptionDt
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
+import { appError } from "../../errors/appError.js";
 
 export const LOOKUP_ENTITIES = [
   "CaseType",
@@ -80,9 +81,7 @@ export async function createLookupOption(
       where: { firmId: actor.firmId, entity, key: payload.key }
     });
     if (existing) {
-      const err = new Error(`A ${entity} option with key "${payload.key}" already exists`) as Error & { statusCode: number };
-      err.statusCode = 409;
-      throw err;
+      throw appError(`A ${entity} option with key "${payload.key}" already exists`, 409);
     }
 
     const option = await tx.lookupOption.create({
@@ -123,9 +122,7 @@ export async function updateLookupOption(
     });
 
     if (existing.isSystem) {
-      const err = new Error("System lookup options cannot be modified") as Error & { statusCode: number };
-      err.statusCode = 403;
-      throw err;
+      throw appError("System lookup options cannot be modified", 403);
     }
 
     const option = await tx.lookupOption.update({
@@ -162,9 +159,7 @@ export async function deleteLookupOption(
     });
 
     if (existing.isSystem) {
-      const err = new Error("System lookup options cannot be deleted") as Error & { statusCode: number };
-      err.statusCode = 403;
-      throw err;
+      throw appError("System lookup options cannot be deleted", 403);
     }
 
     await tx.lookupOption.delete({ where: { id: optionId } });
