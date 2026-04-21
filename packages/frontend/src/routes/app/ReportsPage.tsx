@@ -28,41 +28,22 @@ import type {
 } from "../../lib/reports";
 import { parseReportListResponse } from "../../lib/reports";
 
-export function ReportsPage() {
-  const { t } = useTranslation("app");
-  const addToast = useToastStore((state) => state.addToast);
-  const [reportType, setReportType] = useState<ReportType>("case-status");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [exportError, setExportError] = useState<string | null>(null);
-  const table = useTableQueryState({
-    defaultSortBy: "count",
-    defaultSortDir: "desc",
-    defaultLimit: 20
-  });
-
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["reports", reportType, dateFrom, dateTo, table.state],
-    queryFn: async (): Promise<ReportListResponseByType<ReportType>> => {
-      const payload = await apiFetch<unknown>(
-        `/api/reports/${reportType}?${table.toApiQueryString({ dateFrom, dateTo })}`
-      );
-      return parseReportListResponse(reportType, payload);
-    }
-  });
-
-  const reportOptions: { value: ReportType; label: string }[] = [
+export function buildReportOptions(
+  t: (key: string) => string
+): Array<{ value: ReportType; label: string }> {
+  return [
     { value: "case-status", label: t("reports.caseStatus") },
     { value: "hearing-outcomes", label: t("reports.hearingOutcomes") },
     { value: "lawyer-workload", label: t("reports.lawyerWorkload") },
     { value: "revenue", label: t("reports.revenue") },
     { value: "outstanding-balances", label: t("reports.outstandingBalances") }
   ];
+}
 
-  const sortOptions: Record<
-    ReportType,
-    Array<{ value: string; label: string }>
-  > = {
+export function buildReportSortOptions(
+  t: (key: string) => string
+): Record<ReportType, Array<{ value: string; label: string }>> {
+  return {
     "case-status": [
       { value: "count:desc", label: `${t("reports.count")} ↓` },
       { value: "count:asc", label: `${t("reports.count")} ↑` },
@@ -89,19 +70,67 @@ export function ReportsPage() {
       { value: "invoiceNumber:asc", label: `${t("billing.invoiceNumber")} A-Z` }
     ]
   };
+}
+
+export function pickReportSort(
+  reportType: ReportType,
+  sortOptions: Record<ReportType, Array<{ value: string; label: string }>>
+) {
+  return sortOptions[reportType][0]?.value ?? "count:desc";
+}
+
+export function buildReportExportMeta(
+  reportType: ReportType,
+  format: "excel" | "pdf",
+  baseQuery: URLSearchParams
+) {
+  const query = new URLSearchParams(baseQuery);
+  query.set("format", format);
+  const extension = format === "pdf" ? "pdf" : "xlsx";
+  return {
+    requestPath: `/api/reports/${reportType}/export?${query.toString()}`,
+    fallbackFilename: `report-${reportType}.${extension}`
+  };
+}
+
+export function ReportsPage() {
+  const { t } = useTranslation("app");
+  const addToast = useToastStore((state) => state.addToast);
+  const [reportType, setReportType] = useState<ReportType>("case-status");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [exportError, setExportError] = useState<string | null>(null);
+  const table = useTableQueryState({
+    defaultSortBy: "count",
+    defaultSortDir: "desc",
+    defaultLimit: 20
+  });
+
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["reports", reportType, dateFrom, dateTo, table.state],
+    queryFn: async (): Promise<ReportListResponseByType<ReportType>> => {
+      const payload = await apiFetch<unknown>(
+        `/api/reports/${reportType}?${table.toApiQueryString({ dateFrom, dateTo })}`
+      );
+      return parseReportListResponse(reportType, payload);
+    }
+  });
+
+  const reportOptions = buildReportOptions(t);
+  const sortOptions = buildReportSortOptions(t);
 
   async function exportReport(format: "excel" | "pdf") {
     setExportError(null);
-    const exportQs = new URLSearchParams(
-      table.toApiQueryString({ dateFrom, dateTo })
+    const exportMeta = buildReportExportMeta(
+      reportType,
+      format,
+      new URLSearchParams(table.toApiQueryString({ dateFrom, dateTo }))
     );
-    exportQs.set("format", format);
-    const fallbackFilename = `report-${reportType}.${format === "pdf" ? "pdf" : "xlsx"}`;
 
     try {
       await downloadReportFile(
-        `/api/reports/${reportType}/export?${exportQs.toString()}`,
-        fallbackFilename
+        exportMeta.requestPath,
+        exportMeta.fallbackFilename
       );
       addToast(
         t("reports.exportReady", {
@@ -127,13 +156,13 @@ export function ReportsPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <SelectField
             label={t("reports.reportType")}
-            value={reportType}
-            onChange={(v) => {
-              const nextType = v as ReportType;
-              setReportType(nextType);
-              const firstSort = sortOptions[nextType][0]?.value ?? "count:desc";
-              const [sortBy, sortDir] = firstSort.split(":");
-              table.update({
+              value={reportType}
+              onChange={(v) => {
+                const nextType = v as ReportType;
+                setReportType(nextType);
+                const firstSort = pickReportSort(nextType, sortOptions);
+                const [sortBy, sortDir] = firstSort.split(":");
+                table.update({
                 q: "",
                 sortBy,
                 sortDir: (sortDir as "asc" | "desc") ?? "desc",

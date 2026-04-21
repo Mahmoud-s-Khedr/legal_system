@@ -11,8 +11,27 @@ const mockCaseDb = {
   update: vi.fn()
 };
 const mockStatusHistory = { create: vi.fn() };
-const mockParty = { create: vi.fn(), delete: vi.fn(), findMany: vi.fn() };
-const mockAssignment = { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() };
+const mockParty = {
+  create: vi.fn(),
+  delete: vi.fn(),
+  findMany: vi.fn(),
+  findFirstOrThrow: vi.fn(),
+  update: vi.fn(),
+  count: vi.fn()
+};
+const mockAssignment = {
+  create: vi.fn(),
+  findFirst: vi.fn(),
+  update: vi.fn(),
+  findMany: vi.fn(),
+  count: vi.fn()
+};
+const mockCourt = {
+  findMany: vi.fn(),
+  count: vi.fn(),
+  aggregate: vi.fn(),
+  create: vi.fn()
+};
 const mockAuditLog = { create: vi.fn() };
 const mockClient = { findFirstOrThrow: vi.fn(), findMany: vi.fn() };
 
@@ -21,6 +40,7 @@ const mockPrisma = {
   caseStatusHistory: mockStatusHistory,
   caseParty: mockParty,
   caseAssignment: mockAssignment,
+  caseCourt: mockCourt,
   auditLog: mockAuditLog,
   client: mockClient
 };
@@ -44,7 +64,12 @@ const {
   changeCaseStatus,
   addCaseParty,
   addCaseAssignment,
-  unassignCase
+  unassignCase,
+  checkConflictOfInterest,
+  listCaseParties,
+  listCaseAssignments,
+  listCaseCourts,
+  addCaseCourt
 } = await import("./cases.service.js");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -91,6 +116,7 @@ beforeEach(() => {
   mockClient.findFirstOrThrow.mockResolvedValue({ id: "client-1" });
   mockClient.findMany.mockResolvedValue([]);
   mockParty.findMany.mockResolvedValue([]);
+  mockCaseDb.findFirstOrThrow.mockResolvedValue(makeCaseRecord());
 });
 
 describe("listCases", () => {
@@ -262,6 +288,32 @@ describe("addCaseParty", () => {
     expect(mockParty.create).toHaveBeenCalled();
     expect(result.case.parties).toHaveLength(1);
   });
+
+  it("checks conflicts for opponent parties", async () => {
+    mockParty.create.mockResolvedValue({});
+    mockParty.findMany.mockResolvedValue([
+      {
+        name: "Conflict Name",
+        case: { id: "case-2", title: "Other Case" }
+      }
+    ]);
+    mockClient.findMany.mockResolvedValue([
+      {
+        name: "Client Match",
+        parties: [{ case: { id: "case-3", title: "Third Case" } }]
+      }
+    ]);
+
+    const result = await addCaseParty(
+      actor,
+      "case-1",
+      { name: "Conflict Name", role: "OPPONENT" as never, partyType: "OPPONENT" as never },
+      audit
+    );
+
+    expect(result.conflictWarnings).toHaveLength(2);
+    expect(result.conflictWarnings[0]?.conflictingCaseId).toBe("case-2");
+  });
 });
 
 describe("addCaseAssignment", () => {
@@ -307,5 +359,153 @@ describe("unassignCase", () => {
       })
     );
     expect(result).toBeDefined();
+  });
+});
+
+describe("checkConflictOfInterest", () => {
+  it("returns warnings from direct party and client link matches", async () => {
+    mockParty.findMany.mockResolvedValue([
+      {
+        name: "Alpha Corp",
+        case: { id: "case-9", title: "Contract Dispute" }
+      }
+    ]);
+    mockClient.findMany.mockResolvedValue([
+      {
+        name: "Alpha Corp",
+        parties: [{ case: { id: "case-10", title: "Collections" } }]
+      }
+    ]);
+
+    const warnings = await checkConflictOfInterest("firm-1", "alpha", "123");
+
+    expect(warnings).toEqual([
+      {
+        name: "Alpha Corp",
+        conflictingCaseId: "case-9",
+        conflictingCaseTitle: "Contract Dispute"
+      },
+      {
+        name: "Alpha Corp",
+        conflictingCaseId: "case-10",
+        conflictingCaseTitle: "Collections"
+      }
+    ]);
+  });
+});
+
+describe("listCaseParties", () => {
+  it("returns paginated party rows", async () => {
+    mockParty.findMany.mockResolvedValue([
+      {
+        id: "party-1",
+        clientId: null,
+        name: "Opponent A",
+        role: "OPPONENT",
+        partyType: "OPPONENT"
+      }
+    ]);
+    mockParty.count.mockResolvedValue(1);
+
+    const result = await listCaseParties(actor, "case-1", { page: 1, limit: 10 });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.name).toBe("Opponent A");
+    expect(mockParty.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 10
+      })
+    );
+  });
+});
+
+describe("listCaseAssignments", () => {
+  it("returns active assignments by default", async () => {
+    mockAssignment.findMany.mockResolvedValue([
+      {
+        id: "a-1",
+        userId: "u-1",
+        roleOnCase: "LEAD",
+        assignedAt: now,
+        unassignedAt: null,
+        user: { fullName: "Lead Lawyer" }
+      }
+    ]);
+    mockAssignment.count.mockResolvedValue(1);
+
+    const result = await listCaseAssignments(actor, "case-1", {
+      page: 1,
+      limit: 10
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.userName).toBe("Lead Lawyer");
+    expect(mockAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ unassignedAt: null })
+      })
+    );
+  });
+});
+
+describe("court progression", () => {
+  it("lists courts with normalized DTO fields", async () => {
+    mockCourt.findMany.mockResolvedValue([
+      {
+        id: "court-1",
+        caseId: "case-1",
+        courtName: "Court A",
+        courtLevel: "FIRST",
+        circuit: null,
+        caseNumber: "123",
+        stageOrder: 0,
+        startedAt: now,
+        endedAt: null,
+        isActive: true,
+        notes: null,
+        createdAt: now,
+        updatedAt: now
+      }
+    ]);
+    mockCourt.count.mockResolvedValue(1);
+
+    const result = await listCaseCourts(actor, "case-1", { page: 1, limit: 5 });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.courtName).toBe("Court A");
+  });
+
+  it("auto-increments stage order when adding a court", async () => {
+    mockCourt.aggregate.mockResolvedValue({ _max: { stageOrder: 2 } });
+    mockCourt.create.mockResolvedValue({
+      id: "court-2",
+      caseId: "case-1",
+      courtName: "Appeal Court",
+      courtLevel: "APPEAL",
+      circuit: null,
+      caseNumber: null,
+      stageOrder: 3,
+      startedAt: now,
+      endedAt: null,
+      isActive: true,
+      notes: null,
+      createdAt: now,
+      updatedAt: now
+    });
+
+    const result = await addCaseCourt(
+      actor,
+      "case-1",
+      { courtName: "Appeal Court", courtLevel: "APPEAL" } as never,
+      audit
+    );
+
+    expect(result.stageOrder).toBe(3);
+    expect(mockCourt.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ stageOrder: 3 })
+      })
+    );
   });
 });

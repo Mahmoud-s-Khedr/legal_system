@@ -31,6 +31,23 @@ import {
   formatCurrency
 } from "./ui";
 
+export function canRecordPayment(status: InvoiceStatus) {
+  return (
+    status === InvoiceStatus.ISSUED ||
+    status === InvoiceStatus.PARTIALLY_PAID
+  );
+}
+
+export function getRemainingInvoiceAmount(invoice: InvoiceDto) {
+  const total = Number(invoice.totalAmount ?? 0);
+  const paid =
+    invoice.payments?.reduce(
+      (sum, payment) => sum + Number(payment.amount ?? 0),
+      0
+    ) ?? 0;
+  return Math.max(total - paid, 0).toFixed(2);
+}
+
 export function InvoicesPage() {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
@@ -65,15 +82,8 @@ export function InvoicesPage() {
   });
 
   function openPaymentForm(invoice: InvoiceDto) {
-    const total = Number(invoice.totalAmount ?? 0);
-    const paid =
-      invoice.payments?.reduce(
-        (sum, payment) => sum + Number(payment.amount ?? 0),
-        0
-      ) ?? 0;
-    const remaining = Math.max(total - paid, 0).toFixed(2);
     setPaymentRowId(invoice.id);
-    setPaymentAmount(remaining);
+    setPaymentAmount(getRemainingInvoiceAmount(invoice));
     setPaymentMethod("CASH");
     setPaymentRef("");
     setPaymentError(null);
@@ -190,8 +200,7 @@ export function InvoicesPage() {
               ]}
               actions={(item) => (
                 <>
-                  {(item.status === InvoiceStatus.ISSUED ||
-                    item.status === InvoiceStatus.PARTIALLY_PAID) && (
+                  {canRecordPayment(item.status) && (
                     <button
                       className="inline-flex rounded-xl border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
                       onClick={() => openPaymentForm(item)}
@@ -268,9 +277,7 @@ export function InvoicesPage() {
                         </TableCell>
                         <TableCell align="end">
                           <div className="flex items-center justify-end gap-2">
-                            {(invoice.status === InvoiceStatus.ISSUED ||
-                              invoice.status ===
-                                InvoiceStatus.PARTIALLY_PAID) && (
+                            {canRecordPayment(invoice.status) && (
                               <button
                                 className="inline-flex rounded-xl border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
                                 onClick={() => openPaymentForm(invoice)}
