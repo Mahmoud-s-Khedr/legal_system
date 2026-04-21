@@ -2,6 +2,7 @@ import { Language, type Client, type Prisma } from "@prisma/client";
 import type { ClientType, CreateClientDto, UpdateClientDto } from "@elms/shared";
 import { prisma } from "../../db/prisma.js";
 import type { RepositoryTx } from "../types.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 
 const clientInclude = {
   contacts: {
@@ -56,15 +57,16 @@ export async function listFirmClients(
   query: ClientListQuery
 ): Promise<{ total: number; items: ClientRecord[] }> {
   const q = query.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const where: Prisma.ClientWhereInput = {
     firmId,
     deletedAt: null,
-    ...(q
+    ...(searchCandidates.length > 0
       ? {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { email: { contains: q, mode: "insensitive" } }
-          ]
+          OR: searchCandidates.flatMap((candidate) => [
+            { name: { contains: candidate, mode: "insensitive" as const } },
+            { email: { contains: candidate, mode: "insensitive" as const } }
+          ])
         }
       : {}),
     ...(query.type ? { type: query.type as ClientType } : {})

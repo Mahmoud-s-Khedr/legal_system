@@ -19,6 +19,7 @@ import { sendSms } from "./channels/sms.js";
 import { sendDesktopOs } from "./channels/desktopOs.js";
 import { hasEditionFeature } from "../editions/editionPolicy.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
@@ -190,6 +191,7 @@ export async function listNotifications(
   const page = query.page ?? 1;
   const limit = query.limit ?? 50;
   const q = query.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(query.sortBy, ["createdAt", "type", "title", "isRead"] as const, "createdAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
   const where = {
@@ -198,12 +200,12 @@ export async function listNotifications(
     ...(query.type ? { type: query.type as PrismaType } : {}),
     ...(query.isRead === "true" ? { isRead: true } : {}),
     ...(query.isRead === "false" ? { isRead: false } : {}),
-    ...(q
+    ...(searchCandidates.length > 0
       ? {
-          OR: [
-            { title: { contains: q, mode: "insensitive" as const } },
-            { body: { contains: q, mode: "insensitive" as const } }
-          ]
+          OR: searchCandidates.flatMap((candidate) => [
+            { title: { contains: candidate, mode: "insensitive" as const } },
+            { body: { contains: candidate, mode: "insensitive" as const } }
+          ])
         }
       : {})
   };

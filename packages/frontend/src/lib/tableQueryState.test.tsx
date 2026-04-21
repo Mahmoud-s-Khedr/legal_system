@@ -113,4 +113,28 @@ describe("useTableQueryState", () => {
     expect(latestTable?.state.limit).toBe(50);
     expect(latestTable?.state.page).toBe(1);
   });
+
+  it("includes one-character query in API query string and trims whitespace-only query", () => {
+    mockedSearch = {
+      q: "a",
+      sortBy: "createdAt",
+      sortDir: "desc",
+      page: 1,
+      limit: 20
+    };
+    renderProbe();
+
+    expect(latestTable?.toApiQueryString()).toContain("q=a");
+
+    act(() => {
+      latestTable?.setQ("   ");
+    });
+
+    setMockedSearchFromUrlWithNumericPageAndLimit();
+    act(() => {
+      root?.render(<Probe />);
+    });
+
+    expect(latestTable?.toApiQueryString()).not.toContain("q=");
+  });
 });

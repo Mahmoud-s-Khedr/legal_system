@@ -21,6 +21,7 @@ import type { AppEnv } from "../../config/env.js";
 import type { FastifyReply } from "fastify";
 import { hasEditionFeature } from "../editions/editionPolicy.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { appError } from "../../errors/appError.js";
 
 export const ALLOWED_MIME_TYPES = [
@@ -115,6 +116,7 @@ export async function listDocuments(
 ): Promise<DocumentListResponseDto> {
   const { page, limit } = pagination;
   const q = filters.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(
     filters.sortBy,
     ["createdAt", "updatedAt", "title", "fileName", "type", "extractionStatus"] as const,
@@ -129,13 +131,23 @@ export async function listDocuments(
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.clientId ? { clientId: filters.clientId } : {}),
       ...(filters.type ? { type: filters.type } : {}),
-      ...(q
+      ...(searchCandidates.length > 0
         ? {
-            OR: [
-              { title: { contains: q, mode: "insensitive" as const } },
-              { fileName: { contains: q, mode: "insensitive" as const } },
-              { mimeType: { contains: q, mode: "insensitive" as const } }
-            ]
+            OR: searchCandidates.flatMap((candidate) => [
+              { title: { contains: candidate, mode: "insensitive" as const } },
+              {
+                fileName: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              },
+              {
+                mimeType: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              }
+            ])
           }
         : {})
     };

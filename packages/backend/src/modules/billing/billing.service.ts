@@ -18,6 +18,7 @@ import type { InvoiceStatus as PrismaInvoiceStatus, Prisma } from "@prisma/clien
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { Decimal } from "@prisma/client/runtime/library";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
 import {
   createExpense as createExpenseRecord,
@@ -197,6 +198,7 @@ export async function listInvoices(
 ): Promise<InvoiceListResponseDto> {
   const { page, limit } = pagination;
   const q = filters.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const fromDate = filters.from ? new Date(filters.from) : null;
   const toDate = filters.to ? new Date(filters.to) : null;
   const sortBy = normalizeSort(
@@ -210,14 +212,27 @@ export async function listInvoices(
     ...(filters.caseId ? { caseId: filters.caseId } : {}),
     ...(filters.clientId ? { clientId: filters.clientId } : {}),
     ...(filters.status ? { status: filters.status as PrismaInvoiceStatus } : {}),
-    ...(q
+    ...(searchCandidates.length > 0
       ? {
-          OR: [
-            { invoiceNumber: { contains: q, mode: "insensitive" as const } },
-            { feeType: { contains: q, mode: "insensitive" as const } },
-            { client: { name: { contains: q, mode: "insensitive" as const } } },
-            { case: { title: { contains: q, mode: "insensitive" as const } } }
-          ]
+          OR: searchCandidates.flatMap((candidate) => [
+            {
+              invoiceNumber: {
+                contains: candidate,
+                mode: "insensitive" as const
+              }
+            },
+            { feeType: { contains: candidate, mode: "insensitive" as const } },
+            {
+              client: {
+                name: { contains: candidate, mode: "insensitive" as const }
+              }
+            },
+            {
+              case: {
+                title: { contains: candidate, mode: "insensitive" as const }
+              }
+            }
+          ])
         }
       : {}),
     ...(fromDate || toDate
@@ -424,19 +439,29 @@ export async function listExpenses(
 ): Promise<ExpenseListResponseDto> {
   const { page, limit } = pagination;
   const q = filters.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(filters.sortBy, ["createdAt", "updatedAt", "amount", "category"] as const, "createdAt");
   const sortDir = toPrismaSortOrder(filters.sortDir ?? "desc");
   const where: Prisma.ExpenseWhereInput = {
     firmId: actor.firmId,
     ...(filters.caseId ? { caseId: filters.caseId } : {}),
     ...(filters.category ? { category: filters.category } : {}),
-    ...(q
+    ...(searchCandidates.length > 0
       ? {
-          OR: [
-            { category: { contains: q, mode: "insensitive" as const } },
-            { description: { contains: q, mode: "insensitive" as const } },
-            { case: { title: { contains: q, mode: "insensitive" as const } } }
-          ]
+          OR: searchCandidates.flatMap((candidate) => [
+            { category: { contains: candidate, mode: "insensitive" as const } },
+            {
+              description: {
+                contains: candidate,
+                mode: "insensitive" as const
+              }
+            },
+            {
+              case: {
+                title: { contains: candidate, mode: "insensitive" as const }
+              }
+            }
+          ])
         }
       : {})
   };

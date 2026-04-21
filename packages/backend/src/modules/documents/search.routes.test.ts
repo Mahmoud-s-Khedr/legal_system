@@ -67,4 +67,35 @@ describe("registerSearchRoutes", () => {
     });
     expect(result).toEqual({ items: [], total: 0, query: "alpha" });
   });
+
+  it("accepts one-character query text", async () => {
+    const app = {
+      get: vi.fn()
+    };
+
+    await registerSearchRoutes(app as never);
+
+    const [, , handler] = app.get.mock.calls[0] as [
+      string,
+      { preHandler: unknown[] },
+      (request: unknown) => Promise<unknown>
+    ];
+
+    const actor = makeSessionUser({ permissions: ["documents:read"] });
+    searchDocuments.mockResolvedValueOnce({ items: [], total: 0, query: "ا" });
+
+    await handler({
+      query: {
+        q: "ا",
+        page: "1",
+        pageSize: "5"
+      },
+      sessionUser: actor
+    });
+
+    expect(searchDocuments).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({ q: "ا" })
+    );
+  });
 });

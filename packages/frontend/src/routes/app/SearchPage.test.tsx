@@ -143,4 +143,13 @@ describe("SearchPage", () => {
     const firstCall = mockUseQuery.mock.calls[0]?.[0] as { enabled?: boolean };
     expect(firstCall.enabled).toBe(false);
   });
+
+  it("enables query execution for one-character URL query", () => {
+    mockUseSearch.mockReturnValue({ q: "a" });
+
+    render();
+
+    const firstCall = mockUseQuery.mock.calls[0]?.[0] as { enabled?: boolean };
+    expect(firstCall.enabled).toBe(true);
+  });
 });

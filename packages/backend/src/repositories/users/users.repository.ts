@@ -2,6 +2,7 @@ import { Language, type Prisma, UserStatus, type User } from "@prisma/client";
 import type { CreateLocalUserDto, UpdateUserDto } from "@elms/shared";
 import { userWithRoleInclude, type UserWithRole } from "../../modules/auth/sessionUser.js";
 import type { RepositoryTx } from "../types.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 
 export type UserListQuery = {
   q?: string;
@@ -19,17 +20,18 @@ export async function listFirmUsers(
   query: UserListQuery
 ): Promise<{ total: number; items: UserWithRole[] }> {
   const q = query.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const where: Prisma.UserWhereInput = {
     firmId,
     deletedAt: null,
     ...(query.status ? { status: query.status as UserStatus } : {}),
     ...(query.roleId ? { roleId: query.roleId } : {}),
-    ...(q
+    ...(searchCandidates.length > 0
       ? {
-          OR: [
-            { fullName: { contains: q, mode: "insensitive" } },
-            { email: { contains: q, mode: "insensitive" } }
-          ]
+          OR: searchCandidates.flatMap((candidate) => [
+            { fullName: { contains: candidate, mode: "insensitive" as const } },
+            { email: { contains: candidate, mode: "insensitive" as const } }
+          ])
         }
       : {})
   };

@@ -115,6 +115,29 @@ describe("registerCaseRoutes", () => {
     expect(result).toEqual({ items: [], total: 0, page: 3, pageSize: 7 });
   });
 
+  it("forwards one-character query for case search", async () => {
+    const app = createApp();
+    const actor = makeSessionUser({ permissions: ["cases:read"] });
+    listCases.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+    parsePaginationQuery.mockReturnValueOnce({ page: 1, limit: 20 });
+
+    await registerCaseRoutes(app as never);
+
+    const listCall = app.get.mock.calls.find((entry) => entry[0] === "/api/cases") as
+      | [string, { preHandler: unknown[] }, (request: unknown) => Promise<unknown>]
+      | undefined;
+
+    await listCall![2]({
+      query: { q: "ا", page: "1", limit: "20" },
+      sessionUser: actor
+    });
+
+    expect(listCases).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({ q: "ا" })
+    );
+  });
+
   it("rejects invalid party payloads before calling service", async () => {
     const app = createApp();
     await registerCaseRoutes(app as never);

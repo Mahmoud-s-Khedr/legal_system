@@ -11,6 +11,7 @@ import type {
 import { Prisma, SessionOutcome as PrismaSessionOutcome } from "@prisma/client";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { appError } from "../../errors/appError.js";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
 import {
@@ -84,6 +85,7 @@ export async function listHearings(
 ): Promise<HearingListResponseDto> {
   const { page, limit } = pagination;
   const q = filters.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(filters.sortBy, ["sessionDatetime", "createdAt", "outcome"] as const, "sessionDatetime");
   const sortDir = toPrismaSortOrder(filters.sortDir ?? "asc");
 
@@ -96,16 +98,18 @@ export async function listHearings(
       ...buildSessionDatetimeFilter(filters)
     };
 
-    if (q) {
-      const matchedUsers = await findFirmUsersByName(tx, actor.firmId, q);
-      const qUpper = q.toUpperCase();
+    if (searchCandidates.length > 0) {
+      const matchedUsers = await findFirmUsersByName(tx, actor.firmId, q ?? "");
+      const qUpper = (q ?? "").toUpperCase();
       const maybeOutcome =
         (Object.values(PrismaSessionOutcome) as string[]).includes(qUpper)
           ? (qUpper as PrismaSessionOutcome)
           : null;
       where.OR = [
-        { case: { title: { contains: q, mode: "insensitive" } } },
-        { notes: { contains: q, mode: "insensitive" } },
+        ...searchCandidates.flatMap((candidate) => [
+          { case: { title: { contains: candidate, mode: "insensitive" as const } } },
+          { notes: { contains: candidate, mode: "insensitive" as const } }
+        ]),
         ...(matchedUsers.length > 0 ? [{ assignedLawyerId: { in: matchedUsers.map((user) => user.id) } }] : []),
         ...(maybeOutcome ? [{ outcome: maybeOutcome }] : [])
       ];

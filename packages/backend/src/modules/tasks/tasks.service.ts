@@ -11,6 +11,7 @@ import type {
 import { Prisma, TaskStatus } from "@prisma/client";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
 import {
   createFirmTask,
@@ -59,6 +60,7 @@ export async function listTasks(
 ): Promise<TaskListResponseDto> {
   const { page, limit } = pagination;
   const q = filters.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(filters.sortBy, ["dueAt", "createdAt", "title", "priority", "status"] as const, "dueAt");
   const sortDir = toPrismaSortOrder(filters.sortDir ?? "asc");
 
@@ -85,14 +87,30 @@ export async function listTasks(
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.assignedToId ? { assignedToId: filters.assignedToId } : {}),
       ...(filters.status ? { status: filters.status as TaskStatus } : {}),
-      ...(q
+      ...(searchCandidates.length > 0
         ? {
-            OR: [
-              { title: { contains: q, mode: "insensitive" as const } },
-              { description: { contains: q, mode: "insensitive" as const } },
-              { case: { title: { contains: q, mode: "insensitive" as const } } },
-              { assignedTo: { fullName: { contains: q, mode: "insensitive" as const } } }
-            ]
+            OR: searchCandidates.flatMap((candidate) => [
+              { title: { contains: candidate, mode: "insensitive" as const } },
+              {
+                description: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              },
+              {
+                case: {
+                  title: { contains: candidate, mode: "insensitive" as const }
+                }
+              },
+              {
+                assignedTo: {
+                  fullName: {
+                    contains: candidate,
+                    mode: "insensitive" as const
+                  }
+                }
+              }
+            ])
           }
         : {}),
       ...(Object.keys(dueAtFilter).length > 0 ? { dueAt: dueAtFilter } : {}),

@@ -1,6 +1,7 @@
 import { InvitationStatus, type Prisma } from "@prisma/client";
 import type { CreateInvitationDto } from "@elms/shared";
 import type { RepositoryTx } from "../types.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 
 const INVITATION_INCLUDE = {
   role: true
@@ -25,15 +26,20 @@ export async function listFirmInvitations(
   query: InvitationListQuery
 ): Promise<{ total: number; items: InvitationRecord[] }> {
   const q = query.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const where = {
     firmId,
     ...(query.status ? { status: query.status as InvitationStatus } : {}),
-    ...(q
+    ...(searchCandidates.length > 0
       ? {
-          OR: [
-            { email: { contains: q, mode: "insensitive" as const } },
-            { role: { name: { contains: q, mode: "insensitive" as const } } }
-          ]
+          OR: searchCandidates.flatMap((candidate) => [
+            { email: { contains: candidate, mode: "insensitive" as const } },
+            {
+              role: {
+                name: { contains: candidate, mode: "insensitive" as const }
+              }
+            }
+          ])
         }
       : {})
   };

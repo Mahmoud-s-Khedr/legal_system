@@ -156,4 +156,26 @@ describe("CommandPalette", () => {
 
     expect(enabledDocCalls.some((call) => call.enabled === true)).toBe(true);
   });
+
+  it("enables document query for one-character input", () => {
+    const view = render(true);
+    const input = view.querySelector(
+      'input[type="search"]'
+    ) as HTMLInputElement;
+
+    act(() => {
+      setTextInputValue(input, "a");
+      vi.advanceTimersByTime(250);
+    });
+
+    const docCalls = mockUseQuery.mock.calls
+      .filter((call) => call[0]?.queryKey?.[0] === "palette-documents")
+      .map((call) => call[0] as { enabled?: boolean; queryKey?: string[] });
+
+    expect(
+      docCalls.some(
+        (call) => call.enabled === true && call.queryKey?.[1] === "a"
+      )
+    ).toBe(true);
+  });
 });

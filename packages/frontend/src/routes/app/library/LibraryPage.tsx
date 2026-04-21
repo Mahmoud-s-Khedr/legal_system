@@ -62,6 +62,7 @@ export function LibraryPage() {
   });
   const [page, setPage] = useState(1);
   const [searchQ, setSearchQ] = useState("");
+  const normalizedSearchQ = searchQ.trim();
 
   useEffect(() => {
     try {
@@ -82,11 +83,11 @@ export function LibraryPage() {
   });
 
   const documentsQuery = useQuery({
-    queryKey: ["library-documents", selectedCategoryId, page, searchQ],
+    queryKey: ["library-documents", selectedCategoryId, page, normalizedSearchQ],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "20" });
       if (selectedCategoryId) params.set("categoryId", selectedCategoryId);
-      if (searchQ) params.set("q", searchQ);
+      if (normalizedSearchQ) params.set("q", normalizedSearchQ);
       return apiFetch<DocumentsResponse>(
         `/api/library/documents?${params.toString()}`
       );

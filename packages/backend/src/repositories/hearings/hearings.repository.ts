@@ -1,5 +1,6 @@
 import { SessionOutcome as PrismaSessionOutcome, type CaseSession, type Prisma } from "@prisma/client";
 import type { RepositoryTx } from "../types.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 
 const hearingInclude = {
   case: true
@@ -85,11 +86,18 @@ export async function findFirmUsersByName(
   firmId: string,
   q: string
 ): Promise<Array<{ id: string }>> {
+  const searchCandidates = buildFuzzySearchCandidates(q);
+  if (searchCandidates.length === 0) {
+    return [];
+  }
+
   return tx.user.findMany({
     where: {
       firmId,
       deletedAt: null,
-      fullName: { contains: q, mode: "insensitive" }
+      OR: searchCandidates.map((candidate) => ({
+        fullName: { contains: candidate, mode: "insensitive" as const }
+      }))
     },
     select: { id: true }
   });

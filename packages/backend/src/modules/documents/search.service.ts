@@ -1,5 +1,6 @@
 import type { DocumentSearchResponseDto, DocumentSearchResultDto, SessionUser } from "@elms/shared";
 import { prisma } from "../../db/prisma.js";
+import { normalizeArabic } from "../../utils/arabic.js";
 
 interface SearchFilters {
   q: string;
@@ -29,7 +30,7 @@ export async function searchDocuments(
   filters: SearchFilters
 ): Promise<DocumentSearchResponseDto> {
   const { q, caseId, clientId, type, page = 1, pageSize = 20 } = filters;
-  const normalizedQuery = q.trim();
+  const normalizedQuery = normalizeArabic(q.trim());
   const offset = (page - 1) * pageSize;
 
   if (!normalizedQuery) {

@@ -2,6 +2,8 @@ import type { SessionUser } from "@elms/shared";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { Prisma } from "@prisma/client";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
+import { normalizeArabic } from "../../utils/arabic.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -221,6 +223,7 @@ export async function listDocuments(
   page = 1,
   limit = 20
 ): Promise<{ items: LibraryDocumentSummary[]; total: number }> {
+  const searchCandidates = buildFuzzySearchCandidates(filter.q);
   const where: Prisma.LibraryDocumentWhereInput = {
     deletedAt: null,
     OR: [{ scope: "SYSTEM" }, { firmId: actor.firmId }]
@@ -233,11 +236,11 @@ export async function listDocuments(
   if (filter.dateTo) {
     where.publishedAt = { ...(where.publishedAt as object ?? {}), lte: new Date(filter.dateTo) };
   }
-  if (filter.q) {
-    where.OR = [
-      { title: { contains: filter.q, mode: "insensitive" } },
-      { summary: { contains: filter.q, mode: "insensitive" } }
-    ];
+  if (searchCandidates.length > 0) {
+    where.OR = searchCandidates.flatMap((candidate) => [
+      { title: { contains: candidate, mode: "insensitive" as const } },
+      { summary: { contains: candidate, mode: "insensitive" as const } }
+    ]);
   }
 
   const [items, total] = await Promise.all([
@@ -604,6 +607,9 @@ export async function searchLibrary(
   filter: { type?: string; scope?: string; categoryId?: string } = {},
   limit = 20
 ): Promise<LibrarySearchResult[]> {
+  const normalizedQuery = normalizeArabic(query.trim());
+  if (!normalizedQuery) return [];
+
   // Use PostgreSQL full-text search via raw query for Arabic support
   const results = await prisma.$queryRaw<Array<{
     id: string; type: string; title: string;
@@ -623,7 +629,7 @@ export async function searchLibrary(
       la.body AS article_body,
       ts_rank(
         to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,'')),
-        websearch_to_tsquery('simple', ${query})
+        websearch_to_tsquery('simple', ${normalizedQuery})
       ) AS rank
     FROM "LibraryDocument" d
     LEFT JOIN "LegislationArticle" la ON la."documentId" = d.id
@@ -631,7 +637,7 @@ export async function searchLibrary(
       AND (d.scope = 'SYSTEM' OR d."firmId" = ${actor.firmId}::uuid)
       AND (
         to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,''))
-        @@ websearch_to_tsquery('simple', ${query})
+        @@ websearch_to_tsquery('simple', ${normalizedQuery})
       )
       ${filter.type ? Prisma.sql`AND d.type = ${filter.type}` : Prisma.empty}
       ${filter.scope ? Prisma.sql`AND d.scope = ${filter.scope}` : Prisma.empty}

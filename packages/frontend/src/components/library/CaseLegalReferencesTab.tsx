@@ -57,6 +57,7 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [notes, setNotes] = useState("");
+  const normalizedSearchQ = searchQ.trim();
 
   const refsQuery = useQuery({
     queryKey: ["case-legal-refs", caseId],
@@ -65,11 +66,11 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
   });
 
   const searchQuery = useQuery({
-    enabled: searchQ.length > 1,
-    queryKey: ["library-search-link", searchQ],
+    enabled: normalizedSearchQ.length > 0,
+    queryKey: ["library-search-link", normalizedSearchQ],
     queryFn: () =>
       apiFetch<{ results: SearchResult[] }>(
-        `/api/library/search?q=${encodeURIComponent(searchQ)}&limit=10`
+        `/api/library/search?q=${encodeURIComponent(normalizedSearchQ)}&limit=10`
       )
   });
 
@@ -243,7 +244,7 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
                 />
               </FieldWrap>
             </>
-          ) : searchQ.length > 1 ? (
+          ) : normalizedSearchQ.length > 0 ? (
             <p className="text-sm text-slate-500">{t("empty.noResults")}</p>
           ) : null}
 

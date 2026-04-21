@@ -24,6 +24,7 @@ import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
+import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { appError } from "../../errors/appError.js";
 
 function mapCourt(court: {
@@ -244,6 +245,7 @@ export async function listCases(
 ): Promise<CaseListResponseDto> {
   const { page, limit } = query;
   const q = query.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(query.sortBy, ["updatedAt", "createdAt", "title", "caseNumber", "status"] as const, "updatedAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
 
@@ -264,13 +266,23 @@ export async function listCases(
             }
           }
         : {}),
-      ...(q
+      ...(searchCandidates.length > 0
         ? {
-            OR: [
-              { title: { contains: q, mode: "insensitive" as const } },
-              { caseNumber: { contains: q, mode: "insensitive" as const } },
-              { internalReference: { contains: q, mode: "insensitive" as const } }
-            ]
+            OR: searchCandidates.flatMap((candidate) => [
+              { title: { contains: candidate, mode: "insensitive" as const } },
+              {
+                caseNumber: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              },
+              {
+                internalReference: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              }
+            ])
           }
         : {})
     };
@@ -781,6 +793,7 @@ export async function listCaseParties(
   }
 ) {
   const q = query.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(query.sortBy, ["name", "role", "partyType", "createdAt"] as const, "createdAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
 
@@ -793,12 +806,18 @@ export async function listCaseParties(
       caseId,
       ...(query.role ? { role: query.role } : {}),
       ...(query.partyType ? { partyType: query.partyType } : {}),
-      ...(q
+      ...(searchCandidates.length > 0
         ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { client: { name: { contains: q, mode: "insensitive" } } }
-            ]
+            OR: searchCandidates.flatMap((candidate) => [
+              {
+                name: { contains: candidate, mode: "insensitive" as const }
+              },
+              {
+                client: {
+                  name: { contains: candidate, mode: "insensitive" as const }
+                }
+              }
+            ])
           }
         : {})
     };
@@ -836,6 +855,7 @@ export async function listCaseAssignments(
   }
 ) {
   const q = query.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(query.sortBy, ["assignedAt", "unassignedAt", "roleOnCase", "userName"] as const, "assignedAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
 
@@ -848,7 +868,18 @@ export async function listCaseAssignments(
       caseId,
       ...(query.roleOnCase ? { roleOnCase: query.roleOnCase as PrismaCaseRoleOnCase } : {}),
       ...(query.active === "false" ? { unassignedAt: { not: null } } : { unassignedAt: null }),
-      ...(q ? { user: { fullName: { contains: q, mode: "insensitive" } } } : {})
+      ...(searchCandidates.length > 0
+        ? {
+            OR: searchCandidates.map((candidate) => ({
+              user: {
+                fullName: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              }
+            }))
+          }
+        : {})
     };
     const orderBy: Prisma.CaseAssignmentOrderByWithRelationInput =
       sortBy === "userName" ? { user: { fullName: sortDir } } : { [sortBy]: sortDir };
@@ -896,6 +927,7 @@ export async function listCaseCourts(
   }
 ) {
   const q = query.q?.trim();
+  const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(
     query.sortBy,
     ["stageOrder", "courtName", "courtLevel", "createdAt", "startedAt", "isActive"] as const,
@@ -914,14 +946,31 @@ export async function listCaseCourts(
       ...(query.courtLevel ? { courtLevel: query.courtLevel } : {}),
       ...(query.isActive === "true" ? { isActive: true } : {}),
       ...(query.isActive === "false" ? { isActive: false } : {}),
-      ...(q
+      ...(searchCandidates.length > 0
         ? {
-            OR: [
-              { courtName: { contains: q, mode: "insensitive" } },
-              { caseNumber: { contains: q, mode: "insensitive" } },
-              { circuit: { contains: q, mode: "insensitive" } },
-              { notes: { contains: q, mode: "insensitive" } }
-            ]
+            OR: searchCandidates.flatMap((candidate) => [
+              {
+                courtName: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              },
+              {
+                caseNumber: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              },
+              {
+                circuit: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
+              },
+              {
+                notes: { contains: candidate, mode: "insensitive" as const }
+              }
+            ])
           }
         : {})
     };

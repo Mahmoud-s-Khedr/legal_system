@@ -242,10 +242,11 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request) => {
       const q = request.query as Record<string, string>;
-      if (!q.q) return { results: [] };
+      const normalizedQuery = q.q?.trim() ?? "";
+      if (!normalizedQuery) return { results: [] };
       const results = await searchLibrary(
         request.sessionUser!,
-        q.q,
+        normalizedQuery,
         {
           type: q.type && Object.values(LibraryDocumentType).includes(q.type as LibraryDocumentType) ? q.type : undefined,
           scope: q.scope,

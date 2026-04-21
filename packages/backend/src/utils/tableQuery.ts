@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stringMatchesFuzzyQuery } from "./fuzzySearch.js";
 
 export const sortDirSchema = z.enum(["asc", "desc"]);
 export type SortDir = z.infer<typeof sortDirSchema>;
@@ -90,11 +91,13 @@ export function applyArrayTableQuery<T extends Record<string, unknown>>(
     limit: number;
   }
 ) {
-  const q = options.q?.trim().toLowerCase();
+  const q = options.q?.trim();
 
   const filtered = q
     ? rows.filter((row) =>
-        options.searchFields.some((field) => String(row[field] ?? "").toLowerCase().includes(q))
+        options.searchFields.some((field) =>
+          stringMatchesFuzzyQuery(String(row[field] ?? ""), q)
+        )
       )
     : rows;
 
