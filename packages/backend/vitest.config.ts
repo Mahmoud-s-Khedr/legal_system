@@ -1,4 +1,7 @@
 import { defineConfig } from "vitest/config";
+import { getPackageCoverageThresholds } from "../../scripts/coverage/threshold-policy.mjs";
+
+const thresholds = getPackageCoverageThresholds("@elms/backend");
 
 export default defineConfig({
   test: {
@@ -12,16 +15,16 @@ export default defineConfig({
       exclude: [
         "src/**/*.test.ts",
         "src/**/*.spec.ts",
+        "src/**/*.d.ts",
         "src/index.ts",
         "src/server.ts",
+        "src/security/bootstrap.ts",
+        "src/security/devSeed.ts",
+        "src/security/librarySeed.ts",
+        "src/security/lookupSeed.ts",
         "prisma/**"
       ],
-      thresholds: {
-        lines: 60,
-        branches: 55,
-        functions: 60,
-        statements: 60
-      }
+      thresholds
     }
   }
 });

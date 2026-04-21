@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -55,25 +57,22 @@ jobs:
 
       - name: Validate
         run: pnpm validate
+        env:
+          COVERAGE_DIFF_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          COVERAGE_DIFF_HEAD_SHA: ${{ github.sha }}
 
       - name: Upload Coverage Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
           path: |
+            packages/backend/coverage/**
+            packages/frontend/coverage/**
             packages/shared/coverage/**
           if-no-files-found: warn
 
       - name: Coverage Summary
-        run: |
-          for summary in \
-            packages/shared/coverage/coverage-summary.json
-          do
-            if [ -f "$summary" ]; then
-              echo "=== $summary ==="
-              cat "$summary"
-            fi
-          done
+        run: pnpm coverage:summary
 
       - name: Compile
         run: pnpm compile

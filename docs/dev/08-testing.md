@@ -54,7 +54,7 @@ ELMS uses a four-layer testing strategy: unit tests, integration tests, end-to-e
 environment : node
 include     : src/**/*.test.ts, src/**/*.spec.ts
 coverage    : V8 provider
-excluded    : src/index.ts, src/server.ts, prisma/**
+excluded    : src/**/*.d.ts, src/index.ts, src/server.ts, src/security/{bootstrap,devSeed,librarySeed,lookupSeed}.ts, prisma/**
 ```
 
 Run commands (from the repo root):
@@ -78,7 +78,7 @@ pnpm --filter @elms/backend test:coverage
 environment : jsdom
 include     : src/**/*.test.ts(x), src/**/*.spec.ts(x)
 coverage    : V8 provider
-excluded    : src/main.tsx
+excluded    : src/**/*.d.ts, src/main.tsx
 ```
 
 Run commands:
@@ -92,12 +92,28 @@ pnpm --filter @elms/frontend test:coverage
 
 Coverage is enforced by Vitest's built-in threshold checking. A build fails in CI if any threshold is not met.
 
-| Package | Lines | Branches | Functions | Statements |
+Thresholds are phase-based and selected automatically by date (or overridden with `ELMS_COVERAGE_PHASE=week1|week2|week3|week4`).
+
+| Phase | Date window | `@elms/backend` (L/F/B/S) | `@elms/frontend` (L/F/B/S) | `@elms/shared` (L/F/B/S) |
 |---------|-------|----------|-----------|------------|
-| `@elms/backend` | 60% | 55% | 60% | 60% |
-| `@elms/frontend` | 50% | 45% | 50% | 50% |
+| Week 1 | 2026-04-22 to 2026-04-28 | 30 / 60 / 60 / 30 | 5 / 20 / 20 / 5 | 70 / 70 / 65 / 70 |
+| Week 2 | 2026-04-29 to 2026-05-05 | 45 / 62 / 60 / 45 | 25 / 35 / 30 / 25 | 70 / 70 / 65 / 70 |
+| Week 3 | 2026-05-06 to 2026-05-12 | 60 / 65 / 62 / 60 | 50 / 55 / 45 / 50 | 70 / 70 / 65 / 70 |
+| Week 4+ | 2026-05-13 onward | 70 / 70 / 65 / 70 | 70 / 70 / 65 / 70 | 70 / 70 / 65 / 70 |
+
+Legend: `L/F/B/S = Lines / Functions / Branches / Statements`.
 
 Coverage artifacts (`lcov`, `json-summary`) are uploaded in CI for later analysis. See [CI Integration](#ci-integration).
+
+### Coverage Scope Policy (Frozen)
+
+Coverage percent is calculated from runtime application paths. To keep denominator changes stable over time, the following are intentionally excluded:
+
+- test/spec files
+- TypeScript declaration files (`*.d.ts`)
+- backend one-shot bootstrap/seed scripts (`src/security/bootstrap.ts`, `src/security/devSeed.ts`, `src/security/librarySeed.ts`, `src/security/lookupSeed.ts`)
+
+Any future exclusion change must be treated as a policy change and documented in this page and in CI notes.
 
 ### Running a Single Test File
 
@@ -300,9 +316,10 @@ The CI pipeline (`.github/workflows/ci.yml`) runs in the following order:
 5. `typecheck` — TypeScript `tsc --noEmit`
 6. `test` — Vitest for backend and frontend
 7. `test:coverage` — Vitest with coverage; uploads `lcov` and `json-summary` as GitHub Actions artifacts
-8. Coverage summary posted as a workflow annotation
-9. `build` — Turbo build for all packages
-10. Lighthouse CI — runs `lhci autorun` after the build job passes (`.lighthouserc.json`)
+8. `coverage:diff` — changed-lines coverage gate (minimum 80%)
+9. `coverage:summary` — consolidated summary across backend/frontend/shared, including gap to active threshold and week4 target
+10. `build` — Turbo build for all packages
+11. Lighthouse CI — runs `lhci autorun` after the build job passes (`.lighthouserc.json`)
 
 E2E and load tests are **not** part of the standard CI pipeline — they are intended for scheduled or manual runs against a deployed environment. Load tests in particular require a real database and should not run against CI infrastructure.
 

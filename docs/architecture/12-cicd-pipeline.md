@@ -62,9 +62,9 @@ Runs on `ubuntu-latest`. Every step must pass for the job to succeed.
 | Lint | `pnpm lint` | ESLint across all packages |
 | Typecheck | `pnpm typecheck` | `tsc --noEmit` across monorepo |
 | Test | `pnpm test` | Unit + integration tests |
-| Test Coverage | `pnpm test:coverage` | Coverage report generation |
+| Test Coverage | `pnpm test:coverage` | Coverage report generation plus consolidated package summary with gap-to-threshold and gap-to-week4 target |
 | Upload coverage | `actions/upload-artifact@v4` | Retain coverage reports for review |
-| Coverage Summary | `cat coverage-summary.json` | Print summary to job log |
+| Coverage Summary | `pnpm coverage:summary` | Print consolidated package + aggregate summary (milestone visibility in CI logs) |
 | Build | `pnpm build` | Compile all packages (backend, frontend, shared) |
 
 Coverage artifacts are uploaded with the name `coverage-reports` and include backend, frontend, and shared package coverage directories. They are retained for the default GitHub Actions retention period. The upload step uses `if-no-files-found: warn` so a missing coverage output does not fail the pipeline.
@@ -276,4 +276,3 @@ Typical cloud deployment steps performed by this script:
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-
