@@ -105,6 +105,18 @@ Legend: `L/F/B/S = Lines / Functions / Branches / Statements`.
 
 Coverage artifacts (`lcov`, `json-summary`) are uploaded in CI for later analysis. See [CI Integration](#ci-integration).
 
+Diff coverage is also enforced at `85%` for changed executable lines:
+
+```bash
+pnpm coverage:diff
+```
+
+To inspect the highest-impact uncovered files from generated summaries:
+
+```bash
+pnpm coverage:hotspots
+```
+
 ### Coverage Scope Policy (Frozen)
 
 Coverage percent is calculated from runtime application paths. To keep denominator changes stable over time, the following are intentionally excluded:

@@ -51,7 +51,7 @@ import { DocumentUploadForm } from "../../components/documents/DocumentUploadFor
 import { CaseBillingTab } from "../../components/billing/CaseBillingTab";
 import { CaseLegalReferencesTab } from "../../components/library/CaseLegalReferencesTab";
 
-const caseTabs = [
+export const caseTabs = [
   "overview",
   "courts",
   "parties",
@@ -64,7 +64,7 @@ const caseTabs = [
 ] as const;
 type CaseTab = (typeof caseTabs)[number];
 
-const EMPTY_COURT: CreateCaseCourtDto = {
+export const EMPTY_COURT: CreateCaseCourtDto = {
   courtName: "",
   courtLevel: "",
   circuit: "",
@@ -72,6 +72,10 @@ const EMPTY_COURT: CreateCaseCourtDto = {
   startedAt: "",
   notes: ""
 };
+
+export function pickActiveCourt(courts: CaseCourtDto[]) {
+  return courts.find((court) => court.isActive) ?? courts[0] ?? null;
+}
 
 export function CaseDetailPage() {
   const { t } = useTranslation("app");
@@ -259,8 +263,7 @@ export function CaseDetailPage() {
     );
   }
 
-  const activeCourt =
-    caseItem.courts.find((c) => c.isActive) ?? caseItem.courts[0];
+  const activeCourt = pickActiveCourt(caseItem.courts);
 
   const clientDisplayName = clientQuery.data
     ? clientQuery.data.name

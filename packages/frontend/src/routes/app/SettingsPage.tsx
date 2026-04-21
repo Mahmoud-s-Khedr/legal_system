@@ -45,6 +45,60 @@ import {
   formatDate
 } from "./ui";
 
+export function getSelectableEditionKeys() {
+  return [
+    EditionKey.SOLO_OFFLINE,
+    EditionKey.SOLO_ONLINE,
+    EditionKey.LOCAL_FIRM_OFFLINE,
+    EditionKey.LOCAL_FIRM_ONLINE
+  ];
+}
+
+export function getTrialDaysRemaining(
+  trialEnabled: boolean,
+  trialEndsAt: string | null | undefined,
+  now: Date = new Date()
+) {
+  if (!trialEnabled || !trialEndsAt) {
+    return null;
+  }
+
+  const trialEndsAtDate = new Date(trialEndsAt);
+  if (Number.isNaN(trialEndsAtDate.getTime())) {
+    return null;
+  }
+
+  const millisPerDay = 24 * 60 * 60 * 1000;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const trialEndDay = new Date(
+    trialEndsAtDate.getFullYear(),
+    trialEndsAtDate.getMonth(),
+    trialEndsAtDate.getDate()
+  );
+
+  return Math.max(
+    0,
+    Math.ceil((trialEndDay.getTime() - startOfToday.getTime()) / millisPerDay)
+  );
+}
+
+export function isDesktopBackupPolicyValid(policy: DesktopBackupPolicy) {
+  return (
+    validateBackupTimeLocal(policy.timeLocal) &&
+    policy.retentionCount >= 1 &&
+    policy.retentionCount <= 365 &&
+    (policy.frequency !== "weekly" || policy.weeklyDay !== null)
+  );
+}
+
+export function groupPermissionsByResource(permissions: string[]) {
+  return permissions.reduce<Record<string, string[]>>((acc, perm) => {
+    const resource = perm.split(":")[0] ?? perm;
+    (acc[resource] ??= []).push(perm);
+    return acc;
+  }, {});
+}
+
 export function SettingsPage() {
   const { t } = useTranslation("app");
   const isDesktopShell = isDesktopDownloadsEnabled();
@@ -257,47 +311,21 @@ export function SettingsPage() {
 
   const firm = firmQuery.data.firm;
   const canSelfServeLicense = firm.editionKey !== EditionKey.ENTERPRISE;
-  const selectableEditions = [
-    EditionKey.SOLO_OFFLINE,
-    EditionKey.SOLO_ONLINE,
-    EditionKey.LOCAL_FIRM_OFFLINE,
-    EditionKey.LOCAL_FIRM_ONLINE
-  ];
-  const trialEndsAtDate = firm.trialEndsAt ? new Date(firm.trialEndsAt) : null;
-  const hasValidTrialEndDate = Boolean(
-    trialEndsAtDate && !Number.isNaN(trialEndsAtDate.getTime())
+  const selectableEditions = getSelectableEditionKeys();
+  const trialDaysRemaining = getTrialDaysRemaining(
+    firm.trialEnabled,
+    firm.trialEndsAt
   );
   const trialCountdownText = (() => {
-    if (!firm.trialEnabled || !hasValidTrialEndDate || !trialEndsAtDate) {
+    if (trialDaysRemaining === null || !firm.trialEndsAt) {
       return null;
     }
-    const millisPerDay = 24 * 60 * 60 * 1000;
-    const now = new Date();
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
-    const trialEndDay = new Date(
-      trialEndsAtDate.getFullYear(),
-      trialEndsAtDate.getMonth(),
-      trialEndsAtDate.getDate()
-    );
-    const daysRemaining = Math.max(
-      0,
-      Math.ceil((trialEndDay.getTime() - startOfToday.getTime()) / millisPerDay)
-    );
     return t("settings.trialActiveWithCountdown", {
-      count: daysRemaining,
+      count: trialDaysRemaining,
       endDate: formatDate(firm.trialEndsAt)
     });
   })();
-  const isBackupPolicyValid =
-    validateBackupTimeLocal(backupPolicyForm.timeLocal) &&
-    backupPolicyForm.retentionCount >= 1 &&
-    backupPolicyForm.retentionCount <= 365 &&
-    (backupPolicyForm.frequency !== "weekly" ||
-      backupPolicyForm.weeklyDay !== null);
+  const isBackupPolicyValid = isDesktopBackupPolicyValid(backupPolicyForm);
   const canSubmitRestore = canSubmitRestoreAcknowledgement(
     restoreCheckOne,
     restoreCheckTwo
@@ -362,11 +390,7 @@ export function SettingsPage() {
         >
           <div className="space-y-4">
             {Object.entries(
-              user.permissions.reduce<Record<string, string[]>>((acc, perm) => {
-                const resource = perm.split(":")[0] ?? perm;
-                (acc[resource] ??= []).push(perm);
-                return acc;
-              }, {})
+              groupPermissionsByResource(user.permissions)
             ).map(([resource, perms]) => (
               <div key={resource}>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide rtl:tracking-normal text-slate-500">

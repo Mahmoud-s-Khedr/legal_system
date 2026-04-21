@@ -88,7 +88,7 @@ const DAY_NAMES_START_SUNDAY = [
   "Sat"
 ];
 
-function buildIsoForDroppedDate(
+export function buildIsoForDroppedDate(
   originalIso: string,
   targetDate: Date,
   lockToHour = false
@@ -204,7 +204,7 @@ function DroppableSlot({
   );
 }
 
-function eventTypeLabel(
+export function eventTypeLabel(
   sourceType: CalendarEvent["sourceType"],
   t: (key: string) => string
 ) {
@@ -249,12 +249,12 @@ function eventLink(event: CalendarEvent) {
   );
 }
 
-function nowIndicatorOffsetPx() {
+export function nowIndicatorOffsetPx() {
   const now = new Date();
   return (now.getHours() + now.getMinutes() / 60) * SLOT_HEIGHT;
 }
 
-function normalizeCreateTask(form: CreateTaskDto) {
+export function normalizeCreateTask(form: CreateTaskDto) {
   return {
     ...form,
     caseId: form.caseId || null,
@@ -263,7 +263,7 @@ function normalizeCreateTask(form: CreateTaskDto) {
   };
 }
 
-function normalizeCreateHearing(form: CreateHearingDto) {
+export function normalizeCreateHearing(form: CreateHearingDto) {
   return {
     ...form,
     assignedLawyerId: form.assignedLawyerId || null,

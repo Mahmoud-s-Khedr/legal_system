@@ -1,8 +1,14 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CaseRoleOnCase, TaskPriority } from "@elms/shared";
-import { isPartyPristine, isQuickIntakeDirty } from "./CaseQuickIntakePage";
+import { CaseRoleOnCase, ClientType, TaskPriority } from "@elms/shared";
+import {
+  isIdentityType,
+  isPartyPristine,
+  isQuickIntakeDirty,
+  normalizeClientPayload,
+  toNullable
+} from "./CaseQuickIntakePage";
 
 function baseState(): Parameters<typeof isQuickIntakeDirty>[0] {
   return {
@@ -73,6 +79,37 @@ function baseState(): Parameters<typeof isQuickIntakeDirty>[0] {
 }
 
 describe("quick intake dirty state", () => {
+  it("normalizes nullable text values", () => {
+    expect(toNullable("   ")).toBeNull();
+    expect(toNullable("  value  ")).toBe("value");
+  });
+
+  it("detects identity client types and normalizes payload by type", () => {
+    expect(isIdentityType(ClientType.INDIVIDUAL)).toBe(true);
+    expect(isIdentityType(ClientType.GOVERNMENT)).toBe(true);
+    expect(isIdentityType(ClientType.COMPANY)).toBe(false);
+
+    expect(
+      normalizeClientPayload({
+        name: "  ACME  ",
+        type: ClientType.COMPANY,
+        phone: " 010 ",
+        email: "  ",
+        governorate: " Cairo ",
+        preferredLanguage: "ar",
+        nationalId: " 123 ",
+        commercialRegister: " 999 ",
+        taxNumber: " 888 ",
+        contacts: []
+      })
+    ).toMatchObject({
+      name: "ACME",
+      nationalId: null,
+      commercialRegister: "999",
+      taxNumber: "888"
+    });
+  });
+
   it("treats default party row as pristine", () => {
     const party = baseState().parties[0];
     expect(isPartyPristine(party)).toBe(true);

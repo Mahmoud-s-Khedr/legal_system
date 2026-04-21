@@ -74,6 +74,9 @@ jobs:
       - name: Coverage Summary
         run: pnpm coverage:summary
 
+      - name: Coverage Hotspots
+        run: pnpm coverage:hotspots
+
       - name: Compile
         run: pnpm compile
 

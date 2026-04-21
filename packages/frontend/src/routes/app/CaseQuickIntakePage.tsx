@@ -113,16 +113,16 @@ function makeId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function toNullable(value: string | null | undefined) {
+export function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
 }
 
-function isIdentityType(type: ClientType | "") {
+export function isIdentityType(type: ClientType | "") {
   return type === ClientType.INDIVIDUAL || type === ClientType.GOVERNMENT;
 }
 
-function normalizeClientPayload(form: ClientFormState): CreateClientDto {
+export function normalizeClientPayload(form: ClientFormState): CreateClientDto {
   return {
     name: form.name.trim(),
     type: form.type as ClientType,
