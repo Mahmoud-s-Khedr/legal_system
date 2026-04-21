@@ -9,7 +9,7 @@
  * Legacy mode (--legacy-json): generates the historical JSON license file.
  *
  * Usage:
- *   tsx scripts/generate-license.ts --firm-id "uuid" --edition-key solo_offline --expires-at 2027-03-20
+ *   node scripts/generate-license.ts --firm-id "uuid" --edition-key solo_offline --expires-at 2127-03-20
  *     [--private-key apps/desktop/src-tauri/keys/private.pem] \
  *     [--out activation.key]
  *
