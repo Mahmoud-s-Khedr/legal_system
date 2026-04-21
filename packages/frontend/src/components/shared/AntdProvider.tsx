@@ -29,7 +29,7 @@ export function AntdProvider({ children }: PropsWithChildren) {
           colorBgContainer: "#ffffff",
           borderRadius: 12,
           borderRadiusLG: 16,
-          fontFamily: "\"Cairo\", system-ui, sans-serif",
+          fontFamily: '"Cairo", system-ui, sans-serif',
           controlHeight: 48
         },
         components: {

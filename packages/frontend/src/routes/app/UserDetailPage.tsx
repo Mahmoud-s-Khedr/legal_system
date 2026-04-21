@@ -14,7 +14,14 @@ import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import {
+  EmptyState,
+  Field,
+  PageHeader,
+  PrimaryButton,
+  SectionCard,
+  SelectField
+} from "./ui";
 
 interface UserEditForm {
   fullName: string;
@@ -30,8 +37,10 @@ export function UserDetailPage() {
   const { user: currentUser } = useAuthBootstrap();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const canUpdateUsers = currentUser?.permissions.includes("users:update") ?? false;
-  const canDeleteUsers = currentUser?.permissions.includes("users:delete") ?? false;
+  const canUpdateUsers =
+    currentUser?.permissions.includes("users:update") ?? false;
+  const canDeleteUsers =
+    currentUser?.permissions.includes("users:delete") ?? false;
   const canReadRoles = currentUser?.permissions.includes("roles:read") ?? false;
 
   const userQuery = useQuery({
@@ -117,7 +126,12 @@ export function UserDetailPage() {
   });
 
   if (!userQuery.data && !userQuery.isLoading) {
-    return <EmptyState title={t("empty.noUsers")} description={t("empty.noUsersHelp")} />;
+    return (
+      <EmptyState
+        title={t("empty.noUsers")}
+        description={t("empty.noUsersHelp")}
+      />
+    );
   }
 
   return (
@@ -137,7 +151,10 @@ export function UserDetailPage() {
         }
       />
 
-      <SectionCard title={t("users.manageTitle")} description={t("users.manageHelp")}>
+      <SectionCard
+        title={t("users.manageTitle")}
+        description={t("users.manageHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -174,7 +191,9 @@ export function UserDetailPage() {
             ) : null}
             <SelectField
               label={t("labels.status")}
-              onChange={(value) => setForm({ ...form, status: value as UserStatus })}
+              onChange={(value) =>
+                setForm({ ...form, status: value as UserStatus })
+              }
               options={Object.values(UserStatus).map((value) => ({
                 value,
                 label: getEnumLabel(t, "UserStatus", value)
@@ -184,7 +203,9 @@ export function UserDetailPage() {
           </div>
           <SelectField
             label={t("labels.language")}
-            onChange={(value) => setForm({ ...form, preferredLanguage: value as Language })}
+            onChange={(value) =>
+              setForm({ ...form, preferredLanguage: value as Language })
+            }
             options={Object.values(Language).map((value) => ({
               value,
               label: getEnumLabel(t, "Language", value)
@@ -193,14 +214,18 @@ export function UserDetailPage() {
           />
           <div className="flex flex-wrap gap-3">
             {canUpdateUsers ? (
-              <PrimaryButton type="submit">{t("actions.saveChanges")}</PrimaryButton>
+              <PrimaryButton type="submit">
+                {t("actions.saveChanges")}
+              </PrimaryButton>
             ) : null}
             {canUpdateUsers ? (
               <button
                 className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
                 onClick={() =>
                   statusMutation.mutate(
-                    form.status === UserStatus.SUSPENDED ? UserStatus.ACTIVE : UserStatus.SUSPENDED
+                    form.status === UserStatus.SUSPENDED
+                      ? UserStatus.ACTIVE
+                      : UserStatus.SUSPENDED
                   )
                 }
                 type="button"
@@ -232,39 +257,52 @@ export function UserDetailPage() {
             ) : null}
           </div>
           {updateMutation.error ? (
-            <p className="text-sm text-red-600">{(updateMutation.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(updateMutation.error as Error).message}
+            </p>
           ) : null}
           {statusMutation.error ? (
-            <p className="text-sm text-red-600">{(statusMutation.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(statusMutation.error as Error).message}
+            </p>
           ) : null}
           {deleteMutation.error ? (
-            <p className="text-sm text-red-600">{(deleteMutation.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(deleteMutation.error as Error).message}
+            </p>
           ) : null}
         </form>
       </SectionCard>
 
       {canUpdateUsers ? (
-      <SectionCard title={t("users.passwordTitle")} description={t("users.passwordHelp")}> 
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            passwordMutation.mutate(passwordForm);
-          }}
+        <SectionCard
+          title={t("users.passwordTitle")}
+          description={t("users.passwordHelp")}
         >
-          <Field
-            dir="ltr"
-            label={t("users.newPassword")}
-            onChange={(value) => setPasswordForm({ newPassword: value })}
-            type="password"
-            value={passwordForm.newPassword}
-          />
-          <PrimaryButton type="submit">{t("users.resetPassword")}</PrimaryButton>
-          {passwordMutation.error ? (
-            <p className="text-sm text-red-600">{(passwordMutation.error as Error).message}</p>
-          ) : null}
-        </form>
-      </SectionCard>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              passwordMutation.mutate(passwordForm);
+            }}
+          >
+            <Field
+              dir="ltr"
+              label={t("users.newPassword")}
+              onChange={(value) => setPasswordForm({ newPassword: value })}
+              type="password"
+              value={passwordForm.newPassword}
+            />
+            <PrimaryButton type="submit">
+              {t("users.resetPassword")}
+            </PrimaryButton>
+            {passwordMutation.error ? (
+              <p className="text-sm text-red-600">
+                {(passwordMutation.error as Error).message}
+              </p>
+            ) : null}
+          </form>
+        </SectionCard>
       ) : null}
     </div>
   );

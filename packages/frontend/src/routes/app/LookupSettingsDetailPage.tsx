@@ -1,10 +1,22 @@
 import { useEffect, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateLookupOptionDto, LookupOptionDto, LookupOptionListResponseDto, UpdateLookupOptionDto } from "@elms/shared";
+import type {
+  CreateLookupOptionDto,
+  LookupOptionDto,
+  LookupOptionListResponseDto,
+  UpdateLookupOptionDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, ErrorState, Field, PageHeader, PrimaryButton, SectionCard } from "./ui";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  PrimaryButton,
+  SectionCard
+} from "./ui";
 
 const EMPTY_CREATE: CreateLookupOptionDto = {
   key: "",
@@ -21,16 +33,23 @@ export function LookupSettingsDetailPage() {
 
   const optionsQuery = useQuery({
     queryKey: ["lookups", entity],
-    queryFn: () => apiFetch<LookupOptionListResponseDto>(`/api/lookups/${entity}`)
+    queryFn: () =>
+      apiFetch<LookupOptionListResponseDto>(`/api/lookups/${entity}`)
   });
 
-  const [createForm, setCreateForm] = useState<CreateLookupOptionDto>(EMPTY_CREATE);
-  const [editingOption, setEditingOption] = useState<LookupOptionDto | null>(null);
+  const [createForm, setCreateForm] =
+    useState<CreateLookupOptionDto>(EMPTY_CREATE);
+  const [editingOption, setEditingOption] = useState<LookupOptionDto | null>(
+    null
+  );
   const [createError, setCreateError] = useState<string | null>(null);
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateLookupOptionDto) =>
-      apiFetch(`/api/lookups/${entity}`, { method: "POST", body: JSON.stringify(payload) }),
+      apiFetch(`/api/lookups/${entity}`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }),
     onSuccess: async () => {
       setCreateForm(EMPTY_CREATE);
       setCreateError(null);
@@ -40,8 +59,17 @@ export function LookupSettingsDetailPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: UpdateLookupOptionDto }) =>
-      apiFetch(`/api/lookups/${entity}/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+    mutationFn: ({
+      id,
+      payload
+    }: {
+      id: string;
+      payload: UpdateLookupOptionDto;
+    }) =>
+      apiFetch(`/api/lookups/${entity}/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      }),
     onSuccess: async () => {
       setEditingOption(null);
       await queryClient.invalidateQueries({ queryKey: ["lookups", entity] });
@@ -66,18 +94,26 @@ export function LookupSettingsDetailPage() {
         description={t("lookups.detailDescription")}
       />
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <SectionCard title={t("lookups.optionsList")} description={t("lookups.optionsListHelp")}>
+        <SectionCard
+          title={t("lookups.optionsList")}
+          description={t("lookups.optionsListHelp")}
+        >
           {optionsQuery.isLoading ? (
             <p className="text-sm text-slate-500">{t("labels.loading")}</p>
           ) : optionsQuery.isError ? (
             <ErrorState
               title={t("errors.title")}
-              description={(optionsQuery.error as Error)?.message ?? t("errors.fallback")}
+              description={
+                (optionsQuery.error as Error)?.message ?? t("errors.fallback")
+              }
               retryLabel={t("errors.reload")}
               onRetry={() => void optionsQuery.refetch()}
             />
           ) : !items.length ? (
-            <EmptyState title={t("empty.noLookupOptions")} description={t("empty.noLookupOptionsHelp")} />
+            <EmptyState
+              title={t("empty.noLookupOptions")}
+              description={t("empty.noLookupOptionsHelp")}
+            />
           ) : (
             <div className="space-y-2">
               {items.map((option) => (
@@ -123,17 +159,25 @@ export function LookupSettingsDetailPage() {
 
         <div className="space-y-4">
           {editingOption ? (
-            <SectionCard title={t("lookups.editOption")} description={t("lookups.editOptionHelp")}>
+            <SectionCard
+              title={t("lookups.editOption")}
+              description={t("lookups.editOptionHelp")}
+            >
               <LookupEditForm
                 option={editingOption}
                 isPending={updateMutation.isPending}
                 onCancel={() => setEditingOption(null)}
-                onSubmit={(payload) => updateMutation.mutate({ id: editingOption.id, payload })}
+                onSubmit={(payload) =>
+                  updateMutation.mutate({ id: editingOption.id, payload })
+                }
                 t={t}
               />
             </SectionCard>
           ) : (
-            <SectionCard title={t("lookups.addOption")} description={t("lookups.addOptionHelp")}>
+            <SectionCard
+              title={t("lookups.addOption")}
+              description={t("lookups.addOptionHelp")}
+            >
               <form
                 className="space-y-4"
                 onSubmit={(e) => {
@@ -144,7 +188,12 @@ export function LookupSettingsDetailPage() {
                 <Field
                   dir="ltr"
                   label={t("lookups.key")}
-                  onChange={(v) => setCreateForm({ ...createForm, key: v.toUpperCase().replace(/\s+/g, "_") })}
+                  onChange={(v) =>
+                    setCreateForm({
+                      ...createForm,
+                      key: v.toUpperCase().replace(/\s+/g, "_")
+                    })
+                  }
                   placeholder="MY_CUSTOM_VALUE"
                   value={createForm.key}
                 />
@@ -165,7 +214,9 @@ export function LookupSettingsDetailPage() {
                   onChange={(v) => setCreateForm({ ...createForm, labelFr: v })}
                   value={createForm.labelFr}
                 />
-                {createError ? <p className="text-sm text-red-600">{createError}</p> : null}
+                {createError ? (
+                  <p className="text-sm text-red-600">{createError}</p>
+                ) : null}
                 <PrimaryButton type="submit">
                   {createMutation.isPending ? "..." : t("lookups.addOption")}
                 </PrimaryButton>
@@ -235,7 +286,9 @@ function LookupEditForm({
         value={form.labelFr}
       />
       <div className="flex gap-3">
-        <PrimaryButton type="submit">{isPending ? "..." : t("actions.saveChanges")}</PrimaryButton>
+        <PrimaryButton type="submit">
+          {isPending ? "..." : t("actions.saveChanges")}
+        </PrimaryButton>
         <button
           className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           onClick={onCancel}

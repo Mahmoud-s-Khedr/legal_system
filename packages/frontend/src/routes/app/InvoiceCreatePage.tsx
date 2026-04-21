@@ -6,8 +6,18 @@ import type { CaseListResponseDto, ClientListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useCreateInvoice } from "../../lib/billing";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
-import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "../../lib/useUnsavedChanges";
+import {
+  Field,
+  FormAlert,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField
+} from "./ui";
 
 interface ItemRow {
   description: string;
@@ -29,7 +39,9 @@ export function InvoiceCreatePage() {
   const [taxAmount, setTaxAmount] = useState("0");
   const [discountAmount, setDiscountAmount] = useState("0");
   const [dueDate, setDueDate] = useState("");
-  const [items, setItems] = useState<ItemRow[]>([{ description: "", quantity: "1", unitPrice: "0" }]);
+  const [items, setItems] = useState<ItemRow[]>([
+    { description: "", quantity: "1", unitPrice: "0" }
+  ]);
   const [error, setError] = useState("");
   useUnsavedChanges(
     Boolean(
@@ -39,7 +51,9 @@ export function InvoiceCreatePage() {
       dueDate ||
       (parseFloat(taxAmount) || 0) !== 0 ||
       (parseFloat(discountAmount) || 0) !== 0 ||
-      items.some((i) => i.description !== "" || i.quantity !== "1" || i.unitPrice !== "0")
+      items.some(
+        (i) => i.description !== "" || i.quantity !== "1" || i.unitPrice !== "0"
+      )
     ),
     { bypassBlockRef: bypassRef }
   );
@@ -53,23 +67,44 @@ export function InvoiceCreatePage() {
     queryFn: () => apiFetch<ClientListResponseDto>("/api/clients?limit=200")
   });
 
-  const caseOptions = useMemo(() => [
-    { value: "", label: `— ${t("labels.optional")} —` },
-    ...(casesQuery.data?.items ?? []).map((c) => ({ value: c.id, label: c.title }))
-  ], [casesQuery.data?.items, t]);
+  const caseOptions = useMemo(
+    () => [
+      { value: "", label: `— ${t("labels.optional")} —` },
+      ...(casesQuery.data?.items ?? []).map((c) => ({
+        value: c.id,
+        label: c.title
+      }))
+    ],
+    [casesQuery.data?.items, t]
+  );
 
-  const clientOptions = useMemo(() => [
-    { value: "", label: `— ${t("labels.optional")} —` },
-    ...(clientsQuery.data?.items ?? []).map((c) => ({ value: c.id, label: c.name }))
-  ], [clientsQuery.data?.items, t]);
+  const clientOptions = useMemo(
+    () => [
+      { value: "", label: `— ${t("labels.optional")} —` },
+      ...(clientsQuery.data?.items ?? []).map((c) => ({
+        value: c.id,
+        label: c.name
+      }))
+    ],
+    [clientsQuery.data?.items, t]
+  );
 
   const subtotal = items.reduce((sum, item) => {
-    return sum + (parseFloat(item.unitPrice) || 0) * (parseInt(item.quantity, 10) || 0);
+    return (
+      sum +
+      (parseFloat(item.unitPrice) || 0) * (parseInt(item.quantity, 10) || 0)
+    );
   }, 0);
-  const totalAmount = Math.max(0, subtotal + (parseFloat(taxAmount) || 0) - (parseFloat(discountAmount) || 0));
+  const totalAmount = Math.max(
+    0,
+    subtotal + (parseFloat(taxAmount) || 0) - (parseFloat(discountAmount) || 0)
+  );
 
   function addItem() {
-    setItems((prev) => [...prev, { description: "", quantity: "1", unitPrice: "0" }]);
+    setItems((prev) => [
+      ...prev,
+      { description: "", quantity: "1", unitPrice: "0" }
+    ]);
   }
 
   function removeItem(index: number) {
@@ -77,7 +112,9 @@ export function InvoiceCreatePage() {
   }
 
   function updateItem(index: number, field: keyof ItemRow, value: string) {
-    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+    setItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -99,7 +136,10 @@ export function InvoiceCreatePage() {
       });
       feedback.success("messages.invoiceCreated");
       allowNextNavigation();
-      await navigate({ to: "/app/invoices/$invoiceId", params: { invoiceId: invoice.id } });
+      await navigate({
+        to: "/app/invoices/$invoiceId",
+        params: { invoiceId: invoice.id }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.fallback"));
     }
@@ -163,7 +203,9 @@ export function InvoiceCreatePage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium">{t("billing.tax")}</label>
+              <label className="block text-sm font-medium">
+                {t("billing.tax")}
+              </label>
               <input
                 type="number"
                 min="0"
@@ -174,7 +216,9 @@ export function InvoiceCreatePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium">{t("billing.discount")}</label>
+              <label className="block text-sm font-medium">
+                {t("billing.discount")}
+              </label>
               <input
                 type="number"
                 min="0"
@@ -196,13 +240,18 @@ export function InvoiceCreatePage() {
           </div>
           <div className="space-y-3">
             {items.map((item, index) => (
-              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_80px_100px_36px]">
+              <div
+                key={index}
+                className="grid gap-2 sm:grid-cols-[1fr_80px_100px_36px]"
+              >
                 <input
                   required
                   className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder={t("billing.itemDescription")}
                   value={item.description}
-                  onChange={(e) => updateItem(index, "description", e.target.value)}
+                  onChange={(e) =>
+                    updateItem(index, "description", e.target.value)
+                  }
                 />
                 <input
                   type="number"
@@ -210,7 +259,9 @@ export function InvoiceCreatePage() {
                   className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder={t("billing.qty")}
                   value={item.quantity}
-                  onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                  onChange={(e) =>
+                    updateItem(index, "quantity", e.target.value)
+                  }
                 />
                 <input
                   type="number"
@@ -220,7 +271,9 @@ export function InvoiceCreatePage() {
                   className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder={t("billing.unitPrice")}
                   value={item.unitPrice}
-                  onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
+                  onChange={(e) =>
+                    updateItem(index, "unitPrice", e.target.value)
+                  }
                 />
                 <button
                   type="button"

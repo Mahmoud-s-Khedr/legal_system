@@ -13,7 +13,9 @@ export function BackToTopButton({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const container = scrollContainerId ? document.getElementById(scrollContainerId) : null;
+    const container = scrollContainerId
+      ? document.getElementById(scrollContainerId)
+      : null;
     const scrollTarget = container ?? window;
 
     const getScrollTop = () =>
@@ -34,7 +36,9 @@ export function BackToTopButton({
     <button
       type="button"
       onClick={() => {
-        const container = scrollContainerId ? document.getElementById(scrollContainerId) : null;
+        const container = scrollContainerId
+          ? document.getElementById(scrollContainerId)
+          : null;
         if (container) {
           container.scrollTo({ top: 0, behavior: "smooth" });
           return;

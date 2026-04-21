@@ -78,9 +78,21 @@ import {
 } from "./hearingCalendar";
 
 const SLOT_HEIGHT = 56;
-const DAY_NAMES_START_SUNDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES_START_SUNDAY = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat"
+];
 
-function buildIsoForDroppedDate(originalIso: string, targetDate: Date, lockToHour = false) {
+function buildIsoForDroppedDate(
+  originalIso: string,
+  targetDate: Date,
+  lockToHour = false
+) {
   const original = new Date(originalIso);
   const next = new Date(targetDate);
   if (!lockToHour) {
@@ -98,7 +110,8 @@ function CalendarEventPill({
   onOpen: (event: CalendarEvent) => void;
   compact?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `event:${event.id}` });
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: `event:${event.id}` });
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.6 : 1
@@ -191,7 +204,10 @@ function DroppableSlot({
   );
 }
 
-function eventTypeLabel(sourceType: CalendarEvent["sourceType"], t: (key: string) => string) {
+function eventTypeLabel(
+  sourceType: CalendarEvent["sourceType"],
+  t: (key: string) => string
+) {
   if (sourceType === "hearing") return t("calendar.eventTypes.hearing");
   if (sourceType === "task") return t("calendar.eventTypes.task");
   return t("calendar.eventTypes.invoice");
@@ -200,7 +216,11 @@ function eventTypeLabel(sourceType: CalendarEvent["sourceType"], t: (key: string
 function eventLink(event: CalendarEvent) {
   if (event.sourceType === "hearing") {
     return (
-      <Link className="text-accent hover:underline" to="/app/hearings/$hearingId/edit" params={{ hearingId: event.linkParams.hearingId }}>
+      <Link
+        className="text-accent hover:underline"
+        to="/app/hearings/$hearingId/edit"
+        params={{ hearingId: event.linkParams.hearingId }}
+      >
         {event.title}
       </Link>
     );
@@ -208,14 +228,22 @@ function eventLink(event: CalendarEvent) {
 
   if (event.sourceType === "task") {
     return (
-      <Link className="text-accent hover:underline" to="/app/tasks/$taskId" params={{ taskId: event.linkParams.taskId }}>
+      <Link
+        className="text-accent hover:underline"
+        to="/app/tasks/$taskId"
+        params={{ taskId: event.linkParams.taskId }}
+      >
         {event.title}
       </Link>
     );
   }
 
   return (
-    <Link className="text-accent hover:underline" to="/app/invoices/$invoiceId" params={{ invoiceId: event.linkParams.invoiceId }}>
+    <Link
+      className="text-accent hover:underline"
+      to="/app/invoices/$invoiceId"
+      params={{ invoiceId: event.linkParams.invoiceId }}
+    >
       {event.title}
     </Link>
   );
@@ -240,7 +268,9 @@ function normalizeCreateHearing(form: CreateHearingDto) {
     ...form,
     assignedLawyerId: form.assignedLawyerId || null,
     sessionDatetime: new Date(form.sessionDatetime).toISOString(),
-    nextSessionAt: form.nextSessionAt ? new Date(form.nextSessionAt).toISOString() : null,
+    nextSessionAt: form.nextSessionAt
+      ? new Date(form.nextSessionAt).toISOString()
+      : null,
     notes: form.notes || null
   };
 }
@@ -253,16 +283,24 @@ export function CalendarPage() {
   const [view, setView] = useState<CalendarView>("month");
   const [focusDate, setFocusDate] = useState(() => new Date());
   const [mobileMode, setMobileMode] = useState<CalendarMobileMode>("agenda");
-  const [selectedTypes, setSelectedTypes] = useState<CalendarEventSource[]>(["hearing", "task", "invoice"]);
+  const [selectedTypes, setSelectedTypes] = useState<CalendarEventSource[]>([
+    "hearing",
+    "task",
+    "invoice"
+  ]);
   const [selectedAssignee, setSelectedAssignee] = useState("all");
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [quickType, setQuickType] = useState<"hearing" | "task">("hearing");
-  const [pendingDrag, setPendingDrag] = useState<{ event: CalendarEvent; nextAt: string } | null>(null);
+  const [pendingDrag, setPendingDrag] = useState<{
+    event: CalendarEvent;
+    nextAt: string;
+  } | null>(null);
   const [drawerWidth, setDrawerWidth] = useState<number | string>(440);
 
   useEffect(() => {
-    const onResize = () => setDrawerWidth(window.innerWidth < 640 ? "100%" : 440);
+    const onResize = () =>
+      setDrawerWidth(window.innerWidth < 640 ? "100%" : 440);
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
@@ -284,11 +322,21 @@ export function CalendarPage() {
     outcome: null
   });
 
-  const weekStartsOn = useMemo(() => resolveWeekStartIndex(i18n.resolvedLanguage ?? i18n.language ?? "en"), [i18n.language, i18n.resolvedLanguage]);
-  const visibleRange = useMemo(() => getVisibleRange(view, focusDate, weekStartsOn), [focusDate, view, weekStartsOn]);
+  const weekStartsOn = useMemo(
+    () => resolveWeekStartIndex(i18n.resolvedLanguage ?? i18n.language ?? "en"),
+    [i18n.language, i18n.resolvedLanguage]
+  );
+  const visibleRange = useMemo(
+    () => getVisibleRange(view, focusDate, weekStartsOn),
+    [focusDate, view, weekStartsOn]
+  );
 
   const hearingsQuery = useQuery({
-    queryKey: ["calendar-hearings", visibleRange.from.toISOString(), visibleRange.to.toISOString()],
+    queryKey: [
+      "calendar-hearings",
+      visibleRange.from.toISOString(),
+      visibleRange.to.toISOString()
+    ],
     queryFn: () =>
       apiFetch<HearingListResponseDto>(
         `/api/hearings?from=${encodeURIComponent(visibleRange.from.toISOString())}&to=${encodeURIComponent(visibleRange.to.toISOString())}&limit=300`
@@ -296,7 +344,11 @@ export function CalendarPage() {
   });
 
   const tasksQuery = useQuery({
-    queryKey: ["calendar-tasks", visibleRange.from.toISOString(), visibleRange.to.toISOString()],
+    queryKey: [
+      "calendar-tasks",
+      visibleRange.from.toISOString(),
+      visibleRange.to.toISOString()
+    ],
     queryFn: () =>
       apiFetch<TaskListResponseDto>(
         `/api/tasks?from=${encodeURIComponent(visibleRange.from.toISOString())}&to=${encodeURIComponent(visibleRange.to.toISOString())}&limit=300`
@@ -320,13 +372,22 @@ export function CalendarPage() {
   });
 
   const events = useMemo(() => {
-    const hearingEvents = normalizeHearingEvents(hearingsQuery.data?.items ?? []);
-    const taskEvents = normalizeTaskEvents(tasksQuery.data?.items ?? []);
-    const invoiceEvents = normalizeInvoiceEvents(invoicesQuery.data?.items ?? []);
-    return [...hearingEvents, ...taskEvents, ...invoiceEvents].sort(
-      (left, right) => new Date(left.at).getTime() - new Date(right.at).getTime()
+    const hearingEvents = normalizeHearingEvents(
+      hearingsQuery.data?.items ?? []
     );
-  }, [hearingsQuery.data?.items, invoicesQuery.data?.items, tasksQuery.data?.items]);
+    const taskEvents = normalizeTaskEvents(tasksQuery.data?.items ?? []);
+    const invoiceEvents = normalizeInvoiceEvents(
+      invoicesQuery.data?.items ?? []
+    );
+    return [...hearingEvents, ...taskEvents, ...invoiceEvents].sort(
+      (left, right) =>
+        new Date(left.at).getTime() - new Date(right.at).getTime()
+    );
+  }, [
+    hearingsQuery.data?.items,
+    invoicesQuery.data?.items,
+    tasksQuery.data?.items
+  ]);
 
   const filteredEvents = useMemo(
     () =>
@@ -346,8 +407,14 @@ export function CalendarPage() {
     return grouped;
   }, [filteredEvents]);
 
-  const monthDays = useMemo(() => getMonthGridDays(focusDate, weekStartsOn), [focusDate, weekStartsOn]);
-  const weekDays = useMemo(() => getWeekDays(focusDate, weekStartsOn), [focusDate, weekStartsOn]);
+  const monthDays = useMemo(
+    () => getMonthGridDays(focusDate, weekStartsOn),
+    [focusDate, weekStartsOn]
+  );
+  const weekDays = useMemo(
+    () => getWeekDays(focusDate, weekStartsOn),
+    [focusDate, weekStartsOn]
+  );
 
   const assigneeOptions = useMemo(() => {
     const names = new Map<string, string>();
@@ -359,10 +426,14 @@ export function CalendarPage() {
       names.set(user.id, user.fullName);
     }
 
-    return Array.from(names.entries()).map(([value, label]) => ({ value, label }));
+    return Array.from(names.entries()).map(([value, label]) => ({
+      value,
+      label
+    }));
   }, [t, usersQuery.data?.items]);
 
-  const hasError = hearingsQuery.isError || tasksQuery.isError || invoicesQuery.isError;
+  const hasError =
+    hearingsQuery.isError || tasksQuery.isError || invoicesQuery.isError;
 
   const headerTitle = useMemo(() => {
     if (view === "day") {
@@ -412,7 +483,13 @@ export function CalendarPage() {
   });
 
   const rescheduleMutation = useMutation({
-    mutationFn: async ({ event, nextAt }: { event: CalendarEvent; nextAt: string }) => {
+    mutationFn: async ({
+      event,
+      nextAt
+    }: {
+      event: CalendarEvent;
+      nextAt: string;
+    }) => {
       if (event.sourceType === "hearing") {
         if (!event.editable.hearing) {
           throw new Error("Missing hearing payload.");
@@ -472,25 +549,40 @@ export function CalendarPage() {
     }
   });
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  );
 
   function openQuickCreate(day: Date, hour = 9) {
     const datetimeLocal = slotDateTime(day, hour);
     setQuickTaskForm((current) => ({ ...current, dueAt: datetimeLocal }));
-    setQuickHearingForm((current) => ({ ...current, sessionDatetime: datetimeLocal }));
+    setQuickHearingForm((current) => ({
+      ...current,
+      sessionDatetime: datetimeLocal
+    }));
     setQuickCreateOpen(true);
   }
 
   function openEventDetail(event: CalendarEvent) {
     if (event.sourceType === "hearing") {
-      void navigate({ to: "/app/hearings/$hearingId/edit", params: { hearingId: event.sourceId } });
+      void navigate({
+        to: "/app/hearings/$hearingId/edit",
+        params: { hearingId: event.sourceId }
+      });
       return;
     }
     if (event.sourceType === "task") {
-      void navigate({ to: "/app/tasks/$taskId", params: { taskId: event.sourceId } });
+      void navigate({
+        to: "/app/tasks/$taskId",
+        params: { taskId: event.sourceId }
+      });
       return;
     }
-    void navigate({ to: "/app/invoices/$invoiceId", params: { invoiceId: event.sourceId } });
+    void navigate({
+      to: "/app/invoices/$invoiceId",
+      params: { invoiceId: event.sourceId }
+    });
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -511,7 +603,11 @@ export function CalendarPage() {
 
     const targetDate = new Date(targetIso);
     const lockToHour = view !== "month";
-    const nextAt = buildIsoForDroppedDate(draggedEvent.at, targetDate, lockToHour);
+    const nextAt = buildIsoForDroppedDate(
+      draggedEvent.at,
+      targetDate,
+      lockToHour
+    );
 
     if (nextAt === draggedEvent.at) {
       return;
@@ -528,7 +624,10 @@ export function CalendarPage() {
 
     return ordered.map((day) =>
       new Intl.DateTimeFormat(i18n.language, { weekday: "short" }).format(
-        addDays(startOfDay(new Date("2026-03-22T00:00:00.000Z")), DAY_NAMES_START_SUNDAY.indexOf(day))
+        addDays(
+          startOfDay(new Date("2026-03-22T00:00:00.000Z")),
+          DAY_NAMES_START_SUNDAY.indexOf(day)
+        )
       )
     );
   }, [i18n.language, weekStartsOn]);
@@ -546,12 +645,21 @@ export function CalendarPage() {
       />
 
       {quickType === "task" ? (
-        <Form layout="vertical" className="mt-3" onFinish={() => createTaskMutation.mutate(quickTaskForm)}>
-          <Form.Item label={t("labels.title")} required>
+        <Form
+          layout="vertical"
+          className="mt-3"
+          onFinish={() => createTaskMutation.mutate(quickTaskForm)}
+        >
+          <Form.Item label={t("labels.eventTitle")} required>
             <input
               className="calendar-input"
               value={quickTaskForm.title}
-              onChange={(event) => setQuickTaskForm((current) => ({ ...current, title: event.target.value }))}
+              onChange={(event) =>
+                setQuickTaskForm((current) => ({
+                  ...current,
+                  title: event.target.value
+                }))
+              }
             />
           </Form.Item>
           <Form.Item label={t("labels.dueDate")} required>
@@ -560,7 +668,10 @@ export function CalendarPage() {
               classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
               showTime={{ format: "HH:mm" }}
               format={DATE_PICKER_DATETIME_FORMAT}
-              value={toDatePickerValue(toDateTimeLocalValue(quickTaskForm.dueAt ?? ""), "datetime-local")}
+              value={toDatePickerValue(
+                toDateTimeLocalValue(quickTaskForm.dueAt ?? ""),
+                "datetime-local"
+              )}
               onChange={(nextValue) =>
                 setQuickTaskForm((current) => ({
                   ...current,
@@ -580,19 +691,36 @@ export function CalendarPage() {
             >
               {t("actions.create")}
             </Button>
-            <Button onClick={() => setDrawerOpen(true)}>{t("actions.more")}</Button>
-            <Button type="link" onClick={() => void navigate({ to: "/app/invoices/new" })}>
+            <Button onClick={() => setDrawerOpen(true)}>
+              {t("actions.more")}
+            </Button>
+            <Button
+              type="link"
+              onClick={() => void navigate({ to: "/app/invoices/new" })}
+            >
               {t("actions.newInvoice")}
             </Button>
           </Space>
         </Form>
       ) : (
-        <Form layout="vertical" className="mt-3" onFinish={() => createHearingMutation.mutate(quickHearingForm)}>
+        <Form
+          layout="vertical"
+          className="mt-3"
+          onFinish={() => createHearingMutation.mutate(quickHearingForm)}
+        >
           <Form.Item label={t("labels.case")} required>
             <Select
               value={quickHearingForm.caseId}
-              options={(casesQuery.data?.items ?? []).map((caseItem) => ({ value: caseItem.id, label: caseItem.title }))}
-              onChange={(value) => setQuickHearingForm((current) => ({ ...current, caseId: value }))}
+              options={(casesQuery.data?.items ?? []).map((caseItem) => ({
+                value: caseItem.id,
+                label: caseItem.title
+              }))}
+              onChange={(value) =>
+                setQuickHearingForm((current) => ({
+                  ...current,
+                  caseId: value
+                }))
+              }
             />
           </Form.Item>
           <Form.Item label={t("labels.sessionDatetime")} required>
@@ -601,11 +729,17 @@ export function CalendarPage() {
               classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
               showTime={{ format: "HH:mm" }}
               format={DATE_PICKER_DATETIME_FORMAT}
-              value={toDatePickerValue(toDateTimeLocalValue(quickHearingForm.sessionDatetime), "datetime-local")}
+              value={toDatePickerValue(
+                toDateTimeLocalValue(quickHearingForm.sessionDatetime),
+                "datetime-local"
+              )}
               onChange={(nextValue) =>
                 setQuickHearingForm((current) => ({
                   ...current,
-                  sessionDatetime: fromDatePickerValue(nextValue, "datetime-local")
+                  sessionDatetime: fromDatePickerValue(
+                    nextValue,
+                    "datetime-local"
+                  )
                 }))
               }
               style={{ direction: "ltr", width: "100%" }}
@@ -617,12 +751,19 @@ export function CalendarPage() {
               type="primary"
               htmlType="submit"
               loading={createHearingMutation.isPending}
-              disabled={!quickHearingForm.caseId || !quickHearingForm.sessionDatetime}
+              disabled={
+                !quickHearingForm.caseId || !quickHearingForm.sessionDatetime
+              }
             >
               {t("actions.create")}
             </Button>
-            <Button onClick={() => setDrawerOpen(true)}>{t("actions.more")}</Button>
-            <Button type="link" onClick={() => void navigate({ to: "/app/invoices/new" })}>
+            <Button onClick={() => setDrawerOpen(true)}>
+              {t("actions.more")}
+            </Button>
+            <Button
+              type="link"
+              onClick={() => void navigate({ to: "/app/invoices/new" })}
+            >
               {t("actions.newInvoice")}
             </Button>
           </Space>
@@ -649,10 +790,25 @@ export function CalendarPage() {
               ]}
               onChange={(value) => setView(value as CalendarView)}
             />
-            <Button onClick={() => setFocusDate(shiftFocusDate(view, focusDate, -1))}>{t("hearings.previous")}</Button>
-            <Button onClick={() => setFocusDate(new Date())}>{t("hearings.today")}</Button>
-            <Button onClick={() => setFocusDate(shiftFocusDate(view, focusDate, 1))}>{t("hearings.next")}</Button>
-            <Popover trigger="click" open={quickCreateOpen} onOpenChange={setQuickCreateOpen} content={quickCreateContent}>
+            <Button
+              onClick={() => setFocusDate(shiftFocusDate(view, focusDate, -1))}
+            >
+              {t("hearings.previous")}
+            </Button>
+            <Button onClick={() => setFocusDate(new Date())}>
+              {t("hearings.today")}
+            </Button>
+            <Button
+              onClick={() => setFocusDate(shiftFocusDate(view, focusDate, 1))}
+            >
+              {t("hearings.next")}
+            </Button>
+            <Popover
+              trigger="click"
+              open={quickCreateOpen}
+              onOpenChange={setQuickCreateOpen}
+              content={quickCreateContent}
+            >
               <Button type="primary">{t("actions.create")}</Button>
             </Popover>
           </Space>
@@ -662,19 +818,23 @@ export function CalendarPage() {
       <SectionCard title={headerTitle} description={t("hearings.rangeHelp")}>
         <div className="calendar-filter-row">
           <div className="flex flex-wrap items-center gap-2">
-            {(["hearing", "task", "invoice"] as CalendarEventSource[]).map((sourceType) => (
-              <Tag.CheckableTag
-                key={sourceType}
-                checked={selectedTypes.includes(sourceType)}
-                onChange={(checked) =>
-                  setSelectedTypes((current) =>
-                    checked ? Array.from(new Set([...current, sourceType])) : current.filter((item) => item !== sourceType)
-                  )
-                }
-              >
-                {eventTypeLabel(sourceType, t)}
-              </Tag.CheckableTag>
-            ))}
+            {(["hearing", "task", "invoice"] as CalendarEventSource[]).map(
+              (sourceType) => (
+                <Tag.CheckableTag
+                  key={sourceType}
+                  checked={selectedTypes.includes(sourceType)}
+                  onChange={(checked) =>
+                    setSelectedTypes((current) =>
+                      checked
+                        ? Array.from(new Set([...current, sourceType]))
+                        : current.filter((item) => item !== sourceType)
+                    )
+                  }
+                >
+                  {eventTypeLabel(sourceType, t)}
+                </Tag.CheckableTag>
+              )
+            )}
           </div>
 
           <Select
@@ -711,13 +871,20 @@ export function CalendarPage() {
         ) : null}
 
         {!hasError && !filteredEvents.length ? (
-          <EmptyState title={t("hearings.emptyRangeTitle")} description={t("hearings.emptyRangeDescription")} />
+          <EmptyState
+            title={t("hearings.emptyRangeTitle")}
+            description={t("hearings.emptyRangeDescription")}
+          />
         ) : null}
 
         {!hasError ? (
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             {view === "month" ? (
-              <div className={mobileMode === "timeline" ? "hidden md:block" : "block"}>
+              <div
+                className={
+                  mobileMode === "timeline" ? "hidden md:block" : "block"
+                }
+              >
                 <div className="calendar-month-grid">
                   {monthColumns.map((label) => (
                     <div className="calendar-weekday-header" key={label}>
@@ -728,7 +895,8 @@ export function CalendarPage() {
                   {monthDays.map((day) => {
                     const dayKey = getDayKey(day);
                     const dayEvents = eventsByDay.get(dayKey) ?? [];
-                    const outsideMonth = day.getMonth() !== focusDate.getMonth();
+                    const outsideMonth =
+                      day.getMonth() !== focusDate.getMonth();
 
                     return (
                       <DroppableDayCell
@@ -738,12 +906,21 @@ export function CalendarPage() {
                         onQuickCreate={openQuickCreate}
                         isOutsideMonth={outsideMonth}
                       >
-                        <div className="calendar-day-number">{day.getDate()}</div>
+                        <div className="calendar-day-number">
+                          {day.getDate()}
+                        </div>
                         <div className="mt-2 space-y-1">
                           {dayEvents.slice(0, 4).map((item) => (
-                            <Tooltip key={item.id} title={`${item.title} • ${formatDateTime(item.at)}`}>
+                            <Tooltip
+                              key={item.id}
+                              title={`${item.title} • ${formatDateTime(item.at)}`}
+                            >
                               <div>
-                                <CalendarEventPill event={item} onOpen={openEventDetail} compact />
+                                <CalendarEventPill
+                                  event={item}
+                                  onOpen={openEventDetail}
+                                  compact
+                                />
                               </div>
                             </Tooltip>
                           ))}
@@ -768,20 +945,33 @@ export function CalendarPage() {
               </div>
             ) : null}
 
-            {(view === "week" || view === "day") ? (
-              <div className={mobileMode === "timeline" ? "hidden md:block" : "block"}>
+            {view === "week" || view === "day" ? (
+              <div
+                className={
+                  mobileMode === "timeline" ? "hidden md:block" : "block"
+                }
+              >
                 <div className="calendar-timeline-shell">
                   <div className="calendar-time-label-col">
                     <div className="h-10" />
                     {Array.from({ length: 24 }, (_, hour) => (
-                      <div key={hour} className="calendar-time-label" style={{ height: SLOT_HEIGHT }}>
+                      <div
+                        key={hour}
+                        className="calendar-time-label"
+                        style={{ height: SLOT_HEIGHT }}
+                      >
                         {`${hour.toString().padStart(2, "0")}:00`}
                       </div>
                     ))}
                   </div>
 
                   <div className="calendar-time-columns">
-                    <div className="calendar-time-columns-header" style={{ gridTemplateColumns: `repeat(${view === "day" ? 1 : weekDays.length}, minmax(0, 1fr))` }}>
+                    <div
+                      className="calendar-time-columns-header"
+                      style={{
+                        gridTemplateColumns: `repeat(${view === "day" ? 1 : weekDays.length}, minmax(0, 1fr))`
+                      }}
+                    >
                       {(view === "day" ? [focusDate] : weekDays).map((day) => {
                         const label = new Intl.DateTimeFormat(i18n.language, {
                           weekday: "short",
@@ -789,14 +979,22 @@ export function CalendarPage() {
                           month: "short"
                         }).format(day);
                         return (
-                          <div className="calendar-day-header" key={day.toISOString()}>
+                          <div
+                            className="calendar-day-header"
+                            key={day.toISOString()}
+                          >
                             {label}
                           </div>
                         );
                       })}
                     </div>
 
-                    <div className="calendar-time-columns-grid" style={{ gridTemplateColumns: `repeat(${view === "day" ? 1 : weekDays.length}, minmax(0, 1fr))` }}>
+                    <div
+                      className="calendar-time-columns-grid"
+                      style={{
+                        gridTemplateColumns: `repeat(${view === "day" ? 1 : weekDays.length}, minmax(0, 1fr))`
+                      }}
+                    >
                       {(view === "day" ? [focusDate] : weekDays).map((day) => {
                         const key = day.toISOString();
                         const dayEvents = filteredEvents.filter((eventItem) =>
@@ -823,8 +1021,13 @@ export function CalendarPage() {
 
                             {dayEvents.map((eventItem) => {
                               const at = new Date(eventItem.at);
-                              const top = (at.getHours() + at.getMinutes() / 60) * SLOT_HEIGHT;
-                              const height = Math.max((eventItem.durationMinutes / 60) * SLOT_HEIGHT, 30);
+                              const top =
+                                (at.getHours() + at.getMinutes() / 60) *
+                                SLOT_HEIGHT;
+                              const height = Math.max(
+                                (eventItem.durationMinutes / 60) * SLOT_HEIGHT,
+                                30
+                              );
 
                               return (
                                 <div
@@ -832,7 +1035,10 @@ export function CalendarPage() {
                                   className="calendar-time-event"
                                   style={{ top: top + 40, height }}
                                 >
-                                  <CalendarEventPill event={eventItem} onOpen={openEventDetail} />
+                                  <CalendarEventPill
+                                    event={eventItem}
+                                    onOpen={openEventDetail}
+                                  />
                                 </div>
                               );
                             })}
@@ -845,11 +1051,16 @@ export function CalendarPage() {
               </div>
             ) : null}
 
-            <div className={`space-y-3 ${mobileMode === "timeline" ? "md:hidden" : ""}`}>
+            <div
+              className={`space-y-3 ${mobileMode === "timeline" ? "md:hidden" : ""}`}
+            >
               {Array.from(eventsByDay.entries())
                 .sort((a, b) => a[0].localeCompare(b[0]))
                 .map(([day, dayEvents]) => (
-                  <article className="rounded-2xl border border-slate-200 bg-white p-4" key={day}>
+                  <article
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                    key={day}
+                  >
                     <h3 className="font-semibold">{formatDate(day)}</h3>
                     <div className="mt-3 space-y-2">
                       {dayEvents.map((eventItem) => (
@@ -858,11 +1069,19 @@ export function CalendarPage() {
                           key={eventItem.id}
                         >
                           <div>
-                            <p className="text-xs text-slate-500">{eventTypeLabel(eventItem.sourceType, t)}</p>
-                            <p className="font-medium">{eventLink(eventItem)}</p>
-                            <p className="text-xs text-slate-500">{eventItem.subtitle}</p>
+                            <p className="text-xs text-slate-500">
+                              {eventTypeLabel(eventItem.sourceType, t)}
+                            </p>
+                            <p className="font-medium">
+                              {eventLink(eventItem)}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {eventItem.subtitle}
+                            </p>
                           </div>
-                          <span className="text-xs text-slate-500">{formatDateTime(eventItem.at)}</span>
+                          <span className="text-xs text-slate-500">
+                            {formatDateTime(eventItem.at)}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -874,27 +1093,48 @@ export function CalendarPage() {
       </SectionCard>
 
       <Drawer
-        title={quickType === "hearing" ? t("hearings.createTitle") : t("tasks.createTitle")}
+        title={
+          quickType === "hearing"
+            ? t("hearings.createTitle")
+            : t("tasks.createTitle")
+        }
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         width={drawerWidth}
       >
         {quickType === "hearing" ? (
-          <Form layout="vertical" onFinish={() => createHearingMutation.mutate(quickHearingForm)}>
+          <Form
+            layout="vertical"
+            onFinish={() => createHearingMutation.mutate(quickHearingForm)}
+          >
             <Form.Item label={t("labels.case")} required>
               <Select
                 value={quickHearingForm.caseId}
-                options={(casesQuery.data?.items ?? []).map((caseItem) => ({ value: caseItem.id, label: caseItem.title }))}
-                onChange={(value) => setQuickHearingForm((current) => ({ ...current, caseId: value }))}
+                options={(casesQuery.data?.items ?? []).map((caseItem) => ({
+                  value: caseItem.id,
+                  label: caseItem.title
+                }))}
+                onChange={(value) =>
+                  setQuickHearingForm((current) => ({
+                    ...current,
+                    caseId: value
+                  }))
+                }
               />
             </Form.Item>
             <Form.Item label={t("labels.assignedLawyer")}>
               <Select
                 allowClear
                 value={quickHearingForm.assignedLawyerId || undefined}
-                options={(usersQuery.data?.items ?? []).map((user) => ({ value: user.id, label: user.fullName }))}
+                options={(usersQuery.data?.items ?? []).map((user) => ({
+                  value: user.id,
+                  label: user.fullName
+                }))}
                 onChange={(value) =>
-                  setQuickHearingForm((current) => ({ ...current, assignedLawyerId: value ?? "" }))
+                  setQuickHearingForm((current) => ({
+                    ...current,
+                    assignedLawyerId: value ?? ""
+                  }))
                 }
               />
             </Form.Item>
@@ -904,11 +1144,17 @@ export function CalendarPage() {
                 classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
                 showTime={{ format: "HH:mm" }}
                 format={DATE_PICKER_DATETIME_FORMAT}
-                value={toDatePickerValue(toDateTimeLocalValue(quickHearingForm.sessionDatetime), "datetime-local")}
+                value={toDatePickerValue(
+                  toDateTimeLocalValue(quickHearingForm.sessionDatetime),
+                  "datetime-local"
+                )}
                 onChange={(nextValue) =>
                   setQuickHearingForm((current) => ({
                     ...current,
-                    sessionDatetime: fromDatePickerValue(nextValue, "datetime-local")
+                    sessionDatetime: fromDatePickerValue(
+                      nextValue,
+                      "datetime-local"
+                    )
                   }))
                 }
                 style={{ direction: "ltr", width: "100%" }}
@@ -921,30 +1167,51 @@ export function CalendarPage() {
                   type="primary"
                   htmlType="submit"
                   loading={createHearingMutation.isPending}
-                  disabled={!quickHearingForm.caseId || !quickHearingForm.sessionDatetime}
+                  disabled={
+                    !quickHearingForm.caseId ||
+                    !quickHearingForm.sessionDatetime
+                  }
                 >
                   {t("actions.create")}
                 </Button>
-                <Button onClick={() => void navigate({ to: "/app/hearings/new" })}>{t("actions.more")}</Button>
+                <Button
+                  onClick={() => void navigate({ to: "/app/hearings/new" })}
+                >
+                  {t("actions.more")}
+                </Button>
               </Space>
             </Form.Item>
           </Form>
         ) : (
-          <Form layout="vertical" onFinish={() => createTaskMutation.mutate(quickTaskForm)}>
-            <Form.Item label={t("labels.title")} required>
+          <Form
+            layout="vertical"
+            onFinish={() => createTaskMutation.mutate(quickTaskForm)}
+          >
+            <Form.Item label={t("labels.eventTitle")} required>
               <input
                 className="calendar-input"
                 value={quickTaskForm.title}
-                onChange={(event) => setQuickTaskForm((current) => ({ ...current, title: event.target.value }))}
+                onChange={(event) =>
+                  setQuickTaskForm((current) => ({
+                    ...current,
+                    title: event.target.value
+                  }))
+                }
               />
             </Form.Item>
             <Form.Item label={t("labels.assignedLawyer")}>
               <Select
                 allowClear
                 value={quickTaskForm.assignedToId || undefined}
-                options={(usersQuery.data?.items ?? []).map((user) => ({ value: user.id, label: user.fullName }))}
+                options={(usersQuery.data?.items ?? []).map((user) => ({
+                  value: user.id,
+                  label: user.fullName
+                }))}
                 onChange={(value) =>
-                  setQuickTaskForm((current) => ({ ...current, assignedToId: value ?? "" }))
+                  setQuickTaskForm((current) => ({
+                    ...current,
+                    assignedToId: value ?? ""
+                  }))
                 }
               />
             </Form.Item>
@@ -954,7 +1221,10 @@ export function CalendarPage() {
                 classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
                 showTime={{ format: "HH:mm" }}
                 format={DATE_PICKER_DATETIME_FORMAT}
-                value={toDatePickerValue(toDateTimeLocalValue(quickTaskForm.dueAt ?? ""), "datetime-local")}
+                value={toDatePickerValue(
+                  toDateTimeLocalValue(quickTaskForm.dueAt ?? ""),
+                  "datetime-local"
+                )}
                 onChange={(nextValue) =>
                   setQuickTaskForm((current) => ({
                     ...current,
@@ -975,7 +1245,9 @@ export function CalendarPage() {
                 >
                   {t("actions.create")}
                 </Button>
-                <Button onClick={() => void navigate({ to: "/app/tasks/new" })}>{t("actions.more")}</Button>
+                <Button onClick={() => void navigate({ to: "/app/tasks/new" })}>
+                  {t("actions.more")}
+                </Button>
               </Space>
             </Form.Item>
           </Form>
@@ -995,9 +1267,14 @@ export function CalendarPage() {
       >
         {pendingDrag ? (
           <Space direction="vertical" size={4}>
-            <Badge color="var(--color-accent)" text={eventTypeLabel(pendingDrag.event.sourceType, t)} />
+            <Badge
+              color="var(--color-accent)"
+              text={eventTypeLabel(pendingDrag.event.sourceType, t)}
+            />
             <div>{pendingDrag.event.title}</div>
-            <div className="text-slate-500">{formatDateTime(pendingDrag.nextAt)}</div>
+            <div className="text-slate-500">
+              {formatDateTime(pendingDrag.nextAt)}
+            </div>
           </Space>
         ) : null}
       </Modal>

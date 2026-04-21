@@ -30,7 +30,10 @@ export function InlineHearingForm({ caseId, onSuccess }: Props) {
 
   const lawyerOptions = [
     { value: "", label: t("labels.unassigned") },
-    ...(usersQuery.data?.items ?? []).map((u) => ({ value: u.id, label: u.fullName }))
+    ...(usersQuery.data?.items ?? []).map((u) => ({
+      value: u.id,
+      label: u.fullName
+    }))
   ];
 
   const mutation = useMutation({
@@ -48,7 +51,10 @@ export function InlineHearingForm({ caseId, onSuccess }: Props) {
     onSuccess
   });
 
-  function set<K extends keyof CreateHearingDto>(key: K, value: CreateHearingDto[K]) {
+  function set<K extends keyof CreateHearingDto>(
+    key: K,
+    value: CreateHearingDto[K]
+  ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 

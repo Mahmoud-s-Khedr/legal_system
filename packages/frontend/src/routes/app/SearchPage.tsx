@@ -47,7 +47,10 @@ export function SearchPage() {
 
       <form className="flex gap-3" onSubmit={submitSearch}>
         <div className="relative flex-1">
-          <Search aria-hidden="true" className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search
+            aria-hidden="true"
+            className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          />
           <input
             aria-label={t("search.placeholder")}
             className="w-full rounded-2xl border border-slate-200 bg-white py-3 ps-9 pe-4 text-sm outline-none focus:border-accent"
@@ -71,13 +74,19 @@ export function SearchPage() {
       ) : searchQuery.isError ? (
         <ErrorState
           title={t("errors.title")}
-          description={(searchQuery.error as Error)?.message ?? t("errors.fallback")}
+          description={
+            (searchQuery.error as Error)?.message ?? t("errors.fallback")
+          }
           retryLabel={t("errors.reload")}
           onRetry={() => void searchQuery.refetch()}
         />
       ) : searchQuery.data?.items.length === 0 || !normalizedQuery ? (
         <EmptyState
-          description={normalizedQuery ? t("search.noResultsHelp") : t("search.placeholder")}
+          description={
+            normalizedQuery
+              ? t("search.noResultsHelp")
+              : t("search.placeholder")
+          }
           title={normalizedQuery ? t("search.noResults") : t("search.title")}
         />
       ) : (

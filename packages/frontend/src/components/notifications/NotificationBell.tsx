@@ -3,7 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Bell } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { NotificationDto, NotificationListResponseDto } from "@elms/shared";
+import type {
+  NotificationDto,
+  NotificationListResponseDto
+} from "@elms/shared";
 import { NotificationType } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useAccessibleOverlay } from "../shared/useAccessibleOverlay";
@@ -50,18 +53,23 @@ export function NotificationBell() {
 
   const countQuery = useQuery({
     queryKey: ["notifications-count"],
-    queryFn: () => apiFetch<{ count: number }>("/api/notifications/unread-count"),
+    queryFn: () =>
+      apiFetch<{ count: number }>("/api/notifications/unread-count"),
     refetchInterval: 60_000 // poll every 60s
   });
 
   const listQuery = useQuery({
     queryKey: ["notifications-list"],
-    queryFn: () => apiFetch<NotificationListResponseDto>("/api/notifications?limit=10"),
+    queryFn: () =>
+      apiFetch<NotificationListResponseDto>("/api/notifications?limit=10"),
     enabled: open
   });
 
   const markRead = useMutation({
-    mutationFn: (id: string) => apiFetch<{ success: boolean }>(`/api/notifications/${id}/read`, { method: "PATCH" }),
+    mutationFn: (id: string) =>
+      apiFetch<{ success: boolean }>(`/api/notifications/${id}/read`, {
+        method: "PATCH"
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["notifications-count"] });
       void qc.invalidateQueries({ queryKey: ["notifications-list"] });
@@ -69,7 +77,10 @@ export function NotificationBell() {
   });
 
   const markAllRead = useMutation({
-    mutationFn: () => apiFetch<{ success: boolean }>("/api/notifications/read-all", { method: "PATCH" }),
+    mutationFn: () =>
+      apiFetch<{ success: boolean }>("/api/notifications/read-all", {
+        method: "PATCH"
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["notifications-count"] });
       void qc.invalidateQueries({ queryKey: ["notifications-list"] });
@@ -119,7 +130,9 @@ export function NotificationBell() {
             aria-labelledby="notifications-heading"
           >
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <p className="font-semibold" id="notifications-heading">{t("notifications.title")}</p>
+              <p className="font-semibold" id="notifications-heading">
+                {t("notifications.title")}
+              </p>
               {unreadCount > 0 && (
                 <button
                   onClick={() => void markAllRead.mutateAsync()}
@@ -133,12 +146,15 @@ export function NotificationBell() {
 
             <div className="max-h-80 overflow-y-auto">
               {listQuery.isLoading && (
-                <p className="px-4 py-3 text-sm text-slate-500">{t("labels.loading")}</p>
+                <p className="px-4 py-3 text-sm text-slate-500">
+                  {t("labels.loading")}
+                </p>
               )}
               {listQuery.isError && (
                 <div className="space-y-2 px-4 py-4">
                   <p className="text-sm text-red-600">
-                    {(listQuery.error as Error)?.message ?? t("errors.fallback")}
+                    {(listQuery.error as Error)?.message ??
+                      t("errors.fallback")}
                   </p>
                   <button
                     type="button"
@@ -149,9 +165,13 @@ export function NotificationBell() {
                   </button>
                 </div>
               )}
-              {!listQuery.isLoading && !listQuery.isError && !listQuery.data?.items.length && (
-                <p className="px-4 py-6 text-center text-sm text-slate-500">{t("notifications.empty")}</p>
-              )}
+              {!listQuery.isLoading &&
+                !listQuery.isError &&
+                !listQuery.data?.items.length && (
+                  <p className="px-4 py-6 text-center text-sm text-slate-500">
+                    {t("notifications.empty")}
+                  </p>
+                )}
               {listQuery.data?.items.map((n) => (
                 <button
                   key={n.id}
@@ -167,7 +187,9 @@ export function NotificationBell() {
                     n.isRead ? "opacity-60" : ""
                   }`}
                 >
-                  <p className={`text-sm ${!n.isRead ? "font-semibold" : ""}`}>{n.title}</p>
+                  <p className={`text-sm ${!n.isRead ? "font-semibold" : ""}`}>
+                    {n.title}
+                  </p>
                   <p className="mt-0.5 text-xs text-slate-500">{n.body}</p>
                   <p className="mt-1 text-xs text-slate-400">
                     {formatDate(n.createdAt)}

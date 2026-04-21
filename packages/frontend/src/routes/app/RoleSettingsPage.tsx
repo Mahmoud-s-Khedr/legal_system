@@ -49,18 +49,25 @@ export function RoleSettingsPage() {
         description={t("roles.description")}
       />
 
-      {rolesQuery.isLoading ? <p className="text-sm text-slate-500">{t("labels.loading")}</p> : null}
+      {rolesQuery.isLoading ? (
+        <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+      ) : null}
       {rolesQuery.isError ? (
         <ErrorState
           title={t("errors.title")}
-          description={(rolesQuery.error as Error)?.message ?? t("errors.fallback")}
+          description={
+            (rolesQuery.error as Error)?.message ?? t("errors.fallback")
+          }
           retryLabel={t("errors.reload")}
           onRetry={() => void rolesQuery.refetch()}
         />
       ) : null}
 
       {!rolesQuery.isLoading && !rolesQuery.isError && firmRoles.length > 0 ? (
-        <SectionCard title={t("roles.firmRoles")} description={t("roles.firmRolesHelp")}>
+        <SectionCard
+          title={t("roles.firmRoles")}
+          description={t("roles.firmRolesHelp")}
+        >
           <div className="space-y-3">
             {firmRoles.map((role) => (
               <article
@@ -68,9 +75,16 @@ export function RoleSettingsPage() {
                 key={role.id}
               >
                 <div>
-                  <p className="font-semibold">{role.firmId === null ? getEnumLabel(t, "UserRole", role.key) : role.name}</p>
+                  <p className="font-semibold">
+                    {role.firmId === null
+                      ? getEnumLabel(t, "UserRole", role.key)
+                      : role.name}
+                  </p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {role.firmId === null ? getEnumLabel(t, "UserRole", role.key) : role.key} · {role.permissions.length} {t("roles.permissionsCount")}
+                    {role.firmId === null
+                      ? getEnumLabel(t, "UserRole", role.key)
+                      : role.key}{" "}
+                    · {role.permissions.length} {t("roles.permissionsCount")}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -105,32 +119,44 @@ export function RoleSettingsPage() {
           </div>
         </SectionCard>
       ) : !rolesQuery.isLoading && !rolesQuery.isError ? (
-        <SectionCard title={t("roles.firmRoles")} description={t("roles.firmRolesHelp")}>
-          <EmptyState title={t("empty.noFirmRoles")} description={t("empty.noFirmRolesHelp")} />
+        <SectionCard
+          title={t("roles.firmRoles")}
+          description={t("roles.firmRolesHelp")}
+        >
+          <EmptyState
+            title={t("empty.noFirmRoles")}
+            description={t("empty.noFirmRolesHelp")}
+          />
         </SectionCard>
       ) : null}
 
       {!rolesQuery.isLoading && !rolesQuery.isError ? (
-        <SectionCard title={t("roles.systemRoles")} description={t("roles.systemRolesHelp")}>
-        <div className="space-y-3">
-          {systemRoles.map((role) => (
-            <article
-              className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 opacity-75"
-              key={role.id}
-            >
-              <div>
-                <p className="font-semibold">{getEnumLabel(t, "UserRole", role.key)}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {getEnumLabel(t, "UserRole", role.key)} · {role.permissions.length} {t("roles.permissionsCount")}
-                </p>
-              </div>
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
-                {t("lookups.system")}
-              </span>
-            </article>
-          ))}
-        </div>
-      </SectionCard>
+        <SectionCard
+          title={t("roles.systemRoles")}
+          description={t("roles.systemRolesHelp")}
+        >
+          <div className="space-y-3">
+            {systemRoles.map((role) => (
+              <article
+                className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 opacity-75"
+                key={role.id}
+              >
+                <div>
+                  <p className="font-semibold">
+                    {getEnumLabel(t, "UserRole", role.key)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {getEnumLabel(t, "UserRole", role.key)} ·{" "}
+                    {role.permissions.length} {t("roles.permissionsCount")}
+                  </p>
+                </div>
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+                  {t("lookups.system")}
+                </span>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
       ) : null}
     </div>
   );

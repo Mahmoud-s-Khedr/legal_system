@@ -1,16 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "../../lib/useUnsavedChanges";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ClientType, Language, type ClientListResponseDto, type CreateClientDto } from "@elms/shared";
+import {
+  ClientType,
+  Language,
+  type ClientListResponseDto,
+  type CreateClientDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
-import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import {
+  Field,
+  FormAlert,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField
+} from "./ui";
 
-type ClientFormState = Omit<CreateClientDto, "type"> & { type: ClientType | "" };
+type ClientFormState = Omit<CreateClientDto, "type"> & {
+  type: ClientType | "";
+};
 
 function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -30,8 +47,12 @@ function normalizePayload(form: ClientFormState): CreateClientDto {
     governorate: toNullable(form.governorate),
     preferredLanguage: form.preferredLanguage ?? Language.AR,
     nationalId: isIdentityType(form.type) ? toNullable(form.nationalId) : null,
-    commercialRegister: form.type === ClientType.COMPANY ? toNullable(form.commercialRegister) : null,
-    taxNumber: form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
+    commercialRegister:
+      form.type === ClientType.COMPANY
+        ? toNullable(form.commercialRegister)
+        : null,
+    taxNumber:
+      form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
     contacts: []
   };
 }
@@ -51,7 +72,9 @@ export function ClientCreatePage() {
     value: v,
     label: getEnumLabel(t, "Language", v)
   }));
-  const governorateOptions = getEgyptGovernorateOptions(i18n.resolvedLanguage ?? i18n.language ?? "en");
+  const governorateOptions = getEgyptGovernorateOptions(
+    i18n.resolvedLanguage ?? i18n.language ?? "en"
+  );
 
   const [form, setForm] = useState<ClientFormState>({
     name: "",
@@ -65,32 +88,45 @@ export function ClientCreatePage() {
     taxNumber: "",
     contacts: []
   });
-  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [validationMessage, setValidationMessage] = useState<string | null>(
+    null
+  );
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
-  useUnsavedChanges(form.name !== "" || form.type !== "", { bypassBlockRef: bypassRef });
+  useUnsavedChanges(form.name !== "" || form.type !== "", {
+    bypassBlockRef: bypassRef
+  });
 
   const dupCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dupCheckSeq = useRef(0);
 
-  const checkDuplicate = useCallback(async (q: string, seq: number) => {
-    if (!q.trim()) return;
-    const result = await apiFetch<ClientListResponseDto>(`/api/clients?q=${encodeURIComponent(q.trim())}&limit=1`);
-    if (seq !== dupCheckSeq.current) {
-      return;
-    }
-    if (result.items.length > 0) {
-      setDuplicateWarning(t("clients.duplicateWarning", { name: result.items[0].name }));
-    } else {
-      setDuplicateWarning(null);
-    }
-  }, [t]);
+  const checkDuplicate = useCallback(
+    async (q: string, seq: number) => {
+      if (!q.trim()) return;
+      const result = await apiFetch<ClientListResponseDto>(
+        `/api/clients?q=${encodeURIComponent(q.trim())}&limit=1`
+      );
+      if (seq !== dupCheckSeq.current) {
+        return;
+      }
+      if (result.items.length > 0) {
+        setDuplicateWarning(
+          t("clients.duplicateWarning", { name: result.items[0].name })
+        );
+      } else {
+        setDuplicateWarning(null);
+      }
+    },
+    [t]
+  );
 
   function scheduleCheck(q: string) {
     if (dupCheckTimer.current) clearTimeout(dupCheckTimer.current);
     setDuplicateWarning(null);
     dupCheckSeq.current += 1;
     const seq = dupCheckSeq.current;
-    dupCheckTimer.current = setTimeout(() => { void checkDuplicate(q, seq); }, 500);
+    dupCheckTimer.current = setTimeout(() => {
+      void checkDuplicate(q, seq);
+    }, 500);
   }
 
   useEffect(() => {
@@ -123,7 +159,10 @@ export function ClientCreatePage() {
         title={t("clients.createTitle")}
         description={t("clients.createHelp")}
       />
-      <SectionCard title={t("clients.createTitle")} description={t("clients.createHelp")}>
+      <SectionCard
+        title={t("clients.createTitle")}
+        description={t("clients.createHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -139,14 +178,22 @@ export function ClientCreatePage() {
         >
           <Field
             label={t("labels.name")}
-            onChange={(value) => { setForm({ ...form, name: value }); scheduleCheck(value); }}
+            onChange={(value) => {
+              setForm({ ...form, name: value });
+              scheduleCheck(value);
+            }}
             required
             value={form.name}
           />
           <SelectField
             label={t("labels.type")}
-            onChange={(value) => setForm({ ...form, type: value as ClientType | "" })}
-            options={[{ value: "", label: t("labels.selectType") }, ...clientTypeOptions]}
+            onChange={(value) =>
+              setForm({ ...form, type: value as ClientType | "" })
+            }
+            options={[
+              { value: "", label: t("labels.selectType") },
+              ...clientTypeOptions
+            ]}
             required
             value={form.type}
           />
@@ -156,7 +203,10 @@ export function ClientCreatePage() {
                 <Field
                   dir="ltr"
                   label={t("labels.email")}
-                  onChange={(value) => { setForm({ ...form, email: value }); scheduleCheck(value); }}
+                  onChange={(value) => {
+                    setForm({ ...form, email: value });
+                    scheduleCheck(value);
+                  }}
                   type="email"
                   value={form.email ?? ""}
                 />
@@ -171,15 +221,14 @@ export function ClientCreatePage() {
                 <SelectField
                   label={t("labels.governorate")}
                   onChange={(value) => setForm({ ...form, governorate: value })}
-                  options={[
-                    { value: "", label: "-" },
-                    ...governorateOptions
-                  ]}
+                  options={[{ value: "", label: "-" }, ...governorateOptions]}
                   value={form.governorate ?? ""}
                 />
                 <SelectField
                   label={t("labels.language")}
-                  onChange={(value) => setForm({ ...form, preferredLanguage: value as Language })}
+                  onChange={(value) =>
+                    setForm({ ...form, preferredLanguage: value as Language })
+                  }
                   options={languageOptions}
                   value={form.preferredLanguage ?? Language.AR}
                 />
@@ -188,7 +237,9 @@ export function ClientCreatePage() {
                 <Field
                   dir="ltr"
                   label={t("labels.nationalId")}
-                  onChange={(value) => { setForm({ ...form, nationalId: value }); }}
+                  onChange={(value) => {
+                    setForm({ ...form, nationalId: value });
+                  }}
                   value={form.nationalId ?? ""}
                 />
               ) : null}
@@ -197,7 +248,9 @@ export function ClientCreatePage() {
                   <Field
                     dir="ltr"
                     label={t("labels.commercialRegister")}
-                    onChange={(value) => setForm({ ...form, commercialRegister: value })}
+                    onChange={(value) =>
+                      setForm({ ...form, commercialRegister: value })
+                    }
                     value={form.commercialRegister ?? ""}
                   />
                   <Field
@@ -231,7 +284,9 @@ export function ClientCreatePage() {
             submitting={createMutation.isPending}
           />
           {validationMessage ? <FormAlert message={validationMessage} /> : null}
-          {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
+          {createMutation.error ? (
+            <FormAlert message={(createMutation.error as Error).message} />
+          ) : null}
         </form>
       </SectionCard>
     </div>

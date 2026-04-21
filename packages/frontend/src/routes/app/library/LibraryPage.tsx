@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { BookOpen, ChevronRight, ChevronLeft, Search, Upload } from "lucide-react";
+import {
+  BookOpen,
+  ChevronRight,
+  ChevronLeft,
+  Search,
+  Upload
+} from "lucide-react";
 import { apiFetch } from "../../../lib/api";
 import { useHasPermission } from "../../../store/authStore";
 import { EmptyState, ErrorState, PageHeader, SectionCard } from "../ui";
@@ -22,7 +28,12 @@ interface DocumentSummary {
   type: string;
   scope: string;
   publishedAt: string | null;
-  category: { id: string; nameAr: string; nameEn: string; nameFr: string } | null;
+  category: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    nameFr: string;
+  } | null;
 }
 
 interface DocumentsResponse {
@@ -38,17 +49,31 @@ export function LibraryPage() {
   const isRtl = i18n.resolvedLanguage === "ar";
   const isFrench = i18n.resolvedLanguage === "fr";
   const ChevronIcon = isRtl ? ChevronLeft : ChevronRight;
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(() => {
-    try { return localStorage.getItem("elms:library:selectedCategoryId") ?? undefined; } catch { return undefined; }
+  const [selectedCategoryId, setSelectedCategoryId] = useState<
+    string | undefined
+  >(() => {
+    try {
+      return (
+        localStorage.getItem("elms:library:selectedCategoryId") ?? undefined
+      );
+    } catch {
+      return undefined;
+    }
   });
   const [page, setPage] = useState(1);
   const [searchQ, setSearchQ] = useState("");
 
   useEffect(() => {
     try {
-      if (selectedCategoryId) localStorage.setItem("elms:library:selectedCategoryId", selectedCategoryId);
+      if (selectedCategoryId)
+        localStorage.setItem(
+          "elms:library:selectedCategoryId",
+          selectedCategoryId
+        );
       else localStorage.removeItem("elms:library:selectedCategoryId");
-    } catch { /* quota exceeded */ }
+    } catch {
+      /* quota exceeded */
+    }
   }, [selectedCategoryId]);
 
   const categoriesQuery = useQuery({
@@ -62,17 +87,24 @@ export function LibraryPage() {
       const params = new URLSearchParams({ page: String(page), limit: "20" });
       if (selectedCategoryId) params.set("categoryId", selectedCategoryId);
       if (searchQ) params.set("q", searchQ);
-      return apiFetch<DocumentsResponse>(`/api/library/documents?${params.toString()}`);
+      return apiFetch<DocumentsResponse>(
+        `/api/library/documents?${params.toString()}`
+      );
     }
   });
 
-  function localizeCategoryName(category: Pick<CategoryNode, "nameAr" | "nameEn" | "nameFr">) {
+  function localizeCategoryName(
+    category: Pick<CategoryNode, "nameAr" | "nameEn" | "nameFr">
+  ) {
     if (isRtl) return category.nameAr;
     if (isFrench) return category.nameFr;
     return category.nameEn;
   }
 
-  function findCategoryName(nodes: CategoryNode[], targetId: string | undefined): string | null {
+  function findCategoryName(
+    nodes: CategoryNode[],
+    targetId: string | undefined
+  ): string | null {
     if (!targetId) return null;
     for (const node of nodes) {
       if (node.id === targetId) {
@@ -86,9 +118,18 @@ export function LibraryPage() {
     return null;
   }
 
-  const selectedCategoryName = findCategoryName(categoriesQuery.data ?? [], selectedCategoryId);
+  const selectedCategoryName = findCategoryName(
+    categoriesQuery.data ?? [],
+    selectedCategoryId
+  );
 
-  function CategoryTree({ nodes, depth = 0 }: { nodes: CategoryNode[]; depth?: number }) {
+  function CategoryTree({
+    nodes,
+    depth = 0
+  }: {
+    nodes: CategoryNode[];
+    depth?: number;
+  }) {
     return (
       <ul className={depth > 0 ? "ms-4 border-s border-slate-200 ps-3" : ""}>
         {nodes.map((node) => (
@@ -96,11 +137,16 @@ export function LibraryPage() {
             <button
               className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-start text-sm transition hover:bg-accentSoft ${selectedCategoryId === node.id ? "bg-accentSoft font-semibold text-accent" : "text-slate-700"}`}
               onClick={() => {
-                setSelectedCategoryId(selectedCategoryId === node.id ? undefined : node.id);
+                setSelectedCategoryId(
+                  selectedCategoryId === node.id ? undefined : node.id
+                );
                 setPage(1);
               }}
             >
-              <ChevronIcon aria-hidden="true" className="size-3 shrink-0 text-slate-400" />
+              <ChevronIcon
+                aria-hidden="true"
+                className="size-3 shrink-0 text-slate-400"
+              />
               <span>{localizeCategoryName(node)}</span>
             </button>
             {node.children.length > 0 && (
@@ -142,14 +188,20 @@ export function LibraryPage() {
 
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Category Sidebar */}
-        <aside aria-label={t("library.categories")} className="w-full shrink-0 lg:w-64">
+        <aside
+          aria-label={t("library.categories")}
+          className="w-full shrink-0 lg:w-64"
+        >
           <SectionCard title={t("library.categories")}>
             {categoriesQuery.isLoading ? (
               <p className="text-sm text-slate-500">{t("common.loading")}</p>
             ) : categoriesQuery.isError ? (
               <ErrorState
                 title={t("errors.title")}
-                description={(categoriesQuery.error as Error)?.message ?? t("errors.fallback")}
+                description={
+                  (categoriesQuery.error as Error)?.message ??
+                  t("errors.fallback")
+                }
                 retryLabel={t("errors.reload")}
                 onRetry={() => void categoriesQuery.refetch()}
               />
@@ -157,7 +209,10 @@ export function LibraryPage() {
               <>
                 <button
                   className={`mb-2 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-start text-sm transition hover:bg-accentSoft ${!selectedCategoryId ? "bg-accentSoft font-semibold text-accent" : "text-slate-700"}`}
-                  onClick={() => { setSelectedCategoryId(undefined); setPage(1); }}
+                  onClick={() => {
+                    setSelectedCategoryId(undefined);
+                    setPage(1);
+                  }}
                 >
                   {t("library.allDocuments")}
                 </button>
@@ -172,13 +227,19 @@ export function LibraryPage() {
         {/* Document List */}
         <div className="min-w-0 flex-1 space-y-4">
           <div className="relative">
-            <Search aria-hidden="true" className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <Search
+              aria-hidden="true"
+              className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+            />
             <input
               className="w-full rounded-2xl border border-slate-200 bg-white py-3 ps-9 pe-4 text-sm outline-none focus:border-accent"
               placeholder={t("library.searchPlaceholder")}
               type="search"
               value={searchQ}
-              onChange={(e) => { setSearchQ(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSearchQ(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
           {selectedCategoryName ? (
@@ -204,12 +265,17 @@ export function LibraryPage() {
           ) : documentsQuery.isError ? (
             <ErrorState
               title={t("errors.title")}
-              description={(documentsQuery.error as Error)?.message ?? t("errors.fallback")}
+              description={
+                (documentsQuery.error as Error)?.message ?? t("errors.fallback")
+              }
               retryLabel={t("errors.reload")}
               onRetry={() => void documentsQuery.refetch()}
             />
           ) : !documentsQuery.data?.items.length ? (
-            <EmptyState description={t("empty.noDocumentsHelp")} title={t("empty.noDocuments")} />
+            <EmptyState
+              description={t("empty.noDocumentsHelp")}
+              title={t("empty.noDocuments")}
+            />
           ) : (
             <div className="space-y-3">
               {documentsQuery.data.items.map((doc) => (
@@ -219,15 +285,20 @@ export function LibraryPage() {
                   params={{ documentId: doc.id }}
                   to="/app/library/documents/$documentId"
                 >
-                  <BookOpen aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-accent" />
+                  <BookOpen
+                    aria-hidden="true"
+                    className="mt-0.5 size-5 shrink-0 text-accent"
+                  />
                   <div className="min-w-0">
-                    <p className="font-semibold leading-snug">
-                      {doc.title}
-                    </p>
+                    <p className="font-semibold leading-snug">{doc.title}</p>
                     <p className="mt-1 text-sm text-slate-500">
                       {doc.type}
-                      {doc.category ? ` · ${localizeCategoryName(doc.category)}` : ""}
-                      {doc.publishedAt ? ` · ${new Date(doc.publishedAt).getFullYear()}` : ""}
+                      {doc.category
+                        ? ` · ${localizeCategoryName(doc.category)}`
+                        : ""}
+                      {doc.publishedAt
+                        ? ` · ${new Date(doc.publishedAt).getFullYear()}`
+                        : ""}
                     </p>
                   </div>
                 </Link>

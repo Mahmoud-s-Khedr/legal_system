@@ -5,10 +5,25 @@ import { Plus, Play, Trash2, Download, Loader2 } from "lucide-react";
 import { useToastStore } from "../../store/toastStore";
 import { apiFetch } from "../../lib/api";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { FormAlert, PageHeader, SectionCard, PrimaryButton, Field, SelectField, TablePagination, TableToolbar, formatDateTime } from "./ui";
+import {
+  FormAlert,
+  PageHeader,
+  SectionCard,
+  PrimaryButton,
+  Field,
+  SelectField,
+  TablePagination,
+  TableToolbar,
+  formatDateTime
+} from "./ui";
 import { downloadReportFile } from "./reportExport";
 
-type ReportType = "case-status" | "hearing-outcomes" | "lawyer-workload" | "revenue" | "outstanding-balances";
+type ReportType =
+  | "case-status"
+  | "hearing-outcomes"
+  | "lawyer-workload"
+  | "revenue"
+  | "outstanding-balances";
 
 interface CustomReportDto {
   id: string;
@@ -42,7 +57,13 @@ const REPORT_TYPES: ReportType[] = [
   "outstanding-balances"
 ];
 
-const EMPTY_FORM = { name: "", description: "", reportType: "case-status" as ReportType, dateFrom: "", dateTo: "" };
+const EMPTY_FORM = {
+  name: "",
+  description: "",
+  reportType: "case-status" as ReportType,
+  dateFrom: "",
+  dateTo: ""
+};
 
 export function ReportBuilderPage() {
   const { t } = useTranslation("app");
@@ -50,7 +71,10 @@ export function ReportBuilderPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
-  const [runResult, setRunResult] = useState<{ id: string; data: RunSessionResult } | null>(null);
+  const [runResult, setRunResult] = useState<{
+    id: string;
+    data: RunSessionResult;
+  } | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -73,7 +97,10 @@ export function ReportBuilderPage() {
           name: form.name,
           description: form.description || undefined,
           reportType: form.reportType,
-          config: { dateFrom: form.dateFrom || undefined, dateTo: form.dateTo || undefined }
+          config: {
+            dateFrom: form.dateFrom || undefined,
+            dateTo: form.dateTo || undefined
+          }
         })
       }),
     onSuccess: () => {
@@ -88,15 +115,20 @@ export function ReportBuilderPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiFetch(`/api/reports/custom/${id}`, { method: "DELETE" }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["custom-reports"] })
+    mutationFn: (id: string) =>
+      apiFetch(`/api/reports/custom/${id}`, { method: "DELETE" }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["custom-reports"] })
   });
 
   async function handleRun(id: string) {
     setRunningId(id);
     setActionError(null);
     try {
-      const data = await apiFetch<RunSessionResult>(`/api/reports/custom/${id}/run`, { method: "POST" });
+      const data = await apiFetch<RunSessionResult>(
+        `/api/reports/custom/${id}/run`,
+        { method: "POST" }
+      );
       setRunResult({ id, data });
     } catch (error) {
       setActionError((error as Error)?.message ?? t("errors.fallback"));
@@ -158,7 +190,9 @@ export function ReportBuilderPage() {
               <SelectField
                 label={t("reports.reportType")}
                 value={form.reportType}
-                onChange={(v) => setForm({ ...form, reportType: v as ReportType })}
+                onChange={(v) =>
+                  setForm({ ...form, reportType: v as ReportType })
+                }
                 options={REPORT_TYPES.map((rt) => ({
                   value: rt,
                   label: t(`reports.type.${rt}`)
@@ -191,10 +225,15 @@ export function ReportBuilderPage() {
                 disabled={!form.name.trim() || createMutation.isPending}
                 onClick={() => createMutation.mutate()}
               >
-                {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                {createMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : null}
                 {t("actions.save")}
               </PrimaryButton>
-              <button className="rounded-xl border border-slate-200 px-4 py-2 text-sm" onClick={() => setShowForm(false)}>
+              <button
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
+                onClick={() => setShowForm(false)}
+              >
                 {t("actions.cancel")}
               </button>
             </div>
@@ -209,16 +248,24 @@ export function ReportBuilderPage() {
         {reportsQuery.isLoading ? (
           <p className="text-sm text-slate-500">{t("labels.loading")}</p>
         ) : reportsQuery.isError ? (
-          <FormAlert message={(reportsQuery.error as Error)?.message ?? t("errors.fallback")} />
+          <FormAlert
+            message={
+              (reportsQuery.error as Error)?.message ?? t("errors.fallback")
+            }
+          />
         ) : !reports.length ? (
           <p className="text-sm text-slate-500">{t("empty.noCustomReports")}</p>
         ) : (
           <div className="space-y-2">
             {reports.map((r) => (
-              <div key={r.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <div
+                key={r.id}
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+              >
                 <div className="flex-1">
                   <p className="font-semibold">{r.name}</p>
-                  <p className="text-sm text-slate-500">{t(`reports.type.${r.reportType}`)}
+                  <p className="text-sm text-slate-500">
+                    {t(`reports.type.${r.reportType}`)}
                     {r.config.dateFrom && ` · ${r.config.dateFrom}`}
                     {r.config.dateTo && ` → ${r.config.dateTo}`}
                   </p>
@@ -228,7 +275,11 @@ export function ReportBuilderPage() {
                   disabled={runningId === r.id}
                   onClick={() => handleRun(r.id)}
                 >
-                  {runningId === r.id ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+                  {runningId === r.id ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Play className="size-4" />
+                  )}
                   {t("reports.run")}
                 </button>
                 <button
@@ -255,8 +306,13 @@ export function ReportBuilderPage() {
         <SectionCard title={t("reports.results")}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500">{t("reports.ranAt")}: {formatDateTime(runResult.data.ranAt)}</p>
-              <button className="text-sm text-slate-400 hover:text-slate-600" onClick={() => setRunResult(null)}>
+              <p className="text-sm text-slate-500">
+                {t("reports.ranAt")}: {formatDateTime(runResult.data.ranAt)}
+              </p>
+              <button
+                className="text-sm text-slate-400 hover:text-slate-600"
+                onClick={() => setRunResult(null)}
+              >
                 {t("actions.close")}
               </button>
             </div>
@@ -272,7 +328,11 @@ export function ReportBuilderPage() {
                 value={`${table.state.sortBy}:${table.state.sortDir}`}
                 onChange={(value) => {
                   const [sortBy, sortDir] = value.split(":");
-                  table.update({ sortBy, sortDir: sortDir as "asc" | "desc", page: 1 });
+                  table.update({
+                    sortBy,
+                    sortDir: sortDir as "asc" | "desc",
+                    page: 1
+                  });
                 }}
                 options={[
                   { value: "value:asc", label: "A-Z" },
@@ -288,7 +348,12 @@ export function ReportBuilderPage() {
                   <thead className="border-b bg-slate-50">
                     <tr>
                       {Object.keys(runRowsQuery.data.items[0]).map((k) => (
-                        <th key={k} className="px-3 py-2 text-start font-semibold text-slate-600">{k}</th>
+                        <th
+                          key={k}
+                          className="px-3 py-2 text-start font-semibold text-slate-600"
+                        >
+                          {k}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -296,7 +361,9 @@ export function ReportBuilderPage() {
                     {runRowsQuery.data.items.map((row, i) => (
                       <tr key={i} className="border-b last:border-0">
                         {Object.values(row).map((v, j) => (
-                          <td key={j} className="px-3 py-2">{String(v ?? "-")}</td>
+                          <td key={j} className="px-3 py-2">
+                            {String(v ?? "-")}
+                          </td>
                         ))}
                       </tr>
                     ))}
@@ -304,7 +371,11 @@ export function ReportBuilderPage() {
                 </table>
               </div>
             ) : runRowsQuery.isError ? (
-              <FormAlert message={(runRowsQuery.error as Error)?.message ?? t("errors.fallback")} />
+              <FormAlert
+                message={
+                  (runRowsQuery.error as Error)?.message ?? t("errors.fallback")
+                }
+              />
             ) : (
               <p className="text-sm text-slate-400">{t("empty.noData")}</p>
             )}

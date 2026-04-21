@@ -9,7 +9,9 @@ const languages = [
 
 export function LanguageSwitcher() {
   const { i18n, t } = useTranslation("app");
-  const activeLanguage = (i18n.resolvedLanguage ?? i18n.language).split("-")[0]?.toUpperCase();
+  const activeLanguage = (i18n.resolvedLanguage ?? i18n.language)
+    .split("-")[0]
+    ?.toUpperCase();
 
   return (
     <div className="flex gap-2" role="group" aria-label={t("labels.language")}>

@@ -1,6 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { SessionOutcome, type HearingListResponseDto, type HearingDto } from "@elms/shared";
+import {
+  SessionOutcome,
+  type HearingListResponseDto,
+  type HearingDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -38,7 +42,8 @@ function OutcomeCell({ hearing }: { hearing: HearingDto }) {
           outcome
         })
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hearings-management"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["hearings-management"] }),
     onError: (error: Error) => {
       addToast(error.message || t("errors.fallback"), "error");
     }
@@ -48,7 +53,9 @@ function OutcomeCell({ hearing }: { hearing: HearingDto }) {
     <select
       className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 focus:border-accent focus:outline-none disabled:opacity-50"
       disabled={mutation.isPending}
-      onChange={(e) => mutation.mutate((e.target.value || null) as SessionOutcome | null)}
+      onChange={(e) =>
+        mutation.mutate((e.target.value || null) as SessionOutcome | null)
+      }
       value={hearing.outcome ?? ""}
     >
       <option value="">—</option>
@@ -73,7 +80,9 @@ export function HearingsPage() {
   const hearingsQuery = useQuery({
     queryKey: ["hearings-management", table.state],
     queryFn: () =>
-      apiFetch<HearingListResponseDto>(`/api/hearings?${table.toApiQueryString()}`)
+      apiFetch<HearingListResponseDto>(
+        `/api/hearings?${table.toApiQueryString()}`
+      )
   });
 
   return (
@@ -84,13 +93,19 @@ export function HearingsPage() {
         description={t("hearings.description")}
         stickyActions
         actions={
-          <Link className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white" to="/app/hearings/new">
+          <Link
+            className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
+            to="/app/hearings/new"
+          >
             {t("hearings.newHearing")}
           </Link>
         }
       />
 
-      <SectionCard title={t("hearings.title")} description={t("hearings.description")}>
+      <SectionCard
+        title={t("hearings.title")}
+        description={t("hearings.description")}
+      >
         <div className="mb-4 grid gap-3 md:grid-cols-2">
           <Field
             label={t("labels.search")}
@@ -109,34 +124,61 @@ export function HearingsPage() {
           />
         </div>
 
-        {hearingsQuery.isLoading ? <p className="text-sm text-slate-500">{t("labels.loading")}</p> : null}
+        {hearingsQuery.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : null}
 
         {hearingsQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(hearingsQuery.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (hearingsQuery.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void hearingsQuery.refetch()}
           />
         ) : null}
 
-        {!hearingsQuery.isLoading && !hearingsQuery.isError && !hearingsQuery.data?.items.length ? (
-          <EmptyState title={t("empty.noHearings")} description={t("empty.noHearingsHelp")} />
+        {!hearingsQuery.isLoading &&
+        !hearingsQuery.isError &&
+        !hearingsQuery.data?.items.length ? (
+          <EmptyState
+            title={t("empty.noHearings")}
+            description={t("empty.noHearingsHelp")}
+          />
         ) : null}
 
-        {!hearingsQuery.isLoading && !hearingsQuery.isError && !!hearingsQuery.data?.items.length ? (
+        {!hearingsQuery.isLoading &&
+        !hearingsQuery.isError &&
+        !!hearingsQuery.data?.items.length ? (
           <>
             <ResponsiveDataList
               items={hearingsQuery.data.items}
               getItemKey={(item) => item.id}
               fields={[
-                { key: "case", label: t("labels.case"), render: (item) => item.caseTitle },
-                { key: "datetime", label: t("labels.sessionDatetime"), render: (item) => formatDateTime(item.sessionDatetime) },
-                { key: "lawyer", label: t("labels.assignedLawyer"), render: (item) => item.assignedLawyerName ?? t("labels.unassigned") },
+                {
+                  key: "case",
+                  label: t("labels.case"),
+                  render: (item) => item.caseTitle
+                },
+                {
+                  key: "datetime",
+                  label: t("labels.sessionDatetime"),
+                  render: (item) => formatDateTime(item.sessionDatetime)
+                },
+                {
+                  key: "lawyer",
+                  label: t("labels.assignedLawyer"),
+                  render: (item) =>
+                    item.assignedLawyerName ?? t("labels.unassigned")
+                },
                 {
                   key: "outcome",
                   label: t("labels.outcome"),
-                  render: (item) => (item.outcome ? getEnumLabel(t, "SessionOutcome", item.outcome) : "—")
+                  render: (item) =>
+                    item.outcome
+                      ? getEnumLabel(t, "SessionOutcome", item.outcome)
+                      : "—"
                 }
               ]}
               actions={(item) => (
@@ -154,19 +196,39 @@ export function HearingsPage() {
                 <TableHead>
                   <tr>
                     <TableHeadCell>{t("labels.case")}</TableHeadCell>
-                    <SortableTableHeadCell label={t("labels.sessionDatetime")} sortKey="sessionDatetime" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell
+                      label={t("labels.sessionDatetime")}
+                      sortKey="sessionDatetime"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
                     <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
-                    <SortableTableHeadCell label={t("labels.outcome")} sortKey="outcome" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    <SortableTableHeadCell
+                      label={t("labels.outcome")}
+                      sortKey="outcome"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <TableHeadCell align="end">
+                      {t("actions.more")}
+                    </TableHeadCell>
                   </tr>
                 </TableHead>
                 <TableBody>
                   {hearingsQuery.data.items.map((hearing) => (
                     <TableRow key={hearing.id}>
                       <TableCell>{hearing.caseTitle}</TableCell>
-                      <TableCell>{formatDateTime(hearing.sessionDatetime)}</TableCell>
-                      <TableCell>{hearing.assignedLawyerName ?? t("labels.unassigned")}</TableCell>
-                      <TableCell><OutcomeCell hearing={hearing} /></TableCell>
+                      <TableCell>
+                        {formatDateTime(hearing.sessionDatetime)}
+                      </TableCell>
+                      <TableCell>
+                        {hearing.assignedLawyerName ?? t("labels.unassigned")}
+                      </TableCell>
+                      <TableCell>
+                        <OutcomeCell hearing={hearing} />
+                      </TableCell>
                       <TableCell align="end">
                         <Link
                           className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"

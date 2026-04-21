@@ -2,7 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { Briefcase, FileText, Calendar } from "lucide-react";
-import { EmptyState, PageHeader, SectionCard, StatCard, ErrorState, formatCurrency, formatDate } from "../app/ui";
+import {
+  EmptyState,
+  PageHeader,
+  SectionCard,
+  StatCard,
+  ErrorState,
+  formatCurrency,
+  formatDate
+} from "../app/ui";
 import { resolveApiUrl } from "../../lib/api";
 
 interface PortalCase {
@@ -51,8 +59,14 @@ export function PortalDashboardPage() {
   const cases = casesQuery.data ?? [];
   const invoices = invoicesQuery.data ?? [];
   const isLoading = casesQuery.isLoading || invoicesQuery.isLoading;
-  const overdueInvoices = invoices.filter((inv) => inv.status === "ISSUED" && inv.dueDate && new Date(inv.dueDate) < new Date());
-  const pageError = (casesQuery.error as Error | null) ?? (invoicesQuery.error as Error | null);
+  const overdueInvoices = invoices.filter(
+    (inv) =>
+      inv.status === "ISSUED" &&
+      inv.dueDate &&
+      new Date(inv.dueDate) < new Date()
+  );
+  const pageError =
+    (casesQuery.error as Error | null) ?? (invoicesQuery.error as Error | null);
 
   return (
     <div className="space-y-6">
@@ -67,19 +81,28 @@ export function PortalDashboardPage() {
           <div className="absolute end-4 top-4 rounded-xl bg-blue-50 p-2 text-blue-600">
             <Briefcase className="size-4" />
           </div>
-          <StatCard label={t("portal.activeCases")} value={isLoading ? "…" : cases.length} />
+          <StatCard
+            label={t("portal.activeCases")}
+            value={isLoading ? "…" : cases.length}
+          />
         </div>
         <div className="relative">
           <div className="absolute end-4 top-4 rounded-xl bg-amber-50 p-2 text-amber-600">
             <FileText className="size-4" />
           </div>
-          <StatCard label={t("portal.invoices")} value={isLoading ? "…" : invoices.length} />
+          <StatCard
+            label={t("portal.invoices")}
+            value={isLoading ? "…" : invoices.length}
+          />
         </div>
         <div className="relative">
           <div className="absolute end-4 top-4 rounded-xl bg-red-100 p-2 text-red-600">
             <FileText className="size-4" />
           </div>
-          <StatCard label={t("portal.overdueInvoices")} value={isLoading ? "…" : overdueInvoices.length} />
+          <StatCard
+            label={t("portal.overdueInvoices")}
+            value={isLoading ? "…" : overdueInvoices.length}
+          />
         </div>
       </div>
 
@@ -91,15 +114,19 @@ export function PortalDashboardPage() {
           <ErrorState
             title={t("errors.title")}
             description={
-              pageError instanceof PortalRequestError && (pageError.status === 401 || pageError.status === 403)
+              pageError instanceof PortalRequestError &&
+              (pageError.status === 401 || pageError.status === 403)
                 ? t("errors.unauthorized")
-                : pageError?.message ?? t("errors.fallback")
+                : (pageError?.message ?? t("errors.fallback"))
             }
             retryLabel={t("errors.reload")}
             onRetry={() => void casesQuery.refetch()}
           />
         ) : !cases.length ? (
-          <EmptyState title={t("empty.noCases")} description={t("empty.noCasesHelp")} />
+          <EmptyState
+            title={t("empty.noCases")}
+            description={t("empty.noCasesHelp")}
+          />
         ) : (
           <div className="space-y-2">
             {cases.map((c) => (
@@ -111,7 +138,9 @@ export function PortalDashboardPage() {
               >
                 <div className="flex-1">
                   <p className="font-semibold">{c.title}</p>
-                  <p className="text-sm text-slate-500">{c.caseNumber} · {c.status}</p>
+                  <p className="text-sm text-slate-500">
+                    {c.caseNumber} · {c.status}
+                  </p>
                 </div>
                 {c.nextHearing && (
                   <div className="flex items-center gap-1.5 text-sm text-slate-400">
@@ -133,27 +162,37 @@ export function PortalDashboardPage() {
           <ErrorState
             title={t("errors.title")}
             description={
-              pageError instanceof PortalRequestError && (pageError.status === 401 || pageError.status === 403)
+              pageError instanceof PortalRequestError &&
+              (pageError.status === 401 || pageError.status === 403)
                 ? t("errors.unauthorized")
-                : pageError?.message ?? t("errors.fallback")
+                : (pageError?.message ?? t("errors.fallback"))
             }
             retryLabel={t("errors.reload")}
             onRetry={() => void invoicesQuery.refetch()}
           />
         ) : !invoices.length ? (
-          <EmptyState title={t("empty.noInvoices")} description={t("empty.noInvoicesHelp")} />
+          <EmptyState
+            title={t("empty.noInvoices")}
+            description={t("empty.noInvoicesHelp")}
+          />
         ) : (
           <div className="space-y-2">
             {invoices.slice(0, 5).map((inv) => (
-              <div key={inv.id} className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <div
+                key={inv.id}
+                className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+              >
                 <div className="flex-1">
                   <p className="font-semibold">{inv.invoiceNumber}</p>
                   <p className="text-sm text-slate-500">
                     {inv.status}
-                    {inv.dueDate && ` · ${t("portal.due")} ${formatDate(inv.dueDate)}`}
+                    {inv.dueDate &&
+                      ` · ${t("portal.due")} ${formatDate(inv.dueDate)}`}
                   </p>
                 </div>
-                <p className="font-semibold">{formatCurrency(inv.totalAmount)}</p>
+                <p className="font-semibold">
+                  {formatCurrency(inv.totalAmount)}
+                </p>
               </div>
             ))}
           </div>

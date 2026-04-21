@@ -10,14 +10,18 @@ type MockLinkProps = {
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ to, children, ...props }: MockLinkProps) => (
-    <a href={to} {...props}>{children}</a>
+    <a href={to} {...props}>
+      {children}
+    </a>
   )
 }));
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 afterEach(() => {
   if (root) {
@@ -68,7 +72,9 @@ describe("FormExitActions", () => {
       />
     );
 
-    const saveAndExit = Array.from(view.querySelectorAll("button")).find((button) => button.textContent?.includes("Save & Exit"));
+    const saveAndExit = Array.from(view.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Save & Exit")
+    );
     expect(saveAndExit).toBeDefined();
   });
 });

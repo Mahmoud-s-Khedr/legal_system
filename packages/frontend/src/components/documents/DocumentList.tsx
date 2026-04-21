@@ -38,15 +38,25 @@ interface DocumentListProps {
 }
 
 export function canShowIndexedText(doc: DocumentDto) {
-  return doc.extractionStatus === "INDEXED" && Boolean(doc.contentText?.trim().length);
+  return (
+    doc.extractionStatus === "INDEXED" &&
+    Boolean(doc.contentText?.trim().length)
+  );
 }
 
-export function DocumentList({ caseId, clientId, queryKey, queryParams, pagination }: DocumentListProps) {
+export function DocumentList({
+  caseId,
+  clientId,
+  queryKey,
+  queryParams,
+  pagination
+}: DocumentListProps) {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
   const addToast = useToastStore((state) => state.addToast);
   const [viewingDoc, setViewingDoc] = useState<DocumentDto | null>(null);
-  const [showingIndexedDoc, setShowingIndexedDoc] = useState<DocumentDto | null>(null);
+  const [showingIndexedDoc, setShowingIndexedDoc] =
+    useState<DocumentDto | null>(null);
 
   const params = new URLSearchParams();
   if (caseId) params.set("caseId", caseId);
@@ -66,14 +76,17 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
     refetchInterval: (data) => {
       const items = data.state.data?.items ?? [];
       const hasPending = items.some(
-        (d) => d.extractionStatus === "PENDING" || d.extractionStatus === "PROCESSING"
+        (d) =>
+          d.extractionStatus === "PENDING" ||
+          d.extractionStatus === "PROCESSING"
       );
       return hasPending ? 3000 : false;
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiFetch(`/api/documents/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) =>
+      apiFetch(`/api/documents/${id}`, { method: "DELETE" }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
     }
@@ -97,7 +110,9 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
 
   const handleDownload = async (doc: DocumentDto) => {
     try {
-      const { blob, filename } = await apiDownload(`/api/documents/${doc.id}/stream`);
+      const { blob, filename } = await apiDownload(
+        `/api/documents/${doc.id}/stream`
+      );
       await saveBlobToDownloads(blob, filename ?? doc.fileName);
     } catch {
       showErrorDialog(t("errors.fallback"));
@@ -127,7 +142,9 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
     return (
       <ErrorState
         title={t("errors.title")}
-        description={(docsQuery.error as Error)?.message ?? t("errors.fallback")}
+        description={
+          (docsQuery.error as Error)?.message ?? t("errors.fallback")
+        }
         retryLabel={t("errors.reload")}
         onRetry={() => void docsQuery.refetch()}
       />
@@ -153,7 +170,7 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
         fields={[
           {
             key: "title",
-            label: t("labels.title"),
+            label: t("labels.documentTitle"),
             render: (doc) => (
               <div className="min-w-0">
                 <p className="truncate font-medium">{doc.title}</p>
@@ -161,8 +178,20 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
               </div>
             )
           },
-          { key: "type", label: t("documents.fileType"), render: (doc) => <EnumBadge enumName="DocumentType" value={doc.type} /> },
-          { key: "status", label: t("labels.status"), render: (doc) => <ExtractionStatusBadge status={doc.extractionStatus} /> }
+          {
+            key: "type",
+            label: t("documents.fileType"),
+            render: (doc) => (
+              <EnumBadge enumName="DocumentType" value={doc.type} />
+            )
+          },
+          {
+            key: "status",
+            label: t("labels.status"),
+            render: (doc) => (
+              <ExtractionStatusBadge status={doc.extractionStatus} />
+            )
+          }
         ]}
         actions={(doc) => (
           <>
@@ -206,7 +235,7 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
         <DataTable>
           <TableHead>
             <tr>
-              <TableHeadCell>{t("labels.title")}</TableHeadCell>
+              <TableHeadCell>{t("labels.documentTitle")}</TableHeadCell>
               <TableHeadCell>{t("documents.fileType")}</TableHeadCell>
               <TableHeadCell>{t("labels.status")}</TableHeadCell>
               <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
@@ -291,7 +320,13 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
         />
       ) : null}
       <Modal
-        title={showingIndexedDoc ? t("documents.indexedTextTitle", { title: showingIndexedDoc.title }) : t("documents.indexedTextTitleFallback")}
+        title={
+          showingIndexedDoc
+            ? t("documents.indexedTextTitle", {
+                title: showingIndexedDoc.title
+              })
+            : t("documents.indexedTextTitleFallback")
+        }
         open={Boolean(showingIndexedDoc)}
         onCancel={() => setShowingIndexedDoc(null)}
         footer={
@@ -313,9 +348,12 @@ export function DocumentList({ caseId, clientId, queryKey, queryParams, paginati
           </div>
         }
       >
-        <p className="mb-3 text-sm text-slate-500">{t("documents.indexedTextDescription")}</p>
+        <p className="mb-3 text-sm text-slate-500">
+          {t("documents.indexedTextDescription")}
+        </p>
         <pre className="max-h-[48vh] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">
-          {showingIndexedDoc?.contentText?.trim() || t("documents.indexedTextUnavailable")}
+          {showingIndexedDoc?.contentText?.trim() ||
+            t("documents.indexedTextUnavailable")}
         </pre>
       </Modal>
     </>

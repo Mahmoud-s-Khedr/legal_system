@@ -38,7 +38,9 @@ export function ClientsPage() {
   const clientsQuery = useQuery({
     queryKey: ["clients", table.state],
     queryFn: () =>
-      apiFetch<ClientListResponseDto>(`/api/clients?${table.toApiQueryString()}`)
+      apiFetch<ClientListResponseDto>(
+        `/api/clients?${table.toApiQueryString()}`
+      )
   });
 
   return (
@@ -57,7 +59,10 @@ export function ClientsPage() {
           </Link>
         }
       />
-      <SectionCard title={t("clients.directory")} description={t("clients.directoryHelp")}>
+      <SectionCard
+        title={t("clients.directory")}
+        description={t("clients.directoryHelp")}
+      >
         <TableToolbar>
           <Field
             label={t("labels.search")}
@@ -71,7 +76,10 @@ export function ClientsPage() {
             onChange={(value) => table.setFilter("type", value)}
             options={[
               { value: "", label: t("labels.all") },
-              ...Object.values(ClientType).map((value) => ({ value, label: getEnumLabel(t, "ClientType", value) }))
+              ...Object.values(ClientType).map((value) => ({
+                value,
+                label: getEnumLabel(t, "ClientType", value)
+              }))
             ]}
           />
         </TableToolbar>
@@ -81,22 +89,45 @@ export function ClientsPage() {
           ) : clientsQuery.isError ? (
             <ErrorState
               title={t("errors.title")}
-              description={(clientsQuery.error as Error)?.message ?? t("errors.fallback")}
+              description={
+                (clientsQuery.error as Error)?.message ?? t("errors.fallback")
+              }
               retryLabel={t("errors.reload")}
               onRetry={() => void clientsQuery.refetch()}
             />
           ) : !clientsQuery.data?.items.length ? (
-            <EmptyState title={t("empty.noClients")} description={t("empty.noClientsHelp")} />
+            <EmptyState
+              title={t("empty.noClients")}
+              description={t("empty.noClientsHelp")}
+            />
           ) : (
             <>
               <ResponsiveDataList
                 items={clientsQuery.data.items}
                 getItemKey={(item) => item.id}
                 fields={[
-                  { key: "name", label: t("labels.name"), render: (item) => item.name },
-                  { key: "email", label: t("labels.email"), render: (item) => item.email ?? "—" },
-                  { key: "phone", label: t("labels.phone"), render: (item) => item.phone ?? "—" },
-                  { key: "type", label: t("labels.type"), render: (item) => <EnumBadge enumName="ClientType" value={item.type} /> }
+                  {
+                    key: "name",
+                    label: t("labels.name"),
+                    render: (item) => item.name
+                  },
+                  {
+                    key: "email",
+                    label: t("labels.email"),
+                    render: (item) => item.email ?? "—"
+                  },
+                  {
+                    key: "phone",
+                    label: t("labels.phone"),
+                    render: (item) => item.phone ?? "—"
+                  },
+                  {
+                    key: "type",
+                    label: t("labels.type"),
+                    render: (item) => (
+                      <EnumBadge enumName="ClientType" value={item.type} />
+                    )
+                  }
                 ]}
                 actions={(item) => (
                   <Link
@@ -112,11 +143,31 @@ export function ClientsPage() {
                 <DataTable>
                   <TableHead>
                     <tr>
-                      <SortableTableHeadCell label={t("labels.name")} sortKey="name" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                      <SortableTableHeadCell label={t("labels.email")} sortKey="email" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                      <SortableTableHeadCell
+                        label={t("labels.name")}
+                        sortKey="name"
+                        sortBy={table.state.sortBy}
+                        sortDir={table.state.sortDir}
+                        onSort={table.setSort}
+                      />
+                      <SortableTableHeadCell
+                        label={t("labels.email")}
+                        sortKey="email"
+                        sortBy={table.state.sortBy}
+                        sortDir={table.state.sortDir}
+                        onSort={table.setSort}
+                      />
                       <TableHeadCell>{t("labels.phone")}</TableHeadCell>
-                      <SortableTableHeadCell label={t("labels.type")} sortKey="type" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                      <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                      <SortableTableHeadCell
+                        label={t("labels.type")}
+                        sortKey="type"
+                        sortBy={table.state.sortBy}
+                        sortDir={table.state.sortDir}
+                        onSort={table.setSort}
+                      />
+                      <TableHeadCell align="end">
+                        {t("actions.more")}
+                      </TableHeadCell>
                     </tr>
                   </TableHead>
                   <TableBody>
@@ -126,7 +177,10 @@ export function ClientsPage() {
                         <TableCell>{client.email ?? "—"}</TableCell>
                         <TableCell>{client.phone ?? "—"}</TableCell>
                         <TableCell>
-                          <EnumBadge enumName="ClientType" value={client.type} />
+                          <EnumBadge
+                            enumName="ClientType"
+                            value={client.type}
+                          />
                         </TableCell>
                         <TableCell align="end">
                           <Link

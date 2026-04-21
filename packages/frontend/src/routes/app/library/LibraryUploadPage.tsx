@@ -4,9 +4,19 @@ import { LibraryDocumentType } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { Upload, FileText, XCircle, Loader2 } from "lucide-react";
 import { apiFetch, apiFormFetch } from "../../../lib/api";
-import { runUploadQueue, type UploadQueueStatus, type UploadQueueSummary } from "../../../lib/uploadQueue";
+import {
+  runUploadQueue,
+  type UploadQueueStatus,
+  type UploadQueueSummary
+} from "../../../lib/uploadQueue";
 import { useHasPermission } from "../../../store/authStore";
-import { Field, PageHeader, SectionCard, PrimaryButton, SelectField } from "../ui";
+import {
+  Field,
+  PageHeader,
+  SectionCard,
+  PrimaryButton,
+  SelectField
+} from "../ui";
 
 interface CategoryNode {
   id: string;
@@ -28,8 +38,12 @@ type FileUploadState = {
   error?: string;
 };
 
-function flattenCategories(nodes: CategoryNode[], depth = 0): { id: string; label: string }[] {
-  const locale = typeof window !== "undefined" ? document.documentElement.lang : "en";
+function flattenCategories(
+  nodes: CategoryNode[],
+  depth = 0
+): { id: string; label: string }[] {
+  const locale =
+    typeof window !== "undefined" ? document.documentElement.lang : "en";
   const selectName = (node: CategoryNode) => {
     if (locale === "ar") return node.nameAr;
     if (locale === "fr") return node.nameFr;
@@ -70,9 +84,12 @@ export function LibraryUploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [files, setFiles] = useState<SelectedLibraryFile[]>([]);
-  const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>({});
+  const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>(
+    {}
+  );
   const [form, setForm] = useState(EMPTY_FORM);
-  const [summary, setSummary] = useState<UploadQueueSummary<UploadResult> | null>(null);
+  const [summary, setSummary] =
+    useState<UploadQueueSummary<UploadResult> | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const categoriesQuery = useQuery({
@@ -136,7 +153,10 @@ export function LibraryUploadPage() {
 
   function appendFiles(newFiles: FileList | null) {
     if (!newFiles?.length) return;
-    const incoming = Array.from(newFiles).map((file) => ({ id: makeFileId(), file }));
+    const incoming = Array.from(newFiles).map((file) => ({
+      id: makeFileId(),
+      file
+    }));
     setFiles((prev) => [...prev, ...incoming]);
     setSummary(null);
     if (fileInputRef.current) {
@@ -168,7 +188,10 @@ export function LibraryUploadPage() {
     setSummary(null);
     setIsUploading(true);
 
-    const uploadSummary = await runUploadQueue<SelectedLibraryFile, UploadResult>({
+    const uploadSummary = await runUploadQueue<
+      SelectedLibraryFile,
+      UploadResult
+    >({
       items: targets,
       concurrency: 3,
       upload: async (entry) => {
@@ -234,7 +257,9 @@ export function LibraryUploadPage() {
       />
 
       {summary && (
-        <div className={`rounded-2xl border px-4 py-3 ${summary.failedCount > 0 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-green-200 bg-green-50 text-green-800"}`}>
+        <div
+          className={`rounded-2xl border px-4 py-3 ${summary.failedCount > 0 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-green-200 bg-green-50 text-green-800"}`}
+        >
           {t("documents.uploadSummary", {
             successCount: summary.successCount,
             failedCount: summary.failedCount
@@ -251,13 +276,21 @@ export function LibraryUploadPage() {
             <Upload className="mb-3 size-8 text-slate-400" />
             {files.length > 0 ? (
               <div className="space-y-1">
-                <p className="font-medium text-accent">{t("documents.filesSelected", { count: files.length })}</p>
-                <p className="text-sm text-slate-500">{t("library.allowedTypes")}</p>
+                <p className="font-medium text-accent">
+                  {t("documents.filesSelected", { count: files.length })}
+                </p>
+                <p className="text-sm text-slate-500">
+                  {t("library.allowedTypes")}
+                </p>
               </div>
             ) : (
               <>
-                <p className="font-medium text-slate-600">{t("library.dropFiles")}</p>
-                <p className="text-sm text-slate-400">{t("library.allowedTypes")}</p>
+                <p className="font-medium text-slate-600">
+                  {t("library.dropFiles")}
+                </p>
+                <p className="text-sm text-slate-400">
+                  {t("library.allowedTypes")}
+                </p>
               </>
             )}
           </div>
@@ -275,12 +308,27 @@ export function LibraryUploadPage() {
               {files.map((entry) => {
                 const state = fileStates[entry.id];
                 return (
-                  <div key={entry.id} className="flex flex-wrap items-center gap-2 text-sm">
+                  <div
+                    key={entry.id}
+                    className="flex flex-wrap items-center gap-2 text-sm"
+                  >
                     <FileText className="size-4 text-accent" />
-                    <span className="font-medium text-slate-800">{entry.file.name}</span>
-                    <span className="text-xs text-slate-500">({(entry.file.size / 1024).toFixed(1)} KB)</span>
-                    {state ? <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs">{getStatusLabel(state.status)}</span> : null}
-                    {state?.error ? <span className="text-xs text-red-600">{state.error}</span> : null}
+                    <span className="font-medium text-slate-800">
+                      {entry.file.name}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      ({(entry.file.size / 1024).toFixed(1)} KB)
+                    </span>
+                    {state ? (
+                      <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs">
+                        {getStatusLabel(state.status)}
+                      </span>
+                    ) : null}
+                    {state?.error ? (
+                      <span className="text-xs text-red-600">
+                        {state.error}
+                      </span>
+                    ) : null}
                     <button
                       type="button"
                       className="ms-auto text-xs text-red-600"
@@ -299,11 +347,15 @@ export function LibraryUploadPage() {
 
       <SectionCard title={t("library.documentMetadata")}>
         <div className="space-y-4">
-          <div className={`grid grid-cols-1 gap-3 ${canManageLibrary ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          <div
+            className={`grid grid-cols-1 gap-3 ${canManageLibrary ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+          >
             <SelectField
               label={t("library.type")}
               value={form.type}
-              onChange={(value) => setForm({ ...form, type: value as LibraryDocumentType })}
+              onChange={(value) =>
+                setForm({ ...form, type: value as LibraryDocumentType })
+              }
               options={DOCUMENT_TYPES.map((dt) => ({ value: dt, label: dt }))}
             />
             {canManageLibrary ? (
@@ -331,30 +383,43 @@ export function LibraryUploadPage() {
           {form.type === LibraryDocumentType.LEGISLATION && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <label className="block space-y-1">
-                <span className="text-sm font-semibold">{t("library.lawNumber")}</span>
+                <span className="text-sm font-semibold">
+                  {t("library.lawNumber")}
+                </span>
                 <input
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
                   placeholder="e.g. 84"
                   type="text"
                   value={form.lawNumber}
-                  onChange={(e) => setForm({ ...form, lawNumber: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, lawNumber: e.target.value })
+                  }
                 />
               </label>
               <label className="block space-y-1">
-                <span className="text-sm font-semibold">{t("library.lawYear")}</span>
+                <span className="text-sm font-semibold">
+                  {t("library.lawYear")}
+                </span>
                 <input
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
                   placeholder="e.g. 2002"
                   type="number"
                   value={form.lawYear}
-                  onChange={(e) => setForm({ ...form, lawYear: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, lawYear: e.target.value })
+                  }
                 />
               </label>
               <SelectField
                 label={t("library.legislationStatus")}
                 value={form.legislationStatus}
-                onChange={(value) => setForm({ ...form, legislationStatus: value })}
-                options={LEGISLATION_STATUSES.map((status) => ({ value: status, label: status }))}
+                onChange={(value) =>
+                  setForm({ ...form, legislationStatus: value })
+                }
+                options={LEGISLATION_STATUSES.map((status) => ({
+                  value: status,
+                  label: status
+                }))}
               />
             </div>
           )}
@@ -362,12 +427,16 @@ export function LibraryUploadPage() {
           {form.type === LibraryDocumentType.JUDGMENT && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block space-y-1">
-                <span className="text-sm font-semibold">{t("library.judgmentNumber")}</span>
+                <span className="text-sm font-semibold">
+                  {t("library.judgmentNumber")}
+                </span>
                 <input
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
                   type="text"
                   value={form.judgmentNumber}
-                  onChange={(e) => setForm({ ...form, judgmentNumber: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, judgmentNumber: e.target.value })
+                  }
                 />
               </label>
               <Field
@@ -382,7 +451,9 @@ export function LibraryUploadPage() {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block space-y-1">
-              <span className="text-sm font-semibold">{t("library.author")}</span>
+              <span className="text-sm font-semibold">
+                {t("library.author")}
+              </span>
               <input
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
                 type="text"

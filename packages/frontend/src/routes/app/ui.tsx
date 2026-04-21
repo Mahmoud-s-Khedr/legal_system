@@ -1,4 +1,10 @@
-import { useEffect, useId, useState, type PropsWithChildren, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useState,
+  type PropsWithChildren,
+  type ReactNode
+} from "react";
 import { DatePicker, Select } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
@@ -29,18 +35,28 @@ export function PageHeader({
 }) {
   const compact = density === "compact";
   return (
-    <div className={`flex flex-col ${compact ? "gap-3" : "gap-4"} lg:flex-row lg:items-end lg:justify-between animate-fade-in`}>
+    <div
+      className={`flex flex-col ${compact ? "gap-3" : "gap-4"} lg:flex-row lg:items-end lg:justify-between animate-fade-in`}
+    >
       <div className={compact ? "space-y-1.5" : "space-y-2"}>
         {eyebrow ? (
-          <p className="text-sm uppercase tracking-[0.3em] rtl:tracking-normal text-slate-500">{eyebrow}</p>
+          <p className="text-sm uppercase tracking-[0.3em] rtl:tracking-normal text-slate-500">
+            {eyebrow}
+          </p>
         ) : null}
-        <h1 className={`font-heading ${compact ? "text-2xl lg:text-3xl" : "text-3xl"}`}>{title}</h1>
+        <h1
+          className={`font-heading ${compact ? "text-2xl lg:text-3xl" : "text-3xl"}`}
+        >
+          {title}
+        </h1>
         <p className="max-w-3xl text-sm text-slate-600">{description}</p>
       </div>
       {actions ? (
         <div
           className={`flex ${actionsWrap === "nowrap" ? "flex-nowrap overflow-x-auto" : "flex-wrap"} gap-2.5 ${
-            stickyActions ? "lg:sticky lg:top-[calc(var(--header-height)+8px)] lg:z-10" : ""
+            stickyActions
+              ? "lg:sticky lg:top-[calc(var(--header-height)+8px)] lg:z-10"
+              : ""
           }`}
         >
           {actions}
@@ -71,14 +87,22 @@ export function SectionCard({
     >
       <div className={compact ? "mb-3" : "mb-4"}>
         <h2 className="font-heading text-lg">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
+        {description ? (
+          <p className="mt-1 text-sm text-slate-600">{description}</p>
+        ) : null}
       </div>
       {children}
     </section>
   );
 }
 
-export function StatCard({ label, value }: { label: string; value: number | string }) {
+export function StatCard({
+  label,
+  value
+}: {
+  label: string;
+  value: number | string;
+}) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-card transition-shadow hover:shadow-card-hover">
       <p className="text-sm text-slate-500">{label}</p>
@@ -97,9 +121,14 @@ export function TableWrapper({
   breakpoint?: "sm" | "md" | "lg";
   className?: string;
 }>) {
-  const tableHiddenClass = mobileMode === "cards"
-    ? (breakpoint === "sm" ? "hidden sm:block" : breakpoint === "lg" ? "hidden lg:block" : "hidden md:block")
-    : "";
+  const tableHiddenClass =
+    mobileMode === "cards"
+      ? breakpoint === "sm"
+        ? "hidden sm:block"
+        : breakpoint === "lg"
+          ? "hidden lg:block"
+          : "hidden md:block"
+      : "";
   return (
     <div
       className={`${tableHiddenClass} overflow-x-auto rounded-2xl border border-slate-200 bg-white ${className}`.trim()}
@@ -117,7 +146,9 @@ export function DataTable({
   stickyHeader = false
 }: PropsWithChildren<{ compact?: boolean; stickyHeader?: boolean }>) {
   return (
-    <table className={`min-w-full text-sm ${compact ? "table-fixed" : ""} ${stickyHeader ? "[&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10" : ""}`}>
+    <table
+      className={`min-w-full text-sm ${compact ? "table-fixed" : ""} ${stickyHeader ? "[&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10" : ""}`}
+    >
       {children}
     </table>
   );
@@ -131,8 +162,15 @@ export function TableHeadCell({
   children,
   align = "start"
 }: PropsWithChildren<{ align?: "start" | "end" | "center" }>) {
-  const alignClass = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
-  return <th className={`px-4 py-3 font-semibold ${alignClass}`}>{children}</th>;
+  const alignClass =
+    align === "end"
+      ? "text-end"
+      : align === "center"
+        ? "text-center"
+        : "text-start";
+  return (
+    <th className={`px-4 py-3 font-semibold ${alignClass}`}>{children}</th>
+  );
 }
 
 export function SortableTableHeadCell({
@@ -150,7 +188,12 @@ export function SortableTableHeadCell({
   onSort: (sortKey: string) => void;
   align?: "start" | "end" | "center";
 }) {
-  const alignClass = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
+  const alignClass =
+    align === "end"
+      ? "text-end"
+      : align === "center"
+        ? "text-center"
+        : "text-start";
   const isActive = sortBy === sortKey;
   const indicator = isActive ? (sortDir === "asc" ? "▲" : "▼") : "↕";
 
@@ -180,7 +223,12 @@ export function TableCell({
   children,
   align = "start"
 }: PropsWithChildren<{ align?: "start" | "end" | "center" }>) {
-  const alignClass = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
+  const alignClass =
+    align === "end"
+      ? "text-end"
+      : align === "center"
+        ? "text-center"
+        : "text-start";
   return <td className={`px-4 py-3 align-top ${alignClass}`}>{children}</td>;
 }
 
@@ -213,7 +261,9 @@ export function TableToolbar({
           {secondaryLabel ?? "More filters"}
         </button>
       </div>
-      <div className={`grid gap-3 lg:grid-cols-2 ${secondaryOpen ? "" : "hidden lg:grid"}`}>
+      <div
+        className={`grid gap-3 lg:grid-cols-2 ${secondaryOpen ? "" : "hidden lg:grid"}`}
+      >
         {secondaryChildren}
       </div>
     </div>
@@ -243,20 +293,39 @@ export function ResponsiveDataList<TItem>({
   breakpoint = "md",
   className = ""
 }: ResponsiveDataListProps<TItem>) {
-  const visibleClass = breakpoint === "sm" ? "sm:hidden" : breakpoint === "lg" ? "lg:hidden" : "md:hidden";
+  const visibleClass =
+    breakpoint === "sm"
+      ? "sm:hidden"
+      : breakpoint === "lg"
+        ? "lg:hidden"
+        : "md:hidden";
   return (
     <div className={`space-y-3 ${visibleClass} ${className}`.trim()}>
       {items.map((item) => (
-        <article key={getItemKey(item)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <article
+          key={getItemKey(item)}
+          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+        >
           <dl className="space-y-2">
             {fields.map((field) => (
-              <div key={field.key} className="flex items-start justify-between gap-4">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{field.label}</dt>
-                <dd className="min-w-0 text-sm text-slate-800 text-end">{field.render(item)}</dd>
+              <div
+                key={field.key}
+                className="flex items-start justify-between gap-4"
+              >
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {field.label}
+                </dt>
+                <dd className="min-w-0 text-sm text-slate-800 text-end">
+                  {field.render(item)}
+                </dd>
               </div>
             ))}
           </dl>
-          {actions ? <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">{actions(item)}</div> : null}
+          {actions ? (
+            <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
+              {actions(item)}
+            </div>
+          ) : null}
         </article>
       ))}
     </div>
@@ -293,7 +362,11 @@ export function TablePagination({
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
       <p>
-        {t("pagination.summary", { from: formattedFrom, to: formattedTo, total: formattedTotal })}
+        {t("pagination.summary", {
+          from: formattedFrom,
+          to: formattedTo,
+          total: formattedTotal
+        })}
       </p>
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Select<number>
@@ -302,7 +375,10 @@ export function TablePagination({
           style={{ width: 96 }}
           value={pageSize}
           onChange={(value) => onPageSizeChange(Number(value))}
-          options={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
+          options={[10, 20, 50, 100].map((size) => ({
+            value: size,
+            label: String(size)
+          }))}
           showSearch
           filterOption={(input, option) => selectLabelFilter(input, option)}
           optionFilterProp="label"
@@ -317,7 +393,10 @@ export function TablePagination({
           {t("pagination.prev")}
         </button>
         <span className="whitespace-nowrap text-xs sm:text-sm">
-          {t("pagination.pageStatus", { page: formattedPage, totalPages: formattedTotalPages })}
+          {t("pagination.pageStatus", {
+            page: formattedPage,
+            totalPages: formattedTotalPages
+          })}
         </span>
         <button
           type="button"
@@ -332,13 +411,23 @@ export function TablePagination({
   );
 }
 
-export function selectLabelFilter(input: string, option?: { label?: ReactNode }) {
+export function selectLabelFilter(
+  input: string,
+  option?: { label?: ReactNode }
+) {
   const label = option?.label;
-  const normalizedLabel = typeof label === "string" ? label : String(label ?? "");
+  const normalizedLabel =
+    typeof label === "string" ? label : String(label ?? "");
   return normalizedLabel.toLowerCase().includes(input.toLowerCase());
 }
 
-export function EmptyState({ title, description }: { title: string; description: string }) {
+export function EmptyState({
+  title,
+  description
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-600">
       <p className="font-semibold text-slate-900">{title}</p>
@@ -398,7 +487,14 @@ export function FormAlert({
   );
 }
 
-export type BadgeVariant = "green" | "blue" | "amber" | "red" | "gray" | "purple" | "default";
+export type BadgeVariant =
+  | "green"
+  | "blue"
+  | "amber"
+  | "red"
+  | "gray"
+  | "purple"
+  | "default";
 
 const BADGE_CLASSES: Record<BadgeVariant, string> = {
   green: "bg-emerald-100 text-emerald-800",
@@ -410,9 +506,14 @@ const BADGE_CLASSES: Record<BadgeVariant, string> = {
   default: "bg-accentSoft text-emerald-900"
 };
 
-export function Badge({ children, variant = "default" }: PropsWithChildren<{ variant?: BadgeVariant }>) {
+export function Badge({
+  children,
+  variant = "default"
+}: PropsWithChildren<{ variant?: BadgeVariant }>) {
   return (
-    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${BADGE_CLASSES[variant]}`}>
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-semibold ${BADGE_CLASSES[variant]}`}
+    >
       {children}
     </span>
   );
@@ -457,7 +558,8 @@ export function Field({
   const fieldId = id ?? generatedId;
   const errorId = error ? `${fieldId}-error` : undefined;
   const hintId = hint ? `${fieldId}-hint` : undefined;
-  const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
+  const describedBy =
+    [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
   const [draftValue, setDraftValue] = useState(value);
   const isBlurCommit = commitMode === "blur";
   const isDateField = type === "date" || type === "datetime-local";
@@ -472,14 +574,22 @@ export function Field({
     <div className="block space-y-2">
       <label className="text-sm font-semibold" htmlFor={fieldId}>
         {label}
-        {required && <span className="text-red-500 ms-1" aria-hidden="true">*</span>}
+        {required && (
+          <span className="text-red-500 ms-1" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
       {isDateField ? (
         <DatePicker
           id={fieldId}
           className="elms-date-picker"
           classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
-          format={type === "date" ? DATE_PICKER_DATE_FORMAT : DATE_PICKER_DATETIME_FORMAT}
+          format={
+            type === "date"
+              ? DATE_PICKER_DATE_FORMAT
+              : DATE_PICKER_DATETIME_FORMAT
+          }
           value={toDatePickerValue(isBlurCommit ? draftValue : value, type)}
           onChange={(nextValue) => {
             const normalized = fromDatePickerValue(nextValue, type);
@@ -549,7 +659,12 @@ export function Field({
         </p>
       ) : null}
       {error ? (
-        <p className="text-xs text-red-600" id={errorId} role="status" aria-live="polite">
+        <p
+          className="text-xs text-red-600"
+          id={errorId}
+          role="status"
+          aria-live="polite"
+        >
           {error}
         </p>
       ) : null}
@@ -587,14 +702,19 @@ export function SelectField({
   const labelId = `${fieldId}-label`;
   const errorId = error ? `${fieldId}-error` : undefined;
   const hintId = hint ? `${fieldId}-hint` : undefined;
-  const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
+  const describedBy =
+    [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
   const selectStyle = dir && dir !== "auto" ? { direction: dir } : undefined;
 
   return (
     <div className="block space-y-2">
       <label className="text-sm font-semibold" htmlFor={fieldId} id={labelId}>
         {label}
-        {required && <span className="text-red-500 ms-1" aria-hidden="true">*</span>}
+        {required && (
+          <span className="text-red-500 ms-1" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
       <Select<string>
         id={fieldId}
@@ -629,7 +749,12 @@ export function SelectField({
         </p>
       ) : null}
       {error ? (
-        <p className="text-xs text-red-600" id={errorId} role="status" aria-live="polite">
+        <p
+          className="text-xs text-red-600"
+          id={errorId}
+          role="status"
+          aria-live="polite"
+        >
           {error}
         </p>
       ) : null}
@@ -662,13 +787,18 @@ export function TextAreaField({
   const fieldId = id ?? generatedId;
   const errorId = error ? `${fieldId}-error` : undefined;
   const hintId = hint ? `${fieldId}-hint` : undefined;
-  const describedBy = [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
+  const describedBy =
+    [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="block space-y-2">
       <label className="text-sm font-semibold" htmlFor={fieldId}>
         {label}
-        {required && <span className="text-red-500 ms-1" aria-hidden="true">*</span>}
+        {required && (
+          <span className="text-red-500 ms-1" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
       <textarea
         className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
@@ -686,7 +816,12 @@ export function TextAreaField({
         </p>
       ) : null}
       {error ? (
-        <p className="text-xs text-red-600" id={errorId} role="status" aria-live="polite">
+        <p
+          className="text-xs text-red-600"
+          id={errorId}
+          role="status"
+          aria-live="polite"
+        >
           {error}
         </p>
       ) : null}
@@ -699,7 +834,11 @@ export function PrimaryButton({
   type = "button",
   disabled = false,
   onClick
-}: PropsWithChildren<{ type?: "button" | "submit"; disabled?: boolean; onClick?: () => void }>) {
+}: PropsWithChildren<{
+  type?: "button" | "submit";
+  disabled?: boolean;
+  onClick?: () => void;
+}>) {
   return (
     <button
       className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
@@ -794,7 +933,9 @@ export function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-export function formatCurrency(value: string | number | null | undefined): string {
+export function formatCurrency(
+  value: string | number | null | undefined
+): string {
   if (value === null || value === undefined || value === "") {
     return "—";
   }

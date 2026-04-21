@@ -168,7 +168,12 @@
     "sort": "Sort",
     "lawyer": "Lawyer",
     "from": "From",
-    "to": "To"
+    "to": "To",
+    "caseTitle": "Case Title",
+    "taskTitle": "Task Title",
+    "documentTitle": "Document Name",
+    "notificationTitle": "Notification Title",
+    "eventTitle": "Event Title"
   },
   "empty": {
     "noCourts": "No court stages yet",

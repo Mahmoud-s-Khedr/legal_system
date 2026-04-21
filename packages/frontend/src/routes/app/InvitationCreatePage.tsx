@@ -1,11 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AuthMode, type CreateInvitationDto, type RoleListResponseDto } from "@elms/shared";
+import {
+  AuthMode,
+  type CreateInvitationDto,
+  type RoleListResponseDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { useAuthBootstrap } from "../../store/authStore";
-import { EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField } from "./ui";
+import {
+  EmptyState,
+  Field,
+  PageHeader,
+  PrimaryButton,
+  SectionCard,
+  SelectField
+} from "./ui";
 
 export function InvitationCreatePage() {
   const { t } = useTranslation("app");
@@ -44,7 +55,10 @@ export function InvitationCreatePage() {
           title={t("invitations.title")}
           description={t("invitations.description")}
         />
-        <EmptyState title={t("invitations.cloudOnly")} description={t("invitations.cloudOnlyHelp")} />
+        <EmptyState
+          title={t("invitations.cloudOnly")}
+          description={t("invitations.cloudOnlyHelp")}
+        />
       </div>
     );
   }
@@ -56,12 +70,18 @@ export function InvitationCreatePage() {
         title={t("invitations.createTitle")}
         description={t("invitations.createHelp")}
       />
-      <SectionCard title={t("invitations.createTitle")} description={t("invitations.createHelp")}>
+      <SectionCard
+        title={t("invitations.createTitle")}
+        description={t("invitations.createHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            createMutation.mutate({ ...form, email: form.email.trim().toLowerCase() });
+            createMutation.mutate({
+              ...form,
+              email: form.email.trim().toLowerCase()
+            });
           }}
         >
           <Field
@@ -86,12 +106,16 @@ export function InvitationCreatePage() {
           />
           <PrimaryButton
             type="submit"
-            disabled={createMutation.isPending || !form.email.trim() || !form.roleId}
+            disabled={
+              createMutation.isPending || !form.email.trim() || !form.roleId
+            }
           >
             {t("actions.sendInvite")}
           </PrimaryButton>
           {createMutation.error ? (
-            <p className="text-sm text-red-600">{(createMutation.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(createMutation.error as Error).message}
+            </p>
           ) : null}
         </form>
       </SectionCard>

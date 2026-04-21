@@ -13,7 +13,16 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, ErrorState, Field, PageHeader, PrimaryButton, SectionCard, SelectField, TextAreaField } from "./ui";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  PrimaryButton,
+  SectionCard,
+  SelectField,
+  TextAreaField
+} from "./ui";
 
 export function TaskDetailPage() {
   const { t } = useTranslation("app");
@@ -113,7 +122,9 @@ export function TaskDetailPage() {
         body: JSON.stringify({
           ...payload,
           caseId: payload.caseId?.trim() ? payload.caseId : null,
-          assignedToId: payload.assignedToId?.trim() ? payload.assignedToId : null,
+          assignedToId: payload.assignedToId?.trim()
+            ? payload.assignedToId
+            : null,
           dueAt: toIsoOrEmpty(payload.dueAt) || null,
           description: payload.description?.trim() ? payload.description : null
         } satisfies CreateTaskDto)
@@ -134,7 +145,9 @@ export function TaskDetailPage() {
     return (
       <ErrorState
         title={t("errors.title")}
-        description={(taskQuery.error as Error)?.message ?? t("errors.fallback")}
+        description={
+          (taskQuery.error as Error)?.message ?? t("errors.fallback")
+        }
         retryLabel={t("errors.reload")}
         onRetry={() => void taskQuery.refetch()}
       />
@@ -157,7 +170,10 @@ export function TaskDetailPage() {
         title={taskQuery.data?.title ?? "..."}
         description={t("tasks.editHelp")}
       />
-      <SectionCard title={t("tasks.editTitle")} description={t("tasks.editHelp")}>
+      <SectionCard
+        title={t("tasks.editTitle")}
+        description={t("tasks.editHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -166,7 +182,7 @@ export function TaskDetailPage() {
           }}
         >
           <Field
-            label={t("labels.title")}
+            label={t("labels.taskTitle")}
             onChange={(value) => updateField("title", value)}
             value={form.title}
           />
@@ -196,7 +212,9 @@ export function TaskDetailPage() {
             />
             <SelectField
               label={t("labels.priority")}
-              onChange={(value) => updateField("priority", value as TaskPriority)}
+              onChange={(value) =>
+                updateField("priority", value as TaskPriority)
+              }
               options={priorityOptions}
               value={form.priority ?? TaskPriority.MEDIUM}
             />
@@ -209,11 +227,16 @@ export function TaskDetailPage() {
             commitMode="blur"
             value={form.dueAt ?? ""}
           />
-          <PrimaryButton type="submit" disabled={updateMutation.isPending || form.title.trim().length < 2}>
+          <PrimaryButton
+            type="submit"
+            disabled={updateMutation.isPending || form.title.trim().length < 2}
+          >
             {t("actions.saveChanges")}
           </PrimaryButton>
           {updateMutation.error ? (
-            <p className="text-sm text-red-600">{(updateMutation.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(updateMutation.error as Error).message}
+            </p>
           ) : null}
         </form>
       </SectionCard>

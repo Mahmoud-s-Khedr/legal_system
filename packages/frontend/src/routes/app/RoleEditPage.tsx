@@ -4,7 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RoleDto, UpdateRoleDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, ErrorState, Field, FormExitActions, PageHeader, SectionCard } from "./ui";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  FormExitActions,
+  PageHeader,
+  SectionCard
+} from "./ui";
 import { PermissionChecklist } from "../../components/shared/PermissionChecklist";
 
 export function RoleEditPage() {
@@ -53,7 +60,9 @@ export function RoleEditPage() {
     return (
       <ErrorState
         title={t("errors.title")}
-        description={(roleQuery.error as Error)?.message ?? t("errors.fallback")}
+        description={
+          (roleQuery.error as Error)?.message ?? t("errors.fallback")
+        }
         retryLabel={t("errors.reload")}
         onRetry={() => void roleQuery.refetch()}
       />
@@ -61,11 +70,21 @@ export function RoleEditPage() {
   }
 
   if (!role) {
-    return <EmptyState title={t("empty.noRoleFound")} description={t("empty.noRoleFoundHelp")} />;
+    return (
+      <EmptyState
+        title={t("empty.noRoleFound")}
+        description={t("empty.noRoleFoundHelp")}
+      />
+    );
   }
 
   if (role.firmId === null) {
-    return <EmptyState title={t("roles.systemRoleEdit")} description={t("roles.systemRoleEditHelp")} />;
+    return (
+      <EmptyState
+        title={t("roles.systemRoleEdit")}
+        description={t("roles.systemRoleEditHelp")}
+      />
+    );
   }
 
   return (
@@ -82,11 +101,18 @@ export function RoleEditPage() {
           void updateMutation.mutateAsync({ name });
         }}
       >
-        <SectionCard title={t("roles.identity")} description={t("roles.identityHelp")}>
+        <SectionCard
+          title={t("roles.identity")}
+          description={t("roles.identityHelp")}
+        >
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-semibold text-slate-500">{t("roles.roleKey")}</p>
-              <p className="mt-1 font-mono text-sm text-slate-700">{role.key}</p>
+              <p className="text-sm font-semibold text-slate-500">
+                {t("roles.roleKey")}
+              </p>
+              <p className="mt-1 font-mono text-sm text-slate-700">
+                {role.key}
+              </p>
             </div>
             <Field
               label={t("labels.name")}
@@ -96,8 +122,14 @@ export function RoleEditPage() {
             />
           </div>
         </SectionCard>
-        <SectionCard title={t("roles.permissions")} description={t("roles.permissionsHelp")}>
-          <PermissionChecklist onChange={setPermissions} selected={permissions} />
+        <SectionCard
+          title={t("roles.permissions")}
+          description={t("roles.permissionsHelp")}
+        >
+          <PermissionChecklist
+            onChange={setPermissions}
+            selected={permissions}
+          />
         </SectionCard>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <FormExitActions

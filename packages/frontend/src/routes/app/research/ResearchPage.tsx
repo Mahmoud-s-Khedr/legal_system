@@ -4,7 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash2, MessageSquare } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, ErrorState, PageHeader, PrimaryButton, SectionCard, formatDate } from "../ui";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  PrimaryButton,
+  SectionCard,
+  formatDate
+} from "../ui";
 
 interface SessionSummary {
   id: string;
@@ -34,7 +41,10 @@ export function ResearchPage() {
       }),
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ["research-sessions"] });
-      await navigate({ to: "/app/research/$sessionId", params: { sessionId: data.id } });
+      await navigate({
+        to: "/app/research/$sessionId",
+        params: { sessionId: data.id }
+      });
     }
   });
 
@@ -90,18 +100,26 @@ export function ResearchPage() {
         </SectionCard>
       )}
 
-      <SectionCard description={t("research.sessionsHelp")} title={t("research.sessions")}>
+      <SectionCard
+        description={t("research.sessionsHelp")}
+        title={t("research.sessions")}
+      >
         {sessionsQuery.isLoading ? (
           <p className="text-sm text-slate-500">{t("common.loading")}</p>
         ) : sessionsQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(sessionsQuery.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (sessionsQuery.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void sessionsQuery.refetch()}
           />
         ) : !sessionsQuery.data?.length ? (
-          <EmptyState description={t("empty.noSessionsHelp")} title={t("empty.noSessions")} />
+          <EmptyState
+            description={t("empty.noSessionsHelp")}
+            title={t("empty.noSessions")}
+          />
         ) : (
           <div className="space-y-2">
             {sessionsQuery.data.map((session) => (
@@ -109,7 +127,10 @@ export function ResearchPage() {
                 className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-accent/50"
                 key={session.id}
               >
-                <MessageSquare aria-hidden="true" className="size-5 shrink-0 text-accent" />
+                <MessageSquare
+                  aria-hidden="true"
+                  className="size-5 shrink-0 text-accent"
+                />
                 <Link
                   className="flex-1 font-semibold hover:text-accent"
                   params={{ sessionId: session.id }}

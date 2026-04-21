@@ -1,6 +1,9 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CaseRoleOnCase,
@@ -29,10 +32,19 @@ import { runUploadQueue } from "../../lib/uploadQueue";
 import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useHasPermission } from "../../store/authStore";
-import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import {
+  Field,
+  FormAlert,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField
+} from "./ui";
 
 type ClientMode = "existing" | "new";
-type ClientFormState = Omit<CreateClientDto, "type"> & { type: ClientType | "" };
+type ClientFormState = Omit<CreateClientDto, "type"> & {
+  type: ClientType | "";
+};
 
 type DraftCourt = {
   id: string;
@@ -118,8 +130,12 @@ function normalizeClientPayload(form: ClientFormState): CreateClientDto {
     governorate: toNullable(form.governorate),
     preferredLanguage: form.preferredLanguage ?? Language.AR,
     nationalId: isIdentityType(form.type) ? toNullable(form.nationalId) : null,
-    commercialRegister: form.type === ClientType.COMPANY ? toNullable(form.commercialRegister) : null,
-    taxNumber: form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
+    commercialRegister:
+      form.type === ClientType.COMPANY
+        ? toNullable(form.commercialRegister)
+        : null,
+    taxNumber:
+      form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
     contacts: []
   };
 }
@@ -190,7 +206,8 @@ export function isPartyPristine(party: DraftParty): boolean {
 }
 
 export function isQuickIntakeDirty(state: {
-  caseForm: Pick<CreateCaseDto, "title" | "caseNumber"> & Partial<Pick<CreateCaseDto, "internalReference" | "type">>;
+  caseForm: Pick<CreateCaseDto, "title" | "caseNumber"> &
+    Partial<Pick<CreateCaseDto, "internalReference" | "type">>;
   statusForm?: { status: CaseStatus; note: string };
   existingClientId: string;
   initialExistingClientId?: string;
@@ -211,11 +228,31 @@ export function isQuickIntakeDirty(state: {
     (state.statusForm?.status ?? CaseStatus.ACTIVE) !== CaseStatus.ACTIVE ||
     hasText(state.statusForm?.note) ||
     hasText(state.clientForm.name) ||
-    state.courts.some((court) => hasText(court.courtName) || hasText(court.courtLevel) || hasText(court.caseNumber) || hasText(court.startedAt) || hasText(court.circuit) || hasText(court.notes)) ||
+    state.courts.some(
+      (court) =>
+        hasText(court.courtName) ||
+        hasText(court.courtLevel) ||
+        hasText(court.caseNumber) ||
+        hasText(court.startedAt) ||
+        hasText(court.circuit) ||
+        hasText(court.notes)
+    ) ||
     state.parties.some((party) => !isPartyPristine(party)) ||
     state.assignments.some((assignment) => hasText(assignment.userId)) ||
-    state.hearings.some((hearing) => hasText(hearing.sessionDatetime) || hasText(hearing.assignedLawyerId) || hasText(hearing.notes) || hasText(hearing.nextSessionAt)) ||
-    state.tasks.some((task) => hasText(task.title) || hasText(task.description) || hasText(task.assignedToId) || hasText(task.dueAt)) ||
+    state.hearings.some(
+      (hearing) =>
+        hasText(hearing.sessionDatetime) ||
+        hasText(hearing.assignedLawyerId) ||
+        hasText(hearing.notes) ||
+        hasText(hearing.nextSessionAt)
+    ) ||
+    state.tasks.some(
+      (task) =>
+        hasText(task.title) ||
+        hasText(task.description) ||
+        hasText(task.assignedToId) ||
+        hasText(task.dueAt)
+    ) ||
     state.documents.some((doc) => doc.file !== null || hasText(doc.title))
   );
 }
@@ -236,10 +273,16 @@ export function CaseQuickIntakePage() {
   const canCreateHearings = useHasPermission("hearings:create");
   const canCreateTasks = useHasPermission("tasks:create");
 
-  const [clientMode, setClientMode] = useState<ClientMode>(canReadClients ? "existing" : "new");
+  const [clientMode, setClientMode] = useState<ClientMode>(
+    canReadClients ? "existing" : "new"
+  );
   const initialExistingClientId = search.clientId ?? "";
-  const [existingClientId, setExistingClientId] = useState(initialExistingClientId);
-  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [existingClientId, setExistingClientId] = useState(
+    initialExistingClientId
+  );
+  const [validationMessage, setValidationMessage] = useState<string | null>(
+    null
+  );
   const [submitSummary, setSubmitSummary] = useState<{
     caseId: string | null;
     failedSections: SubmitSection[];
@@ -270,14 +313,19 @@ export function CaseQuickIntakePage() {
     type: "CIVIL"
   });
 
-  const [statusForm, setStatusForm] = useState<{ status: CaseStatus; note: string }>({
+  const [statusForm, setStatusForm] = useState<{
+    status: CaseStatus;
+    note: string;
+  }>({
     status: CaseStatus.ACTIVE,
     note: ""
   });
 
   const [courts, setCourts] = useState<DraftCourt[]>([emptyCourt()]);
   const [parties, setParties] = useState<DraftParty[]>([emptyParty()]);
-  const [assignments, setAssignments] = useState<DraftAssignment[]>([emptyAssignment()]);
+  const [assignments, setAssignments] = useState<DraftAssignment[]>([
+    emptyAssignment()
+  ]);
   const [hearings, setHearings] = useState<DraftHearing[]>([emptyHearing()]);
   const [tasks, setTasks] = useState<DraftTask[]>([emptyTask()]);
   const [documents, setDocuments] = useState<DraftDocument[]>([]);
@@ -331,7 +379,8 @@ export function CaseQuickIntakePage() {
       })
   });
 
-  const submitting = createClientMutation.isPending || createCaseMutation.isPending;
+  const submitting =
+    createClientMutation.isPending || createCaseMutation.isPending;
 
   const clientOptions = useMemo(
     () => [
@@ -349,7 +398,10 @@ export function CaseQuickIntakePage() {
     label: o.labelAr
   }));
   if (!caseTypeOptions.length) {
-    caseTypeOptions.push({ value: "CIVIL", label: t("caseTypes.CIVIL", "Civil") });
+    caseTypeOptions.push({
+      value: "CIVIL",
+      label: t("caseTypes.CIVIL", "Civil")
+    });
   }
 
   const clientTypeOptions = Object.values(ClientType).map((value) => ({
@@ -362,12 +414,16 @@ export function CaseQuickIntakePage() {
     label: getEnumLabel(t, "Language", value)
   }));
 
-  const governorateOptions = getEgyptGovernorateOptions(i18n.resolvedLanguage ?? i18n.language ?? "en");
+  const governorateOptions = getEgyptGovernorateOptions(
+    i18n.resolvedLanguage ?? i18n.language ?? "en"
+  );
 
-  const courtLevelOptions = (courtLevelsQuery.data?.items ?? []).map((item) => ({
-    value: item.key,
-    label: item.labelAr
-  }));
+  const courtLevelOptions = (courtLevelsQuery.data?.items ?? []).map(
+    (item) => ({
+      value: item.key,
+      label: item.labelAr
+    })
+  );
 
   const partyRoleOptions = (partyRolesQuery.data?.items ?? []).map((item) => ({
     value: item.key,
@@ -376,7 +432,10 @@ export function CaseQuickIntakePage() {
 
   const userOptions = [
     { value: "", label: t("labels.selectUser") },
-    ...(usersQuery.data?.items ?? []).map((user) => ({ value: user.id, label: user.fullName }))
+    ...(usersQuery.data?.items ?? []).map((user) => ({
+      value: user.id,
+      label: user.fullName
+    }))
   ];
 
   const assignmentRoleOptions = Object.values(CaseRoleOnCase).map((value) => ({
@@ -407,14 +466,19 @@ export function CaseQuickIntakePage() {
     label: getEnumLabel(t, "DocumentType", item.key)
   }));
   if (!documentTypeOptions.length) {
-    documentTypeOptions.push({ value: "GENERAL", label: getEnumLabel(t, "DocumentType", "GENERAL") });
+    documentTypeOptions.push({
+      value: "GENERAL",
+      label: getEnumLabel(t, "DocumentType", "GENERAL")
+    });
   }
 
   const effectiveExistingClientEnabled = canReadClients;
   const effectiveInlineClientEnabled = canCreateClients;
 
   const hasRequiredReady =
-    (clientMode === "existing" ? existingClientId.trim() !== "" : clientForm.name.trim() !== "" && !!clientForm.type) &&
+    (clientMode === "existing"
+      ? existingClientId.trim() !== ""
+      : clientForm.name.trim() !== "" && !!clientForm.type) &&
     caseForm.title.trim() !== "" &&
     caseForm.caseNumber.trim() !== "" &&
     caseForm.type.trim() !== "";
@@ -424,11 +488,15 @@ export function CaseQuickIntakePage() {
   }
 
   function updateCourtRow(id: string, patch: Partial<DraftCourt>) {
-    setCourts((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setCourts((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    );
   }
 
   function removeCourtRow(id: string) {
-    setCourts((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+    setCourts((prev) =>
+      prev.length === 1 ? prev : prev.filter((row) => row.id !== id)
+    );
   }
 
   function addPartyRow() {
@@ -436,11 +504,15 @@ export function CaseQuickIntakePage() {
   }
 
   function updatePartyRow(id: string, patch: Partial<DraftParty>) {
-    setParties((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setParties((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    );
   }
 
   function removePartyRow(id: string) {
-    setParties((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+    setParties((prev) =>
+      prev.length === 1 ? prev : prev.filter((row) => row.id !== id)
+    );
   }
 
   function addAssignmentRow() {
@@ -448,11 +520,15 @@ export function CaseQuickIntakePage() {
   }
 
   function updateAssignmentRow(id: string, patch: Partial<DraftAssignment>) {
-    setAssignments((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setAssignments((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    );
   }
 
   function removeAssignmentRow(id: string) {
-    setAssignments((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+    setAssignments((prev) =>
+      prev.length === 1 ? prev : prev.filter((row) => row.id !== id)
+    );
   }
 
   function addHearingRow() {
@@ -460,11 +536,15 @@ export function CaseQuickIntakePage() {
   }
 
   function updateHearingRow(id: string, patch: Partial<DraftHearing>) {
-    setHearings((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setHearings((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    );
   }
 
   function removeHearingRow(id: string) {
-    setHearings((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+    setHearings((prev) =>
+      prev.length === 1 ? prev : prev.filter((row) => row.id !== id)
+    );
   }
 
   function addTaskRow() {
@@ -472,11 +552,15 @@ export function CaseQuickIntakePage() {
   }
 
   function updateTaskRow(id: string, patch: Partial<DraftTask>) {
-    setTasks((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setTasks((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    );
   }
 
   function removeTaskRow(id: string) {
-    setTasks((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+    setTasks((prev) =>
+      prev.length === 1 ? prev : prev.filter((row) => row.id !== id)
+    );
   }
 
   function addDocumentFiles(files: FileList | null) {
@@ -494,7 +578,9 @@ export function CaseQuickIntakePage() {
   }
 
   function updateDocumentRow(id: string, patch: Partial<DraftDocument>) {
-    setDocuments((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setDocuments((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    );
   }
 
   function removeDocumentRow(id: string) {
@@ -558,7 +644,9 @@ export function CaseQuickIntakePage() {
       caseId,
       assignedLawyerId: toNullable(row.assignedLawyerId),
       sessionDatetime: new Date(row.sessionDatetime).toISOString(),
-      nextSessionAt: row.nextSessionAt ? new Date(row.nextSessionAt).toISOString() : null,
+      nextSessionAt: row.nextSessionAt
+        ? new Date(row.nextSessionAt).toISOString()
+        : null,
       outcome: row.outcome ? (row.outcome as SessionOutcome) : null,
       notes: toNullable(row.notes)
     };
@@ -630,7 +718,9 @@ export function CaseQuickIntakePage() {
           setValidationMessage(t("quickIntake.noClientCreatePermission"));
           return;
         }
-        const createdClient = await createClientMutation.mutateAsync(normalizeClientPayload(clientForm));
+        const createdClient = await createClientMutation.mutateAsync(
+          normalizeClientPayload(clientForm)
+        );
         resolvedClientId = createdClient.id;
         await queryClient.invalidateQueries({ queryKey: ["clients"] });
       }
@@ -648,9 +738,13 @@ export function CaseQuickIntakePage() {
       const failedSections: SubmitSection[] = [];
 
       if (canUpdateCases) {
-        const rows = courts.filter((row) => row.courtName.trim() && row.courtLevel.trim());
+        const rows = courts.filter(
+          (row) => row.courtName.trim() && row.courtLevel.trim()
+        );
         if (rows.length) {
-          const result = await Promise.allSettled(rows.map((row) => postCourt(caseId, row)));
+          const result = await Promise.allSettled(
+            rows.map((row) => postCourt(caseId, row))
+          );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("courts");
           }
@@ -658,9 +752,13 @@ export function CaseQuickIntakePage() {
       }
 
       if (canUpdateCases) {
-        const rows = parties.filter((row) => row.name.trim() && row.role.trim());
+        const rows = parties.filter(
+          (row) => row.name.trim() && row.role.trim()
+        );
         if (rows.length) {
-          const result = await Promise.allSettled(rows.map((row) => postParty(caseId, row)));
+          const result = await Promise.allSettled(
+            rows.map((row) => postParty(caseId, row))
+          );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("parties");
           }
@@ -670,7 +768,9 @@ export function CaseQuickIntakePage() {
       if (canAssignCases) {
         const rows = assignments.filter((row) => row.userId.trim() !== "");
         if (rows.length) {
-          const result = await Promise.allSettled(rows.map((row) => postAssignment(caseId, row)));
+          const result = await Promise.allSettled(
+            rows.map((row) => postAssignment(caseId, row))
+          );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("assignments");
           }
@@ -685,9 +785,13 @@ export function CaseQuickIntakePage() {
       }
 
       if (canCreateHearings) {
-        const rows = hearings.filter((row) => row.sessionDatetime.trim() !== "");
+        const rows = hearings.filter(
+          (row) => row.sessionDatetime.trim() !== ""
+        );
         if (rows.length) {
-          const result = await Promise.allSettled(rows.map((row) => postHearing(caseId, row)));
+          const result = await Promise.allSettled(
+            rows.map((row) => postHearing(caseId, row))
+          );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("hearings");
           }
@@ -697,7 +801,9 @@ export function CaseQuickIntakePage() {
       if (canCreateTasks) {
         const rows = tasks.filter((row) => row.title.trim() !== "");
         if (rows.length) {
-          const result = await Promise.allSettled(rows.map((row) => postTask(caseId, row)));
+          const result = await Promise.allSettled(
+            rows.map((row) => postTask(caseId, row))
+          );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("tasks");
           }
@@ -718,16 +824,22 @@ export function CaseQuickIntakePage() {
 
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
-      await queryClient.invalidateQueries({ queryKey: ["case-hearings", caseId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["case-hearings", caseId]
+      });
       await queryClient.invalidateQueries({ queryKey: ["case-tasks", caseId] });
-      await queryClient.invalidateQueries({ queryKey: ["case-documents", caseId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["case-documents", caseId]
+      });
 
       if (failedSections.length > 0) {
         setSubmitSummary({
           caseId,
           failedSections,
           message: t("quickIntake.savedWithIssues", {
-            sections: failedSections.map((s) => t(`quickIntake.section.${s}`)).join(", ")
+            sections: failedSections
+              .map((s) => t(`quickIntake.section.${s}`))
+              .join(", ")
           })
         });
         return;
@@ -749,8 +861,14 @@ export function CaseQuickIntakePage() {
           title={t("quickIntake.title")}
           description={t("quickIntake.description")}
         />
-        <SectionCard title={t("quickIntake.title")} description={t("quickIntake.description")}>
-          <FormAlert message={t("quickIntake.noCasePermission")} variant="info" />
+        <SectionCard
+          title={t("quickIntake.title")}
+          description={t("quickIntake.description")}
+        >
+          <FormAlert
+            message={t("quickIntake.noCasePermission")}
+            variant="info"
+          />
         </SectionCard>
       </div>
     );
@@ -762,17 +880,20 @@ export function CaseQuickIntakePage() {
         eyebrow={t("cases.eyebrow")}
         title={t("quickIntake.title")}
         description={t("quickIntake.description")}
-        actions={(
+        actions={
           <Link
             to="/app/cases"
             className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-accent hover:text-accent"
           >
             {t("actions.cancel")}
           </Link>
-        )}
+        }
       />
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <SectionCard title={t("quickIntake.clientStepTitle")} description={t("quickIntake.clientStepHelp")}>
+        <SectionCard
+          title={t("quickIntake.clientStepTitle")}
+          description={t("quickIntake.clientStepHelp")}
+        >
           <div className="space-y-4">
             {effectiveExistingClientEnabled && effectiveInlineClientEnabled ? (
               <div className="flex flex-wrap gap-2">
@@ -814,7 +935,12 @@ export function CaseQuickIntakePage() {
                   required
                 />
                 {clientsQuery.isError ? (
-                  <FormAlert message={(clientsQuery.error as Error)?.message ?? t("errors.fallback")} />
+                  <FormAlert
+                    message={
+                      (clientsQuery.error as Error)?.message ??
+                      t("errors.fallback")
+                    }
+                  />
                 ) : null}
               </>
             ) : (
@@ -822,14 +948,24 @@ export function CaseQuickIntakePage() {
                 <Field
                   label={t("labels.name")}
                   value={clientForm.name}
-                  onChange={(value) => setClientForm({ ...clientForm, name: value })}
+                  onChange={(value) =>
+                    setClientForm({ ...clientForm, name: value })
+                  }
                   required
                 />
                 <SelectField
                   label={t("labels.type")}
                   value={clientForm.type}
-                  onChange={(value) => setClientForm({ ...clientForm, type: value as ClientType | "" })}
-                  options={[{ value: "", label: t("labels.selectType") }, ...clientTypeOptions]}
+                  onChange={(value) =>
+                    setClientForm({
+                      ...clientForm,
+                      type: value as ClientType | ""
+                    })
+                  }
+                  options={[
+                    { value: "", label: t("labels.selectType") },
+                    ...clientTypeOptions
+                  ]}
                   required
                 />
                 <div className="grid gap-4 md:grid-cols-2">
@@ -838,26 +974,37 @@ export function CaseQuickIntakePage() {
                     label={t("labels.email")}
                     type="email"
                     value={clientForm.email ?? ""}
-                    onChange={(value) => setClientForm({ ...clientForm, email: value })}
+                    onChange={(value) =>
+                      setClientForm({ ...clientForm, email: value })
+                    }
                   />
                   <Field
                     dir="ltr"
                     label={t("labels.phone")}
                     value={clientForm.phone ?? ""}
-                    onChange={(value) => setClientForm({ ...clientForm, phone: value })}
+                    onChange={(value) =>
+                      setClientForm({ ...clientForm, phone: value })
+                    }
                   />
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <SelectField
                     label={t("labels.governorate")}
                     value={clientForm.governorate ?? ""}
-                    onChange={(value) => setClientForm({ ...clientForm, governorate: value })}
+                    onChange={(value) =>
+                      setClientForm({ ...clientForm, governorate: value })
+                    }
                     options={[{ value: "", label: "-" }, ...governorateOptions]}
                   />
                   <SelectField
                     label={t("labels.language")}
                     value={clientForm.preferredLanguage ?? Language.AR}
-                    onChange={(value) => setClientForm({ ...clientForm, preferredLanguage: value as Language })}
+                    onChange={(value) =>
+                      setClientForm({
+                        ...clientForm,
+                        preferredLanguage: value as Language
+                      })
+                    }
                     options={languageOptions}
                   />
                 </div>
@@ -866,7 +1013,9 @@ export function CaseQuickIntakePage() {
                     dir="ltr"
                     label={t("labels.nationalId")}
                     value={clientForm.nationalId ?? ""}
-                    onChange={(value) => setClientForm({ ...clientForm, nationalId: value })}
+                    onChange={(value) =>
+                      setClientForm({ ...clientForm, nationalId: value })
+                    }
                   />
                 ) : null}
                 {clientForm.type === ClientType.COMPANY ? (
@@ -875,13 +1024,20 @@ export function CaseQuickIntakePage() {
                       dir="ltr"
                       label={t("labels.commercialRegister")}
                       value={clientForm.commercialRegister ?? ""}
-                      onChange={(value) => setClientForm({ ...clientForm, commercialRegister: value })}
+                      onChange={(value) =>
+                        setClientForm({
+                          ...clientForm,
+                          commercialRegister: value
+                        })
+                      }
                     />
                     <Field
                       dir="ltr"
                       label={t("labels.taxNumber")}
                       value={clientForm.taxNumber ?? ""}
-                      onChange={(value) => setClientForm({ ...clientForm, taxNumber: value })}
+                      onChange={(value) =>
+                        setClientForm({ ...clientForm, taxNumber: value })
+                      }
                     />
                   </div>
                 ) : null}
@@ -890,10 +1046,13 @@ export function CaseQuickIntakePage() {
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.caseStepTitle")} description={t("quickIntake.caseStepHelp")}>
+        <SectionCard
+          title={t("quickIntake.caseStepTitle")}
+          description={t("quickIntake.caseStepHelp")}
+        >
           <div className="space-y-4">
             <Field
-              label={t("labels.title")}
+              label={t("labels.caseTitle")}
               value={caseForm.title}
               onChange={(value) => setCaseForm({ ...caseForm, title: value })}
               required
@@ -901,19 +1060,27 @@ export function CaseQuickIntakePage() {
             <Field
               label={t("labels.caseNumber")}
               value={caseForm.caseNumber}
-              onChange={(value) => setCaseForm({ ...caseForm, caseNumber: value })}
+              onChange={(value) =>
+                setCaseForm({ ...caseForm, caseNumber: value })
+              }
               required
             />
             <div className="grid gap-4 md:grid-cols-2">
               <Field
                 label={t("labels.internalReference")}
                 value={caseForm.internalReference ?? ""}
-                onChange={(value) => setCaseForm({ ...caseForm, internalReference: value })}
+                onChange={(value) =>
+                  setCaseForm({ ...caseForm, internalReference: value })
+                }
               />
               <Field
                 label={t("labels.judicialYear")}
                 type="number"
-                value={caseForm.judicialYear === null ? "" : String(caseForm.judicialYear)}
+                value={
+                  caseForm.judicialYear === null
+                    ? ""
+                    : String(caseForm.judicialYear)
+                }
                 onChange={(value) => {
                   if (value.trim() === "") {
                     setCaseForm({ ...caseForm, judicialYear: null });
@@ -937,91 +1104,146 @@ export function CaseQuickIntakePage() {
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.section.status")} description={t("quickIntake.statusHelp")}>
+        <SectionCard
+          title={t("quickIntake.section.status")}
+          description={t("quickIntake.statusHelp")}
+        >
           <div className="grid gap-3 md:grid-cols-2">
             <SelectField
               label={t("labels.status")}
               value={statusForm.status}
-              onChange={(value) => setStatusForm((prev) => ({ ...prev, status: value as CaseStatus }))}
+              onChange={(value) =>
+                setStatusForm((prev) => ({
+                  ...prev,
+                  status: value as CaseStatus
+                }))
+              }
               options={statusOptions}
             />
             <Field
               label={t("labels.notes")}
               value={statusForm.note}
-              onChange={(value) => setStatusForm((prev) => ({ ...prev, note: value }))}
+              onChange={(value) =>
+                setStatusForm((prev) => ({ ...prev, note: value }))
+              }
             />
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.section.courts")} description={t("quickIntake.courtsHelp")}>
+        <SectionCard
+          title={t("quickIntake.section.courts")}
+          description={t("quickIntake.courtsHelp")}
+        >
           <div className="space-y-3">
             {courts.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+              <div
+                key={row.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
+              >
                 <div className="grid gap-3 md:grid-cols-2">
                   <Field
                     label={t("labels.courtName")}
                     value={row.courtName}
-                    onChange={(value) => updateCourtRow(row.id, { courtName: value })}
+                    onChange={(value) =>
+                      updateCourtRow(row.id, { courtName: value })
+                    }
                   />
                   <SelectField
                     label={t("labels.courtLevel")}
                     value={row.courtLevel}
-                    onChange={(value) => updateCourtRow(row.id, { courtLevel: value })}
-                    options={[{ value: "", label: t("labels.none") }, ...courtLevelOptions]}
+                    onChange={(value) =>
+                      updateCourtRow(row.id, { courtLevel: value })
+                    }
+                    options={[
+                      { value: "", label: t("labels.none") },
+                      ...courtLevelOptions
+                    ]}
                   />
                   <Field
                     label={t("labels.circuit")}
                     value={row.circuit}
-                    onChange={(value) => updateCourtRow(row.id, { circuit: value })}
+                    onChange={(value) =>
+                      updateCourtRow(row.id, { circuit: value })
+                    }
                   />
                   <Field
                     label={t("labels.caseNumber")}
                     value={row.caseNumber}
-                    onChange={(value) => updateCourtRow(row.id, { caseNumber: value })}
+                    onChange={(value) =>
+                      updateCourtRow(row.id, { caseNumber: value })
+                    }
                   />
                   <Field
                     label={t("labels.startDate")}
                     type="date"
                     value={row.startedAt}
-                    onChange={(value) => updateCourtRow(row.id, { startedAt: value })}
+                    onChange={(value) =>
+                      updateCourtRow(row.id, { startedAt: value })
+                    }
                   />
                   <Field
                     label={t("labels.notes")}
                     value={row.notes}
-                    onChange={(value) => updateCourtRow(row.id, { notes: value })}
+                    onChange={(value) =>
+                      updateCourtRow(row.id, { notes: value })
+                    }
                   />
                 </div>
-                <button type="button" className="text-sm text-red-600" onClick={() => removeCourtRow(row.id)}>
+                <button
+                  type="button"
+                  className="text-sm text-red-600"
+                  onClick={() => removeCourtRow(row.id)}
+                >
                   {t("actions.delete")}
                 </button>
               </div>
             ))}
-            <button type="button" className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm" onClick={addCourtRow}>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm"
+              onClick={addCourtRow}
+            >
               {t("quickIntake.addCourt")}
             </button>
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.section.parties")} description={t("quickIntake.partiesHelp")}>
+        <SectionCard
+          title={t("quickIntake.section.parties")}
+          description={t("quickIntake.partiesHelp")}
+        >
           <div className="space-y-3">
             {parties.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+              <div
+                key={row.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
+              >
                 <div className="grid gap-3 md:grid-cols-2">
                   <Field
                     label={t("labels.name")}
                     value={row.name}
-                    onChange={(value) => updatePartyRow(row.id, { name: value })}
+                    onChange={(value) =>
+                      updatePartyRow(row.id, { name: value })
+                    }
                   />
                   <SelectField
                     label={t("labels.role")}
                     value={row.role}
-                    onChange={(value) => updatePartyRow(row.id, { role: value })}
-                    options={partyRoleOptions.length ? partyRoleOptions : [{ value: "PLAINTIFF", label: "Plaintiff" }]}
+                    onChange={(value) =>
+                      updatePartyRow(row.id, { role: value })
+                    }
+                    options={
+                      partyRoleOptions.length
+                        ? partyRoleOptions
+                        : [{ value: "PLAINTIFF", label: "Plaintiff" }]
+                    }
                   />
                   <SelectField
                     label={t("labels.client")}
                     value={String(row.isOurClient)}
-                    onChange={(value) => updatePartyRow(row.id, { isOurClient: value === "true" })}
+                    onChange={(value) =>
+                      updatePartyRow(row.id, { isOurClient: value === "true" })
+                    }
                     options={[
                       { value: "true", label: t("cases.ourClient") },
                       { value: "false", label: t("cases.externalParty") }
@@ -1030,143 +1252,232 @@ export function CaseQuickIntakePage() {
                   <Field
                     label={t("labels.opposingCounsel")}
                     value={row.opposingCounselName}
-                    onChange={(value) => updatePartyRow(row.id, { opposingCounselName: value })}
+                    onChange={(value) =>
+                      updatePartyRow(row.id, { opposingCounselName: value })
+                    }
                   />
                 </div>
-                <button type="button" className="text-sm text-red-600" onClick={() => removePartyRow(row.id)}>
+                <button
+                  type="button"
+                  className="text-sm text-red-600"
+                  onClick={() => removePartyRow(row.id)}
+                >
                   {t("actions.delete")}
                 </button>
               </div>
             ))}
-            <button type="button" className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm" onClick={addPartyRow}>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm"
+              onClick={addPartyRow}
+            >
               {t("quickIntake.addParty")}
             </button>
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.section.assignments")} description={t("quickIntake.assignmentsHelp")}>
+        <SectionCard
+          title={t("quickIntake.section.assignments")}
+          description={t("quickIntake.assignmentsHelp")}
+        >
           <div className="space-y-3">
             {assignments.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+              <div
+                key={row.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
+              >
                 <div className="grid gap-3 md:grid-cols-2">
                   <SelectField
                     label={t("labels.user")}
                     value={row.userId}
-                    onChange={(value) => updateAssignmentRow(row.id, { userId: value })}
+                    onChange={(value) =>
+                      updateAssignmentRow(row.id, { userId: value })
+                    }
                     options={userOptions}
                   />
                   <SelectField
                     label={t("labels.role")}
                     value={row.roleOnCase}
-                    onChange={(value) => updateAssignmentRow(row.id, { roleOnCase: value as CaseRoleOnCase })}
+                    onChange={(value) =>
+                      updateAssignmentRow(row.id, {
+                        roleOnCase: value as CaseRoleOnCase
+                      })
+                    }
                     options={assignmentRoleOptions}
                   />
                 </div>
-                <button type="button" className="text-sm text-red-600" onClick={() => removeAssignmentRow(row.id)}>
+                <button
+                  type="button"
+                  className="text-sm text-red-600"
+                  onClick={() => removeAssignmentRow(row.id)}
+                >
                   {t("actions.delete")}
                 </button>
               </div>
             ))}
-            <button type="button" className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm" onClick={addAssignmentRow}>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm"
+              onClick={addAssignmentRow}
+            >
               {t("quickIntake.addAssignment")}
             </button>
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.section.hearings")} description={t("quickIntake.hearingsHelp")}>
+        <SectionCard
+          title={t("quickIntake.section.hearings")}
+          description={t("quickIntake.hearingsHelp")}
+        >
           <div className="space-y-3">
             {hearings.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+              <div
+                key={row.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
+              >
                 <div className="grid gap-3 md:grid-cols-2">
                   <Field
                     commitMode="blur"
                     label={t("labels.sessionDatetime")}
                     type="datetime-local"
                     value={row.sessionDatetime}
-                    onChange={(value) => updateHearingRow(row.id, { sessionDatetime: value })}
+                    onChange={(value) =>
+                      updateHearingRow(row.id, { sessionDatetime: value })
+                    }
                   />
                   <SelectField
                     label={t("labels.assignedLawyer")}
                     value={row.assignedLawyerId}
-                    onChange={(value) => updateHearingRow(row.id, { assignedLawyerId: value })}
-                    options={[{ value: "", label: t("labels.unassigned") }, ...userOptions.filter((u) => u.value !== "")]}
+                    onChange={(value) =>
+                      updateHearingRow(row.id, { assignedLawyerId: value })
+                    }
+                    options={[
+                      { value: "", label: t("labels.unassigned") },
+                      ...userOptions.filter((u) => u.value !== "")
+                    ]}
                   />
                   <Field
                     commitMode="blur"
                     label={t("labels.nextSession")}
                     type="datetime-local"
                     value={row.nextSessionAt}
-                    onChange={(value) => updateHearingRow(row.id, { nextSessionAt: value })}
+                    onChange={(value) =>
+                      updateHearingRow(row.id, { nextSessionAt: value })
+                    }
                   />
                   <SelectField
                     label={t("labels.outcome")}
                     value={row.outcome}
-                    onChange={(value) => updateHearingRow(row.id, { outcome: value as SessionOutcome | "" })}
+                    onChange={(value) =>
+                      updateHearingRow(row.id, {
+                        outcome: value as SessionOutcome | ""
+                      })
+                    }
                     options={sessionOutcomeOptions}
                   />
                   <Field
                     label={t("labels.notes")}
                     value={row.notes}
-                    onChange={(value) => updateHearingRow(row.id, { notes: value })}
+                    onChange={(value) =>
+                      updateHearingRow(row.id, { notes: value })
+                    }
                   />
                 </div>
-                <button type="button" className="text-sm text-red-600" onClick={() => removeHearingRow(row.id)}>
+                <button
+                  type="button"
+                  className="text-sm text-red-600"
+                  onClick={() => removeHearingRow(row.id)}
+                >
                   {t("actions.delete")}
                 </button>
               </div>
             ))}
-            <button type="button" className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm" onClick={addHearingRow}>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm"
+              onClick={addHearingRow}
+            >
               {t("quickIntake.addHearing")}
             </button>
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.section.tasks")} description={t("quickIntake.tasksHelp")}>
+        <SectionCard
+          title={t("quickIntake.section.tasks")}
+          description={t("quickIntake.tasksHelp")}
+        >
           <div className="space-y-3">
             {tasks.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+              <div
+                key={row.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
+              >
                 <div className="grid gap-3 md:grid-cols-2">
                   <Field
-                    label={t("labels.title")}
+                    label={t("labels.taskTitle")}
                     value={row.title}
-                    onChange={(value) => updateTaskRow(row.id, { title: value })}
+                    onChange={(value) =>
+                      updateTaskRow(row.id, { title: value })
+                    }
                   />
                   <SelectField
                     label={t("labels.priority")}
                     value={row.priority}
-                    onChange={(value) => updateTaskRow(row.id, { priority: value as TaskPriority })}
+                    onChange={(value) =>
+                      updateTaskRow(row.id, { priority: value as TaskPriority })
+                    }
                     options={taskPriorityOptions}
                   />
                   <SelectField
                     label={t("labels.assignedLawyer")}
                     value={row.assignedToId}
-                    onChange={(value) => updateTaskRow(row.id, { assignedToId: value })}
-                    options={[{ value: "", label: t("labels.unassigned") }, ...userOptions.filter((u) => u.value !== "")]}
+                    onChange={(value) =>
+                      updateTaskRow(row.id, { assignedToId: value })
+                    }
+                    options={[
+                      { value: "", label: t("labels.unassigned") },
+                      ...userOptions.filter((u) => u.value !== "")
+                    ]}
                   />
                   <Field
                     label={t("labels.dueDate")}
                     type="date"
                     value={row.dueAt}
-                    onChange={(value) => updateTaskRow(row.id, { dueAt: value })}
+                    onChange={(value) =>
+                      updateTaskRow(row.id, { dueAt: value })
+                    }
                   />
                   <Field
                     label={t("labels.description")}
                     value={row.description}
-                    onChange={(value) => updateTaskRow(row.id, { description: value })}
+                    onChange={(value) =>
+                      updateTaskRow(row.id, { description: value })
+                    }
                   />
                 </div>
-                <button type="button" className="text-sm text-red-600" onClick={() => removeTaskRow(row.id)}>
+                <button
+                  type="button"
+                  className="text-sm text-red-600"
+                  onClick={() => removeTaskRow(row.id)}
+                >
                   {t("actions.delete")}
                 </button>
               </div>
             ))}
-            <button type="button" className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm" onClick={addTaskRow}>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm"
+              onClick={addTaskRow}
+            >
               {t("quickIntake.addTask")}
             </button>
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.section.documents")} description={t("quickIntake.documentsHelp")}>
+        <SectionCard
+          title={t("quickIntake.section.documents")}
+          description={t("quickIntake.documentsHelp")}
+        >
           <div className="space-y-3">
             <div>
               <button
@@ -1186,22 +1497,35 @@ export function CaseQuickIntakePage() {
               />
             </div>
             {documents.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+              <div
+                key={row.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
+              >
                 <div className="grid gap-3 md:grid-cols-2">
                   <Field
-                    label={t("labels.title")}
+                    label={t("labels.documentTitle")}
                     value={row.title}
-                    onChange={(value) => updateDocumentRow(row.id, { title: value })}
+                    onChange={(value) =>
+                      updateDocumentRow(row.id, { title: value })
+                    }
                   />
                   <SelectField
                     label={t("documents.fileType")}
                     value={row.type}
-                    onChange={(value) => updateDocumentRow(row.id, { type: value })}
+                    onChange={(value) =>
+                      updateDocumentRow(row.id, { type: value })
+                    }
                     options={documentTypeOptions}
                   />
-                  <p className="md:col-span-2 text-sm text-slate-600">{row.file?.name ?? t("documents.noFileSelected")}</p>
+                  <p className="md:col-span-2 text-sm text-slate-600">
+                    {row.file?.name ?? t("documents.noFileSelected")}
+                  </p>
                 </div>
-                <button type="button" className="text-sm text-red-600" onClick={() => removeDocumentRow(row.id)}>
+                <button
+                  type="button"
+                  className="text-sm text-red-600"
+                  onClick={() => removeDocumentRow(row.id)}
+                >
                   {t("actions.delete")}
                 </button>
               </div>
@@ -1209,20 +1533,28 @@ export function CaseQuickIntakePage() {
           </div>
         </SectionCard>
 
-        <SectionCard title={t("quickIntake.reviewTitle")} description={t("quickIntake.reviewHelp")}>
+        <SectionCard
+          title={t("quickIntake.reviewTitle")}
+          description={t("quickIntake.reviewHelp")}
+        >
           <div className="space-y-2 text-sm text-slate-700">
             <p>
               <strong>{t("quickIntake.requiredStatus")}:</strong>{" "}
-              {hasRequiredReady ? t("quickIntake.requiredReady") : t("quickIntake.requiredMissing")}
+              {hasRequiredReady
+                ? t("quickIntake.requiredReady")
+                : t("quickIntake.requiredMissing")}
             </p>
-            <p>{t("quickIntake.optionalSummary", {
-              courts: courts.filter((row) => row.courtName && row.courtLevel).length,
-              parties: parties.filter((row) => row.name && row.role).length,
-              assignments: assignments.filter((row) => row.userId).length,
-              hearings: hearings.filter((row) => row.sessionDatetime).length,
-              tasks: tasks.filter((row) => row.title).length,
-              documents: documents.filter((row) => row.file).length
-            })}</p>
+            <p>
+              {t("quickIntake.optionalSummary", {
+                courts: courts.filter((row) => row.courtName && row.courtLevel)
+                  .length,
+                parties: parties.filter((row) => row.name && row.role).length,
+                assignments: assignments.filter((row) => row.userId).length,
+                hearings: hearings.filter((row) => row.sessionDatetime).length,
+                tasks: tasks.filter((row) => row.title).length,
+                documents: documents.filter((row) => row.file).length
+              })}
+            </p>
           </div>
 
           <div className="mt-4">
@@ -1250,7 +1582,10 @@ export function CaseQuickIntakePage() {
                 className="rounded-xl border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/5"
                 onClick={() => {
                   if (!submitSummary.caseId) return;
-                  void navigate({ to: "/app/cases/$caseId", params: { caseId: submitSummary.caseId } });
+                  void navigate({
+                    to: "/app/cases/$caseId",
+                    params: { caseId: submitSummary.caseId }
+                  });
                 }}
               >
                 {t("quickIntake.openCreatedCase")}

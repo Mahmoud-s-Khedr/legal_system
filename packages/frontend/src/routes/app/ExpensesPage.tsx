@@ -1,9 +1,30 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useExpenses, useCreateExpense, useDeleteExpense } from "../../lib/billing";
+import {
+  useExpenses,
+  useCreateExpense,
+  useDeleteExpense
+} from "../../lib/billing";
 import { confirmAction } from "../../lib/dialog";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper, formatCurrency } from "./ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  SectionCard,
+  SortableTableHeadCell,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableToolbar,
+  TableWrapper,
+  formatCurrency
+} from "./ui";
 
 export function ExpensesPage() {
   const { t } = useTranslation("app");
@@ -35,7 +56,11 @@ export function ExpensesPage() {
     e.preventDefault();
     setFormError("");
     try {
-      await createExpense.mutateAsync({ category, amount, description: description || null });
+      await createExpense.mutateAsync({
+        category,
+        amount,
+        description: description || null
+      });
       setCategory("");
       setAmount("");
       setDescription("");
@@ -66,7 +91,9 @@ export function ExpensesPage() {
           <form onSubmit={(e) => void handleCreate(e)} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium">{t("billing.category")}</label>
+                <label className="block text-sm font-medium">
+                  {t("billing.category")}
+                </label>
                 <input
                   required
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
@@ -75,7 +102,9 @@ export function ExpensesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">{t("billing.amount")}</label>
+                <label className="block text-sm font-medium">
+                  {t("billing.amount")}
+                </label>
                 <input
                   required
                   type="number"
@@ -87,7 +116,9 @@ export function ExpensesPage() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium">{t("billing.description")}</label>
+                <label className="block text-sm font-medium">
+                  {t("billing.description")}
+                </label>
                 <input
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   value={description}
@@ -131,7 +162,9 @@ export function ExpensesPage() {
             placeholder={t("billing.category")}
           />
         </TableToolbar>
-        {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
+        {isLoading && (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        )}
         {!isLoading && isError && (
           <ErrorState
             title={t("errors.title")}
@@ -141,20 +174,40 @@ export function ExpensesPage() {
           />
         )}
         {!isLoading && !isError && !data?.items.length && (
-          <EmptyState title={t("empty.noExpenses")} description={t("empty.noExpensesHelp")} />
+          <EmptyState
+            title={t("empty.noExpenses")}
+            description={t("empty.noExpensesHelp")}
+          />
         )}
         {!isLoading && !isError && !!data?.items.length && (
           <>
-            {deleteError ? <p className="text-sm text-red-600">{deleteError}</p> : null}
+            {deleteError ? (
+              <p className="text-sm text-red-600">{deleteError}</p>
+            ) : null}
             <TableWrapper>
               <DataTable>
                 <TableHead>
                   <tr>
-                    <SortableTableHeadCell label={t("billing.category")} sortKey="category" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell
+                      label={t("billing.category")}
+                      sortKey="category"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
                     <TableHeadCell>{t("labels.description")}</TableHeadCell>
                     <TableHeadCell>{t("labels.case")}</TableHeadCell>
-                    <SortableTableHeadCell label={t("billing.amount")} sortKey="amount" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} align="end" />
-                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    <SortableTableHeadCell
+                      label={t("billing.amount")}
+                      sortKey="amount"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                      align="end"
+                    />
+                    <TableHeadCell align="end">
+                      {t("actions.more")}
+                    </TableHeadCell>
                   </tr>
                 </TableHead>
                 <TableBody>
@@ -163,13 +216,18 @@ export function ExpensesPage() {
                       <TableCell>{exp.category}</TableCell>
                       <TableCell>{exp.description ?? "—"}</TableCell>
                       <TableCell>{exp.caseTitle ?? "—"}</TableCell>
-                      <TableCell align="end">{formatCurrency(exp.amount)}</TableCell>
+                      <TableCell align="end">
+                        {formatCurrency(exp.amount)}
+                      </TableCell>
                       <TableCell align="end">
                         <button
                           onClick={() => {
                             void (async () => {
                               const approved = await confirmAction({
-                                content: t("billing.deleteExpenseConfirm", "Delete this expense?")
+                                content: t(
+                                  "billing.deleteExpenseConfirm",
+                                  "Delete this expense?"
+                                )
                               });
                               if (!approved) {
                                 return;
@@ -178,7 +236,10 @@ export function ExpensesPage() {
                                 setDeleteError("");
                                 await deleteExpense.mutateAsync(exp.id);
                               } catch (error) {
-                                setDeleteError((error as Error)?.message ?? t("errors.fallback"));
+                                setDeleteError(
+                                  (error as Error)?.message ??
+                                    t("errors.fallback")
+                                );
                               }
                             })();
                           }}

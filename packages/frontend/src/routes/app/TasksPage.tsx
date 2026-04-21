@@ -71,17 +71,16 @@ export function TasksPage() {
 
   const isRtl = i18n.resolvedLanguage === "ar";
 
-  const kanbanColumns = useMemo(
-    () => {
-      const statuses = Object.values(TaskStatus);
-      const ordered = isRtl ? [...statuses].reverse() : statuses;
-      return ordered.map((status) => ({
-        status,
-        items: (kanbanQuery.data?.items ?? []).filter((task) => task.status === status)
-      }));
-    },
-    [kanbanQuery.data?.items, isRtl]
-  );
+  const kanbanColumns = useMemo(() => {
+    const statuses = Object.values(TaskStatus);
+    const ordered = isRtl ? [...statuses].reverse() : statuses;
+    return ordered.map((status) => ({
+      status,
+      items: (kanbanQuery.data?.items ?? []).filter(
+        (task) => task.status === status
+      )
+    }));
+  }, [kanbanQuery.data?.items, isRtl]);
 
   return (
     <div className="space-y-6">
@@ -136,20 +135,29 @@ export function TasksPage() {
           <div className="mt-4">
             <ErrorState
               title={t("errors.title")}
-              description={(tasksQuery.error as Error)?.message ?? t("errors.fallback")}
+              description={
+                (tasksQuery.error as Error)?.message ?? t("errors.fallback")
+              }
               retryLabel={t("errors.reload")}
               onRetry={() => void tasksQuery.refetch()}
             />
           </div>
         ) : null}
 
-        {!tasksQuery.isError && !tasksQuery.isLoading && !(tasksQuery.data?.items.length ?? 0) ? (
+        {!tasksQuery.isError &&
+        !tasksQuery.isLoading &&
+        !(tasksQuery.data?.items.length ?? 0) ? (
           <div className="mt-4">
-            <EmptyState title={t("empty.noTasks")} description={t("empty.noTasksHelp")} />
+            <EmptyState
+              title={t("empty.noTasks")}
+              description={t("empty.noTasksHelp")}
+            />
           </div>
         ) : null}
 
-        {!tasksQuery.isError && viewMode === "table" && !!tasksQuery.data?.items.length ? (
+        {!tasksQuery.isError &&
+        viewMode === "table" &&
+        !!tasksQuery.data?.items.length ? (
           <div className="mt-4">
             <ResponsiveDataList
               items={tasksQuery.data.items}
@@ -157,21 +165,48 @@ export function TasksPage() {
               fields={[
                 {
                   key: "title",
-                  label: t("labels.title"),
-                  render: (item) => <span className={item.status === TaskStatus.DONE ? "line-through text-slate-400" : ""}>{item.title}</span>
+                  label: t("labels.taskTitle"),
+                  render: (item) => (
+                    <span
+                      className={
+                        item.status === TaskStatus.DONE
+                          ? "line-through text-slate-400"
+                          : ""
+                      }
+                    >
+                      {item.title}
+                    </span>
+                  )
                 },
-                { key: "status", label: t("labels.status"), render: (item) => getEnumLabel(t, "TaskStatus", item.status) },
-                { key: "priority", label: t("labels.priority"), render: (item) => getEnumLabel(t, "TaskPriority", item.priority) },
-                { key: "dueAt", label: t("labels.dueDate"), render: (item) => formatDateTime(item.dueAt) }
+                {
+                  key: "status",
+                  label: t("labels.status"),
+                  render: (item) => getEnumLabel(t, "TaskStatus", item.status)
+                },
+                {
+                  key: "priority",
+                  label: t("labels.priority"),
+                  render: (item) =>
+                    getEnumLabel(t, "TaskPriority", item.priority)
+                },
+                {
+                  key: "dueAt",
+                  label: t("labels.dueDate"),
+                  render: (item) => formatDateTime(item.dueAt)
+                }
               ]}
               actions={(item) => (
                 <>
                   <button
                     aria-label={t("actions.markDone")}
                     className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                    disabled={markDoneMutation.isPending || item.status === TaskStatus.DONE}
+                    disabled={
+                      markDoneMutation.isPending ||
+                      item.status === TaskStatus.DONE
+                    }
                     onClick={() => {
-                      if (item.status !== TaskStatus.DONE) markDoneMutation.mutate(item.id);
+                      if (item.status !== TaskStatus.DONE)
+                        markDoneMutation.mutate(item.id);
                     }}
                     type="button"
                   >
@@ -192,12 +227,38 @@ export function TasksPage() {
                 <TableHead>
                   <tr>
                     <TableHeadCell />
-                    <SortableTableHeadCell label={t("labels.title")} sortKey="title" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <SortableTableHeadCell label={t("labels.status")} sortKey="status" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <SortableTableHeadCell label={t("labels.priority")} sortKey="priority" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell
+                      label={t("labels.taskTitle")}
+                      sortKey="title"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <SortableTableHeadCell
+                      label={t("labels.status")}
+                      sortKey="status"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <SortableTableHeadCell
+                      label={t("labels.priority")}
+                      sortKey="priority"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
                     <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
-                    <SortableTableHeadCell label={t("labels.dueDate")} sortKey="dueAt" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    <SortableTableHeadCell
+                      label={t("labels.dueDate")}
+                      sortKey="dueAt"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <TableHeadCell align="end">
+                      {t("actions.more")}
+                    </TableHeadCell>
                   </tr>
                 </TableHead>
                 <TableBody>
@@ -209,18 +270,33 @@ export function TasksPage() {
                           checked={task.status === TaskStatus.DONE}
                           className="h-4 w-4 cursor-pointer accent-accent"
                           disabled={markDoneMutation.isPending}
-                          onChange={() => { if (task.status !== TaskStatus.DONE) markDoneMutation.mutate(task.id); }}
+                          onChange={() => {
+                            if (task.status !== TaskStatus.DONE)
+                              markDoneMutation.mutate(task.id);
+                          }}
                           type="checkbox"
                         />
                       </TableCell>
                       <TableCell>
-                        <span className={task.status === TaskStatus.DONE ? "line-through text-slate-400" : ""}>
+                        <span
+                          className={
+                            task.status === TaskStatus.DONE
+                              ? "line-through text-slate-400"
+                              : ""
+                          }
+                        >
                           {task.title}
                         </span>
                       </TableCell>
-                      <TableCell>{getEnumLabel(t, "TaskStatus", task.status)}</TableCell>
-                      <TableCell>{getEnumLabel(t, "TaskPriority", task.priority)}</TableCell>
-                      <TableCell>{task.assignedToName ?? t("labels.unassigned")}</TableCell>
+                      <TableCell>
+                        {getEnumLabel(t, "TaskStatus", task.status)}
+                      </TableCell>
+                      <TableCell>
+                        {getEnumLabel(t, "TaskPriority", task.priority)}
+                      </TableCell>
+                      <TableCell>
+                        {task.assignedToName ?? t("labels.unassigned")}
+                      </TableCell>
                       <TableCell>{formatDateTime(task.dueAt)}</TableCell>
                       <TableCell align="end">
                         <Link
@@ -251,9 +327,14 @@ export function TasksPage() {
           <div className="mt-4 grid gap-4 xl:grid-cols-5">
             {kanbanColumns.map((column) => (
               <div className="space-y-3" key={column.status}>
-                <p className="font-semibold">{getEnumLabel(t, "TaskStatus", column.status)}</p>
+                <p className="font-semibold">
+                  {getEnumLabel(t, "TaskStatus", column.status)}
+                </p>
                 {!column.items.length ? (
-                  <EmptyState title={t("empty.noTasks")} description={t("empty.noTasksHelp")} />
+                  <EmptyState
+                    title={t("empty.noTasks")}
+                    description={t("empty.noTasksHelp")}
+                  />
                 ) : (
                   column.items.map((task) => (
                     <Link
@@ -266,7 +347,9 @@ export function TasksPage() {
                       <p className="mt-1 text-sm text-slate-600">
                         {task.assignedToName ?? t("labels.unassigned")}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">{formatDateTime(task.dueAt)}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {formatDateTime(task.dueAt)}
+                      </p>
                     </Link>
                   ))
                 )}

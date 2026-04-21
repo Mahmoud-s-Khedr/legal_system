@@ -4,9 +4,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Pencil, Trash2, Plus, BookOpen } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, ErrorState, PageHeader, PrimaryButton, SectionCard, formatDate } from "../ui";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  PrimaryButton,
+  SectionCard,
+  formatDate
+} from "../ui";
 
-function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldWrap({
+  label,
+  children
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block space-y-2">
       <span className="text-sm font-semibold">{label}</span>
@@ -41,7 +54,12 @@ interface LibraryDocumentDetail {
   description: string | null;
   descriptionAr: string | null;
   fileUrl: string | null;
-  category: { id: string; nameAr: string; nameEn: string; nameFr: string } | null;
+  category: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    nameFr: string;
+  } | null;
   articles: Article[];
   annotations: Annotation[];
 }
@@ -50,10 +68,14 @@ export function LibraryDocumentPage() {
   const { t, i18n } = useTranslation("app");
   const isRtl = i18n.resolvedLanguage === "ar";
   const isFrench = i18n.resolvedLanguage === "fr";
-  const { documentId } = useParams({ from: "/app/library/documents/$documentId" });
+  const { documentId } = useParams({
+    from: "/app/library/documents/$documentId"
+  });
   const queryClient = useQueryClient();
   const [annotationBody, setAnnotationBody] = useState("");
-  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
+  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(
+    null
+  );
   const [editingBody, setEditingBody] = useState("");
   const [linkCaseId, setLinkCaseId] = useState("");
   const [linkNotes, setLinkNotes] = useState("");
@@ -62,7 +84,8 @@ export function LibraryDocumentPage() {
 
   const docQuery = useQuery({
     queryKey: ["library-document", documentId],
-    queryFn: () => apiFetch<LibraryDocumentDetail>(`/api/library/documents/${documentId}`)
+    queryFn: () =>
+      apiFetch<LibraryDocumentDetail>(`/api/library/documents/${documentId}`)
   });
 
   const createAnnotationMutation = useMutation({
@@ -74,7 +97,9 @@ export function LibraryDocumentPage() {
     onSuccess: () => {
       setActionError(null);
       setAnnotationBody("");
-      void queryClient.invalidateQueries({ queryKey: ["library-document", documentId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["library-document", documentId]
+      });
     },
     onError: (error: Error) => {
       setActionError(error.message || t("errors.fallback"));
@@ -90,7 +115,9 @@ export function LibraryDocumentPage() {
     onSuccess: () => {
       setActionError(null);
       setEditingAnnotationId(null);
-      void queryClient.invalidateQueries({ queryKey: ["library-document", documentId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["library-document", documentId]
+      });
     },
     onError: (error: Error) => {
       setActionError(error.message || t("errors.fallback"));
@@ -102,7 +129,9 @@ export function LibraryDocumentPage() {
       apiFetch(`/api/library/annotations/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       setActionError(null);
-      void queryClient.invalidateQueries({ queryKey: ["library-document", documentId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["library-document", documentId]
+      });
     },
     onError: (error: Error) => {
       setActionError(error.message || t("errors.fallback"));
@@ -120,7 +149,9 @@ export function LibraryDocumentPage() {
       setLinkCaseId("");
       setLinkNotes("");
       setShowLinkForm(false);
-      void queryClient.invalidateQueries({ queryKey: ["case-legal-refs", linkCaseId.trim()] });
+      void queryClient.invalidateQueries({
+        queryKey: ["case-legal-refs", linkCaseId.trim()]
+      });
     },
     onError: (error: Error) => {
       setActionError(error.message || t("errors.fallback"));
@@ -137,7 +168,9 @@ export function LibraryDocumentPage() {
       <div className="p-6">
         <ErrorState
           title={t("errors.title")}
-          description={(docQuery.error as Error)?.message ?? t("errors.fallback")}
+          description={
+            (docQuery.error as Error)?.message ?? t("errors.fallback")
+          }
           retryLabel={t("errors.reload")}
           onRetry={() => void docQuery.refetch()}
         />
@@ -149,10 +182,15 @@ export function LibraryDocumentPage() {
   }
 
   const title = doc.title;
-  const description = isRtl && doc.descriptionAr ? doc.descriptionAr : doc.description;
+  const description =
+    isRtl && doc.descriptionAr ? doc.descriptionAr : doc.description;
 
   const categoryTitle = doc.category
-    ? (isRtl ? doc.category.nameAr : isFrench ? doc.category.nameFr : doc.category.nameEn)
+    ? isRtl
+      ? doc.category.nameAr
+      : isFrench
+        ? doc.category.nameFr
+        : doc.category.nameEn
     : null;
 
   return (
@@ -185,24 +223,38 @@ export function LibraryDocumentPage() {
           </span>
         )}
         {doc.status && (
-          <span className="rounded-full bg-accentSoft px-3 py-1 text-accent">{doc.status}</span>
+          <span className="rounded-full bg-accentSoft px-3 py-1 text-accent">
+            {doc.status}
+          </span>
         )}
       </div>
 
       {/* Articles */}
       {doc.articles.length > 0 && (
-        <SectionCard description={t("library.articlesHelp")} title={t("library.articles")}>
+        <SectionCard
+          description={t("library.articlesHelp")}
+          title={t("library.articles")}
+        >
           <div className="space-y-4">
             {doc.articles.map((article) => {
-              const artTitle = isRtl && article.titleAr ? article.titleAr : article.title;
-              const artBody = isRtl && article.bodyAr ? article.bodyAr : article.body;
+              const artTitle =
+                isRtl && article.titleAr ? article.titleAr : article.title;
+              const artBody =
+                isRtl && article.bodyAr ? article.bodyAr : article.body;
               return (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4" key={article.id}>
+                <div
+                  className="rounded-2xl border border-slate-200 bg-white p-4"
+                  key={article.id}
+                >
                   <p className="mb-2 text-sm font-semibold text-accent">
-                    {article.number ? `${t("library.article")} ${article.number}` : ""}
+                    {article.number
+                      ? `${t("library.article")} ${article.number}`
+                      : ""}
                     {artTitle ? ` — ${artTitle}` : ""}
                   </p>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{artBody}</p>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                    {artBody}
+                  </p>
                 </div>
               );
             })}
@@ -226,15 +278,26 @@ export function LibraryDocumentPage() {
       )}
 
       {/* Annotations */}
-      <SectionCard description={t("library.annotationsHelp")} title={t("library.annotations")}>
-        {actionError ? <p className="mb-3 text-sm text-red-600">{actionError}</p> : null}
+      <SectionCard
+        description={t("library.annotationsHelp")}
+        title={t("library.annotations")}
+      >
+        {actionError ? (
+          <p className="mb-3 text-sm text-red-600">{actionError}</p>
+        ) : null}
         <div className="space-y-3">
           {!doc.annotations.length ? (
-            <EmptyState description={t("empty.noAnnotationsHelp")} title={t("empty.noAnnotations")} />
+            <EmptyState
+              description={t("empty.noAnnotationsHelp")}
+              title={t("empty.noAnnotations")}
+            />
           ) : (
             doc.annotations.map((ann) =>
               editingAnnotationId === ann.id ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4" key={ann.id}>
+                <div
+                  className="rounded-2xl border border-slate-200 bg-white p-4"
+                  key={ann.id}
+                >
                   <textarea
                     className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-accent"
                     rows={3}
@@ -244,7 +307,12 @@ export function LibraryDocumentPage() {
                   <div className="mt-2 flex gap-2">
                     <PrimaryButton
                       disabled={updateAnnotationMutation.isPending}
-                      onClick={() => updateAnnotationMutation.mutate({ id: ann.id, body: editingBody })}
+                      onClick={() =>
+                        updateAnnotationMutation.mutate({
+                          id: ann.id,
+                          body: editingBody
+                        })
+                      }
                     >
                       {t("actions.save")}
                     </PrimaryButton>
@@ -257,13 +325,21 @@ export function LibraryDocumentPage() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4" key={ann.id}>
-                  <p className="flex-1 whitespace-pre-wrap text-sm">{ann.body}</p>
+                <div
+                  className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+                  key={ann.id}
+                >
+                  <p className="flex-1 whitespace-pre-wrap text-sm">
+                    {ann.body}
+                  </p>
                   <div className="flex shrink-0 gap-1">
                     <button
                       aria-label={t("actions.edit")}
                       className="rounded-lg p-1 text-slate-400 hover:text-accent"
-                      onClick={() => { setEditingAnnotationId(ann.id); setEditingBody(ann.body); }}
+                      onClick={() => {
+                        setEditingAnnotationId(ann.id);
+                        setEditingBody(ann.body);
+                      }}
                     >
                       <Pencil aria-hidden="true" className="size-4" />
                     </button>
@@ -292,8 +368,12 @@ export function LibraryDocumentPage() {
             onChange={(e) => setAnnotationBody(e.target.value)}
           />
           <PrimaryButton
-            disabled={!annotationBody.trim() || createAnnotationMutation.isPending}
-            onClick={() => createAnnotationMutation.mutate(annotationBody.trim())}
+            disabled={
+              !annotationBody.trim() || createAnnotationMutation.isPending
+            }
+            onClick={() =>
+              createAnnotationMutation.mutate(annotationBody.trim())
+            }
           >
             <Plus aria-hidden="true" className="size-4" />
             {t("library.addAnnotation")}
@@ -302,7 +382,10 @@ export function LibraryDocumentPage() {
       </SectionCard>
 
       {/* Link to case */}
-      <SectionCard description={t("library.linkToCaseHelp")} title={t("library.linkToCase")}>
+      <SectionCard
+        description={t("library.linkToCaseHelp")}
+        title={t("library.linkToCase")}
+      >
         {showLinkForm ? (
           <div className="space-y-3">
             <FieldWrap label={t("library.caseId")}>
@@ -326,7 +409,12 @@ export function LibraryDocumentPage() {
             <div className="flex gap-2">
               <PrimaryButton
                 disabled={!linkCaseId.trim() || linkToCaseMutation.isPending}
-                onClick={() => linkToCaseMutation.mutate({ caseId: linkCaseId.trim(), notes: linkNotes })}
+                onClick={() =>
+                  linkToCaseMutation.mutate({
+                    caseId: linkCaseId.trim(),
+                    notes: linkNotes
+                  })
+                }
               >
                 {t("actions.link")}
               </PrimaryButton>

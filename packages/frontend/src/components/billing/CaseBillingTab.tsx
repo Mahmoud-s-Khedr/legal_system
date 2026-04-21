@@ -9,7 +9,20 @@ import {
   useCreateExpense,
   useDeleteExpense
 } from "../../lib/billing";
-import { DataTable, EmptyState, ErrorState, FormAlert, SectionCard, TableBody, TableCell, TableHead, TableHeadCell, TableRow, TableWrapper, formatCurrency } from "../../routes/app/ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  FormAlert,
+  SectionCard,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TableRow,
+  TableWrapper,
+  formatCurrency
+} from "../../routes/app/ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useToastStore } from "../../store/toastStore";
 
@@ -32,7 +45,12 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
     e.preventDefault();
     setFormError("");
     try {
-      await createExpense.mutateAsync({ caseId, category, amount, description: description || null });
+      await createExpense.mutateAsync({
+        caseId,
+        category,
+        amount,
+        description: description || null
+      });
       setCategory("");
       setAmount("");
       setDescription("");
@@ -50,20 +68,37 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
       ) : summary.isError ? (
         <ErrorState
           title={t("errors.title")}
-          description={(summary.error as Error)?.message ?? t("errors.fallback")}
+          description={
+            (summary.error as Error)?.message ?? t("errors.fallback")
+          }
           retryLabel={t("errors.reload")}
           onRetry={() => void summary.refetch()}
         />
       ) : summary.data ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[
-            { label: t("billing.totalBilled"), value: summary.data.totalBilled },
+            {
+              label: t("billing.totalBilled"),
+              value: summary.data.totalBilled
+            },
             { label: t("billing.totalPaid"), value: summary.data.totalPaid },
-            { label: t("billing.outstanding"), value: summary.data.outstanding },
-            { label: t("billing.totalExpenses"), value: summary.data.totalExpenses },
-            { label: t("billing.profitability"), value: summary.data.profitability }
+            {
+              label: t("billing.outstanding"),
+              value: summary.data.outstanding
+            },
+            {
+              label: t("billing.totalExpenses"),
+              value: summary.data.totalExpenses
+            },
+            {
+              label: t("billing.profitability"),
+              value: summary.data.profitability
+            }
           ].map(({ label, value }) => (
-            <div key={label} className="rounded-2xl border border-slate-200 bg-white p-3">
+            <div
+              key={label}
+              className="rounded-2xl border border-slate-200 bg-white p-3"
+            >
               <p className="text-xs text-slate-500">{label}</p>
               <p className="mt-1 font-semibold">{formatCurrency(value)}</p>
             </div>
@@ -72,10 +107,7 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
       ) : null}
 
       {/* Invoices */}
-      <SectionCard
-        title={t("billing.invoices")}
-        description=""
-      >
+      <SectionCard title={t("billing.invoices")} description="">
         <div className="mb-3 flex justify-end">
           <Link
             to="/app/invoices/new"
@@ -89,12 +121,17 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
         ) : invoices.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(invoices.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (invoices.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void invoices.refetch()}
           />
         ) : !invoices.data?.items.length ? (
-          <EmptyState title={t("empty.noInvoices")} description={t("empty.noInvoicesHelp")} />
+          <EmptyState
+            title={t("empty.noInvoices")}
+            description={t("empty.noInvoicesHelp")}
+          />
         ) : (
           <TableWrapper>
             <DataTable>
@@ -102,7 +139,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                 <tr>
                   <TableHeadCell>{t("billing.invoice")}</TableHeadCell>
                   <TableHeadCell>{t("labels.status")}</TableHeadCell>
-                  <TableHeadCell align="end">{t("billing.amount")}</TableHeadCell>
+                  <TableHeadCell align="end">
+                    {t("billing.amount")}
+                  </TableHeadCell>
                 </tr>
               </TableHead>
               <TableBody>
@@ -131,7 +170,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                         {getEnumLabel(t, "InvoiceStatus", inv.status)}
                       </span>
                     </TableCell>
-                    <TableCell align="end">{formatCurrency(inv.totalAmount)}</TableCell>
+                    <TableCell align="end">
+                      {formatCurrency(inv.totalAmount)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -158,7 +199,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
           >
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-medium">{t("billing.category")}</label>
+                <label className="block text-xs font-medium">
+                  {t("billing.category")}
+                </label>
                 <input
                   required
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
@@ -167,7 +210,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium">{t("billing.amount")}</label>
+                <label className="block text-xs font-medium">
+                  {t("billing.amount")}
+                </label>
                 <input
                   required
                   type="number"
@@ -179,7 +224,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium">{t("billing.description")}</label>
+                <label className="block text-xs font-medium">
+                  {t("billing.description")}
+                </label>
                 <input
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   value={description}
@@ -212,12 +259,17 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
         ) : expenses.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(expenses.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (expenses.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void expenses.refetch()}
           />
         ) : !expenses.data?.items.length ? (
-          <EmptyState title={t("empty.noExpenses")} description={t("empty.noExpensesHelp")} />
+          <EmptyState
+            title={t("empty.noExpenses")}
+            description={t("empty.noExpensesHelp")}
+          />
         ) : (
           <TableWrapper>
             <DataTable>
@@ -225,7 +277,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                 <tr>
                   <TableHeadCell>{t("billing.category")}</TableHeadCell>
                   <TableHeadCell>{t("labels.description")}</TableHeadCell>
-                  <TableHeadCell align="end">{t("billing.amount")}</TableHeadCell>
+                  <TableHeadCell align="end">
+                    {t("billing.amount")}
+                  </TableHeadCell>
                   <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
                 </tr>
               </TableHead>
@@ -234,7 +288,9 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                   <TableRow key={exp.id}>
                     <TableCell>{exp.category}</TableCell>
                     <TableCell>{exp.description ?? "—"}</TableCell>
-                    <TableCell align="end">{formatCurrency(exp.amount)}</TableCell>
+                    <TableCell align="end">
+                      {formatCurrency(exp.amount)}
+                    </TableCell>
                     <TableCell align="end">
                       <button
                         onClick={() => {
@@ -242,7 +298,11 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                             try {
                               await deleteExpense.mutateAsync(exp.id);
                             } catch (error) {
-                              addToast((error as Error)?.message ?? t("errors.fallback"), "error");
+                              addToast(
+                                (error as Error)?.message ??
+                                  t("errors.fallback"),
+                                "error"
+                              );
                             }
                           })();
                         }}

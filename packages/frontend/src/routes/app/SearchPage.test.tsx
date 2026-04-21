@@ -23,11 +23,23 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("./ui", () => ({
-  PageHeader: ({ title }: { title: string }) => <div data-testid="header">{title}</div>,
-  EmptyState: ({ title, description }: { title: string; description: string }) => (
-    <div data-testid="empty">{title}:{description}</div>
+  PageHeader: ({ title }: { title: string }) => (
+    <div data-testid="header">{title}</div>
   ),
-  ErrorState: ({ title }: { title: string }) => <div data-testid="error">{title}</div>
+  EmptyState: ({
+    title,
+    description
+  }: {
+    title: string;
+    description: string;
+  }) => (
+    <div data-testid="empty">
+      {title}:{description}
+    </div>
+  ),
+  ErrorState: ({ title }: { title: string }) => (
+    <div data-testid="error">{title}</div>
+  )
 }));
 
 vi.mock("../../components/search/SearchResultCard", () => ({
@@ -41,7 +53,9 @@ const { SearchPage } = await import("./SearchPage");
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 function render() {
   container = document.createElement("div");
@@ -90,7 +104,9 @@ describe("SearchPage", () => {
     mockUseSearch.mockReturnValue({ q: "alpha" });
 
     const view = render();
-    const input = view.querySelector('input[type="search"]') as HTMLInputElement | null;
+    const input = view.querySelector(
+      'input[type="search"]'
+    ) as HTMLInputElement | null;
 
     expect(input?.value).toBe("alpha");
   });
@@ -99,14 +115,18 @@ describe("SearchPage", () => {
     const view = render();
 
     const form = view.querySelector("form");
-    const input = view.querySelector('input[type="search"]') as HTMLInputElement;
+    const input = view.querySelector(
+      'input[type="search"]'
+    ) as HTMLInputElement;
 
     act(() => {
       setTextInputValue(input, "lease");
     });
 
     act(() => {
-      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form?.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true })
+      );
     });
 
     expect(mockNavigate).toHaveBeenCalledWith({

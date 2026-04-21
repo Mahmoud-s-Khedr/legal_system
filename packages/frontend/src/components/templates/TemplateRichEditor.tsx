@@ -89,7 +89,12 @@ function ToolbarButton({
   );
 }
 
-export function TemplateRichEditor({ value, language, onChange, disabled = false }: Props) {
+export function TemplateRichEditor({
+  value,
+  language,
+  onChange,
+  disabled = false
+}: Props) {
   const { t } = useTranslation("app");
   const dir = getTemplateDirection(language);
 
@@ -185,13 +190,17 @@ export function TemplateRichEditor({ value, language, onChange, disabled = false
         <ToolbarButton
           label={t("templates.toolbar.h1")}
           active={editor.isActive("heading", { level: 1 })}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
+          }
           disabled={disabled}
         />
         <ToolbarButton
           label={t("templates.toolbar.h2")}
           active={editor.isActive("heading", { level: 2 })}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
           disabled={disabled}
         />
         <ToolbarButton
@@ -236,7 +245,9 @@ export function TemplateRichEditor({ value, language, onChange, disabled = false
         />
         <ToolbarButton
           label={t("templates.toolbar.clear")}
-          onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
+          onClick={() =>
+            editor.chain().focus().clearNodes().unsetAllMarks().run()
+          }
           disabled={disabled}
         />
         <select

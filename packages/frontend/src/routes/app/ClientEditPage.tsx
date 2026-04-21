@@ -1,13 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClientType, Language, type ClientDto, type CreateClientDto } from "@elms/shared";
+import {
+  ClientType,
+  Language,
+  type ClientDto,
+  type CreateClientDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { getEgyptGovernorateOptions, withLegacyGovernorateOption } from "../../lib/egyptGovernorates";
+import {
+  getEgyptGovernorateOptions,
+  withLegacyGovernorateOption
+} from "../../lib/egyptGovernorates";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, ErrorState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField
+} from "./ui";
 
 function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -26,8 +45,12 @@ function normalizePayload(form: CreateClientDto): CreateClientDto {
     email: toNullable(form.email),
     governorate: toNullable(form.governorate),
     nationalId: isIdentityType(form.type) ? toNullable(form.nationalId) : null,
-    commercialRegister: form.type === ClientType.COMPANY ? toNullable(form.commercialRegister) : null,
-    taxNumber: form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null
+    commercialRegister:
+      form.type === ClientType.COMPANY
+        ? toNullable(form.commercialRegister)
+        : null,
+    taxNumber:
+      form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null
   };
 }
 
@@ -65,9 +88,13 @@ export function ClientEditPage() {
     contacts: []
   });
   const loadedFormRef = useRef<CreateClientDto | null>(null);
-  useUnsavedChanges(loadedFormRef.current !== null && JSON.stringify(form) !== JSON.stringify(loadedFormRef.current), {
-    bypassBlockRef: bypassRef
-  });
+  useUnsavedChanges(
+    loadedFormRef.current !== null &&
+      JSON.stringify(form) !== JSON.stringify(loadedFormRef.current),
+    {
+      bypassBlockRef: bypassRef
+    }
+  );
 
   const governorateOptions = withLegacyGovernorateOption(
     getEgyptGovernorateOptions(i18n.resolvedLanguage ?? i18n.language ?? "en"),
@@ -116,7 +143,9 @@ export function ClientEditPage() {
     return (
       <ErrorState
         title={t("errors.title")}
-        description={(clientQuery.error as Error)?.message ?? t("errors.fallback")}
+        description={
+          (clientQuery.error as Error)?.message ?? t("errors.fallback")
+        }
         retryLabel={t("errors.reload")}
         onRetry={() => void clientQuery.refetch()}
       />
@@ -124,7 +153,12 @@ export function ClientEditPage() {
   }
 
   if (!clientQuery.data) {
-    return <EmptyState title={t("empty.noClientSelected")} description={t("empty.noClientSelectedHelp")} />;
+    return (
+      <EmptyState
+        title={t("empty.noClientSelected")}
+        description={t("empty.noClientSelectedHelp")}
+      />
+    );
   }
 
   return (
@@ -134,7 +168,10 @@ export function ClientEditPage() {
         title={clientQuery.data?.name ?? "..."}
         description={t("clients.editHelp")}
       />
-      <SectionCard title={t("clients.editTitle")} description={t("clients.editHelp")}>
+      <SectionCard
+        title={t("clients.editTitle")}
+        description={t("clients.editHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -150,7 +187,9 @@ export function ClientEditPage() {
           />
           <SelectField
             label={t("labels.type")}
-            onChange={(value) => setForm({ ...form, type: value as ClientType })}
+            onChange={(value) =>
+              setForm({ ...form, type: value as ClientType })
+            }
             options={clientTypeOptions}
             required
             value={form.type}
@@ -174,15 +213,14 @@ export function ClientEditPage() {
             <SelectField
               label={t("labels.governorate")}
               onChange={(value) => setForm({ ...form, governorate: value })}
-              options={[
-                { value: "", label: "-" },
-                ...governorateOptions
-              ]}
+              options={[{ value: "", label: "-" }, ...governorateOptions]}
               value={form.governorate ?? ""}
             />
             <SelectField
               label={t("labels.language")}
-              onChange={(value) => setForm({ ...form, preferredLanguage: value as Language })}
+              onChange={(value) =>
+                setForm({ ...form, preferredLanguage: value as Language })
+              }
               options={languageOptions}
               value={form.preferredLanguage ?? Language.AR}
             />
@@ -200,7 +238,9 @@ export function ClientEditPage() {
               <Field
                 dir="ltr"
                 label={t("labels.commercialRegister")}
-                onChange={(value) => setForm({ ...form, commercialRegister: value })}
+                onChange={(value) =>
+                  setForm({ ...form, commercialRegister: value })
+                }
                 value={form.commercialRegister ?? ""}
               />
               <Field
@@ -220,7 +260,9 @@ export function ClientEditPage() {
             submitting={updateMutation.isPending}
           />
           {updateMutation.error ? (
-            <p className="text-sm text-red-600">{(updateMutation.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(updateMutation.error as Error).message}
+            </p>
           ) : null}
         </form>
       </SectionCard>

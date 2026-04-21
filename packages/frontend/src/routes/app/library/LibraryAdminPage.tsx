@@ -3,9 +3,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
-import { EmptyState, ErrorState, PageHeader, PrimaryButton, SectionCard, SelectField } from "../ui";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  PrimaryButton,
+  SectionCard,
+  SelectField
+} from "../ui";
 
-function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldWrap({
+  label,
+  children
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block space-y-2">
       <span className="text-sm font-semibold">{label}</span>
@@ -23,7 +36,13 @@ interface CategoryNode {
   children: CategoryNode[];
 }
 
-const EMPTY_FORM = { nameAr: "", nameEn: "", nameFr: "", slug: "", parentId: "" };
+const EMPTY_FORM = {
+  nameAr: "",
+  nameEn: "",
+  nameFr: "",
+  slug: "",
+  parentId: ""
+};
 
 export function LibraryAdminPage() {
   const { t } = useTranslation("app");
@@ -120,7 +139,13 @@ export function LibraryAdminPage() {
         eyebrow={t("library.eyebrow")}
         title={t("library.adminTitle")}
         actions={
-          <PrimaryButton onClick={() => { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); }}>
+          <PrimaryButton
+            onClick={() => {
+              setShowForm(true);
+              setEditingId(null);
+              setForm(EMPTY_FORM);
+            }}
+          >
             <Plus aria-hidden="true" className="size-4" />
             {t("library.newCategory")}
           </PrimaryButton>
@@ -144,17 +169,26 @@ export function LibraryAdminPage() {
       )}
 
       <SectionCard title={t("library.categories")}>
-        {categoriesQuery.isLoading ? <p className="text-sm text-slate-500">{t("labels.loading")}</p> : null}
+        {categoriesQuery.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : null}
         {categoriesQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(categoriesQuery.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (categoriesQuery.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void categoriesQuery.refetch()}
           />
         ) : null}
-        {!categoriesQuery.isLoading && !categoriesQuery.isError && !flat.length ? (
-          <EmptyState description={t("empty.noCategoriesHelp")} title={t("empty.noCategories")} />
+        {!categoriesQuery.isLoading &&
+        !categoriesQuery.isError &&
+        !flat.length ? (
+          <EmptyState
+            description={t("empty.noCategoriesHelp")}
+            title={t("empty.noCategories")}
+          />
         ) : !categoriesQuery.isLoading && !categoriesQuery.isError ? (
           <div className="space-y-2">
             {flat.map(({ node, depth, parentId }) => (
@@ -162,14 +196,18 @@ export function LibraryAdminPage() {
                 {editingId === node.id ? (
                   <div className="rounded-2xl border border-accent/30 bg-accentSoft p-4">
                     <CategoryForm
-                      allCategories={selectableParents.filter((category) => category.id !== node.id)}
+                      allCategories={selectableParents.filter(
+                        (category) => category.id !== node.id
+                      )}
                       form={form}
                       isPending={updateMutation.isPending}
                       submitLabel={t("actions.save")}
                       t={t}
                       onChange={setForm}
                       onCancel={() => setEditingId(null)}
-                      onSubmit={() => updateMutation.mutate({ id: node.id, data: form })}
+                      onSubmit={() =>
+                        updateMutation.mutate({ id: node.id, data: form })
+                      }
                     />
                   </div>
                 ) : (
@@ -179,10 +217,14 @@ export function LibraryAdminPage() {
                   >
                     <div className="flex-1">
                       <p className="font-medium">{node.nameEn}</p>
-                      <p className="text-sm text-slate-500" dir="rtl">{node.nameAr}</p>
+                      <p className="text-sm text-slate-500" dir="rtl">
+                        {node.nameAr}
+                      </p>
                       <p className="text-xs text-slate-400">{node.nameFr}</p>
                     </div>
-                    <code className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{node.slug}</code>
+                    <code className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                      {node.slug}
+                    </code>
                     <button
                       aria-label={t("actions.edit")}
                       className="rounded-lg p-1 text-slate-400 hover:text-accent"
@@ -218,12 +260,24 @@ function CategoryForm({
   onSubmit,
   onCancel
 }: {
-  form: { nameAr: string; nameEn: string; nameFr: string; slug: string; parentId: string };
+  form: {
+    nameAr: string;
+    nameEn: string;
+    nameFr: string;
+    slug: string;
+    parentId: string;
+  };
   allCategories: { id: string; nameEn: string }[];
   submitLabel: string;
   isPending: boolean;
   t: (key: string) => string;
-  onChange: (form: { nameAr: string; nameEn: string; nameFr: string; slug: string; parentId: string }) => void;
+  onChange: (form: {
+    nameAr: string;
+    nameEn: string;
+    nameFr: string;
+    slug: string;
+    parentId: string;
+  }) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
@@ -271,18 +325,30 @@ function CategoryForm({
           onChange={(value) => onChange({ ...form, parentId: value })}
           options={[
             { value: "", label: t("library.noParent") },
-            ...allCategories.map((category) => ({ value: category.id, label: category.nameEn }))
+            ...allCategories.map((category) => ({
+              value: category.id,
+              label: category.nameEn
+            }))
           ]}
         />
       </div>
       <div className="flex gap-2">
         <PrimaryButton
-          disabled={!form.nameAr.trim() || !form.nameEn.trim() || !form.nameFr.trim() || !form.slug.trim() || isPending}
+          disabled={
+            !form.nameAr.trim() ||
+            !form.nameEn.trim() ||
+            !form.nameFr.trim() ||
+            !form.slug.trim() ||
+            isPending
+          }
           onClick={onSubmit}
         >
           {submitLabel}
         </PrimaryButton>
-        <button className="rounded-xl border border-slate-200 px-4 py-2 text-sm" onClick={onCancel}>
+        <button
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
+          onClick={onCancel}
+        >
           {t("actions.cancel")}
         </button>
       </div>

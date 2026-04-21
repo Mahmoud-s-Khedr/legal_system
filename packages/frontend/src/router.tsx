@@ -90,7 +90,9 @@ function ProtectedRoute() {
   }, [isBootstrapped, navigate, user]);
 
   if (!isBootstrapped) {
-    return <div className="p-8 text-center text-ink">{t("labels.loading")}</div>;
+    return (
+      <div className="p-8 text-center text-ink">{t("labels.loading")}</div>
+    );
   }
 
   if (!user) {
@@ -122,7 +124,9 @@ function LandingRedirect() {
   }, [isBootstrapped, navigate, needsSetup, user]);
 
   if (!isBootstrapped) {
-    return <div className="p-8 text-center text-ink">{t("labels.loading")}</div>;
+    return (
+      <div className="p-8 text-center text-ink">{t("labels.loading")}</div>
+    );
   }
 
   return null;
@@ -273,69 +277,113 @@ const taskDetailRoute = createRoute({
 const usersRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/users",
-  component: () => <PermissionGate permission="users:read"><UsersPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="users:read">
+      <UsersPage />
+    </PermissionGate>
+  )
 });
 
 const userCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/users/new",
-  component: () => <PermissionGate permission="users:create"><UserCreatePage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="users:create">
+      <UserCreatePage />
+    </PermissionGate>
+  )
 });
 
 const userDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/users/$userId",
-  component: () => <PermissionGate permission="users:read"><UserDetailPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="users:read">
+      <UserDetailPage />
+    </PermissionGate>
+  )
 });
 
 // Invitations — requires invitations:read permission
 const invitationsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/invitations",
-  component: () => <PermissionGate permission="invitations:read"><InvitationsPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="invitations:read">
+      <InvitationsPage />
+    </PermissionGate>
+  )
 });
 
 const invitationCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/invitations/new",
-  component: () => <PermissionGate permission="invitations:create"><InvitationCreatePage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="invitations:create">
+      <InvitationCreatePage />
+    </PermissionGate>
+  )
 });
 
 // Settings — requires settings:read permission
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings",
-  component: () => <PermissionGate permission="settings:read"><SettingsPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="settings:read">
+      <SettingsPage />
+    </PermissionGate>
+  )
 });
 
 const lookupSettingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings/lookups",
-  component: () => <PermissionGate permission="lookups:manage"><LookupSettingsPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="lookups:manage">
+      <LookupSettingsPage />
+    </PermissionGate>
+  )
 });
 
 const lookupSettingsDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings/lookups/$entity",
-  component: () => <PermissionGate permission="lookups:manage"><LookupSettingsDetailPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="lookups:manage">
+      <LookupSettingsDetailPage />
+    </PermissionGate>
+  )
 });
 
 const roleSettingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings/roles",
-  component: () => <PermissionGate permission="roles:read"><RoleSettingsPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="roles:read">
+      <RoleSettingsPage />
+    </PermissionGate>
+  )
 });
 
 const roleCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings/roles/new",
-  component: () => <PermissionGate permission="roles:create"><RoleCreatePage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="roles:create">
+      <RoleCreatePage />
+    </PermissionGate>
+  )
 });
 
 const roleEditRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings/roles/$roleId/edit",
-  component: () => <PermissionGate permission="roles:update"><RoleEditPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="roles:update">
+      <RoleEditPage />
+    </PermissionGate>
+  )
 });
 
 // Documents
@@ -364,26 +412,42 @@ const searchRoute = createRoute({
 const invoicesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/invoices",
-  component: () => <PermissionGate permission="invoices:read"><InvoicesPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="invoices:read">
+      <InvoicesPage />
+    </PermissionGate>
+  )
 });
 
 const invoiceCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/invoices/new",
-  component: () => <PermissionGate permission="invoices:create"><InvoiceCreatePage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="invoices:create">
+      <InvoiceCreatePage />
+    </PermissionGate>
+  )
 });
 
 const invoiceDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/invoices/$invoiceId",
-  component: () => <PermissionGate permission="invoices:read"><InvoiceDetailPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="invoices:read">
+      <InvoiceDetailPage />
+    </PermissionGate>
+  )
 });
 
 // Expenses
 const expensesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/expenses",
-  component: () => <PermissionGate permission="expenses:read"><ExpensesPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="expenses:read">
+      <ExpensesPage />
+    </PermissionGate>
+  )
 });
 
 // Notifications
@@ -403,13 +467,21 @@ const notificationPreferencesRoute = createRoute({
 const reportsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/reports",
-  component: () => <PermissionGate permission="reports:read"><ReportsPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="reports:read">
+      <ReportsPage />
+    </PermissionGate>
+  )
 });
 
 const reportBuilderRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/reports/builder",
-  component: () => <PermissionGate permission="reports:read"><ReportBuilderPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="reports:read">
+      <ReportBuilderPage />
+    </PermissionGate>
+  )
 });
 
 const ppoPortalRoute = createRoute({
@@ -422,70 +494,114 @@ const ppoPortalRoute = createRoute({
 const researchRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/research",
-  component: () => <PermissionGate permission="research:use"><ResearchPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="research:use">
+      <ResearchPage />
+    </PermissionGate>
+  )
 });
 
 const researchSessionRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/research/$sessionId",
-  component: () => <PermissionGate permission="research:use"><ResearchSessionPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="research:use">
+      <ResearchSessionPage />
+    </PermissionGate>
+  )
 });
 
 // Library
 const libraryRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/library",
-  component: () => <PermissionGate permission="library:read"><LibraryPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="library:read">
+      <LibraryPage />
+    </PermissionGate>
+  )
 });
 
 const libraryDocumentRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/library/documents/$documentId",
-  component: () => <PermissionGate permission="library:read"><LibraryDocumentPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="library:read">
+      <LibraryDocumentPage />
+    </PermissionGate>
+  )
 });
 
 const librarySearchRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/library/search",
-  component: () => <PermissionGate permission="library:read"><LibrarySearchPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="library:read">
+      <LibrarySearchPage />
+    </PermissionGate>
+  )
 });
 
 const libraryAdminRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/library/admin",
-  component: () => <PermissionGate permission="library:manage"><LibraryAdminPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="library:manage">
+      <LibraryAdminPage />
+    </PermissionGate>
+  )
 });
 
 const libraryUploadRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/library/upload",
-  component: () => <PermissionGate permission="library:read"><LibraryUploadPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="library:read">
+      <LibraryUploadPage />
+    </PermissionGate>
+  )
 });
 
 // Import
 const importRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/import",
-  component: () => <PermissionGate permission="clients:create"><ImportPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="clients:create">
+      <ImportPage />
+    </PermissionGate>
+  )
 });
 
 // Templates
 const templatesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/templates",
-  component: () => <PermissionGate permission="templates:read"><TemplatesPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="templates:read">
+      <TemplatesPage />
+    </PermissionGate>
+  )
 });
 
 const templateCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/templates/new",
-  component: () => <PermissionGate permission="templates:create"><TemplateCreatePage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="templates:create">
+      <TemplateCreatePage />
+    </PermissionGate>
+  )
 });
 
 const templateEditRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/templates/$templateId/edit",
-  component: () => <PermissionGate permission="templates:read"><TemplateEditPage /></PermissionGate>
+  component: () => (
+    <PermissionGate permission="templates:read">
+      <TemplateEditPage />
+    </PermissionGate>
+  )
 });
 
 // Portal routes
@@ -520,10 +636,7 @@ const routeTree = rootRoute.addChildren([
   setupRoute,
   aboutRoute,
   portalLoginRoute,
-  portalRoute.addChildren([
-    portalDashboardRoute,
-    portalCaseRoute
-  ]),
+  portalRoute.addChildren([portalDashboardRoute, portalCaseRoute]),
   appRoute.addChildren([
     dashboardRoute,
     clientsRoute,

@@ -2,7 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { Linkedin, Mail, Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getDeveloperContact } from "../../lib/developerContact";
-import { copyTextToClipboard, handleExternalLinkClick } from "../../lib/externalLinks";
+import {
+  copyTextToClipboard,
+  handleExternalLinkClick
+} from "../../lib/externalLinks";
 
 export interface ShellFooterLink {
   id: string;
@@ -28,9 +31,14 @@ export function ShellFooter({
     <footer className="border-t border-slate-200 bg-white/90 py-4">
       <div className="shell-container flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500">{ariaLabel}</span>
-          <nav className="flex flex-wrap items-center gap-2" aria-label={ariaLabel}>
-            {links.map((link) => (
+          <span className="text-xs font-semibold text-slate-500">
+            {ariaLabel}
+          </span>
+          <nav
+            className="flex flex-wrap items-center gap-2"
+            aria-label={ariaLabel}
+          >
+            {links.map((link) =>
               link.to ? (
                 <Link
                   key={link.id}
@@ -53,7 +61,7 @@ export function ShellFooter({
                   {link.label}
                 </button>
               )
-            ))}
+            )}
           </nav>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 text-xs text-slate-500">
@@ -76,7 +84,13 @@ export function ShellFooter({
                 href={`mailto:${contact.email}`}
                 target="_blank"
                 rel="noreferrer"
-                onClick={(event) => handleExternalLinkClick(event, `mailto:${contact.email}`, contact.email)}
+                onClick={(event) =>
+                  handleExternalLinkClick(
+                    event,
+                    `mailto:${contact.email}`,
+                    contact.email
+                  )
+                }
                 className="rounded-md border border-slate-200 p-1.5 text-slate-500 transition hover:border-accent hover:text-accent"
                 title={t("contact.email")}
                 aria-label={t("contact.email")}
@@ -89,7 +103,13 @@ export function ShellFooter({
                 href={`tel:${contact.phone}`}
                 target="_blank"
                 rel="noreferrer"
-                onClick={(event) => handleExternalLinkClick(event, `tel:${contact.phone}`, contact.phone)}
+                onClick={(event) =>
+                  handleExternalLinkClick(
+                    event,
+                    `tel:${contact.phone}`,
+                    contact.phone
+                  )
+                }
                 className="rounded-md border border-slate-200 p-1.5 text-slate-500 transition hover:border-accent hover:text-accent"
                 title={t("contact.phone")}
                 aria-label={t("contact.phone")}
@@ -102,7 +122,13 @@ export function ShellFooter({
                 href={contact.linkedin}
                 target="_blank"
                 rel="noreferrer"
-                onClick={(event) => handleExternalLinkClick(event, contact.linkedin, contact.linkedin)}
+                onClick={(event) =>
+                  handleExternalLinkClick(
+                    event,
+                    contact.linkedin,
+                    contact.linkedin
+                  )
+                }
                 className="rounded-md border border-slate-200 p-1.5 text-slate-500 transition hover:border-accent hover:text-accent"
                 title={t("contact.linkedin")}
                 aria-label={t("contact.linkedin")}

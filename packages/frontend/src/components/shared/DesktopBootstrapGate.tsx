@@ -12,7 +12,8 @@ interface BootstrapStatus {
 
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
 
-let tauriCorePromise: Promise<typeof import("@tauri-apps/api/core")> | null = null;
+let tauriCorePromise: Promise<typeof import("@tauri-apps/api/core")> | null =
+  null;
 
 function getTauriCore() {
   if (!tauriCorePromise) {
@@ -55,7 +56,9 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
       let nextPhase = phaseRef.current;
 
       try {
-        const nextStatus = await invokeDesktopCommand<BootstrapStatus>("desktop_bootstrap_status");
+        const nextStatus = await invokeDesktopCommand<BootstrapStatus>(
+          "desktop_bootstrap_status"
+        );
         nextPhase = nextStatus.phase;
         if (!cancelled) {
           setStatus(nextStatus);
@@ -90,10 +93,12 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
 
   const failureMessage = status.message ?? "";
   const isPostgresVersionMismatch =
-    status.phase === "failed" && status.failureCode === "postgres_cluster_version_mismatch";
+    status.phase === "failed" &&
+    status.failureCode === "postgres_cluster_version_mismatch";
   const isRecoverableMigrationFailure =
     status.phase === "failed" &&
-    (failureMessage.includes("P3009") || failureMessage.toLowerCase().includes("migration failed"));
+    (failureMessage.includes("P3009") ||
+      failureMessage.toLowerCase().includes("migration failed"));
 
   async function runRecoveryCommand(command: string, message: string) {
     setStatus({
@@ -120,11 +125,16 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
         <p className="text-sm uppercase tracking-[0.35em] rtl:tracking-normal text-slate-500">
           {t("desktopBootstrap.eyebrow")}
         </p>
-        <h1 className="mt-4 font-heading text-3xl">{t(`desktopBootstrap.${status.phase}.title`)}</h1>
+        <h1 className="mt-4 font-heading text-3xl">
+          {t(`desktopBootstrap.${status.phase}.title`)}
+        </h1>
         <p className="mt-4 text-sm leading-7 text-slate-600">
           {isPostgresVersionMismatch
-            ? t("desktopBootstrap.failureCodes.postgres_cluster_version_mismatch")
-            : status.message || t(`desktopBootstrap.${status.phase}.description`)}
+            ? t(
+                "desktopBootstrap.failureCodes.postgres_cluster_version_mismatch"
+              )
+            : status.message ||
+              t(`desktopBootstrap.${status.phase}.description`)}
         </p>
         {status.phase === "failed" && status.failureDetail ? (
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -137,7 +147,10 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
               <button
                 className="rounded-2xl bg-amber-700 px-5 py-3 font-semibold text-white hover:bg-amber-800"
                 onClick={() => {
-                  void runRecoveryCommand("repair_postgres_runtime", t("desktopBootstrap.repairingRuntime"));
+                  void runRecoveryCommand(
+                    "repair_postgres_runtime",
+                    t("desktopBootstrap.repairingRuntime")
+                  );
                 }}
                 type="button"
               >
@@ -148,7 +161,10 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
               <button
                 className="rounded-2xl bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-800"
                 onClick={() => {
-                  void runRecoveryCommand("repair_bootstrap_migrations", t("desktopBootstrap.repairing"));
+                  void runRecoveryCommand(
+                    "repair_bootstrap_migrations",
+                    t("desktopBootstrap.repairing")
+                  );
                 }}
                 type="button"
               >
@@ -158,7 +174,10 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
             <button
               className="rounded-2xl bg-accent px-5 py-3 font-semibold text-white"
               onClick={() => {
-                void runRecoveryCommand("retry_bootstrap", t("desktopBootstrap.retrying"));
+                void runRecoveryCommand(
+                  "retry_bootstrap",
+                  t("desktopBootstrap.retrying")
+                );
               }}
               type="button"
             >
@@ -186,7 +205,9 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
                     } catch (error) {
                       setStatus({
                         phase: "failed",
-                        message: (error as Error)?.message ?? t("desktopBootstrap.unreachable")
+                        message:
+                          (error as Error)?.message ??
+                          t("desktopBootstrap.unreachable")
                       });
                     }
                   })();

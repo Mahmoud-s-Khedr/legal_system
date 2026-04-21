@@ -130,9 +130,16 @@ export function ResearchSessionPage() {
           }
 
           try {
-            const parsed = JSON.parse(data) as { token?: string; error?: string };
+            const parsed = JSON.parse(data) as {
+              token?: string;
+              error?: string;
+            };
             if (parsed.error) {
-              setStreamError(parsed.error === "USAGE_LIMIT_EXCEEDED" ? t("research.limitExceeded") : parsed.error);
+              setStreamError(
+                parsed.error === "USAGE_LIMIT_EXCEEDED"
+                  ? t("research.limitExceeded")
+                  : parsed.error
+              );
             } else if (parsed.token) {
               accumulated += parsed.token;
               setStreamingContent(accumulated);
@@ -167,7 +174,9 @@ export function ResearchSessionPage() {
     return (
       <ErrorState
         title={t("errors.title")}
-        description={(sessionQuery.error as Error)?.message ?? t("errors.fallback")}
+        description={
+          (sessionQuery.error as Error)?.message ?? t("errors.fallback")
+        }
         retryLabel={t("errors.reload")}
         onRetry={() => void sessionQuery.refetch()}
       />
@@ -194,7 +203,8 @@ export function ResearchSessionPage() {
         </h1>
         {usageQuery.data && usageQuery.data.limit > 0 && (
           <span className="text-xs text-slate-400">
-            {usageQuery.data.used} / {usageQuery.data.limit} {t("research.messagesUsed")}
+            {usageQuery.data.used} / {usageQuery.data.limit}{" "}
+            {t("research.messagesUsed")}
           </span>
         )}
       </div>
@@ -204,7 +214,9 @@ export function ResearchSessionPage() {
         {!messages.length && !isStreaming && (
           <div className="flex h-full items-center justify-center text-center text-sm text-slate-400">
             <div>
-              <p className="text-base font-semibold text-slate-600">{t("research.emptyTitle")}</p>
+              <p className="text-base font-semibold text-slate-600">
+                {t("research.emptyTitle")}
+              </p>
               <p className="mt-1">{t("research.emptyHelp")}</p>
             </div>
           </div>
@@ -218,8 +230,13 @@ export function ResearchSessionPage() {
         {isStreaming && streamingContent && (
           <div className="flex justify-start">
             <div className="max-w-[75%] rounded-2xl rounded-tl-sm bg-white border border-slate-200 px-4 py-3 text-sm">
-              <p className="whitespace-pre-wrap leading-relaxed">{streamingContent}</p>
-              <span className="mt-1 inline-block h-4 w-0.5 animate-pulse bg-accent" aria-hidden="true" />
+              <p className="whitespace-pre-wrap leading-relaxed">
+                {streamingContent}
+              </p>
+              <span
+                className="mt-1 inline-block h-4 w-0.5 animate-pulse bg-accent"
+                aria-hidden="true"
+              />
             </div>
           </div>
         )}
@@ -257,7 +274,9 @@ export function ResearchSessionPage() {
         <button
           aria-label={t("actions.send")}
           className="self-end rounded-2xl bg-accent px-4 py-3 text-white disabled:opacity-40"
-          disabled={!input.trim() || isStreaming || usageQuery.data?.allowed === false}
+          disabled={
+            !input.trim() || isStreaming || usageQuery.data?.allowed === false
+          }
           onClick={() => void handleSend()}
         >
           <Send aria-hidden="true" className="size-5" />
@@ -279,7 +298,9 @@ function MessageBubble({
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[75%] space-y-2 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
+      <div
+        className={`max-w-[75%] space-y-2 ${isUser ? "items-end" : "items-start"} flex flex-col`}
+      >
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
             isUser
@@ -315,9 +336,14 @@ function MessageBubble({
         {/* Source panel */}
         {showSources && msg.sources.length > 0 && (
           <div className="w-full space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">{t("research.sources")}</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+              {t("research.sources")}
+            </p>
             {msg.sources.map((src) => (
-              <div className="rounded-xl border border-slate-200 bg-white p-3" key={src.id}>
+              <div
+                className="rounded-xl border border-slate-200 bg-white p-3"
+                key={src.id}
+              >
                 <Link
                   className="text-sm font-semibold hover:text-accent"
                   params={{ documentId: src.document.id }}

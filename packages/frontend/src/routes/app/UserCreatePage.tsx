@@ -1,12 +1,25 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AuthMode, Language, type CreateLocalUserDto, type RoleListResponseDto } from "@elms/shared";
+import {
+  AuthMode,
+  Language,
+  type CreateLocalUserDto,
+  type RoleListResponseDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
-import { EmptyState, ErrorState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField
+} from "./ui";
 
 export function UserCreatePage() {
   const { t } = useTranslation("app");
@@ -48,7 +61,10 @@ export function UserCreatePage() {
           title={t("users.cloudTitle")}
           description={t("users.cloudHelp")}
         />
-        <EmptyState title={t("users.cloudOnly")} description={t("users.cloudOnlyHelp")} />
+        <EmptyState
+          title={t("users.cloudOnly")}
+          description={t("users.cloudOnlyHelp")}
+        />
       </div>
     );
   }
@@ -60,12 +76,19 @@ export function UserCreatePage() {
         title={t("users.createTitle")}
         description={t("users.createHelp")}
       />
-      <SectionCard title={t("users.createTitle")} description={t("users.createHelp")}>
-        {rolesQuery.isLoading ? <p className="text-sm text-slate-500">{t("labels.loading")}</p> : null}
+      <SectionCard
+        title={t("users.createTitle")}
+        description={t("users.createHelp")}
+      >
+        {rolesQuery.isLoading ? (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        ) : null}
         {rolesQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(rolesQuery.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (rolesQuery.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void rolesQuery.refetch()}
           />
@@ -114,7 +137,9 @@ export function UserCreatePage() {
           />
           <SelectField
             label={t("labels.language")}
-            onChange={(value) => setForm({ ...form, preferredLanguage: value as Language })}
+            onChange={(value) =>
+              setForm({ ...form, preferredLanguage: value as Language })
+            }
             options={Object.values(Language).map((value) => ({
               value,
               label: getEnumLabel(t, "Language", value)
@@ -126,11 +151,18 @@ export function UserCreatePage() {
             cancelLabel={t("actions.cancel")}
             submitLabel={t("actions.createUser")}
             savingLabel={t("labels.saving")}
-            submitting={createMutation.isPending || rolesQuery.isLoading || rolesQuery.isError || !rolesQuery.data?.items?.length}
+            submitting={
+              createMutation.isPending ||
+              rolesQuery.isLoading ||
+              rolesQuery.isError ||
+              !rolesQuery.data?.items?.length
+            }
           />
           {createMutation.error ? (
             <p className="text-sm text-red-600">
-              {(createMutation.error as Error).message?.toLowerCase().includes("seat limit")
+              {(createMutation.error as Error).message
+                ?.toLowerCase()
+                .includes("seat limit")
                 ? t("users.seatLimitReached")
                 : t("errors.fallback")}
             </p>

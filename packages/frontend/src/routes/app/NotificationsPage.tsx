@@ -1,7 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { NotificationType, type NotificationDto, type NotificationListResponseDto } from "@elms/shared";
+import {
+  NotificationType,
+  type NotificationDto,
+  type NotificationListResponseDto
+} from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useTableQueryState } from "../../lib/tableQueryState";
@@ -62,15 +66,22 @@ export function NotificationsPage() {
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["notifications-full", table.state],
-    queryFn: () => apiFetch<NotificationListResponseDto>(`/api/notifications?${table.toApiQueryString()}`)
+    queryFn: () =>
+      apiFetch<NotificationListResponseDto>(
+        `/api/notifications?${table.toApiQueryString()}`
+      )
   });
   const unreadCountQuery = useQuery({
     queryKey: ["notifications-unread-count"],
-    queryFn: () => apiFetch<{ count: number }>("/api/notifications/unread-count")
+    queryFn: () =>
+      apiFetch<{ count: number }>("/api/notifications/unread-count")
   });
 
   const markAll = useMutation({
-    mutationFn: () => apiFetch<{ success: boolean }>("/api/notifications/read-all", { method: "PATCH" }),
+    mutationFn: () =>
+      apiFetch<{ success: boolean }>("/api/notifications/read-all", {
+        method: "PATCH"
+      }),
     onSuccess: () => {
       feedback.success("messages.notificationsUpdated");
       void qc.invalidateQueries({ queryKey: ["notifications-full"] });
@@ -80,7 +91,9 @@ export function NotificationsPage() {
 
   const markOne = useMutation({
     mutationFn: (id: string) =>
-      apiFetch<{ success: boolean }>(`/api/notifications/${id}/read`, { method: "PATCH" }),
+      apiFetch<{ success: boolean }>(`/api/notifications/${id}/read`, {
+        method: "PATCH"
+      }),
     onSuccess: () => {
       feedback.success("messages.notificationMarkedRead");
       void qc.invalidateQueries({ queryKey: ["notifications-full"] });
@@ -113,40 +126,45 @@ export function NotificationsPage() {
         <TableToolbar
           primaryChildren={
             <>
-          <Field
-            label={t("labels.search")}
-            value={table.state.q}
-            onChange={table.setQ}
-            placeholder={t("notifications.searchPlaceholder")}
-          />
-          <SelectField
-            label={t("labels.type")}
-            value={table.state.filters.type ?? ""}
-            onChange={(value) => table.setFilter("type", value)}
-            options={[
-              { value: "", label: t("labels.all") },
-              ...Object.values(NotificationType).map((value) => ({ value, label: value }))
-            ]}
-          />
-        </>
+              <Field
+                label={t("labels.search")}
+                value={table.state.q}
+                onChange={table.setQ}
+                placeholder={t("notifications.searchPlaceholder")}
+              />
+              <SelectField
+                label={t("labels.type")}
+                value={table.state.filters.type ?? ""}
+                onChange={(value) => table.setFilter("type", value)}
+                options={[
+                  { value: "", label: t("labels.all") },
+                  ...Object.values(NotificationType).map((value) => ({
+                    value,
+                    label: value
+                  }))
+                ]}
+              />
+            </>
           }
           secondaryChildren={
             <div className="max-w-xs">
               <SelectField
                 label={t("labels.status")}
-              value={table.state.filters.isRead ?? ""}
-              onChange={(value) => table.setFilter("isRead", value)}
-              options={[
-                { value: "", label: t("labels.all") },
-                { value: "false", label: t("notifications.unread") },
-                { value: "true", label: t("notifications.read") }
-              ]}
-            />
+                value={table.state.filters.isRead ?? ""}
+                onChange={(value) => table.setFilter("isRead", value)}
+                options={[
+                  { value: "", label: t("labels.all") },
+                  { value: "false", label: t("notifications.unread") },
+                  { value: "true", label: t("notifications.read") }
+                ]}
+              />
             </div>
           }
           secondaryLabel={t("actions.more")}
         />
-        {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
+        {isLoading && (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        )}
         {!isLoading && isError && (
           <ErrorState
             title={t("errors.title")}
@@ -164,10 +182,33 @@ export function NotificationsPage() {
               items={data.items}
               getItemKey={(item) => item.id}
               fields={[
-                { key: "title", label: t("labels.title"), render: (item) => <span className={!item.isRead ? "font-semibold" : ""}>{item.title}</span> },
-                { key: "description", label: t("labels.description"), render: (item) => item.body },
-                { key: "date", label: t("labels.date"), render: (item) => formatDateTime(item.createdAt) },
-                { key: "status", label: t("labels.status"), render: (item) => (item.isRead ? t("notifications.read") : t("notifications.unread")) }
+                {
+                  key: "title",
+                  label: t("labels.notificationTitle"),
+                  render: (item) => (
+                    <span className={!item.isRead ? "font-semibold" : ""}>
+                      {item.title}
+                    </span>
+                  )
+                },
+                {
+                  key: "description",
+                  label: t("labels.description"),
+                  render: (item) => item.body
+                },
+                {
+                  key: "date",
+                  label: t("labels.date"),
+                  render: (item) => formatDateTime(item.createdAt)
+                },
+                {
+                  key: "status",
+                  label: t("labels.status"),
+                  render: (item) =>
+                    item.isRead
+                      ? t("notifications.read")
+                      : t("notifications.unread")
+                }
               ]}
               actions={(item) =>
                 !item.isRead ? (
@@ -186,47 +227,76 @@ export function NotificationsPage() {
               <DataTable>
                 <TableHead>
                   <tr>
-                    <SortableTableHeadCell label={t("labels.title")} sortKey="title" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell
+                      label={t("labels.notificationTitle")}
+                      sortKey="title"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
                     <TableHeadCell>{t("labels.description")}</TableHeadCell>
-                    <SortableTableHeadCell label={t("labels.date")} sortKey="createdAt" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <SortableTableHeadCell label={t("labels.status")} sortKey="isRead" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    <SortableTableHeadCell
+                      label={t("labels.date")}
+                      sortKey="createdAt"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <SortableTableHeadCell
+                      label={t("labels.status")}
+                      sortKey="isRead"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <TableHeadCell align="end">
+                      {t("actions.more")}
+                    </TableHeadCell>
                   </tr>
                 </TableHead>
                 <TableBody>
                   {data.items.map((n) => {
                     const path = resolveNotificationPath(n);
                     return (
-                    <TableRow key={n.id}>
-                      <TableCell>
-                        {path ? (
-                          <button
-                            className={`text-start hover:text-accent hover:underline ${!n.isRead ? "font-semibold" : ""}`}
-                            onClick={() => { void markOne.mutateAsync(n.id); void navigate({ to: path }); }}
-                            type="button"
-                          >
-                            {n.title}
-                          </button>
-                        ) : (
-                          <span className={!n.isRead ? "font-semibold" : ""}>{n.title}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{n.body}</TableCell>
-                      <TableCell>{formatDateTime(n.createdAt)}</TableCell>
-                      <TableCell>{n.isRead ? t("notifications.read") : t("notifications.unread")}</TableCell>
-                      <TableCell align="end">
-                        {!n.isRead ? (
-                          <button
-                            onClick={() => void markOne.mutateAsync(n.id)}
-                            className="ms-3 shrink-0 rounded-lg px-2 py-1 text-xs text-accent hover:bg-blue-100"
-                          >
-                            {t("notifications.markRead")}
-                          </button>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                    </TableRow>
+                      <TableRow key={n.id}>
+                        <TableCell>
+                          {path ? (
+                            <button
+                              className={`text-start hover:text-accent hover:underline ${!n.isRead ? "font-semibold" : ""}`}
+                              onClick={() => {
+                                void markOne.mutateAsync(n.id);
+                                void navigate({ to: path });
+                              }}
+                              type="button"
+                            >
+                              {n.title}
+                            </button>
+                          ) : (
+                            <span className={!n.isRead ? "font-semibold" : ""}>
+                              {n.title}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>{n.body}</TableCell>
+                        <TableCell>{formatDateTime(n.createdAt)}</TableCell>
+                        <TableCell>
+                          {n.isRead
+                            ? t("notifications.read")
+                            : t("notifications.unread")}
+                        </TableCell>
+                        <TableCell align="end">
+                          {!n.isRead ? (
+                            <button
+                              onClick={() => void markOne.mutateAsync(n.id)}
+                              className="ms-3 shrink-0 rounded-lg px-2 py-1 text-xs text-accent hover:bg-blue-100"
+                            >
+                              {t("notifications.markRead")}
+                            </button>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
                 </TableBody>

@@ -15,7 +15,11 @@ const STATUS_KEY: Record<ExtractionStatus, string> = {
   [ExtractionStatus.FAILED]: "documents.extractionFailed"
 };
 
-export function ExtractionStatusBadge({ status }: { status: ExtractionStatus }) {
+export function ExtractionStatusBadge({
+  status
+}: {
+  status: ExtractionStatus;
+}) {
   const { t } = useTranslation("app");
   return (
     <span

@@ -19,7 +19,8 @@ export function PdfViewer({ url }: PdfViewerProps) {
 
   useEffect(() => {
     let cancelled = false;
-    let renderTask: { promise: Promise<unknown>; cancel: () => void } | null = null;
+    let renderTask: { promise: Promise<unknown>; cancel: () => void } | null =
+      null;
 
     async function render() {
       try {
@@ -53,7 +54,9 @@ export function PdfViewer({ url }: PdfViewerProps) {
         await renderTask.promise;
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : t("documents.pdfRenderFailed"));
+          setError(
+            err instanceof Error ? err.message : t("documents.pdfRenderFailed")
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -76,7 +79,10 @@ export function PdfViewer({ url }: PdfViewerProps) {
       {loading ? (
         <p className="text-sm text-slate-500">{t("documents.loadingPdf")}</p>
       ) : null}
-      <canvas className="w-full rounded-xl border border-slate-200" ref={canvasRef} />
+      <canvas
+        className="w-full rounded-xl border border-slate-200"
+        ref={canvasRef}
+      />
       {pageCount > 1 ? (
         <div className="flex items-center gap-3 text-sm">
           <button

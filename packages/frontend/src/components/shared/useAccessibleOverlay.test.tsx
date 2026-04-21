@@ -7,7 +7,9 @@ import { useAccessibleOverlay } from "./useAccessibleOverlay";
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 afterEach(() => {
   if (root) {
@@ -45,13 +47,22 @@ function TestOverlay() {
 
   return (
     <div>
-      <button id="open-btn" ref={triggerRef} onClick={() => setOpen(true)} type="button">
+      <button
+        id="open-btn"
+        ref={triggerRef}
+        onClick={() => setOpen(true)}
+        type="button"
+      >
         Open
       </button>
       {open ? (
         <div id="overlay-panel" ref={contentRef} tabIndex={-1}>
-          <button id="first" type="button">First</button>
-          <button id="last" type="button">Last</button>
+          <button id="first" type="button">
+            First
+          </button>
+          <button id="last" type="button">
+            Last
+          </button>
         </div>
       ) : null}
     </div>
@@ -70,7 +81,9 @@ describe("useAccessibleOverlay", () => {
     expect(view.querySelector("#overlay-panel")).toBeTruthy();
 
     act(() => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
     });
 
     expect(view.querySelector("#overlay-panel")).toBeFalsy();
@@ -90,7 +103,9 @@ describe("useAccessibleOverlay", () => {
     last?.focus();
 
     act(() => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", bubbles: true })
+      );
     });
 
     expect(document.activeElement).toBe(first);
@@ -114,7 +129,9 @@ describe("useAccessibleOverlay", () => {
     expect(outside?.getAttribute("aria-hidden")).toBe("true");
 
     act(() => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
     });
 
     expect(outside?.getAttribute("aria-hidden")).toBeNull();

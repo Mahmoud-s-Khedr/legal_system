@@ -29,7 +29,9 @@ export function LibrarySearchPage() {
     queryFn: () => {
       const params = new URLSearchParams({ q: submitted });
       if (typeFilter) params.set("type", typeFilter);
-      return apiFetch<{ results: SearchResult[] }>(`/api/library/search?${params.toString()}`);
+      return apiFetch<{ results: SearchResult[] }>(
+        `/api/library/search?${params.toString()}`
+      );
     }
   });
 
@@ -48,7 +50,10 @@ export function LibrarySearchPage() {
 
       <form className="flex gap-3" onSubmit={handleSearch}>
         <div className="relative flex-1">
-          <Search aria-hidden="true" className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+          <Search
+            aria-hidden="true"
+            className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+          />
           <input
             aria-label={t("library.searchPlaceholder")}
             className="w-full rounded-2xl border border-slate-200 bg-white py-3 ps-9 pe-4 text-sm outline-none focus:border-accent"
@@ -66,12 +71,30 @@ export function LibrarySearchPage() {
           onChange={(value) => setTypeFilter(value)}
           options={[
             { value: "", label: t("library.allTypes") },
-            { value: LibraryDocumentType.LEGISLATION, label: t("library.types.legislation") },
-            { value: LibraryDocumentType.JUDGMENT, label: t("library.types.judgment") },
-            { value: LibraryDocumentType.PRACTICE_GUIDE, label: t("library.types.practiceGuide") },
-            { value: LibraryDocumentType.ARTICLE, label: t("library.types.article") },
-            { value: LibraryDocumentType.COMMENTARY, label: t("library.types.commentary") },
-            { value: LibraryDocumentType.GENERAL, label: t("common.documentType.GENERAL") }
+            {
+              value: LibraryDocumentType.LEGISLATION,
+              label: t("library.types.legislation")
+            },
+            {
+              value: LibraryDocumentType.JUDGMENT,
+              label: t("library.types.judgment")
+            },
+            {
+              value: LibraryDocumentType.PRACTICE_GUIDE,
+              label: t("library.types.practiceGuide")
+            },
+            {
+              value: LibraryDocumentType.ARTICLE,
+              label: t("library.types.article")
+            },
+            {
+              value: LibraryDocumentType.COMMENTARY,
+              label: t("library.types.commentary")
+            },
+            {
+              value: LibraryDocumentType.GENERAL,
+              label: t("common.documentType.GENERAL")
+            }
           ]}
           showSearch
           filterOption={(input, option) => selectLabelFilter(input, option)}
@@ -93,42 +116,58 @@ export function LibrarySearchPage() {
       {searchQuery.isError && (
         <ErrorState
           title={t("errors.title")}
-          description={(searchQuery.error as Error)?.message ?? t("errors.fallback")}
+          description={
+            (searchQuery.error as Error)?.message ?? t("errors.fallback")
+          }
           retryLabel={t("errors.reload")}
           onRetry={() => void searchQuery.refetch()}
         />
       )}
 
-      {searchQuery.data && !searchQuery.isError && !searchQuery.data.results.length && (
-        <EmptyState description={t("empty.noResultsHelp")} title={t("empty.noResults")} />
-      )}
+      {searchQuery.data &&
+        !searchQuery.isError &&
+        !searchQuery.data.results.length && (
+          <EmptyState
+            description={t("empty.noResultsHelp")}
+            title={t("empty.noResults")}
+          />
+        )}
 
-      {searchQuery.data?.results && !searchQuery.isError && searchQuery.data.results.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-sm text-slate-500">
-            {t("library.resultsCount", { count: searchQuery.data.results.length })}
-          </p>
-          {searchQuery.data.results.map((result) => (
-            <Link
-              className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-accent"
-              key={`${result.kind}-${result.id}`}
-              params={{ documentId: result.documentId }}
-              to="/app/library/documents/$documentId"
-            >
-              <BookOpen aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-accent" />
-              <div className="min-w-0">
-                <p className="font-semibold">
-                  {result.title}
-                </p>
-                <p className="mt-0.5 text-xs font-medium text-accent">{result.type}</p>
-                {result.snippet && (
-                  <p className="mt-1 text-sm text-slate-600 line-clamp-2">{result.snippet}</p>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+      {searchQuery.data?.results &&
+        !searchQuery.isError &&
+        searchQuery.data.results.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-500">
+              {t("library.resultsCount", {
+                count: searchQuery.data.results.length
+              })}
+            </p>
+            {searchQuery.data.results.map((result) => (
+              <Link
+                className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-accent"
+                key={`${result.kind}-${result.id}`}
+                params={{ documentId: result.documentId }}
+                to="/app/library/documents/$documentId"
+              >
+                <BookOpen
+                  aria-hidden="true"
+                  className="mt-0.5 size-5 shrink-0 text-accent"
+                />
+                <div className="min-w-0">
+                  <p className="font-semibold">{result.title}</p>
+                  <p className="mt-0.5 text-xs font-medium text-accent">
+                    {result.type}
+                  </p>
+                  {result.snippet && (
+                    <p className="mt-1 text-sm text-slate-600 line-clamp-2">
+                      {result.snippet}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
     </div>
   );
 }

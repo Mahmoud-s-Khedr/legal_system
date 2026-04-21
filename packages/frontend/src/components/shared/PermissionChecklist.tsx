@@ -76,7 +76,10 @@ interface PermissionChecklistProps {
   onChange: (permissions: string[]) => void;
 }
 
-export function PermissionChecklist({ selected, onChange }: PermissionChecklistProps) {
+export function PermissionChecklist({
+  selected,
+  onChange
+}: PermissionChecklistProps) {
   const { t } = useTranslation("app");
   const grouped = groupPermissions(ALL_PERMISSIONS);
   const selectedSet = new Set(selected);
@@ -114,7 +117,9 @@ export function PermissionChecklist({ selected, onChange }: PermissionChecklistP
                     node.indeterminate = someSelected && !allSelected;
                   }
                 }}
-                aria-checked={someSelected && !allSelected ? "mixed" : allSelected}
+                aria-checked={
+                  someSelected && !allSelected ? "mixed" : allSelected
+                }
                 className="rounded"
                 id={`group-${resource}`}
                 onChange={() => toggleGroup(resource, perms)}
@@ -131,14 +136,19 @@ export function PermissionChecklist({ selected, onChange }: PermissionChecklistP
               {perms.map((perm) => {
                 const action = perm.split(":")[1] ?? perm;
                 return (
-                  <label className="flex items-center gap-1.5 cursor-pointer" key={perm}>
+                  <label
+                    className="flex items-center gap-1.5 cursor-pointer"
+                    key={perm}
+                  >
                     <input
                       checked={selectedSet.has(perm)}
                       className="rounded"
                       onChange={() => toggle(perm)}
                       type="checkbox"
                     />
-                    <span className="text-sm text-slate-700">{t(`permissions.actions.${action}`, action)}</span>
+                    <span className="text-sm text-slate-700">
+                      {t(`permissions.actions.${action}`, action)}
+                    </span>
                   </label>
                 );
               })}

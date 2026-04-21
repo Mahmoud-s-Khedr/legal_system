@@ -4,7 +4,18 @@ import { useTranslation } from "react-i18next";
 import { useToastStore } from "../../store/toastStore";
 import { apiFetch } from "../../lib/api";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { EmptyState, ErrorState, Field, FormAlert, PageHeader, SectionCard, SelectField, TablePagination, TableToolbar, formatCurrency } from "./ui";
+import {
+  EmptyState,
+  ErrorState,
+  Field,
+  FormAlert,
+  PageHeader,
+  SectionCard,
+  SelectField,
+  TablePagination,
+  TableToolbar,
+  formatCurrency
+} from "./ui";
 import { downloadReportFile } from "./reportExport";
 import type {
   CaseStatusRow,
@@ -48,7 +59,10 @@ export function ReportsPage() {
     { value: "outstanding-balances", label: t("reports.outstandingBalances") }
   ];
 
-  const sortOptions: Record<ReportType, Array<{ value: string; label: string }>> = {
+  const sortOptions: Record<
+    ReportType,
+    Array<{ value: string; label: string }>
+  > = {
     "case-status": [
       { value: "count:desc", label: `${t("reports.count")} ↓` },
       { value: "count:asc", label: `${t("reports.count")} ↑` },
@@ -78,7 +92,9 @@ export function ReportsPage() {
 
   async function exportReport(format: "excel" | "pdf") {
     setExportError(null);
-    const exportQs = new URLSearchParams(table.toApiQueryString({ dateFrom, dateTo }));
+    const exportQs = new URLSearchParams(
+      table.toApiQueryString({ dateFrom, dateTo })
+    );
     exportQs.set("format", format);
     const fallbackFilename = `report-${reportType}.${format === "pdf" ? "pdf" : "xlsx"}`;
 
@@ -88,7 +104,9 @@ export function ReportsPage() {
         fallbackFilename
       );
       addToast(
-        t("reports.exportReady", { format: format === "pdf" ? "PDF" : "Excel" }),
+        t("reports.exportReady", {
+          format: format === "pdf" ? "PDF" : "Excel"
+        }),
         "success"
       );
     } catch (error) {
@@ -141,9 +159,13 @@ export function ReportsPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title={reportOptions.find((o) => o.value === reportType)?.label ?? ""}>
+      <SectionCard
+        title={reportOptions.find((o) => o.value === reportType)?.label ?? ""}
+      >
         {exportError ? <FormAlert message={exportError} /> : null}
-        {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
+        {isLoading && (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        )}
         {!isLoading && isError && (
           <ErrorState
             title={t("errors.title")}
@@ -169,7 +191,11 @@ export function ReportsPage() {
                 value={`${table.state.sortBy}:${table.state.sortDir}`}
                 onChange={(value) => {
                   const [sortBy, sortDir] = value.split(":");
-                  table.update({ sortBy, sortDir: sortDir as "asc" | "desc", page: 1 });
+                  table.update({
+                    sortBy,
+                    sortDir: sortDir as "asc" | "desc",
+                    page: 1
+                  });
                 }}
                 options={sortOptions[reportType]}
               />
@@ -210,7 +236,13 @@ function ReportTable({
   data
 }: {
   reportType: ReportType;
-  data: Array<CaseStatusRow | HearingOutcomeRow | LawyerWorkloadRow | RevenueReportRow | OutstandingBalanceRow>;
+  data: Array<
+    | CaseStatusRow
+    | HearingOutcomeRow
+    | LawyerWorkloadRow
+    | RevenueReportRow
+    | OutstandingBalanceRow
+  >;
 }) {
   const { t } = useTranslation("app");
 
@@ -220,10 +252,15 @@ function ReportTable({
       <>
         <div className="space-y-2 sm:hidden">
           {rows.map((r) => (
-            <article key={r.status} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <article
+              key={r.status}
+              className="rounded-2xl border border-slate-200 bg-white p-4"
+            >
               <p className="text-xs text-slate-500">{t("labels.status")}</p>
               <p className="font-semibold">{r.status}</p>
-              <p className="mt-2 text-xs text-slate-500">{t("reports.count")}</p>
+              <p className="mt-2 text-xs text-slate-500">
+                {t("reports.count")}
+              </p>
               <p className="font-semibold">{r.count}</p>
             </article>
           ))}
@@ -232,15 +269,21 @@ function ReportTable({
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="px-3 py-2 text-start font-medium">{t("labels.status")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("reports.count")}</th>
+                <th className="px-3 py-2 text-start font-medium">
+                  {t("labels.status")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("reports.count")}
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.status} className="border-b border-slate-50">
                   <td className="px-3 py-2">{r.status}</td>
-                  <td className="px-3 py-2 text-end font-semibold">{r.count}</td>
+                  <td className="px-3 py-2 text-end font-semibold">
+                    {r.count}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -256,10 +299,15 @@ function ReportTable({
       <>
         <div className="space-y-2 sm:hidden">
           {rows.map((r, i) => (
-            <article key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <article
+              key={i}
+              className="rounded-2xl border border-slate-200 bg-white p-4"
+            >
               <p className="text-xs text-slate-500">{t("labels.outcome")}</p>
               <p className="font-semibold">{r.outcome ?? "—"}</p>
-              <p className="mt-2 text-xs text-slate-500">{t("reports.count")}</p>
+              <p className="mt-2 text-xs text-slate-500">
+                {t("reports.count")}
+              </p>
               <p className="font-semibold">{r.count}</p>
             </article>
           ))}
@@ -268,15 +316,21 @@ function ReportTable({
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="px-3 py-2 text-start font-medium">{t("labels.outcome")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("reports.count")}</th>
+                <th className="px-3 py-2 text-start font-medium">
+                  {t("labels.outcome")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("reports.count")}
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className="border-b border-slate-50">
                   <td className="px-3 py-2">{r.outcome ?? "—"}</td>
-                  <td className="px-3 py-2 text-end font-semibold">{r.count}</td>
+                  <td className="px-3 py-2 text-end font-semibold">
+                    {r.count}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -292,11 +346,20 @@ function ReportTable({
       <>
         <div className="space-y-2 sm:hidden">
           {rows.map((r) => (
-            <article key={r.userId} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <article
+              key={r.userId}
+              className="rounded-2xl border border-slate-200 bg-white p-4"
+            >
               <p className="font-semibold">{r.fullName}</p>
-              <p className="mt-2 text-xs text-slate-500">{t("reports.openCases")}: {r.openCases}</p>
-              <p className="text-xs text-slate-500">{t("reports.openTasks")}: {r.openTasks}</p>
-              <p className="text-xs text-slate-500">{t("reports.upcomingHearings")}: {r.upcomingHearings}</p>
+              <p className="mt-2 text-xs text-slate-500">
+                {t("reports.openCases")}: {r.openCases}
+              </p>
+              <p className="text-xs text-slate-500">
+                {t("reports.openTasks")}: {r.openTasks}
+              </p>
+              <p className="text-xs text-slate-500">
+                {t("reports.upcomingHearings")}: {r.upcomingHearings}
+              </p>
             </article>
           ))}
         </div>
@@ -304,10 +367,18 @@ function ReportTable({
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="px-3 py-2 text-start font-medium">{t("labels.user")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("reports.openCases")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("reports.openTasks")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("reports.upcomingHearings")}</th>
+                <th className="px-3 py-2 text-start font-medium">
+                  {t("labels.user")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("reports.openCases")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("reports.openTasks")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("reports.upcomingHearings")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -332,12 +403,21 @@ function ReportTable({
       <>
         <div className="space-y-2 sm:hidden">
           {rows.map((r) => (
-            <article key={r.month} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <article
+              key={r.month}
+              className="rounded-2xl border border-slate-200 bg-white p-4"
+            >
               <p className="font-semibold">{r.month}</p>
-              <p className="mt-2 text-xs text-slate-500">{t("billing.totalBilled")}</p>
+              <p className="mt-2 text-xs text-slate-500">
+                {t("billing.totalBilled")}
+              </p>
               <p>{formatCurrency(r.invoiced)}</p>
-              <p className="mt-1 text-xs text-slate-500">{t("billing.totalPaid")}</p>
-              <p className="font-semibold text-emerald-700">{formatCurrency(r.paid)}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {t("billing.totalPaid")}
+              </p>
+              <p className="font-semibold text-emerald-700">
+                {formatCurrency(r.paid)}
+              </p>
             </article>
           ))}
         </div>
@@ -345,17 +425,27 @@ function ReportTable({
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="px-3 py-2 text-start font-medium">{t("reports.month")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("billing.totalBilled")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("billing.totalPaid")}</th>
+                <th className="px-3 py-2 text-start font-medium">
+                  {t("reports.month")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("billing.totalBilled")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("billing.totalPaid")}
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.month} className="border-b border-slate-50">
                   <td className="px-3 py-2">{r.month}</td>
-                  <td className="px-3 py-2 text-end">{formatCurrency(r.invoiced)}</td>
-                  <td className="px-3 py-2 text-end font-semibold text-emerald-700">{formatCurrency(r.paid)}</td>
+                  <td className="px-3 py-2 text-end">
+                    {formatCurrency(r.invoiced)}
+                  </td>
+                  <td className="px-3 py-2 text-end font-semibold text-emerald-700">
+                    {formatCurrency(r.paid)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -371,10 +461,15 @@ function ReportTable({
       <>
         <div className="space-y-2 sm:hidden">
           {rows.map((r) => (
-            <article key={r.invoiceId} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <article
+              key={r.invoiceId}
+              className="rounded-2xl border border-slate-200 bg-white p-4"
+            >
               <p className="font-semibold">{r.invoiceNumber}</p>
               <p className="text-sm text-slate-500">{r.clientName ?? "—"}</p>
-              <p className="mt-2 text-xs text-slate-500">{t("billing.total")}</p>
+              <p className="mt-2 text-xs text-slate-500">
+                {t("billing.total")}
+              </p>
               <p>{formatCurrency(r.totalAmount)}</p>
               <p className="mt-1 text-xs font-semibold text-red-600">
                 {t("reports.daysOverdue")}: {r.daysOverdue}
@@ -386,19 +481,33 @@ function ReportTable({
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="px-3 py-2 text-start font-medium">{t("billing.invoice")}</th>
-                <th className="px-3 py-2 text-start font-medium">{t("labels.client")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("billing.total")}</th>
-                <th className="px-3 py-2 text-end font-medium">{t("reports.daysOverdue")}</th>
+                <th className="px-3 py-2 text-start font-medium">
+                  {t("billing.invoice")}
+                </th>
+                <th className="px-3 py-2 text-start font-medium">
+                  {t("labels.client")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("billing.total")}
+                </th>
+                <th className="px-3 py-2 text-end font-medium">
+                  {t("reports.daysOverdue")}
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.invoiceId} className="border-b border-slate-50">
                   <td className="px-3 py-2 font-medium">{r.invoiceNumber}</td>
-                  <td className="px-3 py-2 text-slate-600">{r.clientName ?? "—"}</td>
-                  <td className="px-3 py-2 text-end">{formatCurrency(r.totalAmount)}</td>
-                  <td className="px-3 py-2 text-end text-red-600 font-semibold">{r.daysOverdue}</td>
+                  <td className="px-3 py-2 text-slate-600">
+                    {r.clientName ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 text-end">
+                    {formatCurrency(r.totalAmount)}
+                  </td>
+                  <td className="px-3 py-2 text-end text-red-600 font-semibold">
+                    {r.daysOverdue}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -408,5 +517,10 @@ function ReportTable({
     );
   }
 
-  return <EmptyState title={t("errors.notFound")} description={t("reports.noData")} />;
+  return (
+    <EmptyState
+      title={t("errors.notFound")}
+      description={t("reports.noData")}
+    />
+  );
 }

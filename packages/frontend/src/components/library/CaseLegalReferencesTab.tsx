@@ -4,10 +4,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Plus, Trash2, Search } from "lucide-react";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, ErrorState, PrimaryButton, SectionCard } from "../../routes/app/ui";
+import {
+  EmptyState,
+  ErrorState,
+  PrimaryButton,
+  SectionCard
+} from "../../routes/app/ui";
 import { useToastStore } from "../../store/toastStore";
 
-function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldWrap({
+  label,
+  children
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block space-y-2">
       <span className="text-sm font-semibold">{label}</span>
@@ -49,26 +60,44 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
 
   const refsQuery = useQuery({
     queryKey: ["case-legal-refs", caseId],
-    queryFn: () => apiFetch<LegalReference[]>(`/api/cases/${caseId}/legal-references`)
+    queryFn: () =>
+      apiFetch<LegalReference[]>(`/api/cases/${caseId}/legal-references`)
   });
 
   const searchQuery = useQuery({
     enabled: searchQ.length > 1,
     queryKey: ["library-search-link", searchQ],
-    queryFn: () => apiFetch<{ results: SearchResult[] }>(`/api/library/search?q=${encodeURIComponent(searchQ)}&limit=10`)
+    queryFn: () =>
+      apiFetch<{ results: SearchResult[] }>(
+        `/api/library/search?q=${encodeURIComponent(searchQ)}&limit=10`
+      )
   });
 
   const linkMutation = useMutation({
-    mutationFn: ({ documentId, articleId, notesVal }: { documentId: string; articleId?: string; notesVal: string }) =>
+    mutationFn: ({
+      documentId,
+      articleId,
+      notesVal
+    }: {
+      documentId: string;
+      articleId?: string;
+      notesVal: string;
+    }) =>
       apiFetch(`/api/cases/${caseId}/legal-references`, {
         method: "POST",
-        body: JSON.stringify({ documentId, articleId: articleId || undefined, notes: notesVal || undefined })
+        body: JSON.stringify({
+          documentId,
+          articleId: articleId || undefined,
+          notes: notesVal || undefined
+        })
       }),
     onSuccess: () => {
       setShowSearch(false);
       setSearchQ("");
       setNotes("");
-      void queryClient.invalidateQueries({ queryKey: ["case-legal-refs", caseId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["case-legal-refs", caseId]
+      });
     },
     onError: (error) => {
       addToast((error as Error)?.message ?? t("errors.fallback"), "error");
@@ -77,32 +106,50 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
 
   const unlinkMutation = useMutation({
     mutationFn: (referenceId: string) =>
-      apiFetch(`/api/cases/legal-references/${referenceId}`, { method: "DELETE" }),
+      apiFetch(`/api/cases/legal-references/${referenceId}`, {
+        method: "DELETE"
+      }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["case-legal-refs", caseId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["case-legal-refs", caseId]
+      });
     }
   });
 
   return (
-    <SectionCard description={t("library.referencesHelp")} title={t("cases.tabs.references")}>
+    <SectionCard
+      description={t("library.referencesHelp")}
+      title={t("cases.tabs.references")}
+    >
       <div className="space-y-3">
         {refsQuery.isLoading ? (
           <p className="text-sm text-slate-500">{t("labels.loading")}</p>
         ) : refsQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(refsQuery.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (refsQuery.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void refsQuery.refetch()}
           />
         ) : !refsQuery.data?.length ? (
-          <EmptyState description={t("empty.noReferencesHelp")} title={t("empty.noReferences")} />
+          <EmptyState
+            description={t("empty.noReferencesHelp")}
+            title={t("empty.noReferences")}
+          />
         ) : (
           refsQuery.data.map((ref) => {
             const docTitle = ref.document.title;
             return (
-              <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4" key={ref.id}>
-                <BookOpen aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-accent" />
+              <div
+                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+                key={ref.id}
+              >
+                <BookOpen
+                  aria-hidden="true"
+                  className="mt-0.5 size-5 shrink-0 text-accent"
+                />
                 <div className="min-w-0 flex-1">
                   <Link
                     className="font-semibold hover:text-accent"
@@ -118,7 +165,11 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
                       {ref.article.title ? ` — ${ref.article.title}` : ""}
                     </p>
                   )}
-                  {ref.notes && <p className="mt-1 text-sm italic text-slate-500">{ref.notes}</p>}
+                  {ref.notes && (
+                    <p className="mt-1 text-sm italic text-slate-500">
+                      {ref.notes}
+                    </p>
+                  )}
                 </div>
                 <button
                   aria-label={t("actions.unlink")}
@@ -137,7 +188,10 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
       {showSearch ? (
         <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="relative">
-            <Search aria-hidden="true" className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <Search
+              aria-hidden="true"
+              className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+            />
             <input
               aria-label={t("library.searchPlaceholder")}
               autoFocus
@@ -158,14 +212,24 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
                     key={`${result.kind}-${result.id}`}
                     onClick={() => {
                       const docId = result.documentId;
-                      const artId = result.kind === "article" ? result.id : undefined;
-                      linkMutation.mutate({ documentId: docId, articleId: artId, notesVal: notes });
+                      const artId =
+                        result.kind === "article" ? result.id : undefined;
+                      linkMutation.mutate({
+                        documentId: docId,
+                        articleId: artId,
+                        notesVal: notes
+                      });
                     }}
                     disabled={linkMutation.isPending}
                   >
-                    <BookOpen aria-hidden="true" className="size-4 shrink-0 text-accent" />
+                    <BookOpen
+                      aria-hidden="true"
+                      className="size-4 shrink-0 text-accent"
+                    />
                     <span className="font-medium">{result.title}</span>
-                    <span className="ms-auto text-xs text-slate-400">{result.type}</span>
+                    <span className="ms-auto text-xs text-slate-400">
+                      {result.type}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -185,7 +249,10 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
 
           <button
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm"
-            onClick={() => { setShowSearch(false); setSearchQ(""); }}
+            onClick={() => {
+              setShowSearch(false);
+              setSearchQ("");
+            }}
           >
             {t("actions.cancel")}
           </button>

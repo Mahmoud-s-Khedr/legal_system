@@ -6,7 +6,24 @@ import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { useAuthBootstrap } from "../../store/authStore";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper } from "./ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  SectionCard,
+  SelectField,
+  SortableTableHeadCell,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableToolbar,
+  TableWrapper
+} from "./ui";
 
 export function UsersPage() {
   const { t } = useTranslation("app");
@@ -20,7 +37,8 @@ export function UsersPage() {
 
   const usersQuery = useQuery({
     queryKey: ["users", table.state],
-    queryFn: () => apiFetch<UserListResponseDto>(`/api/users?${table.toApiQueryString()}`)
+    queryFn: () =>
+      apiFetch<UserListResponseDto>(`/api/users?${table.toApiQueryString()}`)
   });
 
   return (
@@ -30,7 +48,8 @@ export function UsersPage() {
         title={t("users.title")}
         description={t("users.description")}
         actions={
-          mode === AuthMode.LOCAL && user?.permissions.includes("users:create") ? (
+          mode === AuthMode.LOCAL &&
+          user?.permissions.includes("users:create") ? (
             <Link
               className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
               to="/app/users/new"
@@ -40,7 +59,10 @@ export function UsersPage() {
           ) : undefined
         }
       />
-      <SectionCard title={t("users.directory")} description={t("users.directoryHelp")}>
+      <SectionCard
+        title={t("users.directory")}
+        description={t("users.directoryHelp")}
+      >
         <TableToolbar>
           <Field
             label={t("labels.search")}
@@ -54,7 +76,10 @@ export function UsersPage() {
             onChange={(value) => table.setFilter("status", value)}
             options={[
               { value: "", label: t("labels.all") },
-              ...Object.values(UserStatus).map((value) => ({ value, label: getEnumLabel(t, "UserStatus", value) }))
+              ...Object.values(UserStatus).map((value) => ({
+                value,
+                label: getEnumLabel(t, "UserStatus", value)
+              }))
             ]}
           />
         </TableToolbar>
@@ -63,23 +88,48 @@ export function UsersPage() {
         ) : usersQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(usersQuery.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (usersQuery.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void usersQuery.refetch()}
           />
         ) : !usersQuery.data?.items.length ? (
-          <EmptyState title={t("empty.noUsers")} description={t("empty.noUsersHelp")} />
+          <EmptyState
+            title={t("empty.noUsers")}
+            description={t("empty.noUsersHelp")}
+          />
         ) : (
           <>
             <TableWrapper>
               <DataTable>
                 <TableHead>
                   <tr>
-                    <SortableTableHeadCell label={t("labels.fullName")} sortKey="fullName" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <SortableTableHeadCell label={t("labels.email")} sortKey="email" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell
+                      label={t("labels.fullName")}
+                      sortKey="fullName"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <SortableTableHeadCell
+                      label={t("labels.email")}
+                      sortKey="email"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
                     <TableHeadCell>{t("labels.role")}</TableHeadCell>
-                    <SortableTableHeadCell label={t("labels.status")} sortKey="status" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    <SortableTableHeadCell
+                      label={t("labels.status")}
+                      sortKey="status"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <TableHeadCell align="end">
+                      {t("actions.more")}
+                    </TableHeadCell>
                   </tr>
                 </TableHead>
                 <TableBody>
@@ -87,8 +137,12 @@ export function UsersPage() {
                     <TableRow key={user.id}>
                       <TableCell>{user.fullName}</TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{getEnumLabel(t, "UserRole", user.roleKey)}</TableCell>
-                      <TableCell>{getEnumLabel(t, "UserStatus", user.status)}</TableCell>
+                      <TableCell>
+                        {getEnumLabel(t, "UserRole", user.roleKey)}
+                      </TableCell>
+                      <TableCell>
+                        {getEnumLabel(t, "UserStatus", user.status)}
+                      </TableCell>
                       <TableCell align="end">
                         <Link
                           className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"

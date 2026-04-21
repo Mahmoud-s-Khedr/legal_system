@@ -1,6 +1,11 @@
 import React, { type PropsWithChildren } from "react";
 import ReactDOM from "react-dom/client";
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryClientProvider
+} from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import * as Sentry from "@sentry/react";
 import { router } from "./router";
@@ -56,7 +61,10 @@ interface StartupBoundaryState {
   error: Error | null;
 }
 
-class StartupErrorBoundary extends React.Component<PropsWithChildren, StartupBoundaryState> {
+class StartupErrorBoundary extends React.Component<
+  PropsWithChildren,
+  StartupBoundaryState
+> {
   state: StartupBoundaryState = {
     error: null
   };
@@ -92,8 +100,12 @@ function scrub(value: unknown, depth = 0): unknown {
 
   if (typeof value === "object") {
     const output: Record<string, unknown> = {};
-    for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-      output[key] = SENSITIVE_KEY_PATTERN.test(key) ? "[REDACTED]" : scrub(nested, depth + 1);
+    for (const [key, nested] of Object.entries(
+      value as Record<string, unknown>
+    )) {
+      output[key] = SENSITIVE_KEY_PATTERN.test(key)
+        ? "[REDACTED]"
+        : scrub(nested, depth + 1);
     }
     return output;
   }
@@ -127,7 +139,9 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 
       const next = scrub(event) as Sentry.ErrorEvent;
       if (next.request?.headers) {
-        next.request.headers = scrubHeaders(next.request.headers as Record<string, unknown>) as Record<string, string>;
+        next.request.headers = scrubHeaders(
+          next.request.headers as Record<string, unknown>
+        ) as Record<string, string>;
       }
       return next;
     }

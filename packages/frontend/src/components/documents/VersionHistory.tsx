@@ -13,7 +13,10 @@ interface VersionHistoryProps {
   onVersionUploaded: () => void;
 }
 
-export function VersionHistory({ document: doc, onVersionUploaded }: VersionHistoryProps) {
+export function VersionHistory({
+  document: doc,
+  onVersionUploaded
+}: VersionHistoryProps) {
   const { t } = useTranslation("app");
   const addToast = useToastStore((state) => state.addToast);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -46,7 +49,9 @@ export function VersionHistory({ document: doc, onVersionUploaded }: VersionHist
             <span className="text-slate-600">
               v{v.versionNumber} — {v.fileName}
             </span>
-            <span className="text-xs text-slate-400">{formatDateTime(v.createdAt)}</span>
+            <span className="text-xs text-slate-400">
+              {formatDateTime(v.createdAt)}
+            </span>
           </li>
         ))}
       </ul>
@@ -78,7 +83,10 @@ export function VersionHistory({ document: doc, onVersionUploaded }: VersionHist
               try {
                 await uploadMutation.mutateAsync();
               } catch (error) {
-                addToast((error as Error)?.message ?? t("errors.fallback"), "error");
+                addToast(
+                  (error as Error)?.message ?? t("errors.fallback"),
+                  "error"
+                );
               }
             })();
           }}

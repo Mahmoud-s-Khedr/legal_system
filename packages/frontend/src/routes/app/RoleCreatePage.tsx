@@ -44,12 +44,17 @@ export function RoleCreatePage() {
           void createMutation.mutateAsync(form);
         }}
       >
-        <SectionCard title={t("roles.identity")} description={t("roles.identityHelp")}>
+        <SectionCard
+          title={t("roles.identity")}
+          description={t("roles.identityHelp")}
+        >
           <div className="space-y-4">
             <Field
               dir="ltr"
               label={t("roles.roleKey")}
-              onChange={(v) => setForm({ ...form, key: v.toLowerCase().replace(/\s+/g, "_") })}
+              onChange={(v) =>
+                setForm({ ...form, key: v.toLowerCase().replace(/\s+/g, "_") })
+              }
               placeholder="my_custom_role"
               required
               value={form.key}
@@ -62,8 +67,14 @@ export function RoleCreatePage() {
             />
           </div>
         </SectionCard>
-        <SectionCard title={t("roles.permissions")} description={t("roles.permissionsHelp")}>
-          <PermissionChecklist onChange={setPermissions} selected={permissions} />
+        <SectionCard
+          title={t("roles.permissions")}
+          description={t("roles.permissionsHelp")}
+        >
+          <PermissionChecklist
+            onChange={setPermissions}
+            selected={permissions}
+          />
         </SectionCard>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <FormExitActions

@@ -2,7 +2,11 @@ import { Fragment, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { InvoiceStatus, type CreatePaymentDto, type InvoiceDto } from "@elms/shared";
+import {
+  InvoiceStatus,
+  type CreatePaymentDto,
+  type InvoiceDto
+} from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useInvoices } from "../../lib/billing";
 import { useTableQueryState } from "../../lib/tableQueryState";
@@ -37,7 +41,13 @@ export function InvoicesPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const paymentMutation = useMutation({
-    mutationFn: ({ invoiceId, dto }: { invoiceId: string; dto: CreatePaymentDto }) =>
+    mutationFn: ({
+      invoiceId,
+      dto
+    }: {
+      invoiceId: string;
+      dto: CreatePaymentDto;
+    }) =>
       apiFetch<InvoiceDto>(`/api/invoices/${invoiceId}/payments`, {
         method: "POST",
         body: JSON.stringify(dto)
@@ -56,7 +66,11 @@ export function InvoicesPage() {
 
   function openPaymentForm(invoice: InvoiceDto) {
     const total = Number(invoice.totalAmount ?? 0);
-    const paid = invoice.payments?.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
+    const paid =
+      invoice.payments?.reduce(
+        (sum, payment) => sum + Number(payment.amount ?? 0),
+        0
+      ) ?? 0;
     const remaining = Math.max(total - paid, 0).toFixed(2);
     setPaymentRowId(invoice.id);
     setPaymentAmount(remaining);
@@ -112,12 +126,17 @@ export function InvoicesPage() {
             onChange={(value) => table.setFilter("status", value)}
             options={[
               { value: "", label: t("labels.all") },
-              ...Object.values(InvoiceStatus).map((v) => ({ value: v, label: v }))
+              ...Object.values(InvoiceStatus).map((v) => ({
+                value: v,
+                label: v
+              }))
             ]}
           />
         </TableToolbar>
 
-        {isLoading && <p className="mt-4 text-sm text-slate-500">{t("labels.loading")}</p>}
+        {isLoading && (
+          <p className="mt-4 text-sm text-slate-500">{t("labels.loading")}</p>
+        )}
 
         {!isLoading && isError && (
           <div className="mt-4">
@@ -132,25 +151,47 @@ export function InvoicesPage() {
 
         {!isLoading && !isError && !data?.items.length && (
           <div className="mt-4">
-            <EmptyState title={t("empty.noInvoices")} description={t("empty.noInvoicesHelp")} />
+            <EmptyState
+              title={t("empty.noInvoices")}
+              description={t("empty.noInvoicesHelp")}
+            />
           </div>
         )}
 
         {!isLoading && !isError && !!data?.items.length && (
           <div className="mt-4">
-            {paymentError ? <p className="mb-3 text-sm text-red-600">{paymentError}</p> : null}
+            {paymentError ? (
+              <p className="mb-3 text-sm text-red-600">{paymentError}</p>
+            ) : null}
             <ResponsiveDataList
               items={data.items}
               getItemKey={(item) => item.id}
               fields={[
-                { key: "invoiceNumber", label: t("billing.invoiceNumber"), render: (item) => item.invoiceNumber },
-                { key: "client", label: t("labels.client"), render: (item) => item.clientName ?? item.caseTitle ?? "—" },
-                { key: "status", label: t("labels.status"), render: (item) => item.status },
-                { key: "total", label: t("billing.total"), render: (item) => formatCurrency(item.totalAmount) }
+                {
+                  key: "invoiceNumber",
+                  label: t("billing.invoiceNumber"),
+                  render: (item) => item.invoiceNumber
+                },
+                {
+                  key: "client",
+                  label: t("labels.client"),
+                  render: (item) => item.clientName ?? item.caseTitle ?? "—"
+                },
+                {
+                  key: "status",
+                  label: t("labels.status"),
+                  render: (item) => item.status
+                },
+                {
+                  key: "total",
+                  label: t("billing.total"),
+                  render: (item) => formatCurrency(item.totalAmount)
+                }
               ]}
               actions={(item) => (
                 <>
-                  {(item.status === InvoiceStatus.ISSUED || item.status === InvoiceStatus.PARTIALLY_PAID) && (
+                  {(item.status === InvoiceStatus.ISSUED ||
+                    item.status === InvoiceStatus.PARTIALLY_PAID) && (
                     <button
                       className="inline-flex rounded-xl border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
                       onClick={() => openPaymentForm(item)}
@@ -173,11 +214,32 @@ export function InvoicesPage() {
               <DataTable>
                 <TableHead>
                   <tr>
-                    <SortableTableHeadCell label={t("billing.invoiceNumber")} sortKey="invoiceNumber" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                    <SortableTableHeadCell
+                      label={t("billing.invoiceNumber")}
+                      sortKey="invoiceNumber"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
                     <TableHeadCell>{t("labels.client")}</TableHeadCell>
-                    <SortableTableHeadCell label={t("labels.status")} sortKey="status" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <SortableTableHeadCell label={t("billing.total")} sortKey="totalAmount" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} align="end" />
-                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    <SortableTableHeadCell
+                      label={t("labels.status")}
+                      sortKey="status"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <SortableTableHeadCell
+                      label={t("billing.total")}
+                      sortKey="totalAmount"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                      align="end"
+                    />
+                    <TableHeadCell align="end">
+                      {t("actions.more")}
+                    </TableHeadCell>
                   </tr>
                 </TableHead>
                 <TableBody>
@@ -185,7 +247,9 @@ export function InvoicesPage() {
                     <Fragment key={invoice.id}>
                       <TableRow>
                         <TableCell>{invoice.invoiceNumber}</TableCell>
-                        <TableCell>{invoice.clientName ?? invoice.caseTitle ?? "—"}</TableCell>
+                        <TableCell>
+                          {invoice.clientName ?? invoice.caseTitle ?? "—"}
+                        </TableCell>
                         <TableCell>
                           <span
                             className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -199,10 +263,14 @@ export function InvoicesPage() {
                             {invoice.status}
                           </span>
                         </TableCell>
-                        <TableCell align="end">{formatCurrency(invoice.totalAmount)}</TableCell>
+                        <TableCell align="end">
+                          {formatCurrency(invoice.totalAmount)}
+                        </TableCell>
                         <TableCell align="end">
                           <div className="flex items-center justify-end gap-2">
-                            {(invoice.status === InvoiceStatus.ISSUED || invoice.status === InvoiceStatus.PARTIALLY_PAID) && (
+                            {(invoice.status === InvoiceStatus.ISSUED ||
+                              invoice.status ===
+                                InvoiceStatus.PARTIALLY_PAID) && (
                               <button
                                 className="inline-flex rounded-xl border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
                                 onClick={() => openPaymentForm(invoice)}
@@ -228,15 +296,26 @@ export function InvoicesPage() {
                               className="flex flex-wrap items-end gap-3"
                               onSubmit={(e) => {
                                 e.preventDefault();
-                                paymentMutation.mutate({ invoiceId: invoice.id, dto: { amount: paymentAmount, method: paymentMethod, referenceNumber: paymentRef || null } });
+                                paymentMutation.mutate({
+                                  invoiceId: invoice.id,
+                                  dto: {
+                                    amount: paymentAmount,
+                                    method: paymentMethod,
+                                    referenceNumber: paymentRef || null
+                                  }
+                                });
                               }}
                             >
                               <div>
-                                <label className="block text-xs font-medium text-slate-600">{t("billing.amount")}</label>
+                                <label className="block text-xs font-medium text-slate-600">
+                                  {t("billing.amount")}
+                                </label>
                                 <input
                                   className="mt-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                                   min="0.01"
-                                  onChange={(e) => setPaymentAmount(e.target.value)}
+                                  onChange={(e) =>
+                                    setPaymentAmount(e.target.value)
+                                  }
                                   required
                                   step="0.01"
                                   type="number"
@@ -244,22 +323,38 @@ export function InvoicesPage() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-slate-600">{t("billing.paymentMethod")}</label>
+                                <label className="block text-xs font-medium text-slate-600">
+                                  {t("billing.paymentMethod")}
+                                </label>
                                 <select
                                   className="mt-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                                  onChange={(e) => setPaymentMethod(e.target.value)}
+                                  onChange={(e) =>
+                                    setPaymentMethod(e.target.value)
+                                  }
                                   value={paymentMethod}
                                 >
-                                  {["CASH", "BANK_TRANSFER", "CHEQUE", "CARD", "OTHER"].map((m) => (
-                                    <option key={m} value={m}>{m}</option>
+                                  {[
+                                    "CASH",
+                                    "BANK_TRANSFER",
+                                    "CHEQUE",
+                                    "CARD",
+                                    "OTHER"
+                                  ].map((m) => (
+                                    <option key={m} value={m}>
+                                      {m}
+                                    </option>
                                   ))}
                                 </select>
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-slate-600">{t("billing.referenceNumber", "Reference")}</label>
+                                <label className="block text-xs font-medium text-slate-600">
+                                  {t("billing.referenceNumber", "Reference")}
+                                </label>
                                 <input
                                   className="mt-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                                  onChange={(e) => setPaymentRef(e.target.value)}
+                                  onChange={(e) =>
+                                    setPaymentRef(e.target.value)
+                                  }
                                   placeholder={t("labels.optional")}
                                   type="text"
                                   value={paymentRef}
@@ -271,7 +366,9 @@ export function InvoicesPage() {
                                   disabled={paymentMutation.isPending}
                                   type="submit"
                                 >
-                                  {paymentMutation.isPending ? t("labels.saving") : t("actions.save")}
+                                  {paymentMutation.isPending
+                                    ? t("labels.saving")
+                                    : t("actions.save")}
                                 </button>
                                 <button
                                   className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
@@ -298,12 +395,18 @@ export function InvoicesPage() {
                     e.preventDefault();
                     paymentMutation.mutate({
                       invoiceId: paymentRowId,
-                      dto: { amount: paymentAmount, method: paymentMethod, referenceNumber: paymentRef || null }
+                      dto: {
+                        amount: paymentAmount,
+                        method: paymentMethod,
+                        referenceNumber: paymentRef || null
+                      }
                     });
                   }}
                 >
                   <div>
-                    <label className="block text-xs font-medium text-slate-600">{t("billing.amount")}</label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t("billing.amount")}
+                    </label>
                     <input
                       className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                       min="0.01"
@@ -315,19 +418,27 @@ export function InvoicesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600">{t("billing.paymentMethod")}</label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t("billing.paymentMethod")}
+                    </label>
                     <select
                       className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       value={paymentMethod}
                     >
-                      {["CASH", "BANK_TRANSFER", "CHEQUE", "CARD", "OTHER"].map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
+                      {["CASH", "BANK_TRANSFER", "CHEQUE", "CARD", "OTHER"].map(
+                        (m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        )
+                      )}
                     </select>
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-slate-600">{t("billing.referenceNumber", "Reference")}</label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t("billing.referenceNumber", "Reference")}
+                    </label>
                     <input
                       className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                       onChange={(e) => setPaymentRef(e.target.value)}
@@ -342,7 +453,9 @@ export function InvoicesPage() {
                       disabled={paymentMutation.isPending}
                       type="submit"
                     >
-                      {paymentMutation.isPending ? t("labels.saving") : t("actions.save")}
+                      {paymentMutation.isPending
+                        ? t("labels.saving")
+                        : t("actions.save")}
                     </button>
                     <button
                       className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"

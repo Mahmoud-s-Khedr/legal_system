@@ -41,13 +41,21 @@ export function BackendConnectionPage() {
       setTestStatus("idle");
       setTestMessage(null);
     } catch (error) {
-      const code = error instanceof ApiError && typeof error.details === "object" && error.details !== null
-        ? (error.details as { code?: string }).code
-        : undefined;
-      if (code === "BACKEND_URL_INVALID_SCHEME" || code === "BACKEND_URL_INVALID_HOST") {
+      const code =
+        error instanceof ApiError &&
+        typeof error.details === "object" &&
+        error.details !== null
+          ? (error.details as { code?: string }).code
+          : undefined;
+      if (
+        code === "BACKEND_URL_INVALID_SCHEME" ||
+        code === "BACKEND_URL_INVALID_HOST"
+      ) {
         setSaveError(t("backendConnection.invalidUrl"));
       } else {
-        setSaveError((error as Error).message || t("backendConnection.saveFailed"));
+        setSaveError(
+          (error as Error).message || t("backendConnection.saveFailed")
+        );
       }
     } finally {
       setSaving(false);
@@ -91,8 +99,14 @@ export function BackendConnectionPage() {
   }
 
   return (
-    <AuthShell title={t("backendConnection.title")} subtitle={t("backendConnection.subtitle")}>
-      <form className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-elevated animate-slide-up" onSubmit={handleSave}>
+    <AuthShell
+      title={t("backendConnection.title")}
+      subtitle={t("backendConnection.subtitle")}
+    >
+      <form
+        className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-elevated animate-slide-up"
+        onSubmit={handleSave}
+      >
         <Field
           id="backend-base-url"
           label={t("backendConnection.urlLabel")}
@@ -102,7 +116,9 @@ export function BackendConnectionPage() {
         />
         {saveError ? <FormAlert message={saveError} /> : null}
         {saveSuccess ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{saveSuccess}</p>
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            {saveSuccess}
+          </p>
         ) : null}
         <button
           className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
@@ -131,8 +147,12 @@ export function BackendConnectionPage() {
           </p>
         ) : null}
         <div className="flex justify-between text-sm text-slate-600">
-          <Link className="transition hover:text-accent" to="/login">{t("backToLogin")}</Link>
-          <Link className="transition hover:text-accent" to="/setup">{t("desktopSetupLink")}</Link>
+          <Link className="transition hover:text-accent" to="/login">
+            {t("backToLogin")}
+          </Link>
+          <Link className="transition hover:text-accent" to="/setup">
+            {t("desktopSetupLink")}
+          </Link>
         </div>
       </form>
     </AuthShell>

@@ -14,7 +14,10 @@ export function DocumentUploadPage() {
         title={t("documents.uploadTitle")}
         description={t("documents.uploadHelp")}
       />
-      <SectionCard title={t("documents.uploadTitle")} description={t("documents.uploadHelp")}>
+      <SectionCard
+        title={t("documents.uploadTitle")}
+        description={t("documents.uploadHelp")}
+      >
         <DocumentUploadForm
           invalidateKey={["documents"]}
           onSuccess={(summary) => {

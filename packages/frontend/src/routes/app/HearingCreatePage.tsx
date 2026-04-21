@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   SessionOutcome,
@@ -12,7 +15,14 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { Field, FormExitActions, PageHeader, SectionCard, SelectField, TextAreaField } from "./ui";
+import {
+  Field,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField,
+  TextAreaField
+} from "./ui";
 import { slotDateTime } from "./hearingCalendar";
 
 function normalizePayload(form: CreateHearingDto): CreateHearingDto {
@@ -50,7 +60,9 @@ export function HearingCreatePage() {
     outcome: null,
     notes: ""
   }));
-  useUnsavedChanges(JSON.stringify(form) !== JSON.stringify(initialForm), { bypassBlockRef: bypassRef });
+  useUnsavedChanges(JSON.stringify(form) !== JSON.stringify(initialForm), {
+    bypassBlockRef: bypassRef
+  });
 
   const [debouncedConflictInput, setDebouncedConflictInput] = useState({
     assignedLawyerId: "",
@@ -60,7 +72,10 @@ export function HearingCreatePage() {
   useEffect(() => {
     if (search.caseId) {
       setForm((current) => ({ ...current, caseId: search.caseId ?? "" }));
-      setInitialForm((current) => ({ ...current, caseId: search.caseId ?? "" }));
+      setInitialForm((current) => ({
+        ...current,
+        caseId: search.caseId ?? ""
+      }));
     }
   }, [search.caseId]);
 
@@ -136,7 +151,8 @@ export function HearingCreatePage() {
         `/api/hearings/conflicts?assignedLawyerId=${encodeURIComponent(debouncedConflictInput.assignedLawyerId)}&sessionDatetime=${encodeURIComponent(toIsoOrEmpty(debouncedConflictInput.sessionDatetime))}`
       ),
     enabled: Boolean(
-      debouncedConflictInput.assignedLawyerId && isValidDateTimeInput(debouncedConflictInput.sessionDatetime)
+      debouncedConflictInput.assignedLawyerId &&
+      isValidDateTimeInput(debouncedConflictInput.sessionDatetime)
     )
   });
 
@@ -161,7 +177,10 @@ export function HearingCreatePage() {
         title={t("hearings.createTitle")}
         description={t("hearings.createHelp")}
       />
-      <SectionCard title={t("hearings.createTitle")} description={t("hearings.createHelp")}>
+      <SectionCard
+        title={t("hearings.createTitle")}
+        description={t("hearings.createHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -204,7 +223,9 @@ export function HearingCreatePage() {
           />
           <SelectField
             label={t("labels.outcome")}
-            onChange={(value) => updateField("outcome", value ? (value as SessionOutcome) : null)}
+            onChange={(value) =>
+              updateField("outcome", value ? (value as SessionOutcome) : null)
+            }
             options={outcomeOptions}
             value={form.outcome ?? ""}
           />
@@ -219,7 +240,9 @@ export function HearingCreatePage() {
             </p>
           ) : null}
           {createMutation.error ? (
-            <p className="text-sm text-red-600">{(createMutation.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(createMutation.error as Error).message}
+            </p>
           ) : null}
           <FormExitActions
             cancelTo="/app/hearings"

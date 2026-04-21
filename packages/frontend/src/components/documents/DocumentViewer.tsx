@@ -15,7 +15,11 @@ interface DocumentViewerProps {
   onVersionUploaded: () => void;
 }
 
-export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: DocumentViewerProps) {
+export function DocumentViewer({
+  document: doc,
+  onClose,
+  onVersionUploaded
+}: DocumentViewerProps) {
   const { t } = useTranslation("app");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -79,7 +83,9 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
   async function handleDownload() {
     try {
       setIsDownloading(true);
-      const { blob, filename } = await apiDownload(`/api/documents/${doc.id}/stream`);
+      const { blob, filename } = await apiDownload(
+        `/api/documents/${doc.id}/stream`
+      );
       await saveBlobToDownloads(blob, filename ?? doc.fileName);
     } catch {
       showErrorDialog(t("errors.fallback"));
@@ -131,31 +137,46 @@ export function DocumentViewer({ document: doc, onClose, onVersionUploaded }: Do
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {isPreviewLoading ? (
-            <p className="text-sm text-slate-500">{t("documents.previewLoading")}</p>
+            <p className="text-sm text-slate-500">
+              {t("documents.previewLoading")}
+            </p>
           ) : previewError ? (
             doc.contentText ? (
               <div className="space-y-3">
-                <p className="text-sm text-red-600">{t("documents.previewFailed")}</p>
+                <p className="text-sm text-red-600">
+                  {t("documents.previewFailed")}
+                </p>
                 <pre className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">
                   {doc.contentText}
                 </pre>
               </div>
             ) : (
-              <p className="text-sm text-red-600">{t("documents.previewFailed")}</p>
+              <p className="text-sm text-red-600">
+                {t("documents.previewFailed")}
+              </p>
             )
           ) : isPdf && previewUrl ? (
             <PdfViewer url={previewUrl} />
           ) : isImage && previewUrl ? (
-            <img alt={doc.title} className="max-w-full rounded-xl" src={previewUrl} />
+            <img
+              alt={doc.title}
+              className="max-w-full rounded-xl"
+              src={previewUrl}
+            />
           ) : doc.contentText ? (
             <pre className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">
               {doc.contentText}
             </pre>
           ) : (
-            <p className="text-sm text-slate-500">{t("documents.extractionPending")}</p>
+            <p className="text-sm text-slate-500">
+              {t("documents.extractionPending")}
+            </p>
           )}
 
-          <VersionHistory document={doc} onVersionUploaded={onVersionUploaded} />
+          <VersionHistory
+            document={doc}
+            onVersionUploaded={onVersionUploaded}
+          />
         </div>
       </div>
     </div>

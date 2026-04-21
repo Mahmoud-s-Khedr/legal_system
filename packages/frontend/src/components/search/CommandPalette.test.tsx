@@ -29,7 +29,9 @@ const { CommandPalette } = await import("./CommandPalette");
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 function render(open = true) {
   container = document.createElement("div");
@@ -114,7 +116,9 @@ describe("CommandPalette", () => {
   it("renders mixed document/entity results after typing a query", () => {
     const view = render(true);
 
-    const input = view.querySelector('input[type="search"]') as HTMLInputElement;
+    const input = view.querySelector(
+      'input[type="search"]'
+    ) as HTMLInputElement;
 
     act(() => {
       setTextInputValue(input, "lease");
@@ -137,7 +141,9 @@ describe("CommandPalette", () => {
     )?.[0] as { enabled?: boolean };
     expect(initialDocCall.enabled).toBe(false);
 
-    const input = view.querySelector('input[type="search"]') as HTMLInputElement;
+    const input = view.querySelector(
+      'input[type="search"]'
+    ) as HTMLInputElement;
 
     act(() => {
       setTextInputValue(input, "contract");

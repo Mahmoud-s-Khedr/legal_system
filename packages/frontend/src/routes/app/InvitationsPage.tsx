@@ -5,7 +5,25 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { useAuthBootstrap } from "../../store/authStore";
-import { DataTable, EmptyState, ErrorState, Field, PageHeader, SectionCard, SelectField, SortableTableHeadCell, TableBody, TableCell, TableHead, TableHeadCell, TablePagination, TableRow, TableToolbar, TableWrapper, formatDateTime } from "./ui";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Field,
+  PageHeader,
+  SectionCard,
+  SelectField,
+  SortableTableHeadCell,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TablePagination,
+  TableRow,
+  TableToolbar,
+  TableWrapper,
+  formatDateTime
+} from "./ui";
 
 export function InvitationsPage() {
   const { t } = useTranslation("app");
@@ -20,7 +38,10 @@ export function InvitationsPage() {
 
   const invitationsQuery = useQuery({
     queryKey: ["invitations", table.state],
-    queryFn: () => apiFetch<InvitationListResponseDto>(`/api/invitations?${table.toApiQueryString()}`),
+    queryFn: () =>
+      apiFetch<InvitationListResponseDto>(
+        `/api/invitations?${table.toApiQueryString()}`
+      ),
     enabled: mode === AuthMode.CLOUD
   });
 
@@ -52,9 +73,15 @@ export function InvitationsPage() {
         }
       />
       {mode !== AuthMode.CLOUD ? (
-        <EmptyState title={t("invitations.cloudOnly")} description={t("invitations.cloudOnlyHelp")} />
+        <EmptyState
+          title={t("invitations.cloudOnly")}
+          description={t("invitations.cloudOnlyHelp")}
+        />
       ) : (
-        <SectionCard title={t("invitations.directory")} description={t("invitations.directoryHelp")}>
+        <SectionCard
+          title={t("invitations.directory")}
+          description={t("invitations.directoryHelp")}
+        >
           <TableToolbar>
             <Field
               label={t("labels.search")}
@@ -78,25 +105,51 @@ export function InvitationsPage() {
           {invitationsQuery.isError ? (
             <ErrorState
               title={t("errors.title")}
-              description={(invitationsQuery.error as Error)?.message ?? t("errors.fallback")}
+              description={
+                (invitationsQuery.error as Error)?.message ??
+                t("errors.fallback")
+              }
               retryLabel={t("errors.reload")}
               onRetry={() => void invitationsQuery.refetch()}
             />
           ) : invitationsQuery.isLoading ? (
             <p className="text-sm text-slate-500">{t("labels.loading")}</p>
           ) : !invitationsQuery.data?.items.length ? (
-            <EmptyState title={t("empty.noInvitations")} description={t("empty.noInvitationsHelp")} />
+            <EmptyState
+              title={t("empty.noInvitations")}
+              description={t("empty.noInvitationsHelp")}
+            />
           ) : (
             <>
               <TableWrapper>
                 <DataTable>
                   <TableHead>
                     <tr>
-                      <SortableTableHeadCell label={t("labels.email")} sortKey="email" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
+                      <SortableTableHeadCell
+                        label={t("labels.email")}
+                        sortKey="email"
+                        sortBy={table.state.sortBy}
+                        sortDir={table.state.sortDir}
+                        onSort={table.setSort}
+                      />
                       <TableHeadCell>{t("labels.role")}</TableHeadCell>
-                      <SortableTableHeadCell label={t("labels.status")} sortKey="status" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                      <SortableTableHeadCell label={t("labels.endDate")} sortKey="expiresAt" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                      <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                      <SortableTableHeadCell
+                        label={t("labels.status")}
+                        sortKey="status"
+                        sortBy={table.state.sortBy}
+                        sortDir={table.state.sortDir}
+                        onSort={table.setSort}
+                      />
+                      <SortableTableHeadCell
+                        label={t("labels.endDate")}
+                        sortKey="expiresAt"
+                        sortBy={table.state.sortBy}
+                        sortDir={table.state.sortDir}
+                        onSort={table.setSort}
+                      />
+                      <TableHeadCell align="end">
+                        {t("actions.more")}
+                      </TableHeadCell>
                     </tr>
                   </TableHead>
                   <TableBody>
@@ -105,7 +158,9 @@ export function InvitationsPage() {
                         <TableCell>{invite.email}</TableCell>
                         <TableCell>{invite.roleName}</TableCell>
                         <TableCell>{invite.status}</TableCell>
-                        <TableCell>{formatDateTime(invite.expiresAt)}</TableCell>
+                        <TableCell>
+                          {formatDateTime(invite.expiresAt)}
+                        </TableCell>
                         <TableCell align="end">
                           {invite.status === "PENDING" ? (
                             <button

@@ -168,7 +168,12 @@
     "sort": "Trier",
     "lawyer": "Avocat",
     "from": "Du",
-    "to": "Au"
+    "to": "Au",
+    "caseTitle": "Titre du dossier",
+    "taskTitle": "Titre de la tâche",
+    "documentTitle": "Nom du document",
+    "notificationTitle": "Titre de la notification",
+    "eventTitle": "Titre de l'événement"
   },
   "empty": {
     "noHearings": "Aucune audience",

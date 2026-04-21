@@ -1,7 +1,10 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PpoPortalLaunchResult, PpoPortalNavResult } from "../../lib/ppoPortal";
+import type {
+  PpoPortalLaunchResult,
+  PpoPortalNavResult
+} from "../../lib/ppoPortal";
 
 const { launchPpoPortalMock, navigatePpoPortalMock } = vi.hoisted(() => ({
   launchPpoPortalMock: vi.fn<() => Promise<PpoPortalLaunchResult>>(),
@@ -18,11 +21,17 @@ import { PpoPortalPage } from "./PpoPortalPage";
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 beforeEach(() => {
   launchPpoPortalMock.mockReset();
-  launchPpoPortalMock.mockResolvedValue({ ok: true, destination: "browser-tab", reused: false });
+  launchPpoPortalMock.mockResolvedValue({
+    ok: true,
+    destination: "browser-tab",
+    reused: false
+  });
   navigatePpoPortalMock.mockReset();
   navigatePpoPortalMock.mockResolvedValue({ ok: true, action: "back" });
 });
@@ -110,7 +119,11 @@ describe("PpoPortalPage", () => {
 
   it("renders screenshot action in desktop mode and triggers screenshot navigation", async () => {
     vi.stubEnv("VITE_DESKTOP_SHELL", "true");
-    navigatePpoPortalMock.mockResolvedValue({ ok: true, action: "screenshot", url: "/tmp/screenshot.png" });
+    navigatePpoPortalMock.mockResolvedValue({
+      ok: true,
+      action: "screenshot",
+      url: "/tmp/screenshot.png"
+    });
 
     const view = render(<PpoPortalPage />);
 
@@ -122,7 +135,9 @@ describe("PpoPortalPage", () => {
     expect(screenshotButton).not.toBeNull();
 
     act(() => {
-      screenshotButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      screenshotButton?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
     });
 
     await act(async () => {

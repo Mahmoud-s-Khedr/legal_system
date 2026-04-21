@@ -37,9 +37,17 @@ export function PortalLoginPage() {
       <div className="mx-auto flex min-h-[calc(100vh-124px)] max-w-7xl items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
           <div className="mb-4 text-center">
-            <Link to="/" className="font-heading text-xl font-bold tracking-tight text-accent transition hover:text-accent-hover">ELMS</Link>
+            <Link
+              to="/"
+              className="font-heading text-xl font-bold tracking-tight text-accent transition hover:text-accent-hover"
+            >
+              ELMS
+            </Link>
           </div>
-          <SectionCard title={t("portal.clientPortal")} description={t("portal.loginDescription")}>
+          <SectionCard
+            title={t("portal.clientPortal")}
+            description={t("portal.loginDescription")}
+          >
             <form className="space-y-4" onSubmit={handleSubmit}>
               <Field
                 autoComplete="email"
@@ -47,7 +55,9 @@ export function PortalLoginPage() {
                 required
                 type="email"
                 value={form.email}
-                onChange={(value) => setForm((current) => ({ ...current, email: value }))}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, email: value }))
+                }
               />
               <Field
                 autoComplete="current-password"
@@ -55,14 +65,19 @@ export function PortalLoginPage() {
                 required
                 type="password"
                 value={form.password}
-                onChange={(value) => setForm((current) => ({ ...current, password: value }))}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, password: value }))
+                }
               />
               {error ? <FormAlert message={error} /> : null}
               <PrimaryButton disabled={loading} type="submit">
                 {loading ? <Loader2 className="size-4 animate-spin" /> : null}
                 {t("auth:login")}
               </PrimaryButton>
-              <Link to="/login" className="block text-center text-sm text-slate-500 hover:text-slate-700">
+              <Link
+                to="/login"
+                className="block text-center text-sm text-slate-500 hover:text-slate-700"
+              >
                 {t("auth:backToLogin")}
               </Link>
             </form>

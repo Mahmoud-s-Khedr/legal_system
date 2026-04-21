@@ -11,7 +11,13 @@ export function TemplatesPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const addToast = useToastStore((state) => state.addToast);
 
-  const { data: templates, isLoading, isError, error, refetch } = useTemplates();
+  const {
+    data: templates,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useTemplates();
   const deleteMutation = useDeleteTemplate();
 
   return (
@@ -20,14 +26,19 @@ export function TemplatesPage() {
         title={t("templates.title")}
         description={t("templates.description")}
         actions={
-          <Link className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white" to="/app/templates/new">
+          <Link
+            className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
+            to="/app/templates/new"
+          >
             {t("templates.new")}
           </Link>
         }
       />
 
       <SectionCard title={t("templates.list")}>
-        {isLoading && <p className="text-sm text-slate-500">{t("labels.loading")}</p>}
+        {isLoading && (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        )}
         {!isLoading && isError && (
           <ErrorState
             title={t("errors.title")}
@@ -38,7 +49,10 @@ export function TemplatesPage() {
         )}
 
         {!isLoading && !isError && !templates?.length && (
-          <EmptyState title={t("empty.noTemplates")} description={t("empty.noTemplatesHelp")} />
+          <EmptyState
+            title={t("empty.noTemplates")}
+            description={t("empty.noTemplatesHelp")}
+          />
         )}
 
         {!isLoading && !isError && !!templates?.length && (
@@ -51,7 +65,8 @@ export function TemplatesPage() {
                 <div>
                   <p className="font-semibold">{tpl.name}</p>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    {getEnumLabel(t, "Language", tpl.language)} {tpl.isSystem ? `· ${t("templates.system")}` : ""}
+                    {getEnumLabel(t, "Language", tpl.language)}{" "}
+                    {tpl.isSystem ? `· ${t("templates.system")}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -72,7 +87,11 @@ export function TemplatesPage() {
                               .then(() => setDeleting(null))
                               .catch((error) => {
                                 setDeleting(null);
-                                addToast((error as Error)?.message ?? t("errors.fallback"), "error");
+                                addToast(
+                                  (error as Error)?.message ??
+                                    t("errors.fallback"),
+                                  "error"
+                                );
                               });
                           } else {
                             setDeleting(tpl.id);
@@ -81,7 +100,9 @@ export function TemplatesPage() {
                         disabled={deleteMutation.isPending}
                         className="rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
                       >
-                        {deleting === tpl.id ? t("templates.confirmDelete") : t("actions.delete")}
+                        {deleting === tpl.id
+                          ? t("templates.confirmDelete")
+                          : t("actions.delete")}
                       </button>
                     </>
                   )}

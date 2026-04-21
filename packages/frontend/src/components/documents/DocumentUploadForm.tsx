@@ -4,7 +4,11 @@ import type { DocumentDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFormFetch } from "../../lib/api";
 import { useLookupOptions } from "../../lib/lookups";
-import { runUploadQueue, type UploadQueueStatus, type UploadQueueSummary } from "../../lib/uploadQueue";
+import {
+  runUploadQueue,
+  type UploadQueueStatus,
+  type UploadQueueSummary
+} from "../../lib/uploadQueue";
 import { PrimaryButton, SelectField } from "../../routes/app/ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 
@@ -31,35 +35,52 @@ function makeFileId() {
   return `file-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey }: DocumentUploadFormProps) {
+export function DocumentUploadForm({
+  caseId,
+  clientId,
+  onSuccess,
+  invalidateKey
+}: DocumentUploadFormProps) {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const docTypesQuery = useLookupOptions("DocumentType");
 
   const [selectedFiles, setSelectedFiles] = useState<SelectedUploadFile[]>([]);
-  const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>({});
+  const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>(
+    {}
+  );
   const [type, setType] = useState<string>("GENERAL");
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [summary, setSummary] = useState<UploadQueueSummary<DocumentDto> | null>(null);
+  const [summary, setSummary] =
+    useState<UploadQueueSummary<DocumentDto> | null>(null);
 
   const typeOptions = (docTypesQuery.data?.items ?? []).map((o) => ({
     value: o.key,
     label: getEnumLabel(t, "DocumentType", o.key)
   }));
   if (!typeOptions.length) {
-    typeOptions.push({ value: "GENERAL", label: getEnumLabel(t, "DocumentType", "GENERAL") });
+    typeOptions.push({
+      value: "GENERAL",
+      label: getEnumLabel(t, "DocumentType", "GENERAL")
+    });
   }
 
   const failedItems = useMemo(
-    () => selectedFiles.filter((entry) => fileStates[entry.id]?.status === "failed"),
+    () =>
+      selectedFiles.filter(
+        (entry) => fileStates[entry.id]?.status === "failed"
+      ),
     [selectedFiles, fileStates]
   );
 
   function appendFiles(files: FileList | null) {
     if (!files?.length) return;
-    const incoming = Array.from(files).map((file) => ({ id: makeFileId(), file }));
+    const incoming = Array.from(files).map((file) => ({
+      id: makeFileId(),
+      file
+    }));
     setSelectedFiles((prev) => [...prev, ...incoming]);
     setSummary(null);
     setError(null);
@@ -96,7 +117,9 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
     const targets =
       mode === "failed"
         ? failedItems
-        : selectedFiles.filter((entry) => fileStates[entry.id]?.status !== "success");
+        : selectedFiles.filter(
+            (entry) => fileStates[entry.id]?.status !== "success"
+          );
 
     if (!targets.length) {
       if (!selectedFiles.length) {
@@ -109,7 +132,10 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
     setError(null);
     setIsUploading(true);
     try {
-      const uploadSummary = await runUploadQueue<SelectedUploadFile, DocumentDto>({
+      const uploadSummary = await runUploadQueue<
+        SelectedUploadFile,
+        DocumentDto
+      >({
         items: targets,
         concurrency: 3,
         upload: async (entry) => {
@@ -120,7 +146,10 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
           if (clientId) formData.append("clientId", clientId);
           formData.append("file", entry.file);
 
-          return apiFormFetch<DocumentDto>("/api/documents", { method: "POST", body: formData });
+          return apiFormFetch<DocumentDto>("/api/documents", {
+            method: "POST",
+            body: formData
+          });
         },
         onStatusChange: (index, status, uploadError) => {
           const target = targets[index];
@@ -163,7 +192,10 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
     >
       <div className="space-y-2">
         <p className="text-sm font-semibold">
-          {t("documents.chooseFiles")}<span className="text-red-500 ms-1" aria-hidden="true">*</span>
+          {t("documents.chooseFiles")}
+          <span className="text-red-500 ms-1" aria-hidden="true">
+            *
+          </span>
         </p>
         <div className="flex items-center gap-3">
           <button
@@ -194,10 +226,21 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
           {selectedFiles.map((entry) => {
             const state = fileStates[entry.id];
             return (
-              <div key={entry.id} className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="font-medium text-slate-800">{entry.file.name}</span>
-                {state ? <span className="rounded-full bg-white px-2 py-0.5 text-xs border border-slate-200">{getStatusLabel(state.status)}</span> : null}
-                {state?.error ? <span className="text-xs text-red-600">{state.error}</span> : null}
+              <div
+                key={entry.id}
+                className="flex flex-wrap items-center gap-2 text-sm"
+              >
+                <span className="font-medium text-slate-800">
+                  {entry.file.name}
+                </span>
+                {state ? (
+                  <span className="rounded-full bg-white px-2 py-0.5 text-xs border border-slate-200">
+                    {getStatusLabel(state.status)}
+                  </span>
+                ) : null}
+                {state?.error ? (
+                  <span className="text-xs text-red-600">{state.error}</span>
+                ) : null}
                 <button
                   type="button"
                   className="ms-auto text-xs text-red-600"
@@ -220,7 +263,9 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
       />
 
       {summary ? (
-        <p className={`text-sm ${summary.failedCount > 0 ? "text-amber-700" : "text-green-700"}`}>
+        <p
+          className={`text-sm ${summary.failedCount > 0 ? "text-amber-700" : "text-green-700"}`}
+        >
           {t("documents.uploadSummary", {
             successCount: summary.successCount,
             failedCount: summary.failedCount
@@ -231,8 +276,13 @@ export function DocumentUploadForm({ caseId, clientId, onSuccess, invalidateKey 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <div className="flex flex-wrap gap-2">
-        <PrimaryButton type="submit" disabled={isUploading || selectedFiles.length === 0}>
-          {isUploading ? t("documents.uploadStatusUploading") : t("actions.uploadDocument")}
+        <PrimaryButton
+          type="submit"
+          disabled={isUploading || selectedFiles.length === 0}
+        >
+          {isUploading
+            ? t("documents.uploadStatusUploading")
+            : t("actions.uploadDocument")}
         </PrimaryButton>
         {failedItems.length > 0 ? (
           <button

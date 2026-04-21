@@ -1,7 +1,10 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "./useUnsavedChanges";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "./useUnsavedChanges";
 
 const useBlockerMock = vi.hoisted(() => vi.fn());
 const confirmActionMock = vi.hoisted(() => vi.fn());
@@ -23,16 +26,22 @@ vi.mock("./dialog", () => ({
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
-function Probe({ isDirty, bypassBlockRef }: { isDirty: boolean; bypassBlockRef?: { current: boolean } }) {
+function Probe({
+  isDirty,
+  bypassBlockRef
+}: {
+  isDirty: boolean;
+  bypassBlockRef?: { current: boolean };
+}) {
   useUnsavedChanges(isDirty, { bypassBlockRef });
   return null;
 }
 
-let bypassControls:
-  | ReturnType<typeof useUnsavedChangesBypass>
-  | null = null;
+let bypassControls: ReturnType<typeof useUnsavedChangesBypass> | null = null;
 
 function BypassProbe() {
   bypassControls = useUnsavedChangesBypass();
@@ -130,7 +139,9 @@ describe("useUnsavedChanges", () => {
   it("sets beforeunload returnValue when dirty", () => {
     renderProbe(true);
 
-    const event = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    const event = new Event("beforeunload", {
+      cancelable: true
+    }) as BeforeUnloadEvent;
     Object.defineProperty(event, "returnValue", {
       configurable: true,
       writable: true,

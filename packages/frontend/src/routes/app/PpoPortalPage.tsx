@@ -16,7 +16,10 @@ type LaunchState =
   | { status: "success"; result: Extract<PpoPortalLaunchResult, { ok: true }> }
   | { status: "error"; code: PpoPortalLaunchErrorCode; message?: string };
 
-function resolveStatusMessage(t: (key: string) => string, state: LaunchState): string {
+function resolveStatusMessage(
+  t: (key: string) => string,
+  state: LaunchState
+): string {
   if (state.status === "idle" || state.status === "launching") {
     return t("ppo.status.opening");
   }
@@ -34,7 +37,9 @@ function resolveStatusMessage(t: (key: string) => string, state: LaunchState): s
   }
 
   if (state.result.destination === "desktop-window") {
-    return state.result.reused ? t("ppo.status.focusedWindow") : t("ppo.status.openedWindow");
+    return state.result.reused
+      ? t("ppo.status.focusedWindow")
+      : t("ppo.status.openedWindow");
   }
 
   return t("ppo.status.openedTab");
@@ -43,7 +48,9 @@ function resolveStatusMessage(t: (key: string) => string, state: LaunchState): s
 export function PpoPortalPage() {
   const { t } = useTranslation("app");
   const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
-  const [launchState, setLaunchState] = useState<LaunchState>({ status: "idle" });
+  const [launchState, setLaunchState] = useState<LaunchState>({
+    status: "idle"
+  });
   const [hasOpenedAtLeastOnce, setHasOpenedAtLeastOnce] = useState(false);
   const [isTakingScreenshot, setIsTakingScreenshot] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
@@ -68,14 +75,21 @@ export function PpoPortalPage() {
       return;
     }
 
-    setLaunchState({ status: "error", code: result.code, message: result.message });
+    setLaunchState({
+      status: "error",
+      code: result.code,
+      message: result.message
+    });
   }, []);
 
   useEffect(() => {
     void openPortal();
   }, [openPortal]);
 
-  const statusMessage = useMemo(() => resolveStatusMessage(t, launchState), [launchState, t]);
+  const statusMessage = useMemo(
+    () => resolveStatusMessage(t, launchState),
+    [launchState, t]
+  );
 
   const handleScreenshot = useCallback(async () => {
     setIsTakingScreenshot(true);
@@ -99,11 +113,18 @@ export function PpoPortalPage() {
         description={t("ppo.description")}
       />
 
-      <SectionCard title={t("ppo.launchSectionTitle")} description={t("ppo.launchSectionDescription")}>
+      <SectionCard
+        title={t("ppo.launchSectionTitle")}
+        description={t("ppo.launchSectionDescription")}
+      >
         <div className="space-y-4">
           <p className="text-sm text-slate-600">{t("ppo.sessionNote")}</p>
           <p
-            className={launchState.status === "error" ? "text-sm font-medium text-red-700" : "text-sm text-slate-700"}
+            className={
+              launchState.status === "error"
+                ? "text-sm font-medium text-red-700"
+                : "text-sm text-slate-700"
+            }
             role="status"
             aria-live="polite"
           >
@@ -131,7 +152,9 @@ export function PpoPortalPage() {
               type="button"
               data-action="screenshot"
             >
-              {isTakingScreenshot ? t("ppo.status.navigating") : t("ppo.nav.screenshot")}
+              {isTakingScreenshot
+                ? t("ppo.status.navigating")
+                : t("ppo.nav.screenshot")}
             </button>
           ) : null}
         </div>

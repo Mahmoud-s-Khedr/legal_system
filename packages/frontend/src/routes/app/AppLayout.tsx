@@ -124,7 +124,10 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-sand text-ink">
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+      />
       {/* ── Skip to main content (keyboard / screen reader) ── */}
       <a
         href="#main-content"
@@ -149,20 +152,31 @@ export function AppLayout() {
               <Menu size={22} />
             </button>
             <div>
-              <Link to="/app/dashboard" className="font-heading text-xl font-bold tracking-tight text-accent transition hover:text-accent-hover">
+              <Link
+                to="/app/dashboard"
+                className="font-heading text-xl font-bold tracking-tight text-accent transition hover:text-accent-hover"
+              >
                 ELMS
               </Link>
               {breadcrumbItems.length > 0 && (
                 <div className="hidden items-center gap-1 text-xs text-slate-400 md:flex">
                   {breadcrumbItems.map((item, i) => (
-                    <span key={`${item.label}-${i}`} className="flex items-center gap-1">
+                    <span
+                      key={`${item.label}-${i}`}
+                      className="flex items-center gap-1"
+                    >
                       {i > 0 && <SeparatorIcon size={12} />}
                       {item.to ? (
-                        <Link to={item.to} className="capitalize underline-offset-2 transition hover:text-accent hover:underline">
+                        <Link
+                          to={item.to}
+                          className="capitalize underline-offset-2 transition hover:text-accent hover:underline"
+                        >
                           {item.label}
                         </Link>
                       ) : (
-                        <span className="capitalize font-semibold text-slate-600">{item.label}</span>
+                        <span className="capitalize font-semibold text-slate-600">
+                          {item.label}
+                        </span>
                       )}
                     </span>
                   ))}
@@ -173,11 +187,19 @@ export function AppLayout() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden xl:flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
-              <Link to="/app/cases/quick-new" className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent">
+              <Link
+                to="/app/cases/quick-new"
+                className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent"
+              >
                 {t("actions.quickIntake")}
               </Link>
-              <span className="text-slate-300" aria-hidden="true">|</span>
-              <Link to="/app/tasks/new" className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent">
+              <span className="text-slate-300" aria-hidden="true">
+                |
+              </span>
+              <Link
+                to="/app/tasks/new"
+                className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent"
+              >
                 {t("actions.newTask")}
               </Link>
             </div>
@@ -230,7 +252,9 @@ export function AppLayout() {
                   aria-label={t("actions.more")}
                 >
                   <div className="space-y-3">
-                    <GlobalSearchBar onOpenPalette={() => setPaletteOpen(true)} />
+                    <GlobalSearchBar
+                      onOpenPalette={() => setPaletteOpen(true)}
+                    />
                     <div className="border-t border-slate-100 pt-3">
                       <LanguageSwitcher />
                     </div>
@@ -276,7 +300,12 @@ export function AppLayout() {
             className="absolute inset-y-0 flex w-72 flex-col border-e border-slate-200 bg-[var(--sidebar-bg)] p-4 shadow-elevated animate-fade-in start-0"
           >
             <div className="mb-4 flex items-center justify-between">
-              <p id="mobile-nav-title" className="font-heading text-lg font-bold text-accent">ELMS</p>
+              <p
+                id="mobile-nav-title"
+                className="font-heading text-lg font-bold text-accent"
+              >
+                ELMS
+              </p>
               <button
                 className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
                 onClick={() => setDrawerOpen(false)}
@@ -286,9 +315,7 @@ export function AppLayout() {
                 <X size={20} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              {navContent}
-            </div>
+            <div className="flex-1 overflow-y-auto">{navContent}</div>
             {userStrip}
           </aside>
         </div>
@@ -301,9 +328,7 @@ export function AppLayout() {
           className="hidden max-h-[calc(100dvh-var(--header-height)-var(--footer-height)-48px)] rounded-3xl border border-slate-200 bg-[var(--sidebar-bg)] p-3 shadow-card lg:flex lg:flex-col xl:p-4"
           aria-label={t("nav.mainNavigation")}
         >
-          <div className="flex-1 overflow-y-auto">
-            {navContent}
-          </div>
+          <div className="flex-1 overflow-y-auto">{navContent}</div>
           {userStrip}
         </aside>
         <main
@@ -314,7 +339,10 @@ export function AppLayout() {
         </main>
       </div>
       <ShellFooter ariaLabel={t("footer.navigation")} links={footerLinks} />
-      <BackToTopButton label={t("actions.backToTop")} scrollContainerId="main-content" />
+      <BackToTopButton
+        label={t("actions.backToTop")}
+        scrollContainerId="main-content"
+      />
     </div>
   );
 }

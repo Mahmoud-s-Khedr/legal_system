@@ -8,17 +8,25 @@ import { AuthShell } from "./auth/AuthShell";
 import { AboutPage } from "./public/AboutPage";
 
 vi.mock("@tanstack/react-router", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
+  const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+    "@tanstack/react-router"
+  );
   return {
     ...actual,
-    Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => <a href={to} {...props}>{children}</a>
+    Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
+      <a href={to} {...props}>
+        {children}
+      </a>
+    )
   };
 });
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 function render(element: JSX.Element) {
   container = document.createElement("div");
@@ -35,7 +43,10 @@ describe("contact integration smoke", () => {
     vi.stubEnv("VITE_FOOTER_NAME", "Mahmoud Khedr");
     vi.stubEnv("VITE_FOOTER_EMAIL", "mahmoud.s.khedr.2@gmail.com");
     vi.stubEnv("VITE_FOOTER_PHONE", "01016240934");
-    vi.stubEnv("VITE_FOOTER_LINKEDIN", "https://www.linkedin.com/in/mahmoud-s-khedr/");
+    vi.stubEnv(
+      "VITE_FOOTER_LINKEDIN",
+      "https://www.linkedin.com/in/mahmoud-s-khedr/"
+    );
     await act(async () => {
       await i18n.changeLanguage("en");
     });
@@ -77,7 +88,9 @@ describe("contact integration smoke", () => {
     expect(view.textContent).toContain("About This System");
     expect(view.textContent).toContain("Developer Contact");
     expect(view.querySelector("a[href='/']")).not.toBeNull();
-    expect(view.querySelector("a[href='mailto:mahmoud.s.khedr.2@gmail.com']")).not.toBeNull();
+    expect(
+      view.querySelector("a[href='mailto:mahmoud.s.khedr.2@gmail.com']")
+    ).not.toBeNull();
     expect(view.querySelector("a[href='tel:01016240934']")).not.toBeNull();
   });
 });

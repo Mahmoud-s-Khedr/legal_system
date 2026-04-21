@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CaseStatus, type CaseListResponseDto, type UserListResponseDto } from "@elms/shared";
+import {
+  CaseStatus,
+  type CaseListResponseDto,
+  type UserListResponseDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -35,7 +39,13 @@ export function CasesPage() {
     defaultSortBy: "updatedAt",
     defaultSortDir: "desc",
     defaultLimit: 20,
-    filterKeys: ["status", "type", "assignedLawyerId", "createdFrom", "createdTo"]
+    filterKeys: [
+      "status",
+      "type",
+      "assignedLawyerId",
+      "createdFrom",
+      "createdTo"
+    ]
   });
   const [assignedToMe, setAssignedToMe] = useState(false);
 
@@ -45,17 +55,24 @@ export function CasesPage() {
     queryFn: () => apiFetch<UserListResponseDto>("/api/users")
   });
 
-  const effectiveLawyerId = assignedToMe ? (user?.id ?? "") : (table.state.filters.assignedLawyerId ?? "");
+  const effectiveLawyerId = assignedToMe
+    ? (user?.id ?? "")
+    : (table.state.filters.assignedLawyerId ?? "");
 
   const extraParams = new URLSearchParams();
   if (effectiveLawyerId) extraParams.set("assignedLawyerId", effectiveLawyerId);
-  if (table.state.filters.createdFrom) extraParams.set("createdFrom", table.state.filters.createdFrom);
-  if (table.state.filters.createdTo) extraParams.set("createdTo", table.state.filters.createdTo);
+  if (table.state.filters.createdFrom)
+    extraParams.set("createdFrom", table.state.filters.createdFrom);
+  if (table.state.filters.createdTo)
+    extraParams.set("createdTo", table.state.filters.createdTo);
   const extraStr = extraParams.toString();
 
   const casesQuery = useQuery({
     queryKey: ["cases", table.state, effectiveLawyerId],
-    queryFn: () => apiFetch<CaseListResponseDto>(`/api/cases?${table.toApiQueryString()}${extraStr ? `&${extraStr}` : ""}`)
+    queryFn: () =>
+      apiFetch<CaseListResponseDto>(
+        `/api/cases?${table.toApiQueryString()}${extraStr ? `&${extraStr}` : ""}`
+      )
   });
 
   return (
@@ -82,7 +99,10 @@ export function CasesPage() {
           </>
         }
       />
-      <SectionCard title={t("cases.directory")} description={t("cases.directoryHelp")}>
+      <SectionCard
+        title={t("cases.directory")}
+        description={t("cases.directoryHelp")}
+      >
         <TableToolbar>
           <Field
             label={t("labels.search")}
@@ -95,7 +115,10 @@ export function CasesPage() {
             onChange={(value) => table.setFilter("status", value)}
             options={[
               { value: "", label: t("labels.all") },
-              ...Object.values(CaseStatus).map((value) => ({ value, label: getEnumLabel(t, "CaseStatus", value) }))
+              ...Object.values(CaseStatus).map((value) => ({
+                value,
+                label: getEnumLabel(t, "CaseStatus", value)
+              }))
             ]}
             value={table.state.filters.status ?? ""}
           />
@@ -104,24 +127,38 @@ export function CasesPage() {
             onChange={(value) => table.setFilter("type", value)}
             options={[
               { value: "", label: t("labels.all") },
-              ...(caseTypesQuery.data?.items ?? []).map((o) => ({ value: o.key, label: o.labelAr ?? o.key }))
+              ...(caseTypesQuery.data?.items ?? []).map((o) => ({
+                value: o.key,
+                label: o.labelAr ?? o.key
+              }))
             ]}
             value={table.state.filters.type ?? ""}
           />
           <SelectField
             label={t("labels.lawyer")}
-            onChange={(value) => { setAssignedToMe(false); table.setFilter("assignedLawyerId", value); }}
+            onChange={(value) => {
+              setAssignedToMe(false);
+              table.setFilter("assignedLawyerId", value);
+            }}
             options={[
               { value: "", label: t("labels.all") },
-              ...(lawyersQuery.data?.items ?? []).map((u) => ({ value: u.id, label: u.fullName }))
+              ...(lawyersQuery.data?.items ?? []).map((u) => ({
+                value: u.id,
+                label: u.fullName
+              }))
             ]}
-            value={assignedToMe ? "" : (table.state.filters.assignedLawyerId ?? "")}
+            value={
+              assignedToMe ? "" : (table.state.filters.assignedLawyerId ?? "")
+            }
           />
         </TableToolbar>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={() => { setAssignedToMe((v) => !v); table.setFilter("assignedLawyerId", ""); }}
+            onClick={() => {
+              setAssignedToMe((v) => !v);
+              table.setFilter("assignedLawyerId", "");
+            }}
             className={`rounded-2xl border px-3 py-1.5 text-sm font-medium transition ${assignedToMe ? "border-accent bg-accent text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
           >
             {t("cases.assignedToMe", "Assigned to me")}
@@ -144,21 +181,38 @@ export function CasesPage() {
         ) : casesQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(casesQuery.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (casesQuery.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void casesQuery.refetch()}
           />
         ) : !casesQuery.data?.items.length ? (
-          <EmptyState title={t("empty.noCases")} description={t("empty.noCasesHelp")} />
+          <EmptyState
+            title={t("empty.noCases")}
+            description={t("empty.noCasesHelp")}
+          />
         ) : (
           <>
             <ResponsiveDataList
               items={casesQuery.data.items}
               getItemKey={(item) => item.id}
               fields={[
-                { key: "title", label: t("labels.title"), render: (item) => item.title },
-                { key: "caseNumber", label: t("labels.caseNumber"), render: (item) => item.caseNumber },
-                { key: "status", label: t("labels.status"), render: (item) => getEnumLabel(t, "CaseStatus", item.status) }
+                {
+                  key: "title",
+                  label: t("labels.caseTitle"),
+                  render: (item) => item.title
+                },
+                {
+                  key: "caseNumber",
+                  label: t("labels.caseNumber"),
+                  render: (item) => item.caseNumber
+                },
+                {
+                  key: "status",
+                  label: t("labels.status"),
+                  render: (item) => getEnumLabel(t, "CaseStatus", item.status)
+                }
               ]}
               actions={(item) => (
                 <Link
@@ -174,10 +228,30 @@ export function CasesPage() {
               <DataTable>
                 <TableHead>
                   <tr>
-                    <SortableTableHeadCell label={t("labels.title")} sortKey="title" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <SortableTableHeadCell label={t("labels.caseNumber")} sortKey="caseNumber" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <SortableTableHeadCell label={t("labels.status")} sortKey="status" sortBy={table.state.sortBy} sortDir={table.state.sortDir} onSort={table.setSort} />
-                    <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                    <SortableTableHeadCell
+                      label={t("labels.caseTitle")}
+                      sortKey="title"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <SortableTableHeadCell
+                      label={t("labels.caseNumber")}
+                      sortKey="caseNumber"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <SortableTableHeadCell
+                      label={t("labels.status")}
+                      sortKey="status"
+                      sortBy={table.state.sortBy}
+                      sortDir={table.state.sortDir}
+                      onSort={table.setSort}
+                    />
+                    <TableHeadCell align="end">
+                      {t("actions.more")}
+                    </TableHeadCell>
                   </tr>
                 </TableHead>
                 <TableBody>
@@ -185,7 +259,9 @@ export function CasesPage() {
                     <TableRow key={caseItem.id}>
                       <TableCell>{caseItem.title}</TableCell>
                       <TableCell>{caseItem.caseNumber}</TableCell>
-                      <TableCell>{getEnumLabel(t, "CaseStatus", caseItem.status)}</TableCell>
+                      <TableCell>
+                        {getEnumLabel(t, "CaseStatus", caseItem.status)}
+                      </TableCell>
                       <TableCell align="end">
                         <Link
                           className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"

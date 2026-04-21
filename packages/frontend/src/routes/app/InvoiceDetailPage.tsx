@@ -2,17 +2,35 @@ import { useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { InvoiceStatus } from "@elms/shared";
-import { useInvoice, useIssueInvoice, useVoidInvoice, useAddPayment } from "../../lib/billing";
+import {
+  useInvoice,
+  useIssueInvoice,
+  useVoidInvoice,
+  useAddPayment
+} from "../../lib/billing";
 import { apiDownload } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
-import { ErrorState, FormAlert, PageHeader, SectionCard, formatCurrency, formatDate } from "./ui";
+import {
+  ErrorState,
+  FormAlert,
+  PageHeader,
+  SectionCard,
+  formatCurrency,
+  formatDate
+} from "./ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useToastStore } from "../../store/toastStore";
 
 export function InvoiceDetailPage() {
   const { invoiceId } = useParams({ from: "/app/invoices/$invoiceId" });
   const { t } = useTranslation("app");
-  const { data: invoice, isLoading, isError, error, refetch } = useInvoice(invoiceId);
+  const {
+    data: invoice,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useInvoice(invoiceId);
 
   const issueInvoice = useIssueInvoice(invoiceId);
   const voidInvoice = useVoidInvoice(invoiceId);
@@ -26,7 +44,8 @@ export function InvoiceDetailPage() {
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
 
-  if (isLoading) return <p className="p-8 text-slate-500">{t("labels.loading")}</p>;
+  if (isLoading)
+    return <p className="p-8 text-slate-500">{t("labels.loading")}</p>;
   if (isError) {
     return (
       <div className="p-8">
@@ -39,25 +58,33 @@ export function InvoiceDetailPage() {
       </div>
     );
   }
-  if (!invoice) return <p className="p-8 text-red-500">{t("errors.notFound")}</p>;
+  if (!invoice)
+    return <p className="p-8 text-red-500">{t("errors.notFound")}</p>;
   const currentInvoice = invoice;
 
   async function handleAddPayment(e: React.FormEvent) {
     e.preventDefault();
     setPaymentError("");
     try {
-      await addPayment.mutateAsync({ amount: paymentAmount, method: paymentMethod });
+      await addPayment.mutateAsync({
+        amount: paymentAmount,
+        method: paymentMethod
+      });
       addToast(t("messages.paymentRecorded"), "success");
       setPaymentAmount("");
       setShowPaymentForm(false);
     } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : t("errors.fallback"));
+      setPaymentError(
+        err instanceof Error ? err.message : t("errors.fallback")
+      );
     }
   }
 
   const canIssue = invoice.status === InvoiceStatus.DRAFT;
   const canVoid = invoice.status !== InvoiceStatus.VOID;
-  const canPay = invoice.status === InvoiceStatus.ISSUED || invoice.status === InvoiceStatus.PARTIALLY_PAID;
+  const canPay =
+    invoice.status === InvoiceStatus.ISSUED ||
+    invoice.status === InvoiceStatus.PARTIALLY_PAID;
 
   const pdfUrl = `/api/invoices/${invoiceId}/pdf`;
 
@@ -65,9 +92,13 @@ export function InvoiceDetailPage() {
     try {
       setIsDownloadingPdf(true);
       const { blob, filename } = await apiDownload(pdfUrl);
-      await saveBlobToDownloads(blob, filename ?? `invoice-${currentInvoice.invoiceNumber}.pdf`);
+      await saveBlobToDownloads(
+        blob,
+        filename ?? `invoice-${currentInvoice.invoiceNumber}.pdf`
+      );
     } catch (error) {
-      const message = error instanceof Error ? error.message : t("errors.fallback");
+      const message =
+        error instanceof Error ? error.message : t("errors.fallback");
       addToast(message, "error");
     } finally {
       setIsDownloadingPdf(false);
@@ -78,7 +109,11 @@ export function InvoiceDetailPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow={invoice.invoiceNumber}
-        title={currentInvoice.clientName ?? currentInvoice.caseTitle ?? t("billing.invoice")}
+        title={
+          currentInvoice.clientName ??
+          currentInvoice.caseTitle ??
+          t("billing.invoice")
+        }
         description={`${t("billing.status")}: ${getEnumLabel(t, "InvoiceStatus", currentInvoice.status)}`}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -100,7 +135,9 @@ export function InvoiceDetailPage() {
                     await issueInvoice.mutateAsync();
                     addToast(t("messages.invoiceIssued"), "success");
                   } catch (error) {
-                    setActionError((error as Error)?.message ?? t("errors.fallback"));
+                    setActionError(
+                      (error as Error)?.message ?? t("errors.fallback")
+                    );
                   }
                 }}
                 disabled={issueInvoice.isPending}
@@ -125,7 +162,9 @@ export function InvoiceDetailPage() {
                     await voidInvoice.mutateAsync();
                     addToast(t("messages.invoiceVoided"), "success");
                   } catch (error) {
-                    setActionError((error as Error)?.message ?? t("errors.fallback"));
+                    setActionError(
+                      (error as Error)?.message ?? t("errors.fallback")
+                    );
                   }
                 }}
                 disabled={voidInvoice.isPending}
@@ -142,12 +181,21 @@ export function InvoiceDetailPage() {
       {actionError ? <FormAlert message={actionError} /> : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { label: t("billing.subtotal"), value: currentInvoice.subtotalAmount },
+          {
+            label: t("billing.subtotal"),
+            value: currentInvoice.subtotalAmount
+          },
           { label: t("billing.tax"), value: currentInvoice.taxAmount },
-          { label: t("billing.discount"), value: currentInvoice.discountAmount },
+          {
+            label: t("billing.discount"),
+            value: currentInvoice.discountAmount
+          },
           { label: t("billing.total"), value: currentInvoice.totalAmount }
         ].map(({ label, value }) => (
-          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div
+            key={label}
+            className="rounded-2xl border border-slate-200 bg-white p-4"
+          >
             <p className="text-xs text-slate-500">{label}</p>
             <p className="mt-1 font-semibold">{formatCurrency(value)}</p>
           </div>
@@ -159,7 +207,9 @@ export function InvoiceDetailPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-slate-500">
-              <th className="pb-2 text-start">{t("billing.itemDescription")}</th>
+              <th className="pb-2 text-start">
+                {t("billing.itemDescription")}
+              </th>
               <th className="pb-2 text-center">{t("billing.qty")}</th>
               <th className="pb-2 text-end">{t("billing.unitPrice")}</th>
               <th className="pb-2 text-end">{t("billing.total")}</th>
@@ -170,8 +220,12 @@ export function InvoiceDetailPage() {
               <tr key={item.id} className="border-t border-slate-100">
                 <td className="py-2">{item.description}</td>
                 <td className="py-2 text-center">{item.quantity}</td>
-                <td className="py-2 text-end">{formatCurrency(item.unitPrice)}</td>
-                <td className="py-2 text-end font-medium">{formatCurrency(item.total)}</td>
+                <td className="py-2 text-end">
+                  {formatCurrency(item.unitPrice)}
+                </td>
+                <td className="py-2 text-end font-medium">
+                  {formatCurrency(item.total)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -186,8 +240,12 @@ export function InvoiceDetailPage() {
           <div className="space-y-2">
             {currentInvoice.payments.map((payment) => (
               <div key={payment.id} className="flex justify-between text-sm">
-                <span>{payment.method} — {formatDate(payment.paidAt)}</span>
-                <span className="font-semibold text-emerald-700">+{formatCurrency(payment.amount)}</span>
+                <span>
+                  {payment.method} — {formatDate(payment.paidAt)}
+                </span>
+                <span className="font-semibold text-emerald-700">
+                  +{formatCurrency(payment.amount)}
+                </span>
               </div>
             ))}
           </div>
@@ -200,7 +258,9 @@ export function InvoiceDetailPage() {
           >
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium">{t("billing.amount")}</label>
+                <label className="block text-sm font-medium">
+                  {t("billing.amount")}
+                </label>
                 <input
                   required
                   type="number"
@@ -212,7 +272,9 @@ export function InvoiceDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">{t("billing.paymentMethod")}</label>
+                <label className="block text-sm font-medium">
+                  {t("billing.paymentMethod")}
+                </label>
                 <input
                   required
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"

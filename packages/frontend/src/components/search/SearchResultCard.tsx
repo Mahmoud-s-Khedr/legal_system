@@ -26,7 +26,10 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
         <p className="text-sm text-slate-600 leading-relaxed">
           {headlineParts.map((part, index) =>
             part.highlight ? (
-              <mark key={`mark-${index}`} className="rounded bg-yellow-200 px-0.5">
+              <mark
+                key={`mark-${index}`}
+                className="rounded bg-yellow-200 px-0.5"
+              >
                 {part.text}
               </mark>
             ) : (
@@ -35,7 +38,9 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
           )}
         </p>
       ) : null}
-      <p className="text-xs text-slate-400">{formatDateTime(result.createdAt)}</p>
+      <p className="text-xs text-slate-400">
+        {formatDateTime(result.createdAt)}
+      </p>
     </div>
   );
 }

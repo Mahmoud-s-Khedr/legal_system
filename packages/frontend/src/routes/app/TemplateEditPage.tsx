@@ -3,11 +3,26 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { exportTemplateDocx, type TemplateDto, type UpdateTemplateDto } from "../../lib/templates";
-import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import {
+  exportTemplateDocx,
+  type TemplateDto,
+  type UpdateTemplateDto
+} from "../../lib/templates";
+import {
+  EmptyState,
+  Field,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField
+} from "./ui";
 import { useTemplateRender } from "../../lib/templates";
 import { TemplateRichEditor } from "../../components/templates/TemplateRichEditor";
-import { isTemplateHtmlEmpty, normalizeTemplateHtml, sanitizeTemplateHtml } from "../../lib/templateEditor";
+import {
+  isTemplateHtmlEmpty,
+  normalizeTemplateHtml,
+  sanitizeTemplateHtml
+} from "../../lib/templateEditor";
 import { useToastStore } from "../../store/toastStore";
 
 const LANGUAGES = ["AR", "EN", "FR"];
@@ -99,7 +114,9 @@ export function TemplateEditPage() {
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               {t("templates.body")}
             </label>
-            <p className="mb-2 text-xs text-slate-400">{t("templates.bodyHelp")}</p>
+            <p className="mb-2 text-xs text-slate-400">
+              {t("templates.bodyHelp")}
+            </p>
             <TemplateRichEditor
               value={form.body ?? ""}
               language={form.language ?? "AR"}
@@ -111,7 +128,9 @@ export function TemplateEditPage() {
               }}
               disabled={tpl.isSystem}
             />
-            {validationError ? <p className="mt-2 text-sm text-red-600">{validationError}</p> : null}
+            {validationError ? (
+              <p className="mt-2 text-sm text-red-600">{validationError}</p>
+            ) : null}
           </div>
           {!tpl.isSystem && (
             <FormExitActions
@@ -123,12 +142,17 @@ export function TemplateEditPage() {
             />
           )}
           {update.error ? (
-            <p className="text-sm text-red-600">{(update.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(update.error as Error).message}
+            </p>
           ) : null}
         </form>
       </SectionCard>
 
-      <SectionCard title={t("templates.preview")} description={t("templates.previewHelp")}>
+      <SectionCard
+        title={t("templates.preview")}
+        description={t("templates.previewHelp")}
+      >
         <div className="flex items-end gap-3">
           <div className="flex-1">
             <Field
@@ -157,7 +181,9 @@ export function TemplateEditPage() {
             disabled={renderMutation.isPending || !renderCaseId}
             className="mb-0.5 rounded-2xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {renderMutation.isPending ? t("labels.loading") : t("templates.render")}
+            {renderMutation.isPending
+              ? t("labels.loading")
+              : t("templates.render")}
           </button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -166,14 +192,21 @@ export function TemplateEditPage() {
             onClick={() => {
               setExportingTemplate(true);
               void exportTemplateDocx(templateId, "template")
-                .then(() => addToast(t("reports.exportReady", { format: "DOCX" }), "success"))
+                .then(() =>
+                  addToast(
+                    t("reports.exportReady", { format: "DOCX" }),
+                    "success"
+                  )
+                )
                 .catch((error) => addToast((error as Error).message, "error"))
                 .finally(() => setExportingTemplate(false));
             }}
             disabled={exportingTemplate}
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
           >
-            {exportingTemplate ? t("labels.loading") : t("templates.exportTemplateDocx")}
+            {exportingTemplate
+              ? t("labels.loading")
+              : t("templates.exportTemplateDocx")}
           </button>
           <button
             type="button"
@@ -184,24 +217,40 @@ export function TemplateEditPage() {
               }
               setExportingRendered(true);
               void exportTemplateDocx(templateId, "rendered", renderCaseId)
-                .then(() => addToast(t("reports.exportReady", { format: "DOCX" }), "success"))
+                .then(() =>
+                  addToast(
+                    t("reports.exportReady", { format: "DOCX" }),
+                    "success"
+                  )
+                )
                 .catch((error) => addToast((error as Error).message, "error"))
                 .finally(() => setExportingRendered(false));
             }}
             disabled={exportingRendered}
             className="rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {exportingRendered ? t("labels.loading") : t("templates.exportRenderedDocx")}
+            {exportingRendered
+              ? t("labels.loading")
+              : t("templates.exportRenderedDocx")}
           </button>
         </div>
         {previewHtml !== null && (
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("templates.previewRich")}</p>
-            <div className="prose prose-sm max-w-none" dir="auto" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {t("templates.previewRich")}
+            </p>
+            <div
+              className="prose prose-sm max-w-none"
+              dir="auto"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
           </div>
         )}
         {previewText !== null && (
-          <pre className="mt-4 whitespace-pre-wrap rounded-2xl border border-slate-200 bg-sand p-4 text-sm leading-relaxed" dir="auto">
+          <pre
+            className="mt-4 whitespace-pre-wrap rounded-2xl border border-slate-200 bg-sand p-4 text-sm leading-relaxed"
+            dir="auto"
+          >
             {previewText}
           </pre>
         )}

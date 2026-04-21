@@ -16,7 +16,9 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBackendUnreachable, setIsBackendUnreachable] = useState(false);
-  const [diagnosticSummary, setDiagnosticSummary] = useState<string | null>(null);
+  const [diagnosticSummary, setDiagnosticSummary] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -30,13 +32,18 @@ export function LoginPage() {
       await login({ email, password });
       await navigate({ to: "/app/dashboard" });
     } catch (submitError) {
-      const code = submitError instanceof ApiError && typeof submitError.details === "object" && submitError.details !== null
-        ? (submitError.details as { code?: string }).code
-        : undefined;
+      const code =
+        submitError instanceof ApiError &&
+        typeof submitError.details === "object" &&
+        submitError.details !== null
+          ? (submitError.details as { code?: string }).code
+          : undefined;
 
       if (code === "BACKEND_UNREACHABLE") {
         const details =
-          submitError instanceof ApiError && typeof submitError.details === "object" && submitError.details !== null
+          submitError instanceof ApiError &&
+          typeof submitError.details === "object" &&
+          submitError.details !== null
             ? (submitError.details as Record<string, unknown>)
             : {};
         const summary = [
@@ -48,7 +55,8 @@ export function LoginPage() {
         setDiagnosticSummary(summary);
         captureDesktopConnectivitySnapshot({
           reason: "LOGIN_BACKEND_UNREACHABLE",
-          requestUrl: typeof details.requestUrl === "string" ? details.requestUrl : null
+          requestUrl:
+            typeof details.requestUrl === "string" ? details.requestUrl : null
         });
         setError(t("backendConnection.loginUnreachable"));
         setIsBackendUnreachable(true);
@@ -62,7 +70,10 @@ export function LoginPage() {
 
   return (
     <AuthShell title={t("loginTitle")} subtitle={t("loginSubtitle")}>
-      <form className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-elevated animate-slide-up" onSubmit={handleSubmit}>
+      <form
+        className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-elevated animate-slide-up"
+        onSubmit={handleSubmit}
+      >
         <Field
           id="login-email"
           label={t("email")}
@@ -72,9 +83,14 @@ export function LoginPage() {
           value={email}
         />
         <div>
-          <label className="mb-2 block text-sm font-semibold" htmlFor="login-password">
+          <label
+            className="mb-2 block text-sm font-semibold"
+            htmlFor="login-password"
+          >
             {t("password")}
-            <span className="text-red-500 ms-1" aria-hidden="true">*</span>
+            <span className="text-red-500 ms-1" aria-hidden="true">
+              *
+            </span>
           </label>
           <div className="relative">
             <input
@@ -105,7 +121,10 @@ export function LoginPage() {
           </p>
         ) : null}
         {isBackendUnreachable && diagnosticSummary ? (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700" dir="ltr">
+          <p
+            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700"
+            dir="ltr"
+          >
             {diagnosticSummary}
           </p>
         ) : null}
@@ -117,10 +136,18 @@ export function LoginPage() {
         >
           {loading ? "…" : t("login")}
         </button>
-        {error ? <p id="login-form-error" className="sr-only">{error}</p> : null}
+        {error ? (
+          <p id="login-form-error" className="sr-only">
+            {error}
+          </p>
+        ) : null}
         <div className="flex justify-between text-sm text-slate-600">
-          <Link className="transition hover:text-accent" to="/connection">{t("backendConnection.link")}</Link>
-          <Link className="transition hover:text-accent" to="/setup">{t("desktopSetupLink")}</Link>
+          <Link className="transition hover:text-accent" to="/connection">
+            {t("backendConnection.link")}
+          </Link>
+          <Link className="transition hover:text-accent" to="/setup">
+            {t("desktopSetupLink")}
+          </Link>
         </div>
       </form>
     </AuthShell>

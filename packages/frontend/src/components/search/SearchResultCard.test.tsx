@@ -7,7 +7,9 @@ import { SearchResultCard } from "./SearchResultCard";
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 function render(element: JSX.Element) {
   container = document.createElement("div");
@@ -43,7 +45,7 @@ describe("SearchResultCard", () => {
           extractionStatus: ExtractionStatus.INDEXED,
           caseId: null,
           clientId: null,
-          headline: '<mark>alpha</mark><img src=x onerror=alert(1)>',
+          headline: "<mark>alpha</mark><img src=x onerror=alert(1)>",
           rank: 1,
           createdAt: new Date().toISOString()
         }}

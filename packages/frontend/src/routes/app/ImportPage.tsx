@@ -1,15 +1,33 @@
 import React, { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Upload, AlertCircle, CheckCircle2, XCircle, Loader2, Download } from "lucide-react";
+import {
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Download
+} from "lucide-react";
 import { apiFetch, apiFormFetch } from "../../lib/api";
 import { saveTextToDownloads } from "../../lib/desktopDownloads";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { Field, PageHeader, SectionCard, PrimaryButton, SelectField, TablePagination, TableToolbar } from "./ui";
+import {
+  Field,
+  PageHeader,
+  SectionCard,
+  PrimaryButton,
+  SelectField,
+  TablePagination,
+  TableToolbar
+} from "./ui";
 
 type EntityType = "clients" | "cases";
 
-interface RowError { rowNumber: number; error: string }
+interface RowError {
+  rowNumber: number;
+  error: string;
+}
 
 interface PreviewResult {
   previewId: string;
@@ -57,17 +75,24 @@ async function executeFromPreview(
   fallbackMessage: string
 ): Promise<ExecuteResult> {
   try {
-    return await apiFetch<ExecuteResult>(`/api/import/${entityType}/execute-preview`, {
-      method: "POST",
-      body: JSON.stringify({ previewId })
-    });
+    return await apiFetch<ExecuteResult>(
+      `/api/import/${entityType}/execute-preview`,
+      {
+        method: "POST",
+        body: JSON.stringify({ previewId })
+      }
+    );
   } catch (error) {
     throw new Error((error as Error)?.message ?? fallbackMessage);
   }
 }
 
 async function downloadErrorReport(errors: RowError[]) {
-  const csv = "Row,Error\n" + errors.map((e) => `${e.rowNumber},"${e.error.replace(/"/g, '""')}"`).join("\n");
+  const csv =
+    "Row,Error\n" +
+    errors
+      .map((e) => `${e.rowNumber},"${e.error.replace(/"/g, '""')}"`)
+      .join("\n");
   await saveTextToDownloads(csv, "import-errors.csv", "text/csv;charset=utf-8");
 }
 
@@ -117,7 +142,11 @@ export function ImportPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await executeFromPreview(entityType, preview.previewId, t("errors.fallback"));
+      const data = await executeFromPreview(
+        entityType,
+        preview.previewId,
+        t("errors.fallback")
+      );
       setResult(data);
       setStep("results");
     } catch (e) {
@@ -155,7 +184,9 @@ export function ImportPage() {
         {(["upload", "preview", "results"] as Step[]).map((s, i) => (
           <React.Fragment key={s}>
             {i > 0 && <div className="h-px w-8 bg-slate-200" />}
-            <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 ${step === s ? "bg-accent text-white" : "bg-slate-100 text-slate-500"}`}>
+            <div
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 ${step === s ? "bg-accent text-white" : "bg-slate-100 text-slate-500"}`}
+            >
               <span className="font-semibold">{i + 1}.</span>
               <span>{t(`import.step.${s}`)}</span>
             </div>
@@ -195,8 +226,12 @@ export function ImportPage() {
                 <p className="font-medium text-accent">{file.name}</p>
               ) : (
                 <>
-                  <p className="font-medium text-slate-600">{t("import.dropFile")}</p>
-                  <p className="text-sm text-slate-400">{t("import.allowedTypes")}</p>
+                  <p className="font-medium text-slate-600">
+                    {t("import.dropFile")}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    {t("import.allowedTypes")}
+                  </p>
                 </>
               )}
             </div>
@@ -214,9 +249,10 @@ export function ImportPage() {
               <button
                 className="text-accent underline"
                 onClick={() => {
-                  const headers = entityType === "clients"
-                    ? "name,type,phone,email,nationalId,governorate"
-                    : "title,caseNumber,type,status,internalReference,judicialYear,client_id";
+                  const headers =
+                    entityType === "clients"
+                      ? "name,type,phone,email,nationalId,governorate"
+                      : "title,caseNumber,type,status,internalReference,judicialYear,client_id";
                   void saveTextToDownloads(
                     `${headers}\n`,
                     `${entityType}-import-template.csv`,
@@ -242,13 +278,16 @@ export function ImportPage() {
           <div className="space-y-4">
             <div className="flex gap-4 text-sm">
               <div className="rounded-xl bg-slate-100 px-4 py-2">
-                <span className="font-semibold">{preview.total}</span> {t("import.totalRows")}
+                <span className="font-semibold">{preview.total}</span>{" "}
+                {t("import.totalRows")}
               </div>
               <div className="rounded-xl bg-green-50 px-4 py-2 text-green-700">
-                <span className="font-semibold">{preview.valid}</span> {t("import.validRows")}
+                <span className="font-semibold">{preview.valid}</span>{" "}
+                {t("import.validRows")}
               </div>
               <div className="rounded-xl bg-red-50 px-4 py-2 text-red-700">
-                <span className="font-semibold">{preview.invalid}</span> {t("import.invalidRows")}
+                <span className="font-semibold">{preview.invalid}</span>{" "}
+                {t("import.invalidRows")}
               </div>
             </div>
 
@@ -273,33 +312,56 @@ export function ImportPage() {
 
             <div className="max-h-80 overflow-auto rounded-2xl border border-slate-200">
               {previewRowsQuery.isLoading ? (
-                <p className="p-3 text-sm text-slate-500">{t("labels.loading")}</p>
+                <p className="p-3 text-sm text-slate-500">
+                  {t("labels.loading")}
+                </p>
               ) : null}
               {previewRowsQuery.isError ? (
                 <p className="p-3 text-sm text-red-600">
-                  {(previewRowsQuery.error as Error)?.message ?? t("errors.fallback")}
+                  {(previewRowsQuery.error as Error)?.message ??
+                    t("errors.fallback")}
                 </p>
               ) : null}
               <table className="w-full text-sm">
                 <thead className="border-b bg-slate-50">
                   <tr>
-                    <th className="px-3 py-2 text-start font-semibold text-slate-600">{t("import.row")}</th>
-                    {Object.keys(previewRowsQuery.data?.items[0]?.data ?? {}).map((k) => (
-                      <th key={k} className="px-3 py-2 text-start font-semibold text-slate-600">{k}</th>
+                    <th className="px-3 py-2 text-start font-semibold text-slate-600">
+                      {t("import.row")}
+                    </th>
+                    {Object.keys(
+                      previewRowsQuery.data?.items[0]?.data ?? {}
+                    ).map((k) => (
+                      <th
+                        key={k}
+                        className="px-3 py-2 text-start font-semibold text-slate-600"
+                      >
+                        {k}
+                      </th>
                     ))}
-                    <th className="px-3 py-2 text-start font-semibold text-slate-600">{t("import.status")}</th>
+                    <th className="px-3 py-2 text-start font-semibold text-slate-600">
+                      {t("import.status")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {(previewRowsQuery.data?.items ?? []).map((row) => (
-                    <tr key={row.rowNumber} className={row.errors.length ? "bg-red-50" : ""}>
-                      <td className="px-3 py-1.5 text-slate-400">{row.rowNumber}</td>
+                    <tr
+                      key={row.rowNumber}
+                      className={row.errors.length ? "bg-red-50" : ""}
+                    >
+                      <td className="px-3 py-1.5 text-slate-400">
+                        {row.rowNumber}
+                      </td>
                       {Object.values(row.data).map((v, i) => (
-                        <td key={i} className="px-3 py-1.5">{v}</td>
+                        <td key={i} className="px-3 py-1.5">
+                          {v}
+                        </td>
                       ))}
                       <td className="px-3 py-1.5">
                         {row.errors.length ? (
-                          <span className="text-red-600">{row.errors.join("; ")}</span>
+                          <span className="text-red-600">
+                            {row.errors.join("; ")}
+                          </span>
                         ) : (
                           <CheckCircle2 className="size-4 text-green-500" />
                         )}
@@ -318,11 +380,17 @@ export function ImportPage() {
             />
 
             <div className="flex gap-3">
-              <PrimaryButton disabled={preview.valid === 0 || loading} onClick={handleExecute}>
+              <PrimaryButton
+                disabled={preview.valid === 0 || loading}
+                onClick={handleExecute}
+              >
                 {loading ? <Loader2 className="size-4 animate-spin" /> : null}
                 {t("import.import", { count: preview.valid })}
               </PrimaryButton>
-              <button className="rounded-xl border border-slate-200 px-4 py-2 text-sm" onClick={reset}>
+              <button
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
+                onClick={reset}
+              >
                 {t("actions.cancel")}
               </button>
             </div>
@@ -337,18 +405,22 @@ export function ImportPage() {
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-2 rounded-xl bg-green-50 px-4 py-2 text-green-700">
                 <CheckCircle2 className="size-4" />
-                <span className="font-semibold">{result.imported}</span> {t("import.imported")}
+                <span className="font-semibold">{result.imported}</span>{" "}
+                {t("import.imported")}
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-red-700">
                 <XCircle className="size-4" />
-                <span className="font-semibold">{result.failed}</span> {t("import.failed")}
+                <span className="font-semibold">{result.failed}</span>{" "}
+                {t("import.failed")}
               </div>
             </div>
 
             {result.errors.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-600">{t("import.failedRows")}</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    {t("import.failedRows")}
+                  </p>
                   <button
                     className="flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:text-accent"
                     onClick={() => {
@@ -361,8 +433,13 @@ export function ImportPage() {
                 </div>
                 <div className="max-h-40 overflow-auto rounded-2xl border border-red-100 bg-red-50">
                   {result.errors.map((e) => (
-                    <div key={e.rowNumber} className="border-b border-red-100 px-4 py-2 text-sm last:border-0">
-                      <span className="font-medium text-red-600">{t("import.row")} {e.rowNumber}:</span>{" "}
+                    <div
+                      key={e.rowNumber}
+                      className="border-b border-red-100 px-4 py-2 text-sm last:border-0"
+                    >
+                      <span className="font-medium text-red-600">
+                        {t("import.row")} {e.rowNumber}:
+                      </span>{" "}
                       <span className="text-red-500">{e.error}</span>
                     </div>
                   ))}
@@ -370,7 +447,9 @@ export function ImportPage() {
               </div>
             )}
 
-            <PrimaryButton onClick={reset}>{t("import.importMore")}</PrimaryButton>
+            <PrimaryButton onClick={reset}>
+              {t("import.importMore")}
+            </PrimaryButton>
           </div>
         </SectionCard>
       )}

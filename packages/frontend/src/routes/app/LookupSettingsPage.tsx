@@ -31,9 +31,15 @@ export function LookupSettingsPage() {
             to="/app/settings/lookups/$entity"
             params={{ entity }}
           >
-            <p className="font-semibold">{t(`lookups.entities.${entity}`, entity)}</p>
-            <p className="mt-1 text-xs text-slate-500">{t(`lookups.descriptions.${entity}`, "")}</p>
-            <p className="mt-2 text-sm text-slate-400">{t("lookups.manageValues")}</p>
+            <p className="font-semibold">
+              {t(`lookups.entities.${entity}`, entity)}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {t(`lookups.descriptions.${entity}`, "")}
+            </p>
+            <p className="mt-2 text-sm text-slate-400">
+              {t("lookups.manageValues")}
+            </p>
           </Link>
         ))}
       </div>

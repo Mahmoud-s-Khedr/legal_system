@@ -34,14 +34,24 @@ import {
 } from "../../lib/desktopDownloads";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
-import { Badge, EmptyState, Field, PageHeader, PrimaryButton, SectionCard, SelectField, formatDate } from "./ui";
+import {
+  Badge,
+  EmptyState,
+  Field,
+  PageHeader,
+  PrimaryButton,
+  SectionCard,
+  SelectField,
+  formatDate
+} from "./ui";
 
 export function SettingsPage() {
   const { t } = useTranslation("app");
   const isDesktopShell = isDesktopDownloadsEnabled();
   const isDesktopBackupShell = isDesktopBackupEnabled();
   const { user, refreshSession } = useAuthBootstrap();
-  const canUpdateSettings = user?.permissions.includes("settings:update") ?? false;
+  const canUpdateSettings =
+    user?.permissions.includes("settings:update") ?? false;
   const queryClient = useQueryClient();
   const firmQuery = useQuery({
     queryKey: ["firm-me"],
@@ -73,14 +83,18 @@ export function SettingsPage() {
     newPassword: ""
   });
   const [activationKey, setActivationKey] = useState("");
-  const [editionChangeTarget, setEditionChangeTarget] = useState<EditionKey>(EditionKey.SOLO_OFFLINE);
-  const [backupPolicyForm, setBackupPolicyForm] = useState<DesktopBackupPolicy>({
-    enabled: true,
-    frequency: "daily",
-    timeLocal: "02:00",
-    weeklyDay: null,
-    retentionCount: 14
-  });
+  const [editionChangeTarget, setEditionChangeTarget] = useState<EditionKey>(
+    EditionKey.SOLO_OFFLINE
+  );
+  const [backupPolicyForm, setBackupPolicyForm] = useState<DesktopBackupPolicy>(
+    {
+      enabled: true,
+      frequency: "daily",
+      timeLocal: "02:00",
+      weeklyDay: null,
+      retentionCount: 14
+    }
+  );
   const [selectedBackupPath, setSelectedBackupPath] = useState("");
   const [restoreCheckOne, setRestoreCheckOne] = useState(false);
   const [restoreCheckTwo, setRestoreCheckTwo] = useState(false);
@@ -98,7 +112,8 @@ export function SettingsPage() {
   }, [selfQuery.data]);
 
   useEffect(() => {
-    const target = firmQuery.data?.firm.pendingEditionKey ?? firmQuery.data?.firm.editionKey;
+    const target =
+      firmQuery.data?.firm.pendingEditionKey ?? firmQuery.data?.firm.editionKey;
     if (!target || target === EditionKey.ENTERPRISE) {
       return;
     }
@@ -113,7 +128,10 @@ export function SettingsPage() {
 
     setBackupPolicyForm(backupPolicyData.policy);
     setSelectedBackupPath((current) => {
-      if (current && backupPolicyData.backups.some((backup) => backup.path === current)) {
+      if (
+        current &&
+        backupPolicyData.backups.some((backup) => backup.path === current)
+      ) {
         return current;
       }
       return backupPolicyData.backups[0]?.path ?? "";
@@ -148,37 +166,50 @@ export function SettingsPage() {
   const chooseDownloadDirectoryMutation = useMutation({
     mutationFn: () => chooseDesktopDownloadDirectory(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["desktop-download-settings"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["desktop-download-settings"]
+      });
     }
   });
   const resetDownloadDirectoryMutation = useMutation({
     mutationFn: () => resetDesktopDownloadDirectory(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["desktop-download-settings"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["desktop-download-settings"]
+      });
     }
   });
   const chooseBackupDirectoryMutation = useMutation({
     mutationFn: () => chooseDesktopBackupDirectory(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["desktop-backup-policy"]
+      });
     }
   });
   const resetBackupDirectoryMutation = useMutation({
     mutationFn: () => resetDesktopBackupDirectory(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["desktop-backup-policy"]
+      });
     }
   });
   const saveBackupPolicyMutation = useMutation({
-    mutationFn: (payload: DesktopBackupPolicy) => setDesktopBackupPolicy(payload),
+    mutationFn: (payload: DesktopBackupPolicy) =>
+      setDesktopBackupPolicy(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["desktop-backup-policy"]
+      });
     }
   });
   const runBackupNowMutation = useMutation({
     mutationFn: () => runDesktopBackupNow(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["desktop-backup-policy"]
+      });
     }
   });
   const restoreBackupMutation = useMutation({
@@ -186,7 +217,9 @@ export function SettingsPage() {
     onSuccess: async () => {
       setRestoreCheckOne(false);
       setRestoreCheckTwo(false);
-      await queryClient.invalidateQueries({ queryKey: ["desktop-backup-policy"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["desktop-backup-policy"]
+      });
     }
   });
   const activateLicenseMutation = useMutation({
@@ -214,7 +247,12 @@ export function SettingsPage() {
   });
 
   if (!firmQuery.data || !user) {
-    return <EmptyState title={t("empty.noSettings")} description={t("empty.noSettingsHelp")} />;
+    return (
+      <EmptyState
+        title={t("empty.noSettings")}
+        description={t("empty.noSettingsHelp")}
+      />
+    );
   }
 
   const firm = firmQuery.data.firm;
@@ -226,14 +264,20 @@ export function SettingsPage() {
     EditionKey.LOCAL_FIRM_ONLINE
   ];
   const trialEndsAtDate = firm.trialEndsAt ? new Date(firm.trialEndsAt) : null;
-  const hasValidTrialEndDate = Boolean(trialEndsAtDate && !Number.isNaN(trialEndsAtDate.getTime()));
+  const hasValidTrialEndDate = Boolean(
+    trialEndsAtDate && !Number.isNaN(trialEndsAtDate.getTime())
+  );
   const trialCountdownText = (() => {
     if (!firm.trialEnabled || !hasValidTrialEndDate || !trialEndsAtDate) {
       return null;
     }
     const millisPerDay = 24 * 60 * 60 * 1000;
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
     const trialEndDay = new Date(
       trialEndsAtDate.getFullYear(),
       trialEndsAtDate.getMonth(),
@@ -252,8 +296,12 @@ export function SettingsPage() {
     validateBackupTimeLocal(backupPolicyForm.timeLocal) &&
     backupPolicyForm.retentionCount >= 1 &&
     backupPolicyForm.retentionCount <= 365 &&
-    (backupPolicyForm.frequency !== "weekly" || backupPolicyForm.weeklyDay !== null);
-  const canSubmitRestore = canSubmitRestoreAcknowledgement(restoreCheckOne, restoreCheckTwo);
+    (backupPolicyForm.frequency !== "weekly" ||
+      backupPolicyForm.weeklyDay !== null);
+  const canSubmitRestore = canSubmitRestoreAcknowledgement(
+    restoreCheckOne,
+    restoreCheckTwo
+  );
 
   return (
     <div className="space-y-6">
@@ -263,28 +311,55 @@ export function SettingsPage() {
         description={t("settings.description")}
       />
       <div className="grid gap-4 xl:grid-cols-3">
-        <SectionCard title={t("settings.firm")} description={t("settings.firmHelp")}>
+        <SectionCard
+          title={t("settings.firm")}
+          description={t("settings.firmHelp")}
+        >
           <dl className="space-y-3 text-sm">
             <Detail label={t("labels.name")} value={firm.name} />
             <Detail label={t("labels.slug")} value={firm.slug} />
-            <Detail label={t("labels.type")} value={getEnumLabel(t, "FirmType", firm.type)} />
-            <Detail label={t("labels.language")} value={getEnumLabel(t, "Language", firm.defaultLanguage)} />
+            <Detail
+              label={t("labels.type")}
+              value={getEnumLabel(t, "FirmType", firm.type)}
+            />
+            <Detail
+              label={t("labels.language")}
+              value={getEnumLabel(t, "Language", firm.defaultLanguage)}
+            />
             <Detail label={t("settings.firmId")} value={firm.id} />
-            <Detail label={t("settings.edition")} value={firm.pendingEditionKey ?? firm.editionKey} />
+            <Detail
+              label={t("settings.edition")}
+              value={firm.pendingEditionKey ?? firm.editionKey}
+            />
             {firm.pendingEditionKey ? (
-              <Detail label={t("settings.pendingEdition")} value={firm.pendingEditionKey} />
+              <Detail
+                label={t("settings.pendingEdition")}
+                value={firm.pendingEditionKey}
+              />
             ) : null}
           </dl>
         </SectionCard>
-        <SectionCard title={t("settings.session")} description={t("settings.sessionHelp")}>
+        <SectionCard
+          title={t("settings.session")}
+          description={t("settings.sessionHelp")}
+        >
           <dl className="space-y-3 text-sm">
             <Detail label={t("labels.fullName")} value={user.fullName} />
             <Detail label={t("labels.email")} value={user.email} />
-            <Detail label={t("labels.role")} value={getEnumLabel(t, "UserRole", user.roleKey)} />
-            <Detail label={t("labels.language")} value={getEnumLabel(t, "Language", user.preferredLanguage)} />
+            <Detail
+              label={t("labels.role")}
+              value={getEnumLabel(t, "UserRole", user.roleKey)}
+            />
+            <Detail
+              label={t("labels.language")}
+              value={getEnumLabel(t, "Language", user.preferredLanguage)}
+            />
           </dl>
         </SectionCard>
-        <SectionCard title={t("settings.permissions")} description={t("settings.permissionsHelp")}>
+        <SectionCard
+          title={t("settings.permissions")}
+          description={t("settings.permissionsHelp")}
+        >
           <div className="space-y-4">
             {Object.entries(
               user.permissions.reduce<Record<string, string[]>>((acc, perm) => {
@@ -307,7 +382,10 @@ export function SettingsPage() {
           </div>
         </SectionCard>
       </div>
-      <SectionCard title={t("settings.licensingTitle")} description={t("settings.licensingHelp")}>
+      <SectionCard
+        title={t("settings.licensingTitle")}
+        description={t("settings.licensingHelp")}
+      >
         <div className="space-y-4">
           {firm.licenseRequired ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -333,7 +411,9 @@ export function SettingsPage() {
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (!activationKey.trim()) return;
-                  activateLicenseMutation.mutate({ activationKey: activationKey.trim() });
+                  activateLicenseMutation.mutate({
+                    activationKey: activationKey.trim()
+                  });
                 }}
               >
                 <Field
@@ -342,37 +422,57 @@ export function SettingsPage() {
                   onChange={setActivationKey}
                   value={activationKey}
                 />
-                <PrimaryButton type="submit">{t("settings.activateLicense")}</PrimaryButton>
+                <PrimaryButton type="submit">
+                  {t("settings.activateLicense")}
+                </PrimaryButton>
                 {activateLicenseMutation.error ? (
-                  <p className="text-sm text-red-600">{(activateLicenseMutation.error as Error).message}</p>
+                  <p className="text-sm text-red-600">
+                    {(activateLicenseMutation.error as Error).message}
+                  </p>
                 ) : null}
               </form>
               <form
                 className="space-y-3 border-t border-slate-200 pt-4"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  editionChangeMutation.mutate({ editionKey: editionChangeTarget });
+                  editionChangeMutation.mutate({
+                    editionKey: editionChangeTarget
+                  });
                 }}
               >
                 <SelectField
                   id="edition-change-target"
                   label={t("settings.changeEdition")}
-                  onChange={(value) => setEditionChangeTarget(value as EditionKey)}
-                  options={selectableEditions.map((value) => ({ value, label: value }))}
+                  onChange={(value) =>
+                    setEditionChangeTarget(value as EditionKey)
+                  }
+                  options={selectableEditions.map((value) => ({
+                    value,
+                    label: value
+                  }))}
                   value={editionChangeTarget}
                 />
-                <PrimaryButton type="submit">{t("settings.requestEditionChange")}</PrimaryButton>
+                <PrimaryButton type="submit">
+                  {t("settings.requestEditionChange")}
+                </PrimaryButton>
                 {editionChangeMutation.error ? (
-                  <p className="text-sm text-red-600">{(editionChangeMutation.error as Error).message}</p>
+                  <p className="text-sm text-red-600">
+                    {(editionChangeMutation.error as Error).message}
+                  </p>
                 ) : null}
               </form>
             </>
           ) : (
-            <p className="text-sm text-slate-600">{t("settings.enterpriseContractOnly")}</p>
+            <p className="text-sm text-slate-600">
+              {t("settings.enterpriseContractOnly")}
+            </p>
           )}
         </div>
       </SectionCard>
-      <SectionCard title={t("notifications.preferences")} description={t("notifications.preferencesDescription")}>
+      <SectionCard
+        title={t("notifications.preferences")}
+        description={t("notifications.preferencesDescription")}
+      >
         <Link
           className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition"
           to="/app/settings/notifications"
@@ -381,16 +481,25 @@ export function SettingsPage() {
         </Link>
       </SectionCard>
       {isDesktopShell ? (
-        <SectionCard title={t("settings.downloadsTitle")} description={t("settings.downloadsHelp")}>
+        <SectionCard
+          title={t("settings.downloadsTitle")}
+          description={t("settings.downloadsHelp")}
+        >
           <div className="space-y-3">
             <Detail
               label={t("settings.downloadsCurrent")}
-              value={desktopDownloadSettingsQuery.data?.effectivePath ?? t("labels.loading")}
+              value={
+                desktopDownloadSettingsQuery.data?.effectivePath ??
+                t("labels.loading")
+              }
             />
             <div className="flex flex-wrap gap-2">
               <button
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
-                disabled={chooseDownloadDirectoryMutation.isPending || resetDownloadDirectoryMutation.isPending}
+                disabled={
+                  chooseDownloadDirectoryMutation.isPending ||
+                  resetDownloadDirectoryMutation.isPending
+                }
                 onClick={() => {
                   void chooseDownloadDirectoryMutation.mutateAsync();
                 }}
@@ -400,7 +509,10 @@ export function SettingsPage() {
               </button>
               <button
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
-                disabled={chooseDownloadDirectoryMutation.isPending || resetDownloadDirectoryMutation.isPending}
+                disabled={
+                  chooseDownloadDirectoryMutation.isPending ||
+                  resetDownloadDirectoryMutation.isPending
+                }
                 onClick={() => {
                   void resetDownloadDirectoryMutation.mutateAsync();
                 }}
@@ -410,24 +522,36 @@ export function SettingsPage() {
               </button>
             </div>
             {chooseDownloadDirectoryMutation.error ? (
-              <p className="text-sm text-red-600">{(chooseDownloadDirectoryMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(chooseDownloadDirectoryMutation.error as Error).message}
+              </p>
             ) : null}
             {resetDownloadDirectoryMutation.error ? (
-              <p className="text-sm text-red-600">{(resetDownloadDirectoryMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(resetDownloadDirectoryMutation.error as Error).message}
+              </p>
             ) : null}
           </div>
         </SectionCard>
       ) : null}
       {isDesktopBackupShell ? (
-        <SectionCard title={t("settings.backupTitle")} description={t("settings.backupHelp")}>
+        <SectionCard
+          title={t("settings.backupTitle")}
+          description={t("settings.backupHelp")}
+        >
           <div className="space-y-4">
             <Detail
               label={t("settings.backupDirectory")}
-              value={desktopBackupPolicyQuery.data?.effectiveBackupDirectory ?? t("labels.loading")}
+              value={
+                desktopBackupPolicyQuery.data?.effectiveBackupDirectory ??
+                t("labels.loading")
+              }
             />
             <div className="grid gap-3 xl:grid-cols-2">
               <label className="space-y-2 text-sm">
-                <span className="text-slate-600">{t("settings.backupEnabled")}</span>
+                <span className="text-slate-600">
+                  {t("settings.backupEnabled")}
+                </span>
                 <select
                   className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
                   disabled={!canUpdateSettings}
@@ -444,7 +568,9 @@ export function SettingsPage() {
                 </select>
               </label>
               <label className="space-y-2 text-sm">
-                <span className="text-slate-600">{t("settings.backupFrequency")}</span>
+                <span className="text-slate-600">
+                  {t("settings.backupFrequency")}
+                </span>
                 <select
                   className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
                   disabled={!canUpdateSettings}
@@ -452,7 +578,10 @@ export function SettingsPage() {
                     setBackupPolicyForm((current) => ({
                       ...current,
                       frequency: event.target.value as "daily" | "weekly",
-                      weeklyDay: event.target.value === "weekly" ? current.weeklyDay ?? 0 : null
+                      weeklyDay:
+                        event.target.value === "weekly"
+                          ? (current.weeklyDay ?? 0)
+                          : null
                     }))
                   }
                   value={backupPolicyForm.frequency}
@@ -462,19 +591,26 @@ export function SettingsPage() {
                 </select>
               </label>
               <label className="space-y-2 text-sm">
-                <span className="text-slate-600">{t("settings.backupTime")}</span>
+                <span className="text-slate-600">
+                  {t("settings.backupTime")}
+                </span>
                 <input
                   className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
                   disabled={!canUpdateSettings}
                   onChange={(event) =>
-                    setBackupPolicyForm((current) => ({ ...current, timeLocal: event.target.value }))
+                    setBackupPolicyForm((current) => ({
+                      ...current,
+                      timeLocal: event.target.value
+                    }))
                   }
                   type="time"
                   value={backupPolicyForm.timeLocal}
                 />
               </label>
               <label className="space-y-2 text-sm">
-                <span className="text-slate-600">{t("settings.backupRetention")}</span>
+                <span className="text-slate-600">
+                  {t("settings.backupRetention")}
+                </span>
                 <input
                   className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
                   disabled={!canUpdateSettings}
@@ -492,7 +628,9 @@ export function SettingsPage() {
               </label>
               {backupPolicyForm.frequency === "weekly" ? (
                 <label className="space-y-2 text-sm">
-                  <span className="text-slate-600">{t("settings.backupWeekday")}</span>
+                  <span className="text-slate-600">
+                    {t("settings.backupWeekday")}
+                  </span>
                   <select
                     className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
                     disabled={!canUpdateSettings}
@@ -518,7 +656,11 @@ export function SettingsPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
-                disabled={!canUpdateSettings || chooseBackupDirectoryMutation.isPending || resetBackupDirectoryMutation.isPending}
+                disabled={
+                  !canUpdateSettings ||
+                  chooseBackupDirectoryMutation.isPending ||
+                  resetBackupDirectoryMutation.isPending
+                }
                 onClick={() => {
                   void chooseBackupDirectoryMutation.mutateAsync();
                 }}
@@ -528,7 +670,11 @@ export function SettingsPage() {
               </button>
               <button
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
-                disabled={!canUpdateSettings || chooseBackupDirectoryMutation.isPending || resetBackupDirectoryMutation.isPending}
+                disabled={
+                  !canUpdateSettings ||
+                  chooseBackupDirectoryMutation.isPending ||
+                  resetBackupDirectoryMutation.isPending
+                }
                 onClick={() => {
                   void resetBackupDirectoryMutation.mutateAsync();
                 }}
@@ -538,7 +684,11 @@ export function SettingsPage() {
               </button>
               <button
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
-                disabled={!canUpdateSettings || !isBackupPolicyValid || saveBackupPolicyMutation.isPending}
+                disabled={
+                  !canUpdateSettings ||
+                  !isBackupPolicyValid ||
+                  saveBackupPolicyMutation.isPending
+                }
                 onClick={() => {
                   void saveBackupPolicyMutation.mutateAsync(backupPolicyForm);
                 }}
@@ -558,19 +708,38 @@ export function SettingsPage() {
               </button>
             </div>
             <div className="space-y-1 text-sm text-slate-600">
-              <p>{t("settings.lastBackupAt")}: {desktopBackupPolicyQuery.data?.lastBackupAt ? formatDate(desktopBackupPolicyQuery.data.lastBackupAt) : "-"}</p>
-              <p>{t("settings.lastBackupResult")}: {desktopBackupPolicyQuery.data?.lastBackupResult ?? "-"}</p>
-              <p>{t("settings.nextBackupAt")}: {desktopBackupPolicyQuery.data?.nextScheduledBackupAt ? formatDate(desktopBackupPolicyQuery.data.nextScheduledBackupAt) : "-"}</p>
+              <p>
+                {t("settings.lastBackupAt")}:{" "}
+                {desktopBackupPolicyQuery.data?.lastBackupAt
+                  ? formatDate(desktopBackupPolicyQuery.data.lastBackupAt)
+                  : "-"}
+              </p>
+              <p>
+                {t("settings.lastBackupResult")}:{" "}
+                {desktopBackupPolicyQuery.data?.lastBackupResult ?? "-"}
+              </p>
+              <p>
+                {t("settings.nextBackupAt")}:{" "}
+                {desktopBackupPolicyQuery.data?.nextScheduledBackupAt
+                  ? formatDate(
+                      desktopBackupPolicyQuery.data.nextScheduledBackupAt
+                    )
+                  : "-"}
+              </p>
             </div>
 
             {desktopBackupPolicyQuery.data?.backups.length ? (
               <div className="space-y-3 border-t border-slate-200 pt-4">
                 <label className="space-y-2 text-sm">
-                  <span className="text-slate-600">{t("settings.restoreSource")}</span>
+                  <span className="text-slate-600">
+                    {t("settings.restoreSource")}
+                  </span>
                   <select
                     className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
                     disabled={!canUpdateSettings}
-                    onChange={(event) => setSelectedBackupPath(event.target.value)}
+                    onChange={(event) =>
+                      setSelectedBackupPath(event.target.value)
+                    }
                     value={selectedBackupPath}
                   >
                     {desktopBackupPolicyQuery.data.backups.map((backup) => (
@@ -585,7 +754,9 @@ export function SettingsPage() {
                     checked={restoreCheckOne}
                     className="mt-1"
                     disabled={!canUpdateSettings}
-                    onChange={(event) => setRestoreCheckOne(event.target.checked)}
+                    onChange={(event) =>
+                      setRestoreCheckOne(event.target.checked)
+                    }
                     type="checkbox"
                   />
                   <span>{t("settings.restoreAckOne")}</span>
@@ -595,14 +766,21 @@ export function SettingsPage() {
                     checked={restoreCheckTwo}
                     className="mt-1"
                     disabled={!canUpdateSettings}
-                    onChange={(event) => setRestoreCheckTwo(event.target.checked)}
+                    onChange={(event) =>
+                      setRestoreCheckTwo(event.target.checked)
+                    }
                     type="checkbox"
                   />
                   <span>{t("settings.restoreAckTwo")}</span>
                 </label>
                 <button
                   className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 hover:border-amber-300 transition disabled:opacity-50"
-                  disabled={!canUpdateSettings || !selectedBackupPath || !canSubmitRestore || restoreBackupMutation.isPending}
+                  disabled={
+                    !canUpdateSettings ||
+                    !selectedBackupPath ||
+                    !canSubmitRestore ||
+                    restoreBackupMutation.isPending
+                  }
                   onClick={() => {
                     void restoreBackupMutation.mutateAsync(selectedBackupPath);
                   }}
@@ -612,28 +790,44 @@ export function SettingsPage() {
                 </button>
               </div>
             ) : (
-              <p className="text-sm text-slate-600">{t("settings.noBackupsYet")}</p>
+              <p className="text-sm text-slate-600">
+                {t("settings.noBackupsYet")}
+              </p>
             )}
             {chooseBackupDirectoryMutation.error ? (
-              <p className="text-sm text-red-600">{(chooseBackupDirectoryMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(chooseBackupDirectoryMutation.error as Error).message}
+              </p>
             ) : null}
             {resetBackupDirectoryMutation.error ? (
-              <p className="text-sm text-red-600">{(resetBackupDirectoryMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(resetBackupDirectoryMutation.error as Error).message}
+              </p>
             ) : null}
             {saveBackupPolicyMutation.error ? (
-              <p className="text-sm text-red-600">{(saveBackupPolicyMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(saveBackupPolicyMutation.error as Error).message}
+              </p>
             ) : null}
             {runBackupNowMutation.error ? (
-              <p className="text-sm text-red-600">{(runBackupNowMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(runBackupNowMutation.error as Error).message}
+              </p>
             ) : null}
             {restoreBackupMutation.error ? (
-              <p className="text-sm text-red-600">{(restoreBackupMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(restoreBackupMutation.error as Error).message}
+              </p>
             ) : null}
           </div>
         </SectionCard>
       ) : null}
-      {(user.permissions.includes("lookups:manage") || user.permissions.includes("roles:read")) ? (
-        <SectionCard title={t("settings.administration")} description={t("settings.administrationHelp")}>
+      {user.permissions.includes("lookups:manage") ||
+      user.permissions.includes("roles:read") ? (
+        <SectionCard
+          title={t("settings.administration")}
+          description={t("settings.administrationHelp")}
+        >
           <div className="flex flex-wrap gap-3">
             {user.permissions.includes("lookups:manage") ? (
               <Link
@@ -655,7 +849,10 @@ export function SettingsPage() {
         </SectionCard>
       ) : null}
       <div className="grid gap-4 xl:grid-cols-2">
-        <SectionCard title={t("settings.profileTitle")} description={t("settings.profileHelp")}>
+        <SectionCard
+          title={t("settings.profileTitle")}
+          description={t("settings.profileHelp")}
+        >
           <form
             className="space-y-4"
             onSubmit={(event) => {
@@ -675,20 +872,27 @@ export function SettingsPage() {
           >
             <Field
               label={t("labels.fullName")}
-              onChange={(value) => setProfileForm({ ...profileForm, fullName: value })}
+              onChange={(value) =>
+                setProfileForm({ ...profileForm, fullName: value })
+              }
               value={profileForm.fullName}
             />
             <Field
               dir="ltr"
               label={t("labels.email")}
-              onChange={(value) => setProfileForm({ ...profileForm, email: value })}
+              onChange={(value) =>
+                setProfileForm({ ...profileForm, email: value })
+              }
               type="email"
               value={profileForm.email}
             />
             <SelectField
               label={t("labels.language")}
               onChange={(value) =>
-                setProfileForm({ ...profileForm, preferredLanguage: value as Language })
+                setProfileForm({
+                  ...profileForm,
+                  preferredLanguage: value as Language
+                })
               }
               options={Object.values(Language).map((value) => ({
                 value: value as string,
@@ -696,13 +900,20 @@ export function SettingsPage() {
               }))}
               value={profileForm.preferredLanguage}
             />
-            <PrimaryButton type="submit">{t("actions.saveChanges")}</PrimaryButton>
+            <PrimaryButton type="submit">
+              {t("actions.saveChanges")}
+            </PrimaryButton>
             {updateProfileMutation.error ? (
-              <p className="text-sm text-red-600">{(updateProfileMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(updateProfileMutation.error as Error).message}
+              </p>
             ) : null}
           </form>
         </SectionCard>
-        <SectionCard title={t("settings.passwordTitle")} description={t("settings.passwordHelp")}>
+        <SectionCard
+          title={t("settings.passwordTitle")}
+          description={t("settings.passwordHelp")}
+        >
           <form
             className="space-y-4"
             onSubmit={(event) => {
@@ -713,20 +924,28 @@ export function SettingsPage() {
             <Field
               dir="ltr"
               label={t("settings.currentPassword")}
-              onChange={(value) => setPasswordForm({ ...passwordForm, currentPassword: value })}
+              onChange={(value) =>
+                setPasswordForm({ ...passwordForm, currentPassword: value })
+              }
               type="password"
               value={passwordForm.currentPassword}
             />
             <Field
               dir="ltr"
               label={t("settings.newPassword")}
-              onChange={(value) => setPasswordForm({ ...passwordForm, newPassword: value })}
+              onChange={(value) =>
+                setPasswordForm({ ...passwordForm, newPassword: value })
+              }
               type="password"
               value={passwordForm.newPassword}
             />
-            <PrimaryButton type="submit">{t("settings.changePassword")}</PrimaryButton>
+            <PrimaryButton type="submit">
+              {t("settings.changePassword")}
+            </PrimaryButton>
             {changePasswordMutation.error ? (
-              <p className="text-sm text-red-600">{(changePasswordMutation.error as Error).message}</p>
+              <p className="text-sm text-red-600">
+                {(changePasswordMutation.error as Error).message}
+              </p>
             ) : null}
           </form>
         </SectionCard>

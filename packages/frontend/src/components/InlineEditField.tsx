@@ -27,7 +27,14 @@ interface Props {
  * Renders as plain text with a pencil icon on hover.
  * On click: switches to an input/select with confirm (✓) and cancel (✕) buttons.
  */
-export function InlineEditField({ value, onSave, type = "text", options, placeholder, className }: Props) {
+export function InlineEditField({
+  value,
+  onSave,
+  type = "text",
+  options,
+  placeholder,
+  className
+}: Props) {
   const { t } = useTranslation("app");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -72,14 +79,18 @@ export function InlineEditField({ value, onSave, type = "text", options, placeho
           }
         }}
       >
-        <span className={value ? "" : "italic text-slate-400"}>{value || placeholder || "—"}</span>
+        <span className={value ? "" : "italic text-slate-400"}>
+          {value || placeholder || "—"}
+        </span>
         <Pencil className="hidden h-3 w-3 shrink-0 text-slate-400 group-hover:inline" />
       </span>
     );
   }
 
   return (
-    <span className={`inline-flex flex-wrap items-center gap-1.5 ${className ?? ""}`}>
+    <span
+      className={`inline-flex flex-wrap items-center gap-1.5 ${className ?? ""}`}
+    >
       {type === "select" && options ? (
         <select
           autoFocus
@@ -89,7 +100,9 @@ export function InlineEditField({ value, onSave, type = "text", options, placeho
           value={draft}
         >
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
       ) : type === "textarea" ? (

@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ClientListResponseDto, CreateCaseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
-import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField } from "./ui";
+import {
+  Field,
+  FormAlert,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField
+} from "./ui";
 
 export function CaseCreatePage() {
   const { t } = useTranslation("app");
@@ -34,14 +44,15 @@ export function CaseCreatePage() {
 
   const caseTypesQuery = useLookupOptions("CaseType");
   useUnsavedChanges(
-    JSON.stringify(form) !== JSON.stringify({
-      clientId: initialClientId,
-      title: "",
-      caseNumber: "",
-      internalReference: "",
-      judicialYear: null,
-      type: "CIVIL"
-    } satisfies CreateCaseDto),
+    JSON.stringify(form) !==
+      JSON.stringify({
+        clientId: initialClientId,
+        title: "",
+        caseNumber: "",
+        internalReference: "",
+        judicialYear: null,
+        type: "CIVIL"
+      } satisfies CreateCaseDto),
     { bypassBlockRef: bypassRef }
   );
 
@@ -72,7 +83,10 @@ export function CaseCreatePage() {
     label: o.labelAr
   }));
   if (!caseTypeOptions.length) {
-    caseTypeOptions.push({ value: "CIVIL", label: t("caseTypes.CIVIL", "Civil") });
+    caseTypeOptions.push({
+      value: "CIVIL",
+      label: t("caseTypes.CIVIL", "Civil")
+    });
   }
 
   return (
@@ -82,7 +96,10 @@ export function CaseCreatePage() {
         title={t("cases.createTitle")}
         description={t("cases.createHelp")}
       />
-      <SectionCard title={t("cases.createTitle")} description={t("cases.createHelp")}>
+      <SectionCard
+        title={t("cases.createTitle")}
+        description={t("cases.createHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -101,7 +118,7 @@ export function CaseCreatePage() {
             value={form.clientId}
           />
           <Field
-            label={t("labels.title")}
+            label={t("labels.caseTitle")}
             onChange={(value) => setForm({ ...form, title: value })}
             required
             value={form.title}
@@ -124,15 +141,21 @@ export function CaseCreatePage() {
             required
             value={form.type}
           />
-          <p className="text-sm text-slate-500">{t("cases.courtNoteAfterCreate")}</p>
+          <p className="text-sm text-slate-500">
+            {t("cases.courtNoteAfterCreate")}
+          </p>
           <FormExitActions
             cancelTo="/app/cases"
             cancelLabel={t("actions.cancel")}
             submitLabel={t("actions.createCase")}
             savingLabel={t("labels.saving")}
-            submitting={createMutation.isPending || form.title.trim().length < 2}
+            submitting={
+              createMutation.isPending || form.title.trim().length < 2
+            }
           />
-          {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
+          {createMutation.error ? (
+            <FormAlert message={(createMutation.error as Error).message} />
+          ) : null}
         </form>
       </SectionCard>
     </div>

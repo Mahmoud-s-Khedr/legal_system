@@ -10,10 +10,16 @@ const navigateMock = vi.fn();
 const loginMock = vi.fn();
 
 vi.mock("@tanstack/react-router", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
+  const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
+    "@tanstack/react-router"
+  );
   return {
     ...actual,
-    Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => <a href={to} {...props}>{children}</a>,
+    Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
+      <a href={to} {...props}>
+        {children}
+      </a>
+    ),
     useNavigate: () => navigateMock
   };
 });
@@ -27,7 +33,9 @@ vi.mock("../../store/authStore", () => ({
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 function render(element: JSX.Element) {
   container = document.createElement("div");
@@ -61,13 +69,18 @@ describe("LoginPage connectivity messaging", () => {
 
   it("shows localized backend connectivity guidance when backend is unreachable", async () => {
     loginMock.mockRejectedValue(
-      new ApiError("Unable to reach backend", 503, { code: "BACKEND_UNREACHABLE" })
+      new ApiError("Unable to reach backend", 503, {
+        code: "BACKEND_UNREACHABLE"
+      })
     );
 
     const view = render(<LoginPage />);
     const emailInput = view.querySelector<HTMLInputElement>("#login-email");
-    const passwordInput = view.querySelector<HTMLInputElement>("#login-password");
-    const submitButton = view.querySelector<HTMLButtonElement>("button[type='submit']");
+    const passwordInput =
+      view.querySelector<HTMLInputElement>("#login-password");
+    const submitButton = view.querySelector<HTMLButtonElement>(
+      "button[type='submit']"
+    );
 
     expect(emailInput).toBeTruthy();
     expect(passwordInput).toBeTruthy();
@@ -81,7 +94,9 @@ describe("LoginPage connectivity messaging", () => {
       submitButton!.click();
     });
 
-    expect(view.textContent).toContain("ELMS cannot reach the local backend service.");
+    expect(view.textContent).toContain(
+      "ELMS cannot reach the local backend service."
+    );
     expect(view.textContent).toContain("Retry after startup completes.");
     expect(navigateMock).not.toHaveBeenCalled();
   });

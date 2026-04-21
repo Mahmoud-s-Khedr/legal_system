@@ -1,8 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { NotificationChannel, NotificationType, type NotificationPreferenceDto } from "@elms/shared";
+import {
+  NotificationChannel,
+  NotificationType,
+  type NotificationPreferenceDto
+} from "@elms/shared";
 import { apiFetch } from "../../lib/api";
-import { VISIBLE_NOTIFICATION_CHANNELS, VISIBLE_NOTIFICATION_TYPES } from "../../lib/internetRestrictedUi";
+import {
+  VISIBLE_NOTIFICATION_CHANNELS,
+  VISIBLE_NOTIFICATION_TYPES
+} from "../../lib/internetRestrictedUi";
 import { PageHeader, SectionCard } from "./ui";
 
 export function NotificationPreferencesPage() {
@@ -11,16 +18,22 @@ export function NotificationPreferencesPage() {
 
   const { data: prefs, isLoading } = useQuery({
     queryKey: ["notification-preferences"],
-    queryFn: () => apiFetch<NotificationPreferenceDto[]>("/api/notifications/preferences")
+    queryFn: () =>
+      apiFetch<NotificationPreferenceDto[]>("/api/notifications/preferences")
   });
 
   const upsert = useMutation({
-    mutationFn: (dto: { type: NotificationType; channel: NotificationChannel; enabled: boolean }) =>
+    mutationFn: (dto: {
+      type: NotificationType;
+      channel: NotificationChannel;
+      enabled: boolean;
+    }) =>
       apiFetch<NotificationPreferenceDto>("/api/notifications/preferences", {
         method: "PUT",
         body: JSON.stringify(dto)
       }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["notification-preferences"] })
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["notification-preferences"] })
   });
 
   function isEnabled(type: NotificationType, channel: NotificationChannel) {
@@ -34,7 +47,11 @@ export function NotificationPreferencesPage() {
     return false;
   }
 
-  function toggle(type: NotificationType, channel: NotificationChannel, enabled: boolean) {
+  function toggle(
+    type: NotificationType,
+    channel: NotificationChannel,
+    enabled: boolean
+  ) {
     void upsert.mutateAsync({ type, channel, enabled });
   }
 
@@ -56,16 +73,22 @@ export function NotificationPreferencesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th className="pb-3 text-start font-medium">{t("notifications.eventType")}</th>
+                  <th className="pb-3 text-start font-medium">
+                    {t("notifications.eventType")}
+                  </th>
                   {channels.map((ch) => (
-                    <th key={ch} className="pb-3 text-center font-medium">{ch.replace("_", " ")}</th>
+                    <th key={ch} className="pb-3 text-center font-medium">
+                      {ch.replace("_", " ")}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {notificationTypes.map((type) => (
                   <tr key={type} className="border-t border-slate-100">
-                    <td className="py-3 font-medium">{type.replace(/_/g, " ")}</td>
+                    <td className="py-3 font-medium">
+                      {type.replace(/_/g, " ")}
+                    </td>
                     {channels.map((ch) => (
                       <td key={ch} className="py-3 text-center">
                         <input

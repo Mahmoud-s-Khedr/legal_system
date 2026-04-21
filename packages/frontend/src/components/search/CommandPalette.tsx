@@ -40,7 +40,9 @@ export function CommandPalette({ open, onClose }: Props) {
 
   if (open && !wasOpenRef.current) {
     restoreFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     wasOpenRef.current = true;
   } else if (!open && wasOpenRef.current) {
     wasOpenRef.current = false;
@@ -73,14 +75,18 @@ export function CommandPalette({ open, onClose }: Props) {
   const casesQuery = useQuery({
     queryKey: ["palette-cases", debouncedQ],
     queryFn: () =>
-      apiFetch<CaseListResponseDto>(`/api/cases?q=${encodeURIComponent(debouncedQ)}&limit=5`),
+      apiFetch<CaseListResponseDto>(
+        `/api/cases?q=${encodeURIComponent(debouncedQ)}&limit=5`
+      ),
     enabled: open && debouncedQ.trim().length > 0
   });
 
   const clientsQuery = useQuery({
     queryKey: ["palette-clients", debouncedQ],
     queryFn: () =>
-      apiFetch<ClientListResponseDto>(`/api/clients?q=${encodeURIComponent(debouncedQ)}&limit=5`),
+      apiFetch<ClientListResponseDto>(
+        `/api/clients?q=${encodeURIComponent(debouncedQ)}&limit=5`
+      ),
     enabled: open && debouncedQ.trim().length > 0
   });
 
@@ -93,78 +99,111 @@ export function CommandPalette({ open, onClose }: Props) {
     enabled: open && debouncedQ.trim().length > 0
   });
 
-  const quickActions: PaletteItem[] = useMemo(() => [
-    {
-      id: "go-dashboard",
-      label: t("search.escape.dashboard"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/dashboard" }); onClose(); }
-    },
-    {
-      id: "go-cases",
-      label: t("search.escape.cases"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/cases" }); onClose(); }
-    },
-    {
-      id: "go-clients",
-      label: t("search.escape.clients"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/clients" }); onClose(); }
-    },
-    {
-      id: "go-search",
-      label: t("search.escape.search"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/search", search: { q: "" } }); onClose(); }
-    },
-    {
-      id: "go-settings",
-      label: t("search.escape.settings"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/settings" }); onClose(); }
-    },
-    {
-      id: "quick-intake",
-      label: t("actions.quickIntake"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/cases/quick-new" }); onClose(); }
-    },
-    {
-      id: "new-case",
-      label: t("actions.newCase"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/cases/new" }); onClose(); }
-    },
-    {
-      id: "new-hearing",
-      label: t("actions.newHearing"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/hearings/new" }); onClose(); }
-    },
-    {
-      id: "new-task",
-      label: t("actions.newTask"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/tasks/new" }); onClose(); }
-    },
-    {
-      id: "new-invoice",
-      label: t("actions.newInvoice"),
-      score: 0,
-      icon: <Plus className="h-4 w-4" />,
-      action: () => { void navigate({ to: "/app/invoices/new" }); onClose(); }
-    }
-  ], [t, navigate, onClose]);
+  const quickActions: PaletteItem[] = useMemo(
+    () => [
+      {
+        id: "go-dashboard",
+        label: t("search.escape.dashboard"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/dashboard" });
+          onClose();
+        }
+      },
+      {
+        id: "go-cases",
+        label: t("search.escape.cases"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/cases" });
+          onClose();
+        }
+      },
+      {
+        id: "go-clients",
+        label: t("search.escape.clients"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/clients" });
+          onClose();
+        }
+      },
+      {
+        id: "go-search",
+        label: t("search.escape.search"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/search", search: { q: "" } });
+          onClose();
+        }
+      },
+      {
+        id: "go-settings",
+        label: t("search.escape.settings"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/settings" });
+          onClose();
+        }
+      },
+      {
+        id: "quick-intake",
+        label: t("actions.quickIntake"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/cases/quick-new" });
+          onClose();
+        }
+      },
+      {
+        id: "new-case",
+        label: t("actions.newCase"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/cases/new" });
+          onClose();
+        }
+      },
+      {
+        id: "new-hearing",
+        label: t("actions.newHearing"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/hearings/new" });
+          onClose();
+        }
+      },
+      {
+        id: "new-task",
+        label: t("actions.newTask"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/tasks/new" });
+          onClose();
+        }
+      },
+      {
+        id: "new-invoice",
+        label: t("actions.newInvoice"),
+        score: 0,
+        icon: <Plus className="h-4 w-4" />,
+        action: () => {
+          void navigate({ to: "/app/invoices/new" });
+          onClose();
+        }
+      }
+    ],
+    [t, navigate, onClose]
+  );
 
   const searchResults: PaletteItem[] = useMemo(() => {
     if (!debouncedQ.trim()) return [];
@@ -180,22 +219,24 @@ export function CommandPalette({ open, onClose }: Props) {
       return 1;
     };
 
-    const documentItems = (documentsQuery.data?.items ?? []).map((document) => ({
-      id: `document-${document.id}`,
-      label: document.title,
-      description: t("search.resultTypes.document"),
-      snippet: stripHeadlineMarkup(document.headline),
-      badge: document.type,
-      score: document.rank + 10,
-      icon: <FileText className="h-4 w-4 text-slate-400" />,
-      action: () => {
-        void navigate({
-          to: "/app/search",
-          search: { q: debouncedQ.trim() }
-        });
-        onClose();
-      }
-    }));
+    const documentItems = (documentsQuery.data?.items ?? []).map(
+      (document) => ({
+        id: `document-${document.id}`,
+        label: document.title,
+        description: t("search.resultTypes.document"),
+        snippet: stripHeadlineMarkup(document.headline),
+        badge: document.type,
+        score: document.rank + 10,
+        icon: <FileText className="h-4 w-4 text-slate-400" />,
+        action: () => {
+          void navigate({
+            to: "/app/search",
+            search: { q: debouncedQ.trim() }
+          });
+          onClose();
+        }
+      })
+    );
     const caseItems = (casesQuery.data?.items ?? []).map((c) => ({
       id: `case-${c.id}`,
       label: c.title,
@@ -214,7 +255,10 @@ export function CommandPalette({ open, onClose }: Props) {
       score: entityScore(c.name),
       icon: <Users className="h-4 w-4 text-slate-400" />,
       action: () => {
-        void navigate({ to: "/app/clients/$clientId", params: { clientId: c.id } });
+        void navigate({
+          to: "/app/clients/$clientId",
+          params: { clientId: c.id }
+        });
         onClose();
       }
     }));
@@ -243,7 +287,10 @@ export function CommandPalette({ open, onClose }: Props) {
   }, [debouncedQ, itemsSignature, q]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") { onClose(); return; }
+    if (e.key === "Escape") {
+      onClose();
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveIndex((i) => Math.min(i + 1, items.length - 1));
@@ -261,7 +308,9 @@ export function CommandPalette({ open, onClose }: Props) {
 
   const isLoading =
     debouncedQ.trim() &&
-    (casesQuery.isFetching || clientsQuery.isFetching || documentsQuery.isFetching);
+    (casesQuery.isFetching ||
+      clientsQuery.isFetching ||
+      documentsQuery.isFetching);
 
   return (
     <div
@@ -289,11 +338,18 @@ export function CommandPalette({ open, onClose }: Props) {
             aria-label={t("search.placeholder")}
             className="flex-1 bg-transparent text-sm focus:outline-none"
             onChange={(e) => setQ(e.target.value)}
-            placeholder={t("search.commandPlaceholder", "Search or type a command…")}
+            placeholder={t(
+              "search.commandPlaceholder",
+              "Search or type a command…"
+            )}
             type="search"
             value={q}
           />
-          {isLoading && <span className="text-xs text-slate-400">{t("labels.loading")}</span>}
+          {isLoading && (
+            <span className="text-xs text-slate-400">
+              {t("labels.loading")}
+            </span>
+          )}
           <button
             aria-label={t("actions.close")}
             className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
@@ -307,10 +363,14 @@ export function CommandPalette({ open, onClose }: Props) {
         {/* Results */}
         <ul className="max-h-80 overflow-y-auto py-2" role="listbox">
           {!debouncedQ.trim() && (
-            <li className="px-4 pb-1 text-xs font-medium text-slate-400">{t("search.quickActions", "Quick actions")}</li>
+            <li className="px-4 pb-1 text-xs font-medium text-slate-400">
+              {t("search.quickActions", "Quick actions")}
+            </li>
           )}
           {debouncedQ.trim() && !isLoading && !searchResults.length && (
-            <li className="px-4 py-3 text-sm text-slate-500">{t("search.noResults")}</li>
+            <li className="px-4 py-3 text-sm text-slate-500">
+              {t("search.noResults")}
+            </li>
           )}
           {items.map((item, idx) => (
             <li key={item.id} role="option" aria-selected={idx === activeIndex}>
@@ -320,23 +380,35 @@ export function CommandPalette({ open, onClose }: Props) {
                 onMouseEnter={() => setActiveIndex(idx)}
                 type="button"
               >
-                <span className={`mt-0.5 ${idx === activeIndex ? "text-white" : ""}`}>{item.icon}</span>
+                <span
+                  className={`mt-0.5 ${idx === activeIndex ? "text-white" : ""}`}
+                >
+                  {item.icon}
+                </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block truncate font-medium">{item.label}</span>
+                  <span className="block truncate font-medium">
+                    {item.label}
+                  </span>
                   {item.snippet && (
-                    <span className={`mt-0.5 block truncate text-xs ${idx === activeIndex ? "text-white/80" : "text-slate-500"}`}>
+                    <span
+                      className={`mt-0.5 block truncate text-xs ${idx === activeIndex ? "text-white/80" : "text-slate-500"}`}
+                    >
                       {item.snippet}
                     </span>
                   )}
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   {item.badge && (
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${idx === activeIndex ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${idx === activeIndex ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}
+                    >
                       {item.badge}
                     </span>
                   )}
                   {item.description && (
-                    <span className={`text-xs ${idx === activeIndex ? "text-white/70" : "text-slate-400"}`}>
+                    <span
+                      className={`text-xs ${idx === activeIndex ? "text-white/70" : "text-slate-400"}`}
+                    >
                       {item.description}
                     </span>
                   )}
@@ -348,13 +420,20 @@ export function CommandPalette({ open, onClose }: Props) {
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2 text-xs text-slate-400">
-          <span>↑↓ {t("search.navigate", "navigate")} · Enter {t("search.select", "select")} · Esc {t("search.dismiss", "dismiss")}</span>
+          <span>
+            ↑↓ {t("search.navigate", "navigate")} · Enter{" "}
+            {t("search.select", "select")} · Esc{" "}
+            {t("search.dismiss", "dismiss")}
+          </span>
           <a
             className="hover:text-accent"
             href="/app/search"
             onClick={(e) => {
               e.preventDefault();
-              void navigate({ to: "/app/search", search: { q: debouncedQ.trim() } });
+              void navigate({
+                to: "/app/search",
+                search: { q: debouncedQ.trim() }
+              });
               onClose();
             }}
           >
@@ -367,5 +446,8 @@ export function CommandPalette({ open, onClose }: Props) {
 }
 
 function stripHeadlineMarkup(value: string) {
-  return value.replace(/<\/?mark>/gi, "").replace(/\s+/g, " ").trim();
+  return value
+    .replace(/<\/?mark>/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

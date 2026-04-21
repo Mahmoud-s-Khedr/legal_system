@@ -1,7 +1,12 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DocumentType, ExtractionStatus, OcrBackend, type DocumentDto } from "@elms/shared";
+import {
+  DocumentType,
+  ExtractionStatus,
+  OcrBackend,
+  type DocumentDto
+} from "@elms/shared";
 import { DocumentViewer } from "./DocumentViewer";
 import { apiDownload } from "../../lib/api";
 
@@ -22,7 +27,9 @@ vi.mock("./VersionHistory", () => ({
 }));
 
 vi.mock("./PdfViewer", () => ({
-  PdfViewer: ({ url }: { url: string }) => <div data-testid="pdf-viewer">{url}</div>
+  PdfViewer: ({ url }: { url: string }) => (
+    <div data-testid="pdf-viewer">{url}</div>
+  )
 }));
 
 let root: Root | null = null;
@@ -30,7 +37,9 @@ let container: HTMLDivElement | null = null;
 const originalCreateObjectURL = URL.createObjectURL;
 const originalRevokeObjectURL = URL.revokeObjectURL;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 function makeDoc(overrides: Partial<DocumentDto>): DocumentDto {
   return {
@@ -113,14 +122,20 @@ describe("DocumentViewer", () => {
     const createObjectUrlSpy = vi.mocked(URL.createObjectURL);
 
     const view = render(
-      <DocumentViewer document={makeDoc({})} onClose={() => undefined} onVersionUploaded={() => undefined} />
+      <DocumentViewer
+        document={makeDoc({})}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
     );
 
     await flushAsyncWork();
 
     expect(apiDownload).toHaveBeenCalledWith("/api/documents/doc-1/stream");
     expect(createObjectUrlSpy).toHaveBeenCalledWith(blob);
-    expect(view.querySelector("[data-testid='pdf-viewer']")?.textContent).toBe("blob:pdf-preview");
+    expect(view.querySelector("[data-testid='pdf-viewer']")?.textContent).toBe(
+      "blob:pdf-preview"
+    );
   });
 
   it("renders image preview using object URL", async () => {
@@ -143,7 +158,11 @@ describe("DocumentViewer", () => {
 
     const view = render(
       <DocumentViewer
-        document={makeDoc({ id: "doc-img", fileName: "image.png", mimeType: "image/png" })}
+        document={makeDoc({
+          id: "doc-img",
+          fileName: "image.png",
+          mimeType: "image/png"
+        })}
         onClose={() => undefined}
         onVersionUploaded={() => undefined}
       />
@@ -185,13 +204,21 @@ describe("DocumentViewer", () => {
     });
 
     render(
-      <DocumentViewer document={makeDoc({ id: "doc-1" })} onClose={() => undefined} onVersionUploaded={() => undefined} />
+      <DocumentViewer
+        document={makeDoc({ id: "doc-1" })}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
     );
     await flushAsyncWork();
 
     act(() => {
       root?.render(
-        <DocumentViewer document={makeDoc({ id: "doc-2" })} onClose={() => undefined} onVersionUploaded={() => undefined} />
+        <DocumentViewer
+          document={makeDoc({ id: "doc-2" })}
+          onClose={() => undefined}
+          onVersionUploaded={() => undefined}
+        />
       );
     });
     await flushAsyncWork();
@@ -220,7 +247,11 @@ describe("DocumentViewer", () => {
     });
 
     const view = render(
-      <DocumentViewer document={makeDoc({})} onClose={() => undefined} onVersionUploaded={() => undefined} />
+      <DocumentViewer
+        document={makeDoc({})}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
     );
 
     await flushAsyncWork();
@@ -256,7 +287,20 @@ describe("DocumentViewer", () => {
 
     render(
       <DocumentViewer
-        document={makeDoc({ id: "doc-1", updatedAt: "2026-03-01T00:00:00.000Z", versions: [{ id: "v1", documentId: "doc-1", versionNumber: 1, fileName: "a.pdf", storageKey: "k1", createdAt: "2026-03-01T00:00:00.000Z" }] })}
+        document={makeDoc({
+          id: "doc-1",
+          updatedAt: "2026-03-01T00:00:00.000Z",
+          versions: [
+            {
+              id: "v1",
+              documentId: "doc-1",
+              versionNumber: 1,
+              fileName: "a.pdf",
+              storageKey: "k1",
+              createdAt: "2026-03-01T00:00:00.000Z"
+            }
+          ]
+        })}
         onClose={() => undefined}
         onVersionUploaded={() => undefined}
       />
@@ -266,7 +310,20 @@ describe("DocumentViewer", () => {
     act(() => {
       root?.render(
         <DocumentViewer
-          document={makeDoc({ id: "doc-1", updatedAt: "2026-03-02T00:00:00.000Z", versions: [{ id: "v2", documentId: "doc-1", versionNumber: 2, fileName: "b.pdf", storageKey: "k2", createdAt: "2026-03-02T00:00:00.000Z" }] })}
+          document={makeDoc({
+            id: "doc-1",
+            updatedAt: "2026-03-02T00:00:00.000Z",
+            versions: [
+              {
+                id: "v2",
+                documentId: "doc-1",
+                versionNumber: 2,
+                fileName: "b.pdf",
+                storageKey: "k2",
+                createdAt: "2026-03-02T00:00:00.000Z"
+              }
+            ]
+          })}
           onClose={() => undefined}
           onVersionUploaded={() => undefined}
         />

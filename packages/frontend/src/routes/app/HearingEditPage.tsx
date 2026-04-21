@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   SessionOutcome,
@@ -13,7 +16,16 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { EmptyState, Field, FormExitActions, PageHeader, SectionCard, SelectField, TextAreaField, formatDateTime } from "./ui";
+import {
+  EmptyState,
+  Field,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField,
+  TextAreaField,
+  formatDateTime
+} from "./ui";
 import { toDateTimeLocalValue } from "./hearingCalendar";
 
 function normalizePayload(form: CreateHearingDto): CreateHearingDto {
@@ -56,16 +68,20 @@ export function HearingEditPage() {
     notes: ""
   });
   const loadedFormRef = useRef<CreateHearingDto | null>(null);
-  useUnsavedChanges(loadedFormRef.current !== null && (
-    form.caseId !== loadedFormRef.current.caseId ||
-    (form.assignedLawyerId ?? "") !== (loadedFormRef.current.assignedLawyerId ?? "") ||
-    form.sessionDatetime !== loadedFormRef.current.sessionDatetime ||
-    (form.nextSessionAt ?? "") !== (loadedFormRef.current.nextSessionAt ?? "") ||
-    (form.outcome ?? null) !== (loadedFormRef.current.outcome ?? null) ||
-    (form.notes ?? "") !== (loadedFormRef.current.notes ?? "")
-  ), {
-    bypassBlockRef: bypassRef
-  });
+  useUnsavedChanges(
+    loadedFormRef.current !== null &&
+      (form.caseId !== loadedFormRef.current.caseId ||
+        (form.assignedLawyerId ?? "") !==
+          (loadedFormRef.current.assignedLawyerId ?? "") ||
+        form.sessionDatetime !== loadedFormRef.current.sessionDatetime ||
+        (form.nextSessionAt ?? "") !==
+          (loadedFormRef.current.nextSessionAt ?? "") ||
+        (form.outcome ?? null) !== (loadedFormRef.current.outcome ?? null) ||
+        (form.notes ?? "") !== (loadedFormRef.current.notes ?? "")),
+    {
+      bypassBlockRef: bypassRef
+    }
+  );
 
   const [debouncedConflictInput, setDebouncedConflictInput] = useState({
     assignedLawyerId: "",
@@ -151,7 +167,8 @@ export function HearingEditPage() {
         `/api/hearings/conflicts?assignedLawyerId=${encodeURIComponent(debouncedConflictInput.assignedLawyerId)}&sessionDatetime=${encodeURIComponent(toIsoOrEmpty(debouncedConflictInput.sessionDatetime))}&excludeId=${encodeURIComponent(hearingId)}`
       ),
     enabled: Boolean(
-      debouncedConflictInput.assignedLawyerId && isValidDateTimeInput(debouncedConflictInput.sessionDatetime)
+      debouncedConflictInput.assignedLawyerId &&
+      isValidDateTimeInput(debouncedConflictInput.sessionDatetime)
     )
   });
 
@@ -178,7 +195,9 @@ export function HearingEditPage() {
     return (
       <EmptyState
         title={t("errors.title")}
-        description={(hearingQuery.error as Error)?.message ?? t("errors.fallback")}
+        description={
+          (hearingQuery.error as Error)?.message ?? t("errors.fallback")
+        }
       />
     );
   }
@@ -197,9 +216,16 @@ export function HearingEditPage() {
       <PageHeader
         eyebrow={t("hearings.drawerEyebrow")}
         title={t("hearings.editTitle")}
-        description={hearingQuery.data ? formatDateTime(hearingQuery.data.sessionDatetime) : "..."}
+        description={
+          hearingQuery.data
+            ? formatDateTime(hearingQuery.data.sessionDatetime)
+            : "..."
+        }
       />
-      <SectionCard title={t("hearings.editTitle")} description={t("hearings.editHelp")}>
+      <SectionCard
+        title={t("hearings.editTitle")}
+        description={t("hearings.editHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -242,7 +268,9 @@ export function HearingEditPage() {
           />
           <SelectField
             label={t("labels.outcome")}
-            onChange={(value) => updateField("outcome", value ? (value as SessionOutcome) : null)}
+            onChange={(value) =>
+              updateField("outcome", value ? (value as SessionOutcome) : null)
+            }
             options={outcomeOptions}
             value={form.outcome ?? ""}
           />
@@ -257,7 +285,9 @@ export function HearingEditPage() {
             </p>
           ) : null}
           {updateMutation.error ? (
-            <p className="text-sm text-red-600">{(updateMutation.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(updateMutation.error as Error).message}
+            </p>
           ) : null}
           <FormExitActions
             cancelTo="/app/hearings"

@@ -12,9 +12,15 @@ export function SetupPage() {
   const navigate = useNavigate();
   const [firmName, setFirmName] = useState("ELMS Desktop Firm");
   const [fullName, setFullName] = useState("Desktop Admin");
-  const [email, setEmail] = useState(import.meta.env.VITE_SETUP_EMAIL as string ?? "");
-  const [password, setPassword] = useState(import.meta.env.VITE_SETUP_PASSWORD as string ?? "");
-  const [editionKey, setEditionKey] = useState<EditionKey>(EditionKey.SOLO_OFFLINE);
+  const [email, setEmail] = useState(
+    (import.meta.env.VITE_SETUP_EMAIL as string) ?? ""
+  );
+  const [password, setPassword] = useState(
+    (import.meta.env.VITE_SETUP_PASSWORD as string) ?? ""
+  );
+  const [editionKey, setEditionKey] = useState<EditionKey>(
+    EditionKey.SOLO_OFFLINE
+  );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,20 +42,61 @@ export function SetupPage() {
 
   return (
     <AuthShell title={t("setupTitle")} subtitle={t("setupSubtitle")}>
-      <form className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-xl" onSubmit={handleSubmit}>
-        <Field id="setup-firm-name" label={t("firmName")} value={firmName} onChange={setFirmName} required />
-        <Field id="setup-full-name" label={t("fullName")} value={fullName} onChange={setFullName} required />
-        <Field id="setup-email" label={t("email")} type="email" value={email} onChange={setEmail} required />
-        <Field id="setup-password" label={t("password")} type="password" value={password} onChange={setPassword} required />
+      <form
+        className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-xl"
+        onSubmit={handleSubmit}
+      >
+        <Field
+          id="setup-firm-name"
+          label={t("firmName")}
+          value={firmName}
+          onChange={setFirmName}
+          required
+        />
+        <Field
+          id="setup-full-name"
+          label={t("fullName")}
+          value={fullName}
+          onChange={setFullName}
+          required
+        />
+        <Field
+          id="setup-email"
+          label={t("email")}
+          type="email"
+          value={email}
+          onChange={setEmail}
+          required
+        />
+        <Field
+          id="setup-password"
+          label={t("password")}
+          type="password"
+          value={password}
+          onChange={setPassword}
+          required
+        />
         <SelectField
           id="setup-edition"
           label={t("editionLabel")}
           onChange={(value) => setEditionKey(value as EditionKey)}
           options={[
-            { value: EditionKey.SOLO_OFFLINE, label: t("editionOptions.solo_offline") },
-            { value: EditionKey.SOLO_ONLINE, label: t("editionOptions.solo_online") },
-            { value: EditionKey.LOCAL_FIRM_OFFLINE, label: t("editionOptions.local_firm_offline") },
-            { value: EditionKey.LOCAL_FIRM_ONLINE, label: t("editionOptions.local_firm_online") }
+            {
+              value: EditionKey.SOLO_OFFLINE,
+              label: t("editionOptions.solo_offline")
+            },
+            {
+              value: EditionKey.SOLO_ONLINE,
+              label: t("editionOptions.solo_online")
+            },
+            {
+              value: EditionKey.LOCAL_FIRM_OFFLINE,
+              label: t("editionOptions.local_firm_offline")
+            },
+            {
+              value: EditionKey.LOCAL_FIRM_ONLINE,
+              label: t("editionOptions.local_firm_online")
+            }
           ]}
           value={editionKey}
         />

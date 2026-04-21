@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { TaskPriority, TaskStatus, type CreateTaskDto, type UserListResponseDto } from "@elms/shared";
+import {
+  TaskPriority,
+  TaskStatus,
+  type CreateTaskDto,
+  type UserListResponseDto
+} from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -31,7 +36,10 @@ export function InlineTaskForm({ caseId, onSuccess }: Props) {
 
   const assigneeOptions = [
     { value: "", label: t("labels.unassigned") },
-    ...(usersQuery.data?.items ?? []).map((u) => ({ value: u.id, label: u.fullName }))
+    ...(usersQuery.data?.items ?? []).map((u) => ({
+      value: u.id,
+      label: u.fullName
+    }))
   ];
 
   const priorityOptions = Object.values(TaskPriority).map((v) => ({
@@ -46,7 +54,9 @@ export function InlineTaskForm({ caseId, onSuccess }: Props) {
         body: JSON.stringify({
           ...payload,
           assignedToId: payload.assignedToId || null,
-          dueAt: payload.dueAt ? new Date(`${payload.dueAt}T09:00:00`).toISOString() : null,
+          dueAt: payload.dueAt
+            ? new Date(`${payload.dueAt}T09:00:00`).toISOString()
+            : null,
           description: payload.description || null
         })
       }),
@@ -69,7 +79,7 @@ export function InlineTaskForm({ caseId, onSuccess }: Props) {
         <div className="sm:col-span-2">
           <Field
             commitMode="blur"
-            label={t("labels.title")}
+            label={t("labels.taskTitle")}
             onChange={(v) => set("title", v)}
             required
             value={form.title}

@@ -1,7 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { ErrorState, Field, PageHeader, SectionCard, SelectField, TableToolbar } from "./ui";
+import {
+  ErrorState,
+  Field,
+  PageHeader,
+  SectionCard,
+  SelectField,
+  TableToolbar
+} from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useLookupOptions } from "../../lib/lookups";
@@ -49,11 +56,16 @@ export function DocumentsPage() {
         eyebrow={t("documents.eyebrow")}
         title={t("documents.title")}
       />
-      <SectionCard description={t("documents.listHelp")} title={t("documents.list")}>
+      <SectionCard
+        description={t("documents.listHelp")}
+        title={t("documents.list")}
+      >
         {docTypesQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={(docTypesQuery.error as Error)?.message ?? t("errors.fallback")}
+            description={
+              (docTypesQuery.error as Error)?.message ?? t("errors.fallback")
+            }
             retryLabel={t("errors.reload")}
             onRetry={() => void docTypesQuery.refetch()}
           />
@@ -78,13 +90,17 @@ export function DocumentsPage() {
             value={`${table.state.sortBy}:${table.state.sortDir}`}
             onChange={(value) => {
               const [sortBy, sortDir] = value.split(":");
-              table.update({ sortBy, sortDir: sortDir as "asc" | "desc", page: 1 });
+              table.update({
+                sortBy,
+                sortDir: sortDir as "asc" | "desc",
+                page: 1
+              });
             }}
             options={[
               { value: "createdAt:desc", label: `${t("labels.date")} ↓` },
               { value: "createdAt:asc", label: `${t("labels.date")} ↑` },
-              { value: "title:asc", label: `${t("labels.title")} A-Z` },
-              { value: "title:desc", label: `${t("labels.title")} Z-A` }
+              { value: "title:asc", label: `${t("labels.documentTitle")} A-Z` },
+              { value: "title:desc", label: `${t("labels.documentTitle")} Z-A` }
             ]}
           />
         </div>

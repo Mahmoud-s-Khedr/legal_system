@@ -4,7 +4,12 @@ import dayjs from "dayjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, ...props }: Record<string, unknown> & { children?: ReactNode }) => <a {...props}>{children}</a>
+  Link: ({
+    children,
+    ...props
+  }: Record<string, unknown> & { children?: ReactNode }) => (
+    <a {...props}>{children}</a>
+  )
 }));
 
 vi.mock("antd", () => ({
@@ -72,7 +77,9 @@ import { Field } from "./ui";
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 afterEach(() => {
   if (root) {
@@ -110,7 +117,9 @@ describe("Field date commit behavior", () => {
       />
     );
 
-    const input = view.querySelector("[data-testid='hearing-datetime']") as HTMLInputElement;
+    const input = view.querySelector(
+      "[data-testid='hearing-datetime']"
+    ) as HTMLInputElement;
     expect(input).not.toBeNull();
 
     act(() => {
@@ -149,8 +158,12 @@ describe("Field date commit behavior", () => {
     }
 
     const view = render(<FormHarness />);
-    const input = view.querySelector("[data-testid='task-due-at']") as HTMLInputElement;
-    const submit = view.querySelector("button[type='submit']") as HTMLButtonElement;
+    const input = view.querySelector(
+      "[data-testid='task-due-at']"
+    ) as HTMLInputElement;
+    const submit = view.querySelector(
+      "button[type='submit']"
+    ) as HTMLButtonElement;
 
     act(() => {
       input.value = "2026-05-01T09:10";

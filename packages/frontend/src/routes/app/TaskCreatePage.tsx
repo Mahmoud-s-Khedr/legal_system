@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useUnsavedChanges, useUnsavedChangesBypass } from "../../lib/useUnsavedChanges";
+import {
+  useUnsavedChanges,
+  useUnsavedChangesBypass
+} from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   TaskPriority,
@@ -14,7 +17,15 @@ import { apiFetch } from "../../lib/api";
 import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
-import { Field, FormAlert, FormExitActions, PageHeader, SectionCard, SelectField, TextAreaField } from "./ui";
+import {
+  Field,
+  FormAlert,
+  FormExitActions,
+  PageHeader,
+  SectionCard,
+  SelectField,
+  TextAreaField
+} from "./ui";
 
 export function TaskCreatePage() {
   const { t } = useTranslation("app");
@@ -110,7 +121,9 @@ export function TaskCreatePage() {
         body: JSON.stringify({
           ...payload,
           caseId: payload.caseId?.trim() ? payload.caseId : null,
-          assignedToId: payload.assignedToId?.trim() ? payload.assignedToId : null,
+          assignedToId: payload.assignedToId?.trim()
+            ? payload.assignedToId
+            : null,
           dueAt: toIsoOrEmpty(payload.dueAt) || null,
           description: payload.description?.trim() ? payload.description : null
         } satisfies CreateTaskDto)
@@ -131,7 +144,10 @@ export function TaskCreatePage() {
         title={t("tasks.createTitle")}
         description={t("tasks.createHelp")}
       />
-      <SectionCard title={t("tasks.createTitle")} description={t("tasks.createHelp")}>
+      <SectionCard
+        title={t("tasks.createTitle")}
+        description={t("tasks.createHelp")}
+      >
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -140,7 +156,7 @@ export function TaskCreatePage() {
           }}
         >
           <Field
-            label={t("labels.title")}
+            label={t("labels.taskTitle")}
             onChange={(value) => updateField("title", value)}
             required
             value={form.title}
@@ -171,7 +187,9 @@ export function TaskCreatePage() {
             />
             <SelectField
               label={t("labels.priority")}
-              onChange={(value) => updateField("priority", value as TaskPriority)}
+              onChange={(value) =>
+                updateField("priority", value as TaskPriority)
+              }
               options={priorityOptions}
               value={form.priority ?? TaskPriority.MEDIUM}
             />
@@ -189,9 +207,13 @@ export function TaskCreatePage() {
             cancelLabel={t("actions.cancel")}
             submitLabel={t("actions.createTask")}
             savingLabel={t("labels.saving")}
-            submitting={createMutation.isPending || form.title.trim().length < 2}
+            submitting={
+              createMutation.isPending || form.title.trim().length < 2
+            }
           />
-          {createMutation.error ? <FormAlert message={(createMutation.error as Error).message} /> : null}
+          {createMutation.error ? (
+            <FormAlert message={(createMutation.error as Error).message} />
+          ) : null}
         </form>
       </SectionCard>
     </div>

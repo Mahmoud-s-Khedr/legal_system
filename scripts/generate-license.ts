@@ -10,6 +10,7 @@
  *
  * Usage:
  *   node scripts/generate-license.ts --firm-id "uuid" --edition-key solo_offline --expires-at 2127-03-20
+ * node scripts/generate-license.ts --firm-id "bb7bff68-ee52-4d7a-88f9-870382b21f04" --edition-key local_firm_offline --expires-at 2127-03-20
  *     [--private-key apps/desktop/src-tauri/keys/private.pem] \
  *     [--out activation.key]
  *

@@ -2,12 +2,23 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import i18n from "../../i18n";
-import { Field, FormAlert, PageHeader, ResponsiveDataList, SelectField, TablePagination, TableWrapper, selectLabelFilter } from "./ui";
+import {
+  Field,
+  FormAlert,
+  PageHeader,
+  ResponsiveDataList,
+  SelectField,
+  TablePagination,
+  TableWrapper,
+  selectLabelFilter
+} from "./ui";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 afterEach(() => {
   if (root) {
@@ -50,8 +61,12 @@ describe("shared ui fields", () => {
 
     expect(label?.textContent).toContain("Email");
     expect(input?.getAttribute("aria-invalid")).toBe("true");
-    expect(input?.getAttribute("aria-describedby")).toContain("client-email-hint");
-    expect(input?.getAttribute("aria-describedby")).toContain("client-email-error");
+    expect(input?.getAttribute("aria-describedby")).toContain(
+      "client-email-hint"
+    );
+    expect(input?.getAttribute("aria-describedby")).toContain(
+      "client-email-error"
+    );
     expect(error?.textContent).toBe("Invalid email");
     expect(hint?.textContent).toBe("Use your work email");
   });
@@ -116,7 +131,9 @@ describe("shared ui fields", () => {
     expect(view.textContent).toContain("Page 2 of 3");
     expect(view.textContent).toContain("Previous");
     expect(view.textContent).toContain("Next");
-    expect(document.querySelector("[aria-label='Items per page']")).not.toBeNull();
+    expect(
+      document.querySelector("[aria-label='Items per page']")
+    ).not.toBeNull();
   });
 
   it("localizes table pagination labels and summary in Arabic", async () => {
@@ -139,7 +156,9 @@ describe("shared ui fields", () => {
     expect(view.textContent).toContain("الصفحة");
     expect(view.textContent).toContain("السابق");
     expect(view.textContent).toContain("التالي");
-    expect(document.querySelector("[aria-label='عدد العناصر في الصفحة']")).not.toBeNull();
+    expect(
+      document.querySelector("[aria-label='عدد العناصر في الصفحة']")
+    ).not.toBeNull();
   });
 
   it("renders page header with sticky action container", () => {
@@ -157,10 +176,18 @@ describe("shared ui fields", () => {
   it("sets table wrapper mobile mode attributes", () => {
     const view = render(
       <TableWrapper mobileMode="cards" breakpoint="md">
-        <table><tbody><tr><td>cell</td></tr></tbody></table>
+        <table>
+          <tbody>
+            <tr>
+              <td>cell</td>
+            </tr>
+          </tbody>
+        </table>
       </TableWrapper>
     );
-    const wrapper = view.querySelector("[data-mobile-mode='cards'][data-breakpoint='md']");
+    const wrapper = view.querySelector(
+      "[data-mobile-mode='cards'][data-breakpoint='md']"
+    );
     expect(wrapper).not.toBeNull();
   });
 
