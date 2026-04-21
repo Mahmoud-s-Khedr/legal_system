@@ -19,6 +19,51 @@ function getPrismaErrorCode(error: unknown): string | null {
   return null;
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && typeof error.message === "string") {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return "";
+}
+
+function isDatabaseUnavailableError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    return true;
+  }
+
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("can't reach database server") ||
+    message.includes("database server at") ||
+    message.includes("connection refused") ||
+    message.includes("timed out")
+  );
+}
+
+function isSchemaMismatchError(error: unknown): boolean {
+  const prismaCode = getPrismaErrorCode(error);
+  if (prismaCode === "P2021" || prismaCode === "P2022") {
+    return true;
+  }
+
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("column") && message.includes("does not exist") ||
+    message.includes("relation") && message.includes("does not exist") ||
+    message.includes("table") && message.includes("does not exist")
+  );
+}
+
 export function registerErrorHandler(app: FastifyInstance) {
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {
@@ -40,7 +85,31 @@ export function registerErrorHandler(app: FastifyInstance) {
     if (prismaCode === "P2010") {
       request.log.error({ err: error }, "Prisma raw query failed");
       captureBackendException(error);
+      if (isSchemaMismatchError(error)) {
+        return reply.status(503).send({
+          message: "Database schema mismatch. Run migrations and retry.",
+          code: "DATABASE_SCHEMA_MISMATCH"
+        });
+      }
       return reply.status(500).send({ message: "Internal server error" });
+    }
+
+    if (isDatabaseUnavailableError(error)) {
+      request.log.error({ err: error }, "Database unavailable");
+      captureBackendException(error);
+      return reply.status(503).send({
+        message: "Database unavailable",
+        code: "DATABASE_UNAVAILABLE"
+      });
+    }
+
+    if (isSchemaMismatchError(error)) {
+      request.log.error({ err: error }, "Database schema mismatch detected");
+      captureBackendException(error);
+      return reply.status(503).send({
+        message: "Database schema mismatch. Run migrations and retry.",
+        code: "DATABASE_SCHEMA_MISMATCH"
+      });
     }
 
     if (isAppError(error) && error.statusCode < 500) {

@@ -68,7 +68,7 @@ describe("registerErrorHandler", () => {
     invokeHandler(
       {
         code: "P2010",
-        message: "Raw query failed. Code: 42703. Message: column firm_id does not exist"
+        message: "Raw query failed. Code: 2201X. Message: invalid regular expression"
       },
       request,
       reply
@@ -76,6 +76,50 @@ describe("registerErrorHandler", () => {
 
     expect(replyState.statusCode).toBe(500);
     expect(replyState.payload).toEqual({ message: "Internal server error" });
+    expect(request.log.error).toHaveBeenCalled();
+    expect(captureBackendException).toHaveBeenCalled();
+  });
+
+  it("maps database unavailable errors to 503 with stable code", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+
+    invokeHandler(
+      {
+        message: "Can't reach database server at `127.0.0.1:5433`"
+      },
+      request,
+      reply
+    );
+
+    expect(replyState.statusCode).toBe(503);
+    expect(replyState.payload).toEqual({
+      message: "Database unavailable",
+      code: "DATABASE_UNAVAILABLE"
+    });
+    expect(request.log.error).toHaveBeenCalled();
+    expect(captureBackendException).toHaveBeenCalled();
+  });
+
+  it("maps schema mismatch errors to 503 with stable code", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+
+    invokeHandler(
+      {
+        code: "P2010",
+        message:
+          "Raw query failed. Code: 42703. Message: column firm_id does not exist"
+      },
+      request,
+      reply
+    );
+
+    expect(replyState.statusCode).toBe(503);
+    expect(replyState.payload).toEqual({
+      message: "Database schema mismatch. Run migrations and retry.",
+      code: "DATABASE_SCHEMA_MISMATCH"
+    });
     expect(request.log.error).toHaveBeenCalled();
     expect(captureBackendException).toHaveBeenCalled();
   });

@@ -5,7 +5,7 @@ import {
   createRouter,
   useNavigate
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { LoginPage } from "./routes/auth/LoginPage";
 import { BackendConnectionPage } from "./routes/auth/BackendConnectionPage";
@@ -71,17 +71,34 @@ import { ErrorFallback } from "./components/ErrorFallback";
 import { PermissionGate } from "./components/PermissionGate";
 
 function RootComponent() {
-  return <Outlet />;
+  return (
+    <>
+      <AuthBootstrapInitializer />
+      <Outlet />
+    </>
+  );
+}
+
+function AuthBootstrapInitializer() {
+  const { bootstrap } = useAuthBootstrap();
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (startedRef.current) {
+      return;
+    }
+
+    startedRef.current = true;
+    void bootstrap();
+  }, [bootstrap]);
+
+  return null;
 }
 
 function ProtectedRoute() {
   const { t } = useTranslation("app");
-  const { user, isBootstrapped, bootstrap } = useAuthBootstrap();
+  const { user, isBootstrapped } = useAuthBootstrap();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    void bootstrap();
-  }, [bootstrap]);
 
   useEffect(() => {
     if (isBootstrapped && !user) {
@@ -104,12 +121,8 @@ function ProtectedRoute() {
 
 function LandingRedirect() {
   const { t } = useTranslation("app");
-  const { user, needsSetup, isBootstrapped, bootstrap } = useAuthBootstrap();
+  const { user, needsSetup, isBootstrapped } = useAuthBootstrap();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    void bootstrap();
-  }, [bootstrap]);
 
   useEffect(() => {
     if (isBootstrapped) {

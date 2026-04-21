@@ -25,6 +25,57 @@ import { ApiError } from "./lib/api";
 import { useToastStore } from "./store/toastStore";
 import { AntdProvider } from "./components/shared/AntdProvider";
 
+const STARTUP_BACKEND_FAILURE_CODES = new Set([
+  "DATABASE_UNAVAILABLE",
+  "DATABASE_SCHEMA_MISMATCH"
+]);
+
+const startupFailureToastShown = new Set<string>();
+const startupFailureRejectionLogged = new Set<string>();
+
+function getApiErrorCode(error: ApiError): string | null {
+  if (
+    typeof error.details === "object" &&
+    error.details !== null &&
+    "code" in error.details &&
+    typeof (error.details as { code?: unknown }).code === "string"
+  ) {
+    return (error.details as { code: string }).code;
+  }
+
+  return null;
+}
+
+function getStartupFailureMessage(code: string) {
+  if (code === "DATABASE_UNAVAILABLE") {
+    return "The local database service is unavailable. Wait for startup to finish, then retry.";
+  }
+
+  if (code === "DATABASE_SCHEMA_MISMATCH") {
+    return "Local database schema is out of date. Run desktop repair/migrations, then retry.";
+  }
+
+  return "Local backend startup failed.";
+}
+
+function handleStartupBackendFailure(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  const code = getApiErrorCode(error);
+  if (!code || !STARTUP_BACKEND_FAILURE_CODES.has(code)) {
+    return false;
+  }
+
+  if (!startupFailureToastShown.has(code)) {
+    startupFailureToastShown.add(code);
+    useToastStore.getState().addToast(getStartupFailureMessage(code), "error");
+  }
+
+  return true;
+}
+
 function formatQueryError(error: unknown) {
   if (error instanceof ApiError) {
     return error.message;
@@ -44,11 +95,19 @@ const queryClient = new QueryClient({
         return;
       }
 
+      if (handleStartupBackendFailure(error)) {
+        return;
+      }
+
       useToastStore.getState().addToast(formatQueryError(error), "error");
     }
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
+      if (handleStartupBackendFailure(error)) {
+        return;
+      }
+
       useToastStore.getState().addToast(formatQueryError(error), "error");
     }
   })
@@ -159,6 +218,21 @@ window.addEventListener("error", (event) => {
 });
 
 window.addEventListener("unhandledrejection", (event) => {
+  if (handleStartupBackendFailure(event.reason)) {
+    event.preventDefault();
+  }
+
+  if (event.reason instanceof ApiError) {
+    const code = getApiErrorCode(event.reason);
+    if (code && STARTUP_BACKEND_FAILURE_CODES.has(code)) {
+      if (startupFailureRejectionLogged.has(code)) {
+        return;
+      }
+
+      startupFailureRejectionLogged.add(code);
+    }
+  }
+
   console.error("[frontend-startup] unhandled rejection", event.reason);
 });
 

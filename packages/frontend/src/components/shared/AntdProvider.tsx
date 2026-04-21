@@ -1,9 +1,10 @@
-import { type PropsWithChildren } from "react";
-import { ConfigProvider, theme as antdTheme } from "antd";
+import { type PropsWithChildren, useEffect } from "react";
+import { App as AntdApp, ConfigProvider, theme as antdTheme } from "antd";
 import arEG from "antd/locale/ar_EG";
 import enUS from "antd/locale/en_US";
 import frFR from "antd/locale/fr_FR";
 import { useTranslation } from "react-i18next";
+import { setDialogHandlers } from "../../lib/dialog";
 
 function resolveAntdLocale(language: string) {
   if (language === "ar") return arEG;
@@ -42,7 +43,27 @@ export function AntdProvider({ children }: PropsWithChildren) {
         }
       }}
     >
-      {children}
+      <AntdApp>
+        <DialogBridge />
+        {children}
+      </AntdApp>
     </ConfigProvider>
   );
+}
+
+function DialogBridge() {
+  const { modal } = AntdApp.useApp();
+
+  useEffect(() => {
+    setDialogHandlers({
+      confirm: modal.confirm,
+      error: modal.error
+    });
+
+    return () => {
+      setDialogHandlers(null);
+    };
+  }, [modal]);
+
+  return null;
 }

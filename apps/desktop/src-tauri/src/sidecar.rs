@@ -20,10 +20,6 @@ const MAX_BACKEND_RESTARTS: u8 = 3;
 const BACKEND_SHUTDOWN_GRACE_PERIOD: Duration = Duration::from_secs(5);
 const POSTGRES_COMMAND_TIMEOUT: Duration = Duration::from_secs(30);
 const PRISMA_ENGINE_RECURSIVE_SEARCH_DEPTH: usize = 6;
-/// Name of the latest migration in prisma/migrations. Update this whenever a
-/// new migration is added — the marker file written after a successful run lets
-/// the next startup skip the Prisma CLI spawn entirely.
-const LATEST_MIGRATION_NAME: &str = "0016_tenant_rls_backfill";
 const PRISMA_QUERY_ENGINE_PREFIXES: &[&str] = &["libquery_engine", "query_engine"];
 const DESKTOP_JWT_PRIVATE_KEY_FILE: &str = "jwt-private.pem";
 const DESKTOP_JWT_PUBLIC_KEY_FILE: &str = "jwt-public.pem";
@@ -360,6 +356,87 @@ fn should_skip_migrations(
         return false;
     }
     schema_already_current || env_skip_requested
+}
+
+fn is_migration_dir_name(name: &str) -> bool {
+    name.split_once('_')
+        .map(|(prefix, _)| !prefix.is_empty() && prefix.chars().all(|ch| ch.is_ascii_digit()))
+        .unwrap_or(false)
+}
+
+fn detect_latest_migration_name_in_dir(migrations_dir: &Path) -> Option<String> {
+    let mut names = fs::read_dir(migrations_dir)
+        .ok()?
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let file_type = entry.file_type().ok()?;
+            if !file_type.is_dir() {
+                return None;
+            }
+
+            let name = entry.file_name().to_string_lossy().trim().to_string();
+            if name.is_empty() || !is_migration_dir_name(&name) {
+                return None;
+            }
+
+            Some(name)
+        })
+        .collect::<Vec<_>>();
+
+    names.sort();
+    names.pop()
+}
+
+fn detect_latest_migration_name(app: &AppHandle, log_file: &Path) -> Option<String> {
+    let mut candidates = Vec::new();
+    if should_use_workspace_runtime() {
+        if let Some(root) = workspace_root() {
+            candidates.push(root.join("packages/backend/prisma/migrations"));
+        }
+    }
+
+    if let Ok(path) = app.path().resource_dir() {
+        let resource_dir = strip_unc_prefix(&path);
+        candidates.push(resource_dir.join("packages/backend/prisma/migrations"));
+    }
+
+    for candidate in candidates {
+        if let Some(name) = detect_latest_migration_name_in_dir(&candidate) {
+            log_startup_diagnostic(
+                log_file,
+                &format!(
+                    "Detected latest migration directory '{}' from {}",
+                    name,
+                    candidate.display()
+                ),
+            );
+            return Some(name);
+        }
+
+        append_bootstrap_log_line(
+            log_file,
+            &format!(
+                "Migration directory not detected or unreadable at {}",
+                candidate.display()
+            ),
+        );
+    }
+
+    append_bootstrap_log_line(
+        log_file,
+        "Latest migration directory could not be detected; startup will run prisma migrate deploy",
+    );
+    None
+}
+
+fn marker_matches_latest_migration(
+    migration_marker: Option<&str>,
+    detected_latest_migration: Option<&str>,
+) -> bool {
+    migration_marker
+        .zip(detected_latest_migration)
+        .map(|(marker, latest)| marker == latest)
+        .unwrap_or(false)
 }
 
 fn sanitize_node_options(raw: &str) -> (String, usize) {
@@ -943,12 +1020,26 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     inner.set_status("starting", Some("Applying database migrations".to_string()));
     let migration_phase_started_at = Instant::now();
     let migration_version_file = app_data_dir.join(MIGRATION_VERSION_MARKER_FILE);
+    let migration_version_marker = fs::read_to_string(&migration_version_file)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    let detected_latest_migration = detect_latest_migration_name(app, &bootstrap_log_file);
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Migration marker check: marker={} detected_latest={}",
+            migration_version_marker.as_deref().unwrap_or("none"),
+            detected_latest_migration.as_deref().unwrap_or("none")
+        ),
+    );
     let schema_already_current = !allow_migration_repair
         && !should_reset_database
         && !should_repair_postgres_runtime
-        && fs::read_to_string(&migration_version_file)
-            .map(|v| v.trim() == LATEST_MIGRATION_NAME)
-            .unwrap_or(false);
+        && marker_matches_latest_migration(
+            migration_version_marker.as_deref(),
+            detected_latest_migration.as_deref(),
+        );
     let env_skip_requested = env_requests_skip_migrations(&desktop_env);
     let skip_migrations = should_skip_migrations(
         should_reset_database || should_repair_postgres_runtime,
@@ -967,7 +1058,9 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             log_startup_diagnostic(
                 &bootstrap_log_file,
                 &format!(
-                    "Skipping database migrations (schema is current: {LATEST_MIGRATION_NAME})"
+                    "Skipping database migrations (schema is current: marker={} latest={})",
+                    migration_version_marker.as_deref().unwrap_or("none"),
+                    detected_latest_migration.as_deref().unwrap_or("none")
                 ),
             );
         } else {
@@ -992,15 +1085,25 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             error
         })?;
         // Write a version marker so the next startup can skip this step.
-        if let Err(e) = fs::write(&migration_version_file, LATEST_MIGRATION_NAME) {
+        let marker_to_write = detected_latest_migration
+            .clone()
+            .or_else(|| detect_latest_migration_name(app, &bootstrap_log_file));
+        if let Some(latest_migration) = marker_to_write {
+            if let Err(e) = fs::write(&migration_version_file, &latest_migration) {
+                append_bootstrap_log_line(
+                    &bootstrap_log_file,
+                    &format!("Warning: could not write migration version marker: {e}"),
+                );
+            } else {
+                log_startup_diagnostic(
+                    &bootstrap_log_file,
+                    &format!("Migration version marker written: {}", latest_migration),
+                );
+            }
+        } else {
             append_bootstrap_log_line(
                 &bootstrap_log_file,
-                &format!("Warning: could not write migration version marker: {e}"),
-            );
-        } else {
-            log_startup_diagnostic(
-                &bootstrap_log_file,
-                &format!("Migration version marker written: {LATEST_MIGRATION_NAME}"),
+                "Warning: latest migration is unknown; migration version marker was not written",
             );
         }
     }
@@ -3707,7 +3810,9 @@ mod tests {
     use super::clear_reset_markers;
     use super::compute_desktop_env_candidates;
     use super::decode_bootstrap_failure;
+    use super::detect_latest_migration_name_in_dir;
     use super::encode_bootstrap_failure;
+    use super::marker_matches_latest_migration;
     use super::parse_postgres_major_version;
     use super::remove_file_if_present;
     use super::should_skip_migrations;
@@ -3884,6 +3989,38 @@ mod tests {
             !should_skip_migrations(true, true, true),
             "reset should force migration run even if env requested skip"
         );
+    }
+
+    #[test]
+    fn detect_latest_migration_name_in_dir_returns_newest_directory() {
+        let root = test_temp_dir("latest-migration-name");
+        let migrations = root.join("migrations");
+        fs::create_dir_all(migrations.join("0016_tenant_rls_backfill"))
+            .expect("migration dir should be created");
+        fs::create_dir_all(migrations.join("0017_case_party_rework"))
+            .expect("migration dir should be created");
+        fs::create_dir_all(migrations.join("misc")).expect("non-migration dir should be created");
+
+        let detected = detect_latest_migration_name_in_dir(&migrations);
+
+        assert_eq!(detected.as_deref(), Some("0017_case_party_rework"));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn marker_matches_latest_migration_handles_current_stale_and_unknown() {
+        assert!(marker_matches_latest_migration(
+            Some("0017_case_party_rework"),
+            Some("0017_case_party_rework")
+        ));
+        assert!(!marker_matches_latest_migration(
+            Some("0016_tenant_rls_backfill"),
+            Some("0017_case_party_rework")
+        ));
+        assert!(!marker_matches_latest_migration(
+            Some("0017_case_party_rework"),
+            None
+        ));
     }
 
     #[test]

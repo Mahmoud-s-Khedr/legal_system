@@ -1,18 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const confirmMock = vi.hoisted(() => vi.fn());
 const errorMock = vi.hoisted(() => vi.fn());
 
-vi.mock("antd", () => ({
-  Modal: {
-    confirm: confirmMock,
-    error: errorMock
-  }
-}));
+afterEach(async () => {
+  const { setDialogHandlers } = await import("./dialog");
+  setDialogHandlers(null);
+});
 
 describe("dialog helpers", () => {
   it("confirmAction resolves true on modal ok", async () => {
-    const { confirmAction } = await import("./dialog");
+    const { confirmAction, setDialogHandlers } = await import("./dialog");
+    setDialogHandlers({ confirm: confirmMock, error: errorMock });
     confirmMock.mockImplementationOnce((options: { onOk?: () => void }) => {
       options.onOk?.();
     });
@@ -21,7 +20,8 @@ describe("dialog helpers", () => {
   });
 
   it("confirmAction resolves false on modal cancel", async () => {
-    const { confirmAction } = await import("./dialog");
+    const { confirmAction, setDialogHandlers } = await import("./dialog");
+    setDialogHandlers({ confirm: confirmMock, error: errorMock });
     confirmMock.mockImplementationOnce((options: { onCancel?: () => void }) => {
       options.onCancel?.();
     });
@@ -30,7 +30,8 @@ describe("dialog helpers", () => {
   });
 
   it("showErrorDialog forwards message to Modal.error", async () => {
-    const { showErrorDialog } = await import("./dialog");
+    const { showErrorDialog, setDialogHandlers } = await import("./dialog");
+    setDialogHandlers({ confirm: confirmMock, error: errorMock });
 
     showErrorDialog("Something failed");
 
@@ -41,7 +42,8 @@ describe("dialog helpers", () => {
   });
 
   it("confirmAction forwards custom button labels", async () => {
-    const { confirmAction } = await import("./dialog");
+    const { confirmAction, setDialogHandlers } = await import("./dialog");
+    setDialogHandlers({ confirm: confirmMock, error: errorMock });
     confirmMock.mockImplementationOnce((options: { onCancel?: () => void }) => {
       options.onCancel?.();
     });
