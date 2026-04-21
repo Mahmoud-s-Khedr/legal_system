@@ -50,7 +50,8 @@ function normalizePayload(form: CreateClientDto): CreateClientDto {
         ? toNullable(form.commercialRegister)
         : null,
     taxNumber:
-      form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null
+      form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
+    poaNumber: toNullable(form.poaNumber)
   };
 }
 
@@ -85,6 +86,7 @@ export function ClientEditPage() {
     nationalId: "",
     commercialRegister: "",
     taxNumber: "",
+    poaNumber: "",
     contacts: []
   });
   const loadedFormRef = useRef<CreateClientDto | null>(null);
@@ -114,6 +116,7 @@ export function ClientEditPage() {
         nationalId: c.nationalId ?? "",
         commercialRegister: c.commercialRegister ?? "",
         taxNumber: c.taxNumber ?? "",
+        poaNumber: c.poaNumber ?? "",
         contacts: c.contacts ?? []
       };
       setForm(loaded);
@@ -251,6 +254,12 @@ export function ClientEditPage() {
               />
             </div>
           ) : null}
+          <Field
+            dir="ltr"
+            label={t("labels.poaNumber")}
+            onChange={(value) => setForm({ ...form, poaNumber: value })}
+            value={form.poaNumber ?? ""}
+          />
           <FormExitActions
             cancelTo="/app/clients/$clientId"
             cancelParams={{ clientId }}

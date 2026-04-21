@@ -20,6 +20,7 @@ export interface ClientDto {
   nationalId: string | null;
   commercialRegister: string | null;
   taxNumber: string | null;
+  poaNumber: string | null;
   contacts: ClientContactDto[];
   linkedCaseCount: number;
   invoiceCount: number;
@@ -38,6 +39,7 @@ export interface CreateClientDto {
   nationalId?: string | null;
   commercialRegister?: string | null;
   taxNumber?: string | null;
+  poaNumber?: string | null;
   contacts?: Array<{
     name: string;
     phone: string;
@@ -49,3 +51,4 @@ export interface CreateClientDto {
 export type UpdateClientDto = CreateClientDto;
 
 export type ClientListResponseDto = ApiListResponse<ClientDto>;
+

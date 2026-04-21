@@ -9,13 +9,17 @@ import {
   CaseStatus,
   type CaseCourtDto,
   type CaseDto,
+  type CasePartyDto,
+  type CasePartyType,
   type ClientDto,
+  type ClientListResponseDto,
   type CreateCaseAssignmentDto,
   type CreateCaseCourtDto,
   type CreateCasePartyDto,
   type HearingListResponseDto,
   type TaskListResponseDto,
   type UpdateCaseCourtDto,
+  type UpdateCasePartyDto,
   type UserListResponseDto
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
@@ -78,8 +82,13 @@ export function CaseDetailPage() {
   const [partyForm, setPartyForm] = useState<CreateCasePartyDto>({
     name: "",
     role: "PLAINTIFF",
-    isOurClient: true,
-    opposingCounselName: ""
+    partyType: "OPPONENT"
+  });
+  const [editingParty, setEditingParty] = useState<CasePartyDto | null>(null);
+  const [editPartyForm, setEditPartyForm] = useState<UpdateCasePartyDto>({
+    name: "",
+    role: "",
+    partyType: "OPPONENT"
   });
   const [assignmentForm, setAssignmentForm] = useState<CreateCaseAssignmentDto>(
     {
@@ -98,6 +107,10 @@ export function CaseDetailPage() {
   const usersQuery = useQuery({
     queryKey: ["users"],
     queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+  });
+  const clientsQuery = useQuery({
+    queryKey: ["clients", "case-parties"],
+    queryFn: () => apiFetch<ClientListResponseDto>("/api/clients?limit=200")
   });
   const hearingsQuery = useQuery({
     queryKey: ["case-hearings", caseId],
@@ -120,12 +133,32 @@ export function CaseDetailPage() {
         body: JSON.stringify(payload)
       }),
     onSuccess: async () => {
-      setPartyForm({
-        name: "",
-        role: "PLAINTIFF",
-        isOurClient: true,
-        opposingCounselName: ""
-      });
+      setPartyForm({ name: "", role: "PLAINTIFF", partyType: "OPPONENT" });
+      setEditingParty(null);
+      feedback.success("messages.saved");
+      await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["cases"] });
+    }
+  });
+
+  const updatePartyMutation = useMutation({
+    mutationFn: ({ partyId, payload }: { partyId: string; payload: UpdateCasePartyDto }) =>
+      apiFetch(`/api/cases/${caseId}/parties/${partyId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: async () => {
+      setEditingParty(null);
+      feedback.success("messages.saved");
+      await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["cases"] });
+    }
+  });
+
+  const deletePartyMutation = useMutation({
+    mutationFn: (partyId: string) =>
+      apiFetch(`/api/cases/${caseId}/parties/${partyId}`, { method: "DELETE" }),
+    onSuccess: async () => {
       feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
@@ -250,13 +283,20 @@ export function CaseDetailPage() {
     value: o.key,
     label: o.labelAr
   }));
+  const clientOptions = [
+    { value: "", label: t("labels.selectClient") },
+    ...(clientsQuery.data?.items ?? []).map((client) => ({
+      value: client.id,
+      label: client.name
+    }))
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow={t("cases.detailEyebrow")}
-        title={caseItem.title}
-        description={`${caseItem.caseNumber}${activeCourt ? ` · ${activeCourt.courtName}` : ""}`}
+        title={`${caseItem.title} (${caseItem.caseNumber})`}
+        description={activeCourt ? activeCourt.courtName : ""}
         actions={<EnumBadge enumName="CaseStatus" value={caseItem.status} />}
       />
       <div className="sticky top-[calc(var(--header-height)+8px)] z-10 flex gap-2 overflow-x-auto rounded-xl bg-white/90 pb-1 pt-1 backdrop-blur">
@@ -506,10 +546,8 @@ export function CaseDetailPage() {
                     <tr>
                       <TableHeadCell>{t("labels.name")}</TableHeadCell>
                       <TableHeadCell>{t("labels.role")}</TableHeadCell>
-                      <TableHeadCell>{t("labels.client")}</TableHeadCell>
-                      <TableHeadCell>
-                        {t("labels.opposingCounsel")}
-                      </TableHeadCell>
+                      <TableHeadCell>{t("labels.partyType")}</TableHeadCell>
+                      <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
                     </tr>
                   </TableHead>
                   <TableBody>
@@ -520,12 +558,41 @@ export function CaseDetailPage() {
                           {getEnumLabel(t, "PartyRole", party.role)}
                         </TableCell>
                         <TableCell>
-                          {party.isOurClient
-                            ? t("cases.ourClient")
-                            : t("cases.externalParty")}
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            party.partyType === "CLIENT"
+                              ? "bg-green-100 text-green-800"
+                              : party.partyType === "OPPONENT"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-slate-100 text-slate-700"
+                          }`}>
+                            {t(`partyTypes.${party.partyType}`, party.partyType)}
+                          </span>
                         </TableCell>
-                        <TableCell>
-                          {party.opposingCounselName ?? "—"}
+                        <TableCell align="end">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                              onClick={() => {
+                                setEditingParty(party);
+                                setEditPartyForm({
+                                  name: party.name,
+                                  role: party.role,
+                                  partyType: party.partyType,
+                                  clientId: party.clientId ?? undefined
+                                });
+                              }}
+                              type="button"
+                            >
+                              {t("actions.edit")}
+                            </button>
+                            <button
+                              className="rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                              onClick={() => deletePartyMutation.mutate(party.id)}
+                              type="button"
+                            >
+                              {t("actions.delete")}
+                            </button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -533,82 +600,203 @@ export function CaseDetailPage() {
                 </DataTable>
               </TableWrapper>
             )}
-          </SectionCard>
-          <SectionCard
-            title={t("cases.addParty")}
-            description={t("cases.addPartyHelp")}
-          >
-            <form
-              className="space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                addPartyMutation.mutate(partyForm);
-              }}
-            >
-              <Field
-                label={t("labels.name")}
-                onChange={(value) =>
-                  setPartyForm({ ...partyForm, name: value })
-                }
-                value={partyForm.name}
-              />
-              <SelectField
-                label={t("labels.role")}
-                onChange={(value) =>
-                  setPartyForm({ ...partyForm, role: value })
-                }
-                options={
-                  partyRoleOptions.length
-                    ? partyRoleOptions
-                    : [
-                        {
-                          value: "PLAINTIFF",
-                          label: t("partyRoles.PLAINTIFF", "Plaintiff")
-                        },
-                        {
-                          value: "DEFENDANT",
-                          label: t("partyRoles.DEFENDANT", "Defendant")
-                        }
-                      ]
-                }
-                value={partyForm.role}
-              />
-              <SelectField
-                label={t("labels.client")}
-                onChange={(value) =>
-                  setPartyForm({ ...partyForm, isOurClient: value === "true" })
-                }
-                options={[
-                  { value: "true", label: t("cases.ourClient") },
-                  { value: "false", label: t("cases.externalParty") }
-                ]}
-                value={String(partyForm.isOurClient)}
-              />
-              <Field
-                label={t("labels.opposingCounsel")}
-                onChange={(value) =>
-                  setPartyForm({ ...partyForm, opposingCounselName: value })
-                }
-                value={partyForm.opposingCounselName ?? ""}
-              />
-              {addPartyMutation.isError ? (
+            {deletePartyMutation.isError ? (
+              <div className="mt-3">
                 <FormAlert
                   message={
-                    (addPartyMutation.error as Error)?.message ??
+                    (deletePartyMutation.error as Error)?.message ??
                     t("errors.fallback")
                   }
                 />
-              ) : null}
-              <PrimaryButton
-                disabled={addPartyMutation.isPending}
-                type="submit"
-              >
-                {addPartyMutation.isPending
-                  ? t("labels.saving")
-                  : t("actions.addParty")}
-              </PrimaryButton>
-            </form>
+              </div>
+            ) : null}
           </SectionCard>
+          <div className="space-y-4">
+            {editingParty ? (
+              <SectionCard
+                title={t("cases.editParty")}
+                description={t("cases.addPartyHelp")}
+              >
+                <form
+                  className="space-y-4"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    updatePartyMutation.mutate({
+                      partyId: editingParty.id,
+                      payload: editPartyForm
+                    });
+                  }}
+                >
+                  <SelectField
+                    label={t("labels.partyType")}
+                    onChange={(value) =>
+                      setEditPartyForm({
+                        ...editPartyForm,
+                        partyType: value as CasePartyType,
+                        clientId:
+                          value === "CLIENT"
+                            ? (editPartyForm.clientId ?? "")
+                            : undefined
+                      })
+                    }
+                    options={[
+                      { value: "CLIENT", label: t("partyTypes.CLIENT") },
+                      { value: "OPPONENT", label: t("partyTypes.OPPONENT") },
+                      { value: "EXTERNAL", label: t("partyTypes.EXTERNAL") }
+                    ]}
+                    value={editPartyForm.partyType}
+                  />
+                  {editPartyForm.partyType === "CLIENT" ? (
+                    <SelectField
+                      label={t("labels.client")}
+                      onChange={(value) =>
+                        setEditPartyForm({
+                          ...editPartyForm,
+                          clientId: value,
+                          name:
+                            clientsQuery.data?.items.find(
+                              (client) => client.id === value
+                            )?.name ?? editPartyForm.name
+                        })
+                      }
+                      options={clientOptions}
+                      value={editPartyForm.clientId ?? ""}
+                    />
+                  ) : null}
+                  <Field
+                    label={t("labels.name")}
+                    onChange={(value) =>
+                      setEditPartyForm({ ...editPartyForm, name: value })
+                    }
+                    value={editPartyForm.name}
+                  />
+                  <SelectField
+                    label={t("labels.role")}
+                    onChange={(value) =>
+                      setEditPartyForm({ ...editPartyForm, role: value })
+                    }
+                    options={
+                      partyRoleOptions.length
+                        ? partyRoleOptions
+                        : [
+                            { value: "PLAINTIFF", label: t("partyRoles.PLAINTIFF", "Plaintiff") },
+                            { value: "DEFENDANT", label: t("partyRoles.DEFENDANT", "Defendant") }
+                          ]
+                    }
+                    value={editPartyForm.role}
+                  />
+                  {updatePartyMutation.isError ? (
+                    <FormAlert
+                      message={
+                        (updatePartyMutation.error as Error)?.message ??
+                        t("errors.fallback")
+                      }
+                    />
+                  ) : null}
+                  <div className="flex gap-2">
+                    <PrimaryButton disabled={updatePartyMutation.isPending} type="submit">
+                      {updatePartyMutation.isPending ? t("labels.saving") : t("actions.save")}
+                    </PrimaryButton>
+                    <button
+                      className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                      onClick={() => setEditingParty(null)}
+                      type="button"
+                    >
+                      {t("actions.cancel")}
+                    </button>
+                  </div>
+                </form>
+              </SectionCard>
+            ) : (
+              <SectionCard
+                title={t("cases.addParty")}
+                description={t("cases.addPartyHelp")}
+              >
+                <form
+                  className="space-y-4"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    addPartyMutation.mutate(partyForm);
+                  }}
+                >
+                  <SelectField
+                    label={t("labels.partyType")}
+                    onChange={(value) =>
+                      setPartyForm({
+                        ...partyForm,
+                        partyType: value as CasePartyType,
+                        clientId:
+                          value === "CLIENT"
+                            ? (partyForm.clientId ?? "")
+                            : undefined
+                      })
+                    }
+                    options={[
+                      { value: "CLIENT", label: t("partyTypes.CLIENT") },
+                      { value: "OPPONENT", label: t("partyTypes.OPPONENT") },
+                      { value: "EXTERNAL", label: t("partyTypes.EXTERNAL") }
+                    ]}
+                    value={partyForm.partyType}
+                  />
+                  {partyForm.partyType === "CLIENT" ? (
+                    <SelectField
+                      label={t("labels.client")}
+                      onChange={(value) =>
+                        setPartyForm({
+                          ...partyForm,
+                          clientId: value,
+                          name:
+                            clientsQuery.data?.items.find(
+                              (client) => client.id === value
+                            )?.name ?? partyForm.name
+                        })
+                      }
+                      options={clientOptions}
+                      value={partyForm.clientId ?? ""}
+                    />
+                  ) : null}
+                  <Field
+                    label={t("labels.name")}
+                    onChange={(value) =>
+                      setPartyForm({ ...partyForm, name: value })
+                    }
+                    value={partyForm.name}
+                  />
+                  <SelectField
+                    label={t("labels.role")}
+                    onChange={(value) =>
+                      setPartyForm({ ...partyForm, role: value })
+                    }
+                    options={
+                      partyRoleOptions.length
+                        ? partyRoleOptions
+                        : [
+                            { value: "PLAINTIFF", label: t("partyRoles.PLAINTIFF", "Plaintiff") },
+                            { value: "DEFENDANT", label: t("partyRoles.DEFENDANT", "Defendant") }
+                          ]
+                    }
+                    value={partyForm.role}
+                  />
+                  {addPartyMutation.isError ? (
+                    <FormAlert
+                      message={
+                        (addPartyMutation.error as Error)?.message ??
+                        t("errors.fallback")
+                      }
+                    />
+                  ) : null}
+                  <PrimaryButton
+                    disabled={addPartyMutation.isPending}
+                    type="submit"
+                  >
+                    {addPartyMutation.isPending
+                      ? t("labels.saving")
+                      : t("actions.addParty")}
+                  </PrimaryButton>
+                </form>
+              </SectionCard>
+            )}
+          </div>
         </div>
       ) : null}
       {activeTab === "assignments" ? (

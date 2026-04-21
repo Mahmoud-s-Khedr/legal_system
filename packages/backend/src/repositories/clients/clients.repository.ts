@@ -132,6 +132,7 @@ export async function createFirmClient(
       nationalId: payload.nationalId ?? null,
       commercialRegister: payload.commercialRegister ?? null,
       taxNumber: payload.taxNumber ?? null,
+      poaNumber: payload.poaNumber ?? null,
       contacts: contacts
         ? {
             createMany: contacts
@@ -177,7 +178,8 @@ export async function updateFirmClientById(
       preferredLanguage: (payload.preferredLanguage as Language | undefined) ?? Language.AR,
       nationalId: payload.nationalId ?? null,
       commercialRegister: payload.commercialRegister ?? null,
-      taxNumber: payload.taxNumber ?? null
+      taxNumber: payload.taxNumber ?? null,
+      poaNumber: payload.poaNumber ?? null
     },
     include: clientInclude
   });
@@ -198,7 +200,7 @@ export async function findPotentialConflictParties(
   return prisma.caseParty.findMany({
     where: {
       case: { firmId, deletedAt: null },
-      isOurClient: false,
+      partyType: "OPPONENT",
       OR: [
         { name: { contains: name, mode: "insensitive" } },
         ...(nationalId ? [{ client: { nationalId } }] : [])
@@ -209,5 +211,30 @@ export async function findPotentialConflictParties(
       case: { select: { id: true, title: true } }
     },
     take: 10
+  });
+}
+
+export async function listClientCaseParties(
+  tx: RepositoryTx,
+  firmId: string,
+  clientId: string
+): Promise<Array<{ case: { id: string; title: string; caseNumber: string; status: string } }>> {
+  return tx.caseParty.findMany({
+    where: {
+      clientId,
+      partyType: "CLIENT",
+      case: { firmId, deletedAt: null }
+    },
+    select: {
+      case: {
+        select: {
+          id: true,
+          title: true,
+          caseNumber: true,
+          status: true
+        }
+      }
+    },
+    orderBy: { case: { updatedAt: "desc" } }
   });
 }

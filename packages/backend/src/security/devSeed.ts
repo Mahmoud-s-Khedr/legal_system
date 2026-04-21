@@ -445,7 +445,7 @@ async function seedDevCases(
         clientId,
         name: "الموكل",
         role: "PLAINTIFF",
-        isOurClient: true,
+        partyType: "CLIENT",
       },
     });
 
@@ -457,8 +457,7 @@ async function seedDevCases(
         caseId,
         name: oppName,
         role: "DEFENDANT",
-        isOurClient: false,
-        opposingCounselName: Math.random() > 0.5 ? arabicPersonName().nameAr : null,
+        partyType: "OPPONENT",
       },
     });
 

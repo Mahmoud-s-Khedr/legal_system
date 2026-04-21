@@ -2,6 +2,7 @@ import type {
   CaseRoleOnCase,
   CaseAssignmentDto,
   CasePartyDto,
+  CasePartyType,
   CaseCourtDto,
   CaseStatus as SharedCaseStatus,
   CaseDto,
@@ -15,6 +16,7 @@ import type {
   ReorderCaseCourtsDto,
   SessionUser,
   UpdateCaseCourtDto,
+  UpdateCasePartyDto,
   UpdateCaseDto
 } from "@elms/shared";
 import { CaseStatus, CaseRoleOnCase as PrismaCaseRoleOnCase, Prisma } from "@prisma/client";
@@ -79,16 +81,14 @@ function mapCaseParty(party: {
   clientId: string | null;
   name: string;
   role: string;
-  isOurClient: boolean;
-  opposingCounselName: string | null;
+  partyType: string;
 }): CasePartyDto {
   return {
     id: party.id,
     clientId: party.clientId,
     name: party.name,
     role: party.role,
-    isOurClient: party.isOurClient,
-    opposingCounselName: party.opposingCounselName
+    partyType: party.partyType as CasePartyType
   };
 }
 
@@ -131,8 +131,7 @@ function mapCase(caseRecord: {
     clientId: string | null;
     name: string;
     role: string;
-    isOurClient: boolean;
-    opposingCounselName: string | null;
+    partyType: string;
   }>;
   statusHistory: Array<{
     id: string;
@@ -196,8 +195,7 @@ const CASE_INCLUDE = {
       clientId: true,
       name: true,
       role: true,
-      isOurClient: true,
-      opposingCounselName: true
+      partyType: true
     }
   },
   statusHistory: {
@@ -307,9 +305,10 @@ export async function createCase(
   audit: AuditContext
 ) {
   return withTenant(prisma, actor.firmId, async (tx) => {
-    // Validate that the client exists in this firm
-    await tx.client.findFirstOrThrow({
-      where: { id: payload.clientId, firmId: actor.firmId, deletedAt: null }
+    // Validate that the client exists in this firm and get its name
+    const client = await tx.client.findFirstOrThrow({
+      where: { id: payload.clientId, firmId: actor.firmId, deletedAt: null },
+      select: { name: true }
     });
 
     const caseRecord = await tx.case.create({
@@ -326,6 +325,14 @@ export async function createCase(
           create: {
             toStatus: CaseStatus.ACTIVE,
             note: "Case created"
+          }
+        },
+        parties: {
+          create: {
+            clientId: payload.clientId,
+            name: client.name,
+            role: "CLIENT",
+            partyType: "CLIENT"
           }
         }
       },
@@ -346,6 +353,7 @@ export async function createCase(
     return mapCase(caseRecord);
   });
 }
+
 
 export async function updateCase(
   actor: SessionUser,
@@ -484,7 +492,7 @@ export async function checkConflictOfInterest(
   const conflicts = await prisma.caseParty.findMany({
     where: {
       case: { firmId, deletedAt: null },
-      isOurClient: false,
+      partyType: "OPPONENT",
       OR: [
         { name: { contains: partyName, mode: "insensitive" } },
         ...(partyNationalId
@@ -518,7 +526,7 @@ export async function checkConflictOfInterest(
     select: {
       name: true,
       parties: {
-        where: { isOurClient: false },
+        where: { partyType: "OPPONENT" },
         select: { case: { select: { id: true, title: true } } },
         take: 5
       }
@@ -554,9 +562,9 @@ export async function addCaseParty(
   payload: CreateCasePartyDto,
   audit: AuditContext
 ): Promise<{ case: CaseDto; conflictWarnings: ConflictWarningDto[] }> {
-  // Check for conflict of interest on opposing parties (non-blocking)
+  // Check for conflict of interest on opponent parties (non-blocking)
   let conflictWarnings: ConflictWarningDto[] = [];
-  if (!payload.isOurClient) {
+  if (payload.partyType === "OPPONENT") {
     conflictWarnings = await checkConflictOfInterest(
       actor.firmId,
       payload.name,
@@ -565,14 +573,31 @@ export async function addCaseParty(
   }
 
   const updatedCase = await withTenant(prisma, actor.firmId, async (tx) => {
+    await tx.case.findFirstOrThrow({
+      where: { id: caseId, firmId: actor.firmId, deletedAt: null },
+      select: { id: true }
+    });
+
+    // If adding a CLIENT party, validate the linked clientId
+    let clientName = payload.name;
+    if (payload.partyType === "CLIENT") {
+      if (!payload.clientId) {
+        throw appError("clientId is required when adding a CLIENT party", 422);
+      }
+      const linkedClient = await tx.client.findFirstOrThrow({
+        where: { id: payload.clientId, firmId: actor.firmId, deletedAt: null },
+        select: { name: true }
+      });
+      clientName = linkedClient.name;
+    }
+
     const party = await tx.caseParty.create({
       data: {
         caseId,
         clientId: payload.clientId ?? null,
-        name: payload.name,
+        name: clientName,
         role: payload.role,
-        isOurClient: payload.isOurClient,
-        opposingCounselName: payload.opposingCounselName ?? null
+        partyType: payload.partyType
       }
     });
 
@@ -580,7 +605,7 @@ export async function addCaseParty(
       action: "cases.parties.create",
       entityType: "CaseParty",
       entityId: party.id,
-      newData: { caseId, name: payload.name, role: payload.role }
+      newData: { caseId, name: clientName, role: payload.role, partyType: payload.partyType }
     });
 
     return getCaseRecord(actor, caseId);
@@ -588,6 +613,64 @@ export async function addCaseParty(
 
   return { case: updatedCase, conflictWarnings };
 }
+
+export async function updateCaseParty(
+  actor: SessionUser,
+  caseId: string,
+  partyId: string,
+  payload: UpdateCasePartyDto,
+  audit: AuditContext
+): Promise<CaseDto> {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.caseParty.findFirstOrThrow({
+      where: { id: partyId, caseId, case: { firmId: actor.firmId, deletedAt: null } }
+    });
+
+    // If changing away from CLIENT, ensure at least one CLIENT party remains
+    if (existing.partyType === "CLIENT" && payload.partyType !== "CLIENT") {
+      const clientCount = await tx.caseParty.count({
+        where: { caseId, partyType: "CLIENT" }
+      });
+      if (clientCount <= 1) {
+        throw appError("A case must have at least one client party", 422);
+      }
+    }
+
+    // Auto-populate name from linked client
+    let clientName = payload.name;
+    if (payload.partyType === "CLIENT") {
+      if (!payload.clientId) {
+        throw appError("clientId is required when updating a party to CLIENT type", 422);
+      }
+      const linkedClient = await tx.client.findFirstOrThrow({
+        where: { id: payload.clientId, firmId: actor.firmId, deletedAt: null },
+        select: { name: true }
+      });
+      clientName = linkedClient.name;
+    }
+
+    await tx.caseParty.update({
+      where: { id: partyId },
+      data: {
+        clientId: payload.clientId ?? null,
+        name: clientName,
+        role: payload.role,
+        partyType: payload.partyType
+      }
+    });
+
+    await writeAuditLog(tx, audit, {
+      action: "cases.parties.update",
+      entityType: "CaseParty",
+      entityId: partyId,
+      oldData: { name: existing.name, role: existing.role, partyType: existing.partyType },
+      newData: { name: clientName, role: payload.role, partyType: payload.partyType }
+    });
+
+    return getCaseRecord(actor, caseId);
+  });
+}
+
 
 export async function removeCaseParty(
   actor: SessionUser,
@@ -597,8 +680,18 @@ export async function removeCaseParty(
 ) {
   return withTenant(prisma, actor.firmId, async (tx) => {
     const existing = await tx.caseParty.findFirstOrThrow({
-      where: { id: partyId, case: { firmId: actor.firmId } }
+      where: { id: partyId, caseId, case: { firmId: actor.firmId, deletedAt: null } }
     });
+
+    // Block deletion if it is the last CLIENT party
+    if (existing.partyType === "CLIENT") {
+      const clientCount = await tx.caseParty.count({
+        where: { caseId, partyType: "CLIENT" }
+      });
+      if (clientCount <= 1) {
+        throw appError("Cannot remove the last client party from a case", 422);
+      }
+    }
 
     await tx.caseParty.delete({ where: { id: partyId } });
 
@@ -606,12 +699,13 @@ export async function removeCaseParty(
       action: "cases.parties.delete",
       entityType: "CaseParty",
       entityId: partyId,
-      oldData: { name: existing.name, role: existing.role }
+      oldData: { name: existing.name, role: existing.role, partyType: existing.partyType }
     });
 
     return getCaseRecord(actor, caseId);
   });
 }
+
 
 export async function addCaseAssignment(
   actor: SessionUser,
@@ -679,7 +773,7 @@ export async function listCaseParties(
   query: {
     q?: string;
     role?: string;
-    isOurClient?: string;
+    partyType?: CasePartyType;
     sortBy?: string;
     sortDir?: SortDir;
     page: number;
@@ -687,7 +781,7 @@ export async function listCaseParties(
   }
 ) {
   const q = query.q?.trim();
-  const sortBy = normalizeSort(query.sortBy, ["name", "role", "createdAt", "isOurClient"] as const, "createdAt");
+  const sortBy = normalizeSort(query.sortBy, ["name", "role", "partyType", "createdAt"] as const, "createdAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
 
   return withTenant(prisma, actor.firmId, async (tx) => {
@@ -698,13 +792,11 @@ export async function listCaseParties(
     const where: Prisma.CasePartyWhereInput = {
       caseId,
       ...(query.role ? { role: query.role } : {}),
-      ...(query.isOurClient === "true" ? { isOurClient: true } : {}),
-      ...(query.isOurClient === "false" ? { isOurClient: false } : {}),
+      ...(query.partyType ? { partyType: query.partyType } : {}),
       ...(q
         ? {
             OR: [
               { name: { contains: q, mode: "insensitive" } },
-              { opposingCounselName: { contains: q, mode: "insensitive" } },
               { client: { name: { contains: q, mode: "insensitive" } } }
             ]
           }

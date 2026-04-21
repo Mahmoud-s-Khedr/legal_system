@@ -21,6 +21,7 @@ import {
   listCases,
   removeCaseCourt,
   removeCaseParty,
+  updateCaseParty,
   reorderCaseCourts,
   unassignCase,
   updateCase,
@@ -52,10 +53,9 @@ const caseStatusSchema = z.object({
 
 const casePartySchema = z.object({
   clientId: z.string().uuid().nullable().optional(),
-  name: z.string().min(2),
+  name: z.string().min(1),
   role: z.string().min(1),
-  isOurClient: z.boolean(),
-  opposingCounselName: z.string().nullable().optional()
+  partyType: z.enum(["CLIENT", "OPPONENT", "EXTERNAL"])
 });
 
 const caseAssignmentSchema = z.object({
@@ -91,7 +91,7 @@ const caseCourtReorderSchema = z.object({
 const casePartyListQuerySchema = z.object({
   q: z.string().optional(),
   role: z.string().optional(),
-  isOurClient: z.enum(["true", "false"]).optional(),
+  partyType: z.enum(["CLIENT", "OPPONENT", "EXTERNAL"]).optional(),
   sortBy: z.string().optional(),
   sortDir: z.enum(["asc", "desc"]).optional(),
   page: z.string().optional(),
@@ -281,7 +281,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       return listCaseParties(request.sessionUser!, (request.params as { id: string }).id, {
         q: query.q,
         role: query.role,
-        isOurClient: query.isOurClient,
+        partyType: query.partyType,
         sortBy: query.sortBy,
         sortDir: query.sortDir,
         page,
@@ -303,6 +303,23 @@ export async function registerCaseRoutes(app: FastifyInstance) {
         (request.params as { id: string; partyId: string }).partyId,
         getAuditContext(request)
       )
+  );
+
+  app.put(
+    "/api/cases/:id/parties/:partyId",
+    {
+      preHandler: [requireAuth, requirePermission("cases:update")]
+    },
+    async (request) => {
+      const payload = casePartySchema.parse(request.body);
+      return updateCaseParty(
+        request.sessionUser!,
+        (request.params as { id: string; partyId: string }).id,
+        (request.params as { id: string; partyId: string }).partyId,
+        payload,
+        getAuditContext(request)
+      );
+    }
   );
 
   app.post(

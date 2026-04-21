@@ -10,13 +10,14 @@ export interface CaseAssignmentDto {
   unassignedAt: string | null;
 }
 
+export type CasePartyType = "CLIENT" | "OPPONENT" | "EXTERNAL";
+
 export interface CasePartyDto {
   id: string;
   clientId: string | null;
   name: string;
   role: string;
-  isOurClient: boolean;
-  opposingCounselName: string | null;
+  partyType: CasePartyType;
 }
 
 export interface CaseStatusHistoryDto {
@@ -82,9 +83,10 @@ export interface CreateCasePartyDto {
   clientId?: string | null;
   name: string;
   role: string;
-  isOurClient: boolean;
-  opposingCounselName?: string | null;
+  partyType: CasePartyType;
 }
+
+export type UpdateCasePartyDto = CreateCasePartyDto;
 
 export interface CreateCaseAssignmentDto {
   userId: string;
@@ -127,3 +129,4 @@ export interface ConflictWarningDto {
   /** Title of that case */
   conflictingCaseTitle: string;
 }
+

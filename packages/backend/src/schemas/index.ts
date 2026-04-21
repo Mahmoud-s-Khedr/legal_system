@@ -127,6 +127,7 @@ export const clientDtoSchema = {
     nationalId: { type: ["string", "null"] },
     commercialRegister: { type: ["string", "null"] },
     taxNumber: { type: ["string", "null"] },
+    poaNumber: { type: ["string", "null"] },
     contacts: { type: "array", items: clientContactSchema },
     linkedCaseCount: { type: "number" },
     invoiceCount: { type: "number" },
@@ -161,10 +162,9 @@ const casePartySchema = {
     clientId: { type: ["string", "null"] },
     name: { type: "string" },
     role: { type: "string" },
-    isOurClient: { type: "boolean" },
-    opposingCounselName: { type: ["string", "null"] }
+    partyType: { type: "string" }
   },
-  required: ["id", "clientId", "name", "role", "isOurClient", "opposingCounselName"],
+  required: ["id", "clientId", "name", "role", "partyType"],
   additionalProperties: false
 } as const;
 

@@ -248,14 +248,14 @@ describe("addCaseParty", () => {
     mockParty.create.mockResolvedValue({});
 
     const updatedRecord = makeCaseRecord({
-      parties: [{ id: "party-1", clientId: null, name: "Jane Smith", role: "OPPONENT", isOurClient: false, opposingCounselName: null }]
+      parties: [{ id: "party-1", clientId: null, name: "Jane Smith", role: "OPPONENT", partyType: "OPPONENT" }]
     });
     mockCaseDb.findFirstOrThrow.mockResolvedValue(updatedRecord);
 
     const result = await addCaseParty(
       actor,
       "case-1",
-      { name: "Jane Smith", role: "OPPONENT" as never, isOurClient: false },
+      { name: "Jane Smith", role: "OPPONENT" as never, partyType: "OPPONENT" as never },
       audit
     );
 

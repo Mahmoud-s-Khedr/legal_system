@@ -32,6 +32,13 @@ export function ClientDetailPage() {
     queryFn: () => apiFetch<ClientDto>(`/api/clients/${clientId}`)
   });
   const invoicesQuery = useInvoices({ clientId });
+  const linkedCasesQuery = useQuery({
+    queryKey: ["client-cases", clientId],
+    queryFn: () =>
+      apiFetch<Array<{ id: string; title: string; caseNumber: string; status: string }>>(
+        `/api/clients/${clientId}/cases`
+      )
+  });
 
   async function patchClient(field: "email" | "phone", value: string) {
     const current = await queryClient.fetchQuery({
@@ -50,6 +57,7 @@ export function ClientDetailPage() {
         nationalId: current.nationalId,
         commercialRegister: current.commercialRegister,
         taxNumber: current.taxNumber,
+        poaNumber: current.poaNumber,
         contacts: current.contacts ?? []
       })
     });
@@ -162,6 +170,12 @@ export function ClientDetailPage() {
               label={t("labels.language")}
               value={getEnumLabel(t, "Language", client.preferredLanguage)}
             />
+            {client.poaNumber ? (
+              <Detail
+                label={t("labels.poaNumber")}
+                value={client.poaNumber}
+              />
+            ) : null}
           </dl>
         </SectionCard>
         <SectionCard
@@ -277,6 +291,52 @@ export function ClientDetailPage() {
               </DataTable>
             </TableWrapper>
           )}
+      </SectionCard>
+      <SectionCard
+        title={t("cases.linkedCases")}
+        description={t("cases.linkedCasesHelp")}
+      >
+        {linkedCasesQuery.isLoading && (
+          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
+        )}
+        {!linkedCasesQuery.isLoading && !linkedCasesQuery.data?.length && (
+          <EmptyState
+            title={t("empty.noLinkedCases")}
+            description={t("empty.noLinkedCasesHelp")}
+          />
+        )}
+        {!linkedCasesQuery.isLoading && !!linkedCasesQuery.data?.length && (
+          <TableWrapper>
+            <DataTable>
+              <TableHead>
+                <tr>
+                  <TableHeadCell>{t("labels.caseTitle")}</TableHeadCell>
+                  <TableHeadCell>{t("labels.status")}</TableHeadCell>
+                  <TableHeadCell align="end">{t("actions.more")}</TableHeadCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {linkedCasesQuery.data.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell>{`${c.title} (${c.caseNumber})`}</TableCell>
+                    <TableCell>
+                      <EnumBadge enumName="CaseStatus" value={c.status} />
+                    </TableCell>
+                    <TableCell align="end">
+                      <Link
+                        className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        params={{ caseId: c.id }}
+                        to="/app/cases/$caseId"
+                      >
+                        {t("actions.view")}
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </DataTable>
+          </TableWrapper>
+        )}
       </SectionCard>
       <SectionCard
         description={t("documents.listHelp")}

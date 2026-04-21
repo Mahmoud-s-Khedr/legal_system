@@ -16,6 +16,7 @@ import {
   getFirmClientByIdOrThrow,
   getFirmClientRowByIdOrThrow,
   listFirmClients,
+  listClientCaseParties,
   replaceClientContacts,
   softDeleteClientById,
   updateFirmClientById,
@@ -34,6 +35,7 @@ function mapClient(client: ClientRecord): ClientDto {
     nationalId: client.nationalId,
     commercialRegister: client.commercialRegister,
     taxNumber: client.taxNumber,
+    poaNumber: (client as ClientRecord & { poaNumber?: string | null }).poaNumber ?? null,
     contacts: client.contacts,
     linkedCaseCount: client._count.parties,
     invoiceCount: client._count.invoices,
@@ -187,5 +189,17 @@ export async function removeClient(
     });
 
     return { success: true as const };
+  });
+}
+
+export async function listClientCases(
+  actor: SessionUser,
+  clientId: string
+): Promise<Array<{ id: string; title: string; caseNumber: string; status: string }>> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    // Verify the client belongs to this firm
+    await getFirmClientRowByIdOrThrow(tx, actor.firmId, clientId);
+    const parties = await listClientCaseParties(tx, actor.firmId, clientId);
+    return parties.map((p) => p.case);
   });
 }

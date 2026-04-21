@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CaseRoleOnCase, TaskPriority } from "@elms/shared";
 import { isPartyPristine, isQuickIntakeDirty } from "./CaseQuickIntakePage";
 
-function baseState() {
+function baseState(): Parameters<typeof isQuickIntakeDirty>[0] {
   return {
     caseForm: {
       title: "",
@@ -30,8 +30,8 @@ function baseState() {
         id: "party-1",
         name: "",
         role: "PLAINTIFF",
-        isOurClient: true,
-        opposingCounselName: ""
+        partyType: "OPPONENT" as const,
+        clientId: ""
       }
     ],
     assignments: [

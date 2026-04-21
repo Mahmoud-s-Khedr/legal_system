@@ -9,6 +9,7 @@ import { clientDtoSchema, listResponseSchema, successSchema } from "../../schema
 import {
   createClient,
   getClient,
+  listClientCases,
   listClients,
   removeClient,
   updateClient
@@ -31,6 +32,7 @@ const clientSchema = z.object({
   nationalId: z.string().nullable().optional(),
   commercialRegister: z.string().nullable().optional(),
   taxNumber: z.string().nullable().optional(),
+  poaNumber: z.string().nullable().optional(),
   contacts: z.array(contactSchema).optional()
 });
 
@@ -113,6 +115,18 @@ export async function registerClientRoutes(app: FastifyInstance) {
         request.sessionUser!,
         (request.params as { id: string }).id,
         getAuditContext(request)
+      )
+  );
+
+  app.get(
+    "/api/clients/:id/cases",
+    {
+      preHandler: [requireAuth, requirePermission("clients:read")]
+    },
+    async (request) =>
+      listClientCases(
+        request.sessionUser!,
+        (request.params as { id: string }).id
       )
   );
 }

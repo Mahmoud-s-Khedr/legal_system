@@ -53,6 +53,7 @@ function normalizePayload(form: ClientFormState): CreateClientDto {
         : null,
     taxNumber:
       form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
+    poaNumber: toNullable(form.poaNumber),
     contacts: []
   };
 }
@@ -86,6 +87,7 @@ export function ClientCreatePage() {
     nationalId: "",
     commercialRegister: "",
     taxNumber: "",
+    poaNumber: "",
     contacts: []
   });
   const [validationMessage, setValidationMessage] = useState<string | null>(
@@ -261,6 +263,12 @@ export function ClientCreatePage() {
                   />
                 </div>
               ) : null}
+              <Field
+                dir="ltr"
+                label={t("labels.poaNumber")}
+                onChange={(value) => setForm({ ...form, poaNumber: value })}
+                value={form.poaNumber ?? ""}
+              />
             </>
           ) : null}
           {duplicateWarning ? (

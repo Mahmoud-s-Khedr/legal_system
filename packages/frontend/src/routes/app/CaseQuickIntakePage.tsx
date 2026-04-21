@@ -14,6 +14,7 @@ import {
   TaskPriority,
   TaskStatus,
   type CaseDto,
+  type CasePartyType,
   type ClientListResponseDto,
   type CreateCaseAssignmentDto,
   type CreateCaseCourtDto,
@@ -60,8 +61,8 @@ type DraftParty = {
   id: string;
   name: string;
   role: string;
-  isOurClient: boolean;
-  opposingCounselName: string;
+  partyType: CasePartyType;
+  clientId: string;
 };
 
 type DraftAssignment = {
@@ -157,8 +158,8 @@ function emptyParty(): DraftParty {
     id: makeId("party"),
     name: "",
     role: DEFAULT_PARTY_ROLE,
-    isOurClient: true,
-    opposingCounselName: ""
+    partyType: "OPPONENT",
+    clientId: ""
   };
 }
 
@@ -200,8 +201,8 @@ export function isPartyPristine(party: DraftParty): boolean {
   return (
     !hasText(party.name) &&
     party.role === DEFAULT_PARTY_ROLE &&
-    party.isOurClient === true &&
-    !hasText(party.opposingCounselName)
+    party.partyType === "OPPONENT" &&
+    !hasText(party.clientId)
   );
 }
 
@@ -349,7 +350,7 @@ export function CaseQuickIntakePage() {
   const clientsQuery = useQuery({
     queryKey: ["clients", "quick-intake"],
     queryFn: () => apiFetch<ClientListResponseDto>("/api/clients?limit=200"),
-    enabled: canReadClients && clientMode === "existing"
+    enabled: canReadClients
   });
 
   const usersQuery = useQuery({
@@ -607,8 +608,8 @@ export function CaseQuickIntakePage() {
     const payload: CreateCasePartyDto = {
       name: row.name.trim(),
       role: row.role,
-      isOurClient: row.isOurClient,
-      opposingCounselName: toNullable(row.opposingCounselName)
+      partyType: row.partyType,
+      clientId: row.partyType === "CLIENT" ? row.clientId : null
     };
 
     return apiFetch(`/api/cases/${caseId}/parties`, {
@@ -753,7 +754,10 @@ export function CaseQuickIntakePage() {
 
       if (canUpdateCases) {
         const rows = parties.filter(
-          (row) => row.name.trim() && row.role.trim()
+          (row) =>
+            row.name.trim() &&
+            row.role.trim() &&
+            (row.partyType !== "CLIENT" || row.clientId.trim() !== "")
         );
         if (rows.length) {
           const result = await Promise.allSettled(
@@ -1239,23 +1243,30 @@ export function CaseQuickIntakePage() {
                     }
                   />
                   <SelectField
-                    label={t("labels.client")}
-                    value={String(row.isOurClient)}
+                    label={t("labels.partyType")}
+                    value={row.partyType}
                     onChange={(value) =>
-                      updatePartyRow(row.id, { isOurClient: value === "true" })
+                      updatePartyRow(row.id, {
+                        partyType: value as CasePartyType,
+                        clientId: value === "CLIENT" ? row.clientId : ""
+                      })
                     }
                     options={[
-                      { value: "true", label: t("cases.ourClient") },
-                      { value: "false", label: t("cases.externalParty") }
+                      { value: "CLIENT", label: t("partyTypes.CLIENT") },
+                      { value: "OPPONENT", label: t("partyTypes.OPPONENT") },
+                      { value: "EXTERNAL", label: t("partyTypes.EXTERNAL") }
                     ]}
                   />
-                  <Field
-                    label={t("labels.opposingCounsel")}
-                    value={row.opposingCounselName}
-                    onChange={(value) =>
-                      updatePartyRow(row.id, { opposingCounselName: value })
-                    }
-                  />
+                  {row.partyType === "CLIENT" ? (
+                    <SelectField
+                      label={t("labels.client")}
+                      value={row.clientId}
+                      onChange={(value) =>
+                        updatePartyRow(row.id, { clientId: value })
+                      }
+                      options={clientOptions}
+                    />
+                  ) : null}
                 </div>
                 <button
                   type="button"
