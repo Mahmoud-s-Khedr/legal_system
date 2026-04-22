@@ -25,6 +25,7 @@ const DESKTOP_JWT_PRIVATE_KEY_FILE: &str = "jwt-private.pem";
 const DESKTOP_JWT_PUBLIC_KEY_FILE: &str = "jwt-public.pem";
 const DESKTOP_DB_MARKER_FILE: &str = "desktop-database-name";
 const MIGRATION_VERSION_MARKER_FILE: &str = "migration_version";
+const LATEST_MIGRATION_NAME: &str = "0018_document_hybrid_search";
 const FAILURE_CODE_POSTGRES_CLUSTER_VERSION_MISMATCH: &str = "postgres_cluster_version_mismatch";
 const FAILURE_CODE_POSTGRES_STARTUP_FAILED: &str = "postgres_startup_failed";
 const FAILURE_CODE_PREFIX: &str = "__ELMS_FAILURE_CODE__=";
@@ -388,6 +389,18 @@ fn detect_latest_migration_name_in_dir(migrations_dir: &Path) -> Option<String> 
 }
 
 fn detect_latest_migration_name(app: &AppHandle, log_file: &Path) -> Option<String> {
+    let configured_latest = LATEST_MIGRATION_NAME.trim();
+    if !configured_latest.is_empty() {
+        log_startup_diagnostic(
+            log_file,
+            &format!(
+                "Using configured latest migration directory '{}'",
+                configured_latest
+            ),
+        );
+        return Some(configured_latest.to_string());
+    }
+
     let mut candidates = Vec::new();
     if should_use_workspace_runtime() {
         if let Some(root) = workspace_root() {
