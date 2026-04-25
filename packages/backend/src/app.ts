@@ -94,6 +94,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
 
   app.get("/api/health", async (_req, reply) => {
     const desktopBootstrapToken = process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN?.trim();
+    const includeDesktopBootstrapToken = env.AUTH_MODE === "local" && Boolean(desktopBootstrapToken);
     const checks: Record<string, unknown> = {};
     let overallStatus: "ok" | "degraded" | "error" = "ok";
 
@@ -116,7 +117,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
       mode: "local",
       timestamp: new Date().toISOString(),
       checks,
-      ...(desktopBootstrapToken ? { desktopBootstrapToken } : {})
+      ...(includeDesktopBootstrapToken ? { desktopBootstrapToken } : {})
     });
   });
 

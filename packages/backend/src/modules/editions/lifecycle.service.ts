@@ -1,5 +1,5 @@
 import { FirmLifecycleStatus, type EditionKey } from "@elms/shared";
-import { prisma } from "../../db/prisma.js";
+import { listLifecycleSweepFirms, updateFirmLifecycleById } from "../../repositories/editions/editions.repository.js";
 import { isTrialEnabled } from "./editionPolicy.js";
 import { resolveTrialDates } from "./trialDates.js";
 
@@ -14,23 +14,7 @@ export interface LifecycleSweepResult {
 }
 
 export async function runFirmLifecycleSweep(now = new Date()): Promise<LifecycleSweepResult> {
-  const firms = await prisma.firm.findMany({
-    where: {
-      deletedAt: null
-    },
-    select: {
-      id: true,
-      editionKey: true,
-      lifecycleStatus: true,
-      createdAt: true,
-      trialStartedAt: true,
-      trialEndsAt: true,
-      graceEndsAt: true,
-      suspendedAt: true,
-      deletionDueAt: true,
-      deletedAt: true
-    }
-  });
+  const firms = await listLifecycleSweepFirms();
 
   const result: LifecycleSweepResult = {
     scanned: firms.length,
@@ -113,10 +97,7 @@ export async function runFirmLifecycleSweep(now = new Date()): Promise<Lifecycle
     }
 
     if (Object.keys(patch).length > 0) {
-      await prisma.firm.update({
-        where: { id: firm.id },
-        data: patch as Parameters<typeof prisma.firm.update>[0]["data"]
-      });
+      await updateFirmLifecycleById(firm.id, patch as Record<string, unknown>);
       result.updated += 1;
     }
   }

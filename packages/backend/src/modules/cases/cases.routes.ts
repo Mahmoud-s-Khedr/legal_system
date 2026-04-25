@@ -98,6 +98,11 @@ const casePartyListQuerySchema = z.object({
   limit: z.string().optional()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+const idPartyParamsSchema = z.object({ id: z.string().min(1), partyId: z.string().min(1) });
+const idAssignmentParamsSchema = z.object({ id: z.string().min(1), assignmentId: z.string().min(1) });
+const idCourtParamsSchema = z.object({ id: z.string().min(1), courtId: z.string().min(1) });
+
 const caseAssignmentListQuerySchema = z.object({
   q: z.string().optional(),
   roleOnCase: z.nativeEnum(CaseRoleOnCase).optional(),
@@ -193,7 +198,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       schema: { response: { 200: caseDtoSchema } },
       preHandler: [requireAuth, requirePermission("cases:read")]
     },
-    async (request) => getCase(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getCase(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.put(
@@ -206,7 +211,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       const payload = caseUpdateSchema.parse(request.body);
       return updateCase(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -219,12 +224,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       schema: { response: { 200: successSchema } },
       preHandler: [requireAuth, requirePermission("cases:delete")]
     },
-    async (request) =>
-      deleteCase(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        getAuditContext(request)
-      )
+    async (request) => deleteCase(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 
   app.get(
@@ -232,8 +232,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
     {
       preHandler: [requireAuth, requirePermission("cases:read")]
     },
-    async (request) =>
-      listCaseStatusHistory(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => listCaseStatusHistory(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.patch(
@@ -246,7 +245,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       const payload = caseStatusSchema.parse(request.body);
       return changeCaseStatus(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -263,7 +262,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       // Returns { case: CaseDto, conflictWarnings: ConflictWarningDto[] }
       return addCaseParty(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -278,7 +277,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
     async (request) => {
       const query = casePartyListQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(query);
-      return listCaseParties(request.sessionUser!, (request.params as { id: string }).id, {
+      return listCaseParties(request.sessionUser!, idParamsSchema.parse(request.params).id, {
         q: query.q,
         role: query.role,
         partyType: query.partyType,
@@ -296,13 +295,10 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       schema: { response: { 200: successSchema } },
       preHandler: [requireAuth, requirePermission("cases:update")]
     },
-    async (request) =>
-      removeCaseParty(
-        request.sessionUser!,
-        (request.params as { id: string; partyId: string }).id,
-        (request.params as { id: string; partyId: string }).partyId,
-        getAuditContext(request)
-      )
+    async (request) => {
+      const { id, partyId } = idPartyParamsSchema.parse(request.params);
+      return removeCaseParty(request.sessionUser!, id, partyId, getAuditContext(request));
+    }
   );
 
   app.put(
@@ -311,11 +307,12 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("cases:update")]
     },
     async (request) => {
+      const { id, partyId } = idPartyParamsSchema.parse(request.params);
       const payload = casePartySchema.parse(request.body);
       return updateCaseParty(
         request.sessionUser!,
-        (request.params as { id: string; partyId: string }).id,
-        (request.params as { id: string; partyId: string }).partyId,
+        id,
+        partyId,
         payload,
         getAuditContext(request)
       );
@@ -332,7 +329,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       const payload = caseAssignmentSchema.parse(request.body);
       return addCaseAssignment(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -347,7 +344,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
     async (request) => {
       const query = caseAssignmentListQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(query);
-      return listCaseAssignments(request.sessionUser!, (request.params as { id: string }).id, {
+      return listCaseAssignments(request.sessionUser!, idParamsSchema.parse(request.params).id, {
         q: query.q,
         roleOnCase: query.roleOnCase,
         active: query.active,
@@ -365,13 +362,10 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       schema: { response: { 200: successSchema } },
       preHandler: [requireAuth, requirePermission("cases:assign")]
     },
-    async (request) =>
-      unassignCase(
-        request.sessionUser!,
-        (request.params as { id: string; assignmentId: string }).id,
-        (request.params as { id: string; assignmentId: string }).assignmentId,
-        getAuditContext(request)
-      )
+    async (request) => {
+      const { id, assignmentId } = idAssignmentParamsSchema.parse(request.params);
+      return unassignCase(request.sessionUser!, id, assignmentId, getAuditContext(request));
+    }
   );
 
   // ── Court Progression ────────────────────────────────────────────────────────
@@ -385,7 +379,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
     async (request) => {
       const query = caseCourtListQuerySchema.parse(request.query as Record<string, string>);
       const { page, limit } = parsePaginationQuery(query);
-      return listCaseCourts(request.sessionUser!, (request.params as { id: string }).id, {
+      return listCaseCourts(request.sessionUser!, idParamsSchema.parse(request.params).id, {
         q: query.q,
         courtLevel: query.courtLevel,
         isActive: query.isActive,
@@ -407,7 +401,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       const payload = caseCourtSchema.parse(request.body);
       return addCaseCourt(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -421,7 +415,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("cases:update")]
     },
     async (request) => {
-      const { id, courtId } = request.params as { id: string; courtId: string };
+      const { id, courtId } = idCourtParamsSchema.parse(request.params);
       const payload = caseCourtUpdateSchema.parse(request.body);
       return updateCaseCourt(request.sessionUser!, id, courtId, payload, getAuditContext(request));
     }
@@ -434,7 +428,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("cases:update")]
     },
     async (request) => {
-      const { id, courtId } = request.params as { id: string; courtId: string };
+      const { id, courtId } = idCourtParamsSchema.parse(request.params);
       return removeCaseCourt(request.sessionUser!, id, courtId, getAuditContext(request));
     }
   );
@@ -449,7 +443,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       const payload = caseCourtReorderSchema.parse(request.body);
       return reorderCaseCourts(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );

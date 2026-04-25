@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { Readable } from "node:stream";
+import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { fileTypeFromBuffer } from "file-type";
 import { LibraryDocumentType } from "@elms/shared";
@@ -36,6 +37,13 @@ function sanitizeFilename(name: string): string {
   return path.basename(name).replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+const categoryIdParamsSchema = z.object({ categoryId: z.string().min(1) });
+const documentIdParamsSchema = z.object({ documentId: z.string().min(1) });
+const articleIdParamsSchema = z.object({ articleId: z.string().min(1) });
+const annotationIdParamsSchema = z.object({ annotationId: z.string().min(1) });
+const caseIdParamsSchema = z.object({ caseId: z.string().min(1) });
+const referenceIdParamsSchema = z.object({ referenceId: z.string().min(1) });
+
 export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
   // ── Categories ──────────────────────────────────────────────────────────────
 
@@ -65,7 +73,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/categories/:categoryId",
     { preHandler: [requireAuth, requirePermission("library:manage")] },
     async (request, reply) => {
-      const { categoryId } = request.params as { categoryId: string };
+      const { categoryId } = categoryIdParamsSchema.parse(request.params);
       const body = request.body as {
         nameAr?: string;
         nameEn?: string;
@@ -83,7 +91,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/categories/:categoryId",
     { preHandler: [requireAuth, requirePermission("library:manage")] },
     async (request, reply) => {
-      const { categoryId } = request.params as { categoryId: string };
+      const { categoryId } = categoryIdParamsSchema.parse(request.params);
       const ok = await deleteCategory(request.sessionUser!, categoryId);
       if (!ok) return reply.status(404).send({ error: "Category not found" });
       return { success: true };
@@ -113,7 +121,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/documents/:documentId",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { documentId } = request.params as { documentId: string };
+      const { documentId } = documentIdParamsSchema.parse(request.params);
       const result = await getDocument(request.sessionUser!, documentId, request.sessionUser!.id);
       if (!result) return reply.status(404).send({ error: "Document not found" });
       return result;
@@ -134,7 +142,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/documents/:documentId",
     { preHandler: [requireAuth, requirePermission("library:manage")] },
     async (request, reply) => {
-      const { documentId } = request.params as { documentId: string };
+      const { documentId } = documentIdParamsSchema.parse(request.params);
       const body = request.body as Parameters<typeof updateDocument>[2];
       const result = await updateDocument(request.sessionUser!, documentId, body);
       if (!result) return reply.status(404).send({ error: "Document not found" });
@@ -146,7 +154,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/documents/:documentId",
     { preHandler: [requireAuth, requirePermission("library:manage")] },
     async (request, reply) => {
-      const { documentId } = request.params as { documentId: string };
+      const { documentId } = documentIdParamsSchema.parse(request.params);
       const ok = await softDeleteDocument(request.sessionUser!, documentId);
       if (!ok) return reply.status(404).send({ error: "Document not found" });
       return { success: true };
@@ -159,7 +167,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/articles/:articleId",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { articleId } = request.params as { articleId: string };
+      const { articleId } = articleIdParamsSchema.parse(request.params);
       const result = await getArticle(request.sessionUser!, articleId);
       if (!result) return reply.status(404).send({ error: "Article not found" });
       return result;
@@ -172,7 +180,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/documents/:documentId/annotations",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { documentId } = request.params as { documentId: string };
+      const { documentId } = documentIdParamsSchema.parse(request.params);
       const { body } = request.body as { body: string };
       const result = await createAnnotation(request.sessionUser!, documentId, body);
       return reply.status(201).send(result);
@@ -183,7 +191,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/annotations/:annotationId",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { annotationId } = request.params as { annotationId: string };
+      const { annotationId } = annotationIdParamsSchema.parse(request.params);
       const { body } = request.body as { body: string };
       const result = await updateAnnotation(request.sessionUser!, annotationId, body);
       if (!result) return reply.status(404).send({ error: "Annotation not found" });
@@ -195,7 +203,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/annotations/:annotationId",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { annotationId } = request.params as { annotationId: string };
+      const { annotationId } = annotationIdParamsSchema.parse(request.params);
       const ok = await deleteAnnotation(request.sessionUser!, annotationId);
       if (!ok) return reply.status(404).send({ error: "Annotation not found" });
       return { success: true };
@@ -208,7 +216,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/cases/:caseId/legal-references",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request) => {
-      const { caseId } = request.params as { caseId: string };
+      const { caseId } = caseIdParamsSchema.parse(request.params);
       return listCaseLegalReferences(request.sessionUser!, caseId);
     }
   );
@@ -217,7 +225,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/cases/:caseId/legal-references",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { caseId } = request.params as { caseId: string };
+      const { caseId } = caseIdParamsSchema.parse(request.params);
       const body = request.body as { documentId: string; articleId?: string; notes?: string };
       const result = await linkDocumentToCase(request.sessionUser!, caseId, body.documentId, body.articleId, body.notes);
       return reply.status(201).send(result);
@@ -228,7 +236,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/cases/legal-references/:referenceId",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { referenceId } = request.params as { referenceId: string };
+      const { referenceId } = referenceIdParamsSchema.parse(request.params);
       const ok = await unlinkDocumentFromCase(request.sessionUser!, referenceId);
       if (!ok) return reply.status(404).send({ error: "Reference not found" });
       return { success: true };
@@ -360,7 +368,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/documents/:documentId/download",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { documentId } = request.params as { documentId: string };
+      const { documentId } = documentIdParamsSchema.parse(request.params);
       const actor = request.sessionUser!;
       const doc = await prisma.libraryDocument.findFirst({
         where: {
@@ -384,7 +392,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/library/documents/:documentId/stream",
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
-      const { documentId } = request.params as { documentId: string };
+      const { documentId } = documentIdParamsSchema.parse(request.params);
       const actor = request.sessionUser!;
       const doc = await prisma.libraryDocument.findFirst({
         where: {

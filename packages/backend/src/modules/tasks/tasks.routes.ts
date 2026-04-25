@@ -43,6 +43,8 @@ const taskListQuerySchema = z.object({
   limit: z.string().optional()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerTaskRoutes(app: FastifyInstance) {
   app.get(
     "/api/tasks",
@@ -75,7 +77,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
       schema: { response: { 200: taskDtoSchema } },
       preHandler: [requireAuth, requirePermission("tasks:read")]
     },
-    async (request) => getTask(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getTask(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.put(
@@ -88,7 +90,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
       const payload = taskSchema.parse(request.body);
       return updateTask(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -105,7 +107,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
       const payload = taskStatusSchema.parse(request.body);
       return changeTaskStatus(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -118,11 +120,6 @@ export async function registerTaskRoutes(app: FastifyInstance) {
       schema: { response: { 200: successSchema } },
       preHandler: [requireAuth, requirePermission("tasks:delete")]
     },
-    async (request) =>
-      deleteTask(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        getAuditContext(request)
-      )
+    async (request) => deleteTask(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 }

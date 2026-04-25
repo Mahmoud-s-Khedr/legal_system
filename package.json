@@ -15,7 +15,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "test:coverage": "node ./scripts/coverage/run-test-coverage.mjs",
+    "test:coverage": "turbo run test:coverage",
     "coverage:summary": "node ./scripts/coverage/aggregate-summary.mjs",
     "coverage:hotspots": "node ./scripts/coverage/top-uncovered-files.mjs --top 12",
     "coverage:diff": "node ./scripts/coverage/check-diff-coverage.mjs --min 85",

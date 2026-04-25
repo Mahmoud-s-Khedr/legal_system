@@ -43,6 +43,8 @@ const setPermissionsSchema = z.object({
   permissionKeys: z.array(z.string().min(1))
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerRoleRoutes(app: FastifyInstance) {
   app.get(
     "/api/roles",
@@ -61,7 +63,7 @@ export async function registerRoleRoutes(app: FastifyInstance) {
     {
       preHandler: [requireAuth, requirePermission("roles:read")]
     },
-    async (request) => getRole(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getRole(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.post(
@@ -86,7 +88,7 @@ export async function registerRoleRoutes(app: FastifyInstance) {
       const payload = updateRoleSchema.parse(request.body);
       return updateRole(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -99,12 +101,7 @@ export async function registerRoleRoutes(app: FastifyInstance) {
       schema: { response: { 200: successSchema } },
       preHandler: [requireAuth, requirePermission("roles:delete")]
     },
-    async (request) =>
-      deleteRole(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        getAuditContext(request)
-      )
+    async (request) => deleteRole(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 
   app.put(
@@ -117,7 +114,7 @@ export async function registerRoleRoutes(app: FastifyInstance) {
       const payload = setPermissionsSchema.parse(request.body);
       return setRolePermissions(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );

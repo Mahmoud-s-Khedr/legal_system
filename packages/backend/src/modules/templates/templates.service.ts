@@ -1,8 +1,15 @@
 import type { SessionUser } from "@elms/shared";
 import { Language } from "@prisma/client";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  createFirmTemplate,
+  deleteFirmTemplateById,
+  findTemplateWithCaseContext,
+  findVisibleTemplateById,
+  listVisibleTemplates,
+  updateFirmTemplateById
+} from "../../repositories/templates/templates.repository.js";
 
 export interface TemplateDto {
   id: string;
@@ -186,35 +193,25 @@ async function htmlToDocxBuffer(content: string, language: string): Promise<Buff
 }
 
 async function getTemplateWithCaseContext(actor: SessionUser, templateId: string, caseId: string) {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const template = await tx.documentTemplate.findFirst({
-      where: { id: templateId, OR: [{ firmId: actor.firmId }, { isSystem: true }] }
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const payload = await findTemplateWithCaseContext(tx, {
+      firmId: actor.firmId,
+      templateId,
+      caseId
     });
 
-    if (!template) {
+    if (!payload) {
       return null;
     }
 
-    const caseRow = await tx.case.findFirst({
-      where: { id: caseId, firmId: actor.firmId },
-      include: {
-        client: true,
-        courts: { orderBy: { createdAt: "desc" }, take: 1 }
-      }
-    });
-
-    if (!caseRow) {
-      return null;
-    }
-
-    const latestCourt = caseRow.courts[0];
+    const latestCourt = payload.caseRow.courts[0];
 
     const variables: Record<string, string> = {
-      caseName: caseRow.title,
-      caseNumber: caseRow.caseNumber ?? "",
-      internalReference: caseRow.internalReference ?? "",
-      clientName: caseRow.client?.name ?? "",
-      clientNameAr: caseRow.client?.name ?? "",
+      caseName: payload.caseRow.title,
+      caseNumber: payload.caseRow.caseNumber ?? "",
+      internalReference: payload.caseRow.internalReference ?? "",
+      clientName: payload.caseRow.client?.name ?? "",
+      clientNameAr: payload.caseRow.client?.name ?? "",
       courtName: latestCourt?.courtName ?? "",
       courtLevel: latestCourt?.courtLevel ?? "",
       hearingDate: "",
@@ -222,37 +219,26 @@ async function getTemplateWithCaseContext(actor: SessionUser, templateId: string
       todayEn: new Date().toLocaleDateString("en-GB", { dateStyle: "long" })
     };
 
-    // Attach next hearing date if available
-    const nextHearing = await tx.caseSession.findFirst({
-      where: { caseId, case: { firmId: actor.firmId, deletedAt: null }, sessionDatetime: { gte: new Date() } },
-      orderBy: { sessionDatetime: "asc" }
-    });
-
-    if (nextHearing) {
-      variables.hearingDate = nextHearing.sessionDatetime.toLocaleDateString("ar-EG", {
+    if (payload.nextHearing) {
+      variables.hearingDate = payload.nextHearing.sessionDatetime.toLocaleDateString("ar-EG", {
         dateStyle: "long"
       });
     }
 
-    return { template, variables };
+    return { template: payload.template, variables };
   });
 }
 
 export async function listTemplates(actor: SessionUser): Promise<TemplateDto[]> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const rows = await tx.documentTemplate.findMany({
-      where: { OR: [{ firmId: actor.firmId }, { isSystem: true }] },
-      orderBy: [{ isSystem: "asc" }, { name: "asc" }]
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const rows = await listVisibleTemplates(tx, actor.firmId);
     return rows.map(mapTemplate);
   });
 }
 
 export async function getTemplate(actor: SessionUser, templateId: string): Promise<TemplateDto | null> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const row = await tx.documentTemplate.findFirst({
-      where: { id: templateId, OR: [{ firmId: actor.firmId }, { isSystem: true }] }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const row = await findVisibleTemplateById(tx, actor.firmId, templateId);
     return row ? mapTemplate(row) : null;
   });
 }
@@ -262,15 +248,12 @@ export async function createTemplate(
   dto: CreateTemplateDto,
   audit: AuditContext
 ): Promise<TemplateDto> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const row = await tx.documentTemplate.create({
-      data: {
-        firmId: actor.firmId,
-        name: dto.name,
-        language: (dto.language as Language | undefined) ?? Language.AR,
-        body: dto.body,
-        isSystem: false
-      }
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const row = await createFirmTemplate(tx, {
+      firmId: actor.firmId,
+      name: dto.name,
+      language: (dto.language as Language | undefined) ?? Language.AR,
+      body: dto.body
     });
 
     await writeAuditLog(tx, audit, {
@@ -289,17 +272,16 @@ export async function updateTemplate(
   dto: UpdateTemplateDto,
   audit: AuditContext
 ): Promise<TemplateDto | null> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const existing = await tx.documentTemplate.findFirst({
-      where: { id: templateId, firmId: actor.firmId, isSystem: false }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await findVisibleTemplateById(tx, actor.firmId, templateId);
 
-    if (!existing) {
+    if (!existing || existing.isSystem) {
       return null;
     }
 
-    const updateResult = await tx.documentTemplate.updateMany({
-      where: { id: templateId, firmId: actor.firmId, isSystem: false },
+    const updateResult = await updateFirmTemplateById(tx, {
+      firmId: actor.firmId,
+      templateId,
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.language !== undefined && { language: dto.language as Language }),
@@ -307,15 +289,13 @@ export async function updateTemplate(
       }
     });
 
-    if (updateResult.count === 0) {
+    if (updateResult === 0) {
       return null;
     }
 
-    const updated = await tx.documentTemplate.findFirst({
-      where: { id: templateId, firmId: actor.firmId, isSystem: false }
-    });
+    const updated = await findVisibleTemplateById(tx, actor.firmId, templateId);
 
-    if (!updated) {
+    if (!updated || updated.isSystem) {
       return null;
     }
 
@@ -334,12 +314,10 @@ export async function deleteTemplate(
   templateId: string,
   audit: AuditContext
 ): Promise<boolean> {
-  return withTenant(prisma, actor.firmId, async (tx) => {
-    const deleteResult = await tx.documentTemplate.deleteMany({
-      where: { id: templateId, firmId: actor.firmId, isSystem: false }
-    });
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const deleteResult = await deleteFirmTemplateById(tx, actor.firmId, templateId);
 
-    if (deleteResult.count === 0) {
+    if (deleteResult === 0) {
       return false;
     }
 

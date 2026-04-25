@@ -1,4 +1,8 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+
+type RetrievalQueryClient = {
+  $queryRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: unknown[]): Promise<T>;
+};
 
 export interface RetrievedExcerpt {
   documentId: string;
@@ -13,14 +17,14 @@ export interface RetrievedExcerpt {
  * Language `simple` is used for Arabic compatibility (no stemming applied).
  */
 export async function retrieveRelevantExcerpts(
-  prisma: PrismaClient,
+  db: RetrievalQueryClient,
   firmId: string,
   query: string,
   topK = 5
 ): Promise<RetrievedExcerpt[]> {
   if (!query.trim()) return [];
 
-  const rows = await prisma.$queryRaw<
+  const rows = await db.$queryRaw<
     {
       document_id: string;
       article_id: string | null;

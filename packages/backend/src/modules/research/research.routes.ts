@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireEditionFeature } from "../../middleware/requireEditionFeature.js";
@@ -10,6 +11,8 @@ import {
   sendMessage,
   checkUsageLimit
 } from "./research.service.js";
+
+const sessionIdParamsSchema = z.object({ sessionId: z.string().min(1) });
 
 export async function registerResearchRoutes(app: FastifyInstance) {
   // ── Sessions ─────────────────────────────────────────────────────────────
@@ -52,7 +55,7 @@ export async function registerResearchRoutes(app: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const { sessionId } = request.params as { sessionId: string };
+      const { sessionId } = sessionIdParamsSchema.parse(request.params);
       const result = await getSession(request.sessionUser!, sessionId);
       if (!result) return reply.status(404).send({ error: "Session not found" });
       return result;
@@ -69,7 +72,7 @@ export async function registerResearchRoutes(app: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const { sessionId } = request.params as { sessionId: string };
+      const { sessionId } = sessionIdParamsSchema.parse(request.params);
       const ok = await deleteSession(request.sessionUser!, sessionId);
       if (!ok) return reply.status(404).send({ error: "Session not found" });
       return { success: true };
@@ -102,7 +105,7 @@ export async function registerResearchRoutes(app: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const { sessionId } = request.params as { sessionId: string };
+      const { sessionId } = sessionIdParamsSchema.parse(request.params);
       const { content } = request.body as { content: string };
 
       if (!content?.trim()) {

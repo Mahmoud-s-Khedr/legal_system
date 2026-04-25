@@ -106,6 +106,7 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
 describe("createApp", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN;
   });
 
   it("registers plugins/routes and returns app", async () => {
@@ -143,7 +144,7 @@ describe("createApp", () => {
     expect(get).toHaveBeenCalledWith("/api/health", expect.any(Function));
   });
 
-  it("health endpoint returns ok and includes bootstrap token when db check succeeds", async () => {
+  it("health endpoint returns ok and includes bootstrap token in local mode when db check succeeds", async () => {
     const get = vi.fn();
     const app = {
       log: { info: vi.fn() },
@@ -155,7 +156,7 @@ describe("createApp", () => {
     prismaQueryRaw.mockResolvedValue(undefined);
     process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN = "boot-123";
 
-    await createApp(makeEnv());
+    await createApp(makeEnv({ AUTH_MODE: "local" }));
 
     const healthHandler = get.mock.calls.find((entry) => entry[0] === "/api/health")?.[1] as
       | ((req: unknown, reply: unknown) => Promise<unknown>)
@@ -177,6 +178,41 @@ describe("createApp", () => {
         desktopBootstrapToken: "boot-123"
       })
     );
+  });
+
+  it("health endpoint omits bootstrap token in non-local mode", async () => {
+    const get = vi.fn();
+    const app = {
+      log: { info: vi.fn() },
+      decorate: vi.fn(),
+      register: vi.fn().mockResolvedValue(undefined),
+      get
+    };
+    fastifyFactory.mockReturnValue(app);
+    prismaQueryRaw.mockResolvedValue(undefined);
+    process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN = "boot-123";
+
+    await createApp(makeEnv({ AUTH_MODE: "cloud" }));
+
+    const healthHandler = get.mock.calls.find((entry) => entry[0] === "/api/health")?.[1] as
+      | ((req: unknown, reply: unknown) => Promise<unknown>)
+      | undefined;
+
+    const reply = {
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockImplementation((payload: unknown) => payload)
+    };
+
+    const payload = await healthHandler!({} as never, reply as never);
+
+    expect(reply.status).toHaveBeenCalledWith(200);
+    expect(payload).toEqual(
+      expect.objectContaining({
+        ok: true,
+        status: "ok"
+      })
+    );
+    expect(payload).not.toEqual(expect.objectContaining({ desktopBootstrapToken: "boot-123" }));
   });
 
   it("health endpoint returns degraded error when db check fails", async () => {

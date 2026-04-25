@@ -43,6 +43,8 @@ const hearingOutcomeSchema = z.object({
   outcome: z.nativeEnum(SessionOutcome).nullable()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
   app.get(
     "/api/hearings",
@@ -102,7 +104,7 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
       schema: { response: { 200: hearingDtoSchema } },
       preHandler: [requireAuth, requirePermission("hearings:read")]
     },
-    async (request) => getHearing(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getHearing(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.put(
@@ -115,7 +117,7 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
       const payload = hearingSchema.parse(request.body);
       const hearing = await updateHearing(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -147,7 +149,7 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
     async (request) =>
       updateHearingOutcome(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         hearingOutcomeSchema.parse(request.body),
         getAuditContext(request)
       )

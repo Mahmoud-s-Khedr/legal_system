@@ -25,6 +25,8 @@ const updateTemplateSchema = z.object({
   body: z.string().min(1).optional()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerTemplateRoutes(app: FastifyInstance) {
   app.get(
     "/api/templates",
@@ -38,7 +40,7 @@ export async function registerTemplateRoutes(app: FastifyInstance) {
     "/api/templates/:id",
     { preHandler: [requireAuth, requirePermission("templates:read")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const result = await getTemplate(request.sessionUser!, id);
 
       if (!result) {
@@ -64,7 +66,7 @@ export async function registerTemplateRoutes(app: FastifyInstance) {
     "/api/templates/:id",
     { preHandler: [requireAuth, requirePermission("templates:update")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const body = updateTemplateSchema.parse(request.body);
       const audit = getAuditContext(request);
       const result = await updateTemplate(request.sessionUser!, id, body, audit);
@@ -81,7 +83,7 @@ export async function registerTemplateRoutes(app: FastifyInstance) {
     "/api/templates/:id",
     { preHandler: [requireAuth, requirePermission("templates:delete")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const audit = getAuditContext(request);
       const deleted = await deleteTemplate(request.sessionUser!, id, audit);
 
@@ -97,7 +99,7 @@ export async function registerTemplateRoutes(app: FastifyInstance) {
     "/api/templates/:id/render",
     { preHandler: [requireAuth, requirePermission("templates:read")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const { caseId } = z.object({ caseId: z.string().uuid() }).parse(request.body);
 
       const result = await renderTemplate(request.sessionUser!, id, caseId);
@@ -114,7 +116,7 @@ export async function registerTemplateRoutes(app: FastifyInstance) {
     "/api/templates/:id/export",
     { preHandler: [requireAuth, requirePermission("templates:read")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const query = z
         .object({
           format: z.literal("docx").default("docx"),

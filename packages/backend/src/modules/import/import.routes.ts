@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
@@ -18,10 +19,13 @@ const ALLOWED_IMPORT_TYPES = [
   "application/vnd.ms-excel"
 ];
 
+const previewIdParamsSchema = z.object({ previewId: z.string().min(1) });
+const previewBodySchema = z.object({ previewId: z.string().min(1) });
+
 export async function registerImportRoutes(app: FastifyInstance) {
   app.get(
     "/api/import/previews/:previewId/rows",
-    { preHandler: [requireAuth] },
+    { preHandler: [requireAuth], config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
     async (request, reply) => {
       const query = request.query as {
         q?: string;
@@ -35,7 +39,7 @@ export async function registerImportRoutes(app: FastifyInstance) {
       const limit = Math.min(200, Math.max(1, Number.parseInt(query.limit ?? "50", 10) || 50));
       const result = listImportPreviewRows(
         request.sessionUser!,
-        (request.params as { previewId: string }).previewId,
+        previewIdParamsSchema.parse(request.params).previewId,
         {
           q: query.q,
           status: query.status,
@@ -56,7 +60,7 @@ export async function registerImportRoutes(app: FastifyInstance) {
 
   app.post(
     "/api/import/clients/preview",
-    { preHandler: [requireAuth, requirePermission("clients:create")] },
+    { preHandler: [requireAuth, requirePermission("clients:create")], config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (request, reply) => {
       const data = await request.file();
       if (!data) return reply.status(400).send({ message: "No file uploaded" });
@@ -73,7 +77,7 @@ export async function registerImportRoutes(app: FastifyInstance) {
 
   app.post(
     "/api/import/clients/execute",
-    { preHandler: [requireAuth, requirePermission("clients:create")] },
+    { preHandler: [requireAuth, requirePermission("clients:create")], config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (request, reply) => {
       const data = await request.file();
       if (!data) return reply.status(400).send({ message: "No file uploaded" });
@@ -95,12 +99,9 @@ export async function registerImportRoutes(app: FastifyInstance) {
 
   app.post(
     "/api/import/clients/execute-preview",
-    { preHandler: [requireAuth, requirePermission("clients:create")] },
+    { preHandler: [requireAuth, requirePermission("clients:create")], config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (request, reply) => {
-      const body = request.body as { previewId?: string };
-      if (!body.previewId) {
-        return reply.status(422).send({ message: "previewId is required" });
-      }
+      const body = previewBodySchema.parse(request.body);
 
       const result = await executeClientImportPreview(
         request.sessionUser!,
@@ -118,7 +119,7 @@ export async function registerImportRoutes(app: FastifyInstance) {
 
   app.post(
     "/api/import/cases/preview",
-    { preHandler: [requireAuth, requirePermission("cases:create")] },
+    { preHandler: [requireAuth, requirePermission("cases:create")], config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (request, reply) => {
       const data = await request.file();
       if (!data) return reply.status(400).send({ message: "No file uploaded" });
@@ -135,7 +136,7 @@ export async function registerImportRoutes(app: FastifyInstance) {
 
   app.post(
     "/api/import/cases/execute",
-    { preHandler: [requireAuth, requirePermission("cases:create")] },
+    { preHandler: [requireAuth, requirePermission("cases:create")], config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (request, reply) => {
       const data = await request.file();
       if (!data) return reply.status(400).send({ message: "No file uploaded" });
@@ -157,12 +158,9 @@ export async function registerImportRoutes(app: FastifyInstance) {
 
   app.post(
     "/api/import/cases/execute-preview",
-    { preHandler: [requireAuth, requirePermission("cases:create")] },
+    { preHandler: [requireAuth, requirePermission("cases:create")], config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (request, reply) => {
-      const body = request.body as { previewId?: string };
-      if (!body.previewId) {
-        return reply.status(422).send({ message: "previewId is required" });
-      }
+      const body = previewBodySchema.parse(request.body);
 
       const result = await executeCaseImportPreview(
         request.sessionUser!,

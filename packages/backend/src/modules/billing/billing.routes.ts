@@ -85,6 +85,8 @@ const invoiceListQuerySchema = z.object({
   limit: z.string().optional()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 const expenseListQuerySchema = z.object({
   q: z.string().optional(),
   caseId: z.string().uuid().optional(),
@@ -129,7 +131,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       schema: { response: { 200: invoiceDtoSchema } },
       preHandler: [requireAuth, requirePermission("invoices:read")]
     },
-    async (request) => getInvoice(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getInvoice(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.put(
@@ -142,7 +144,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       const payload = updateInvoiceSchema.parse(request.body);
       return updateInvoice(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -155,8 +157,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       schema: { response: { 200: invoiceDtoSchema } },
       preHandler: [requireAuth, requirePermission("invoices:update")]
     },
-    async (request) =>
-      issueInvoice(request.sessionUser!, (request.params as { id: string }).id, getAuditContext(request))
+    async (request) => issueInvoice(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 
   app.post(
@@ -165,8 +166,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       schema: { response: { 200: invoiceDtoSchema } },
       preHandler: [requireAuth, requirePermission("invoices:update")]
     },
-    async (request) =>
-      voidInvoice(request.sessionUser!, (request.params as { id: string }).id, getAuditContext(request))
+    async (request) => voidInvoice(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 
   app.delete(
@@ -178,7 +178,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     async (request) => {
       await deleteInvoice(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         getAuditContext(request)
       );
       return { success: true as const };
@@ -189,13 +189,14 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     "/api/invoices/:id/payments",
     {
       schema: { response: { 200: invoiceDtoSchema } },
-      preHandler: [requireAuth, requirePermission("invoices:update")]
+      preHandler: [requireAuth, requirePermission("invoices:update")],
+      config: { rateLimit: { max: 20, timeWindow: "1 minute" } }
     },
     async (request) => {
       const payload = createPaymentSchema.parse(request.body);
       return addPayment(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -235,7 +236,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       schema: { response: { 200: expenseDtoSchema } },
       preHandler: [requireAuth, requirePermission("expenses:read")]
     },
-    async (request) => getExpense(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getExpense(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.put(
@@ -248,7 +249,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       const payload = updateExpenseSchema.parse(request.body);
       return updateExpense(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -264,7 +265,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     async (request) => {
       await deleteExpense(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         getAuditContext(request)
       );
       return { success: true as const };
@@ -277,7 +278,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     "/api/invoices/:id/pdf",
     { preHandler: [requireAuth, requirePermission("invoices:read")] },
     async (request, reply) => {
-      const invoice = await getInvoice(request.sessionUser!, (request.params as { id: string }).id);
+      const invoice = await getInvoice(request.sessionUser!, idParamsSchema.parse(request.params).id);
       const firmName = (request.sessionUser! as { firmName?: string }).firmName ?? "ELMS";
       const pdf = await generateInvoicePdf(invoice, firmName);
       reply
@@ -296,6 +297,6 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       schema: { response: { 200: billingSummarySchema } },
       preHandler: [requireAuth, requirePermission("invoices:read")]
     },
-    async (request) => getCaseBillingSummary(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getCaseBillingSummary(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 }

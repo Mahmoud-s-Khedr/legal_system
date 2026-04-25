@@ -19,6 +19,7 @@ import {
 } from "./notification.service.js";
 
 export async function registerNotificationRoutes(app: FastifyInstance) {
+  const idParamsSchema = z.object({ id: z.string().min(1) });
   const listNotificationsQuerySchema = z.object({
     q: z.string().optional(),
     type: z.nativeEnum(NotificationType).optional(),
@@ -70,7 +71,7 @@ export async function registerNotificationRoutes(app: FastifyInstance) {
       preHandler: [requireAuth]
     },
     async (request) => {
-      await markRead(request.sessionUser!, (request.params as { id: string }).id);
+      await markRead(request.sessionUser!, idParamsSchema.parse(request.params).id);
       return { success: true as const };
     }
   );

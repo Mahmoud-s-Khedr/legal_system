@@ -49,6 +49,9 @@ const updateLookupSchema = z.object({
   sortOrder: z.number().int().min(0)
 });
 
+const entityParamsSchema = z.object({ entity: z.string().min(1) });
+const entityIdParamsSchema = z.object({ entity: z.string().min(1), id: z.string().min(1) });
+
 function assertValidEntity(entity: string): asserts entity is LookupEntity {
   if (!(LOOKUP_ENTITIES as readonly string[]).includes(entity)) {
     throw appError(
@@ -66,7 +69,7 @@ export async function registerLookupRoutes(app: FastifyInstance) {
       preHandler: [requireAuth]
     },
     async (request) => {
-      const { entity } = request.params as { entity: string };
+      const { entity } = entityParamsSchema.parse(request.params);
       assertValidEntity(entity);
       return listLookupOptions(request.sessionUser!, entity);
     }
@@ -79,7 +82,7 @@ export async function registerLookupRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("lookups:manage")]
     },
     async (request) => {
-      const { entity } = request.params as { entity: string };
+      const { entity } = entityParamsSchema.parse(request.params);
       assertValidEntity(entity);
       const payload = createLookupSchema.parse(request.body);
       return createLookupOption(request.sessionUser!, entity, payload, getAuditContext(request));
@@ -93,7 +96,7 @@ export async function registerLookupRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("lookups:manage")]
     },
     async (request) => {
-      const { entity, id } = request.params as { entity: string; id: string };
+      const { entity, id } = entityIdParamsSchema.parse(request.params);
       assertValidEntity(entity);
       const payload = updateLookupSchema.parse(request.body);
       return updateLookupOption(request.sessionUser!, entity, id, payload, getAuditContext(request));
@@ -107,7 +110,7 @@ export async function registerLookupRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("lookups:manage")]
     },
     async (request) => {
-      const { entity, id } = request.params as { entity: string; id: string };
+      const { entity, id } = entityIdParamsSchema.parse(request.params);
       assertValidEntity(entity);
       return deleteLookupOption(request.sessionUser!, entity, id, getAuditContext(request));
     }

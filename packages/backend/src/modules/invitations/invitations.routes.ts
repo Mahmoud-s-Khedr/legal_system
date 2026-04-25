@@ -18,6 +18,8 @@ const createInvitationSchema = z.object({
   roleId: z.string().uuid()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerInvitationRoutes(app: FastifyInstance, env: AppEnv) {
   app.get(
     "/api/invitations",
@@ -95,7 +97,7 @@ export async function registerInvitationRoutes(app: FastifyInstance, env: AppEnv
 
       return revokeInvitation(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         getAuditContext(request)
       );
     }

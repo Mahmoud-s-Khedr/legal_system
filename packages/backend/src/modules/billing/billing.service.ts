@@ -20,6 +20,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import { appError } from "../../errors/appError.js";
 import {
   createExpense as createExpenseRecord,
   createInvoiceWithItems,
@@ -326,7 +327,7 @@ export async function updateInvoice(
 ): Promise<InvoiceDto> {
   return inTenantTransaction(actor.firmId, async (tx) => {
     const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
-    if (existing.status === "VOID") throw new Error("Cannot update a voided invoice");
+    if (existing.status === "VOID") throw appError("Cannot update a voided invoice", 422);
 
     const taxAmount = new Decimal(payload.taxAmount ?? existing.taxAmount.toFixed(2));
     const discountAmount = new Decimal(payload.discountAmount ?? existing.discountAmount.toFixed(2));
@@ -368,7 +369,7 @@ export async function updateInvoice(
 export async function issueInvoice(actor: SessionUser, id: string, audit: AuditContext): Promise<InvoiceDto> {
   return inTenantTransaction(actor.firmId, async (tx) => {
     const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
-    if (existing.status !== "DRAFT") throw new Error("Only DRAFT invoices can be issued");
+    if (existing.status !== "DRAFT") throw appError("Only DRAFT invoices can be issued", 422);
     const inv = await updateFirmInvoiceById(tx, id, actor.firmId, {
       status: "ISSUED",
       issuedAt: existing.issuedAt ?? new Date()
@@ -389,7 +390,7 @@ export async function voidInvoice(actor: SessionUser, id: string, audit: AuditCo
 export async function deleteInvoice(actor: SessionUser, id: string, audit: AuditContext): Promise<void> {
   return inTenantTransaction(actor.firmId, async (tx) => {
     const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
-    if (existing.status !== "DRAFT") throw new Error("Only DRAFT invoices can be deleted");
+    if (existing.status !== "DRAFT") throw appError("Only DRAFT invoices can be deleted", 422);
     await deleteInvoiceById(tx, id, actor.firmId);
     await writeAuditLog(tx, audit, { action: "invoice.deleted", entityType: "Invoice", entityId: id });
   });
@@ -405,7 +406,7 @@ export async function addPayment(
 ): Promise<InvoiceDto> {
   return inTenantTransaction(actor.firmId, async (tx) => {
     const invoice = await getFirmInvoiceByIdOrThrow(tx, actor.firmId, invoiceId);
-    if (invoice.status === "VOID") throw new Error("Cannot add payment to a voided invoice");
+    if (invoice.status === "VOID") throw appError("Cannot add payment to a voided invoice", 422);
 
     await createPayment(tx, {
       invoiceId,

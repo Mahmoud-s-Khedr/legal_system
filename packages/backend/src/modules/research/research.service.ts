@@ -1,6 +1,4 @@
 import type { SessionUser } from "@elms/shared";
-import { prisma } from "../../db/prisma.js";
-import { withTenant } from "../../db/tenant.js";
 import { loadEnv } from "../../config/env.js";
 import { ResearchRole } from "@prisma/client";
 import { streamMessage, type ChatMessage } from "./ai.provider.js";
@@ -9,6 +7,21 @@ import {
   getAiMonthlyLimit,
   hasEditionFeature
 } from "../editions/editionPolicy.js";
+import { appError } from "../../errors/appError.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import {
+  countFirmUserResearchMessagesSince,
+  createResearchMessage,
+  createResearchSession,
+  createResearchSessionSources,
+  deleteResearchSession,
+  findResearchSessionForFirm,
+  getFirmEditionKey,
+  getResearchSession,
+  listResearchMessages,
+  listResearchSessions,
+  touchResearchSession
+} from "../../repositories/research/research.repository.js";
 
 const SYSTEM_PROMPT = `أنت مساعد قانوني متخصص في القانون المصري وقوانين الشرق الأوسط.
 تساعد المحامين وأعضاء فريق المكتب القانوني في البحث والتحليل القانوني.
@@ -45,63 +58,41 @@ export async function createSession(
   caseId?: string,
   title?: string
 ) {
-  return withTenant(prisma, actor.firmId, async (tx) =>
-    tx.researchSession.create({
-      data: {
-        firmId: actor.firmId,
-        userId: actor.id,
-        caseId: caseId ?? null,
-        title: title ?? null
-      }
+  return inTenantTransaction(actor.firmId, async (tx) =>
+    createResearchSession(tx, {
+      firmId: actor.firmId,
+      userId: actor.id,
+      caseId: caseId ?? null,
+      title: title ?? null
     })
   );
 }
 
 export async function listSessions(actor: SessionUser) {
-  return withTenant(prisma, actor.firmId, async (tx) =>
-    tx.researchSession.findMany({
-      where: { firmId: actor.firmId, userId: actor.id },
-      orderBy: { updatedAt: "desc" },
-      take: 50,
-      select: { id: true, title: true, caseId: true, createdAt: true, updatedAt: true }
-    })
-  );
+  return inTenantTransaction(actor.firmId, async (tx) => listResearchSessions(tx, actor.firmId, actor.id));
 }
 
 export async function getSession(actor: SessionUser, sessionId: string) {
-  return withTenant(prisma, actor.firmId, async (tx) =>
-    tx.researchSession.findFirst({
-      where: { id: sessionId, firmId: actor.firmId },
-      include: {
-        messages: {
-          orderBy: { createdAt: "asc" },
-          include: { sources: { include: { document: true, article: true } } }
-        }
-      }
-    })
-  );
+  return inTenantTransaction(actor.firmId, async (tx) => getResearchSession(tx, actor.firmId, sessionId));
 }
 
 export async function deleteSession(actor: SessionUser, sessionId: string): Promise<boolean> {
-  const deleted = await withTenant(prisma, actor.firmId, async (tx) =>
-    tx.researchSession.deleteMany({ where: { id: sessionId, firmId: actor.firmId, userId: actor.id } })
+  const deleted = await inTenantTransaction(actor.firmId, async (tx) =>
+    deleteResearchSession(tx, { firmId: actor.firmId, userId: actor.id, sessionId })
   );
-  return deleted.count > 0;
+  return deleted > 0;
 }
 
 // ── Usage tracking ───────────────────────────────────────────────────────────
 
 export async function checkUsageLimit(firmId: string): Promise<{ allowed: boolean; used: number; limit: number }> {
-  const firm = await prisma.firm.findUniqueOrThrow({
-    where: { id: firmId },
-    select: { editionKey: true }
-  });
+  const editionKey = await inTenantTransaction(firmId, async (tx) => getFirmEditionKey(tx, firmId));
 
-  if (!hasEditionFeature(firm.editionKey, "ai_research")) {
+  if (!hasEditionFeature(editionKey, "ai_research")) {
     return { allowed: false, used: 0, limit: 0 };
   }
 
-  const policyLimit = getAiMonthlyLimit(firm.editionKey) ?? 0;
+  const policyLimit = getAiMonthlyLimit(editionKey) ?? 0;
   const env = loadEnv();
   const limit = env.AI_MONTHLY_LIMIT === 0 ? policyLimit : Math.min(env.AI_MONTHLY_LIMIT, policyLimit);
   if (limit === 0) return { allowed: true, used: 0, limit: 0 };
@@ -110,15 +101,9 @@ export async function checkUsageLimit(firmId: string): Promise<{ allowed: boolea
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const used = await prisma.researchMessage.count({
-    where: {
-      role: ResearchRole.USER,
-      session: {
-        firmId,
-        createdAt: { gte: startOfMonth }
-      }
-    }
-  });
+  const used = await inTenantTransaction(firmId, async (tx) =>
+    countFirmUserResearchMessagesSince(tx, { firmId, startOfMonth, role: ResearchRole.USER })
+  );
 
   return { allowed: used < limit, used, limit };
 }
@@ -136,33 +121,33 @@ export async function* sendMessage(
   userContent: string
 ): AsyncIterable<string> {
   if (!hasEditionFeature(actor.editionKey, "ai_research")) {
-    throw new Error("FEATURE_NOT_AVAILABLE");
+    throw appError("FEATURE_NOT_AVAILABLE", 403);
   }
 
   // Validate session belongs to actor's firm
-  const session = await prisma.researchSession.findFirst({
-    where: { id: sessionId, firmId: actor.firmId }
-  });
-  if (!session) throw new Error("Session not found");
+  const session = await inTenantTransaction(actor.firmId, async (tx) =>
+    findResearchSessionForFirm(tx, actor.firmId, sessionId)
+  );
+  if (!session) throw appError("Session not found", 404);
 
   // Check usage limit
   const usage = await checkUsageLimit(actor.firmId);
-  if (!usage.allowed) throw new Error("USAGE_LIMIT_EXCEEDED");
+  if (!usage.allowed) throw appError("USAGE_LIMIT_EXCEEDED", 429);
 
   // Persist user message
-  await prisma.researchMessage.create({
-    data: { sessionId, role: ResearchRole.USER, content: userContent }
-  });
+  await inTenantTransaction(actor.firmId, async (tx) =>
+    createResearchMessage(tx, { sessionId, role: ResearchRole.USER, content: userContent })
+  );
 
   // Retrieve context from library
-  const excerpts = await retrieveRelevantExcerpts(prisma, actor.firmId, userContent);
+  const excerpts = await inTenantTransaction(actor.firmId, async (tx) =>
+    retrieveRelevantExcerpts(tx, actor.firmId, userContent)
+  );
 
   // Build history (last 20 messages for context window)
-  const history = await prisma.researchMessage.findMany({
-    where: { sessionId },
-    orderBy: { createdAt: "asc" },
-    take: 20
-  });
+  const history = await inTenantTransaction(actor.firmId, async (tx) =>
+    listResearchMessages(tx, sessionId, 20)
+  );
 
   const chatMessages: ChatMessage[] = history.map((m) => ({
     role: m.role === ResearchRole.USER ? "user" : "assistant",
@@ -179,24 +164,19 @@ export async function* sendMessage(
   }
 
   // Persist assistant message + sources
-  const assistantMsg = await prisma.researchMessage.create({
-    data: { sessionId, role: ResearchRole.ASSISTANT, content: fullResponse }
-  });
-
-  if (excerpts.length > 0) {
-    await prisma.researchSessionSource.createMany({
-      data: excerpts.map((e) => ({
-        sessionId,
-        messageId: assistantMsg.id,
-        documentId: e.documentId,
-        articleId: e.articleId ?? null
-      }))
+  await inTenantTransaction(actor.firmId, async (tx) => {
+    const assistantMsg = await createResearchMessage(tx, {
+      sessionId,
+      role: ResearchRole.ASSISTANT,
+      content: fullResponse
     });
-  }
 
-  // Touch updatedAt on session
-  await prisma.researchSession.update({
-    where: { id: sessionId },
-    data: { updatedAt: new Date() }
+    await createResearchSessionSources(tx, {
+      sessionId,
+      messageId: assistantMsg.id,
+      excerpts: excerpts.map((e) => ({ documentId: e.documentId, articleId: e.articleId ?? null }))
+    });
+
+    await touchResearchSession(tx, sessionId);
   });
 }

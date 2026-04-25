@@ -43,6 +43,8 @@ const revokePoaSchema = z.object({
   reason: z.string().nullable().optional()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerPowersRoutes(app: FastifyInstance) {
   app.get(
     "/api/powers",
@@ -74,12 +76,7 @@ export async function registerPowersRoutes(app: FastifyInstance) {
   app.get(
     "/api/powers/:id",
     { preHandler: [requireAuth, requirePermission("powers:read")] },
-    async (request) =>
-      getPower(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        getAuditContext(request)
-      )
+    async (request) => getPower(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 
   app.put(
@@ -89,7 +86,7 @@ export async function registerPowersRoutes(app: FastifyInstance) {
       const dto = updatePoaSchema.parse(request.body);
       return updatePower(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         dto,
         getAuditContext(request)
       );
@@ -103,7 +100,7 @@ export async function registerPowersRoutes(app: FastifyInstance) {
       const dto = revokePoaSchema.parse(request.body);
       return revokePower(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         dto,
         getAuditContext(request)
       );
@@ -113,11 +110,6 @@ export async function registerPowersRoutes(app: FastifyInstance) {
   app.delete(
     "/api/powers/:id",
     { preHandler: [requireAuth, requirePermission("powers:delete")] },
-    async (request) =>
-      deletePower(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        getAuditContext(request)
-      )
+    async (request) => deletePower(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 }

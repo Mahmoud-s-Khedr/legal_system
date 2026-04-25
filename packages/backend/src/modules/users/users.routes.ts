@@ -48,6 +48,8 @@ const updateUserStatusSchema = z.object({
   status: z.nativeEnum(UserStatus)
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
   const userOrDisabledResponses = { 200: userDtoSchema, 405: errorSchema } as const;
 
@@ -86,7 +88,7 @@ export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
       schema: { response: { 200: userDtoSchema } },
       preHandler: [requireAuth, requirePermission("users:read")]
     },
-    async (request) => getUser(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getUser(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.post(
@@ -117,7 +119,7 @@ export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
       const payload = updateUserSchema.parse(request.body);
       return updateUser(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -128,7 +130,8 @@ export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/users/me/password",
     {
       schema: { response: { 200: successSchema } },
-      preHandler: [requireAuth]
+      preHandler: [requireAuth],
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } }
     },
     async (request) => {
       const payload = changeOwnPasswordSchema.parse(request.body);
@@ -140,13 +143,14 @@ export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/users/:id/password",
     {
       schema: { response: { 200: successSchema } },
-      preHandler: [requireAuth, requirePermission("users:update")]
+      preHandler: [requireAuth, requirePermission("users:update")],
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } }
     },
     async (request) => {
       const payload = adminSetPasswordSchema.parse(request.body);
       return adminSetPassword(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -163,7 +167,7 @@ export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
       const payload = updateUserStatusSchema.parse(request.body);
       return updateUserStatus(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -179,7 +183,7 @@ export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
     async (request) => {
       return removeUser(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         getAuditContext(request)
       );
     }

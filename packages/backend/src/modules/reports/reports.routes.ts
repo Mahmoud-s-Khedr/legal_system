@@ -106,6 +106,11 @@ const REPORT_CONFIG = {
   }
 } as const;
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+const caseIdParamsSchema = z.object({ caseId: z.string().min(1) });
+const reportTypeParamsSchema = z.object({ reportType: z.string().min(1) });
+const runIdParamsSchema = z.object({ runId: z.string().min(1) });
+
 export async function registerReportRoutes(app: FastifyInstance) {
   app.get(
     "/api/reports/case-status",
@@ -195,7 +200,7 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/case-profitability/:caseId",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
-      const { caseId } = request.params as { caseId: string };
+      const { caseId } = caseIdParamsSchema.parse(request.params);
       const result = await caseProfitability(request.sessionUser!, caseId);
 
       if (!result) {
@@ -212,7 +217,7 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/:reportType/export",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
-      const { reportType } = request.params as { reportType: string };
+      const { reportType } = reportTypeParamsSchema.parse(request.params);
       const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
       const format = query.format === "pdf" ? "pdf" : "excel";
       const filter = { dateFrom: query.dateFrom, dateTo: query.dateTo };
@@ -290,7 +295,7 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/custom/:id",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const body = request.body as { name?: string; description?: string; reportType?: string; config?: unknown };
       const result = await updateCustomReport(request.sessionUser!, id, body);
       if (!result) return reply.status(404).send({ error: "Custom report not found" });
@@ -302,7 +307,7 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/custom/:id",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const ok = await deleteCustomReport(request.sessionUser!, id);
       if (!ok) return reply.status(404).send({ error: "Custom report not found" });
       return { success: true };
@@ -313,7 +318,7 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/custom/:id/run",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const result = await createCustomReportRunSession(request.sessionUser!, id);
       if (!result) return reply.status(404).send({ error: "Custom report not found" });
       return result;
@@ -328,7 +333,7 @@ export async function registerReportRoutes(app: FastifyInstance) {
       const { page, limit } = parsePaginationQuery(query);
       const result = listCustomReportRunRows(
         request.sessionUser!,
-        (request.params as { runId: string }).runId,
+        runIdParamsSchema.parse(request.params).runId,
         {
           q: query.q,
           sortBy: query.sortBy,
@@ -348,7 +353,7 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/custom/:id/export",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamsSchema.parse(request.params);
       const q = request.query as Record<string, string>;
       const format = q.format === "pdf" ? "pdf" : "excel";
       const generatedAt = new Date().toISOString().slice(0, 10);
@@ -376,7 +381,7 @@ export async function registerReportRoutes(app: FastifyInstance) {
     "/api/reports/case-profitability/:caseId/export",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request, reply) => {
-      const { caseId } = request.params as { caseId: string };
+      const { caseId } = caseIdParamsSchema.parse(request.params);
       const q = request.query as Record<string, string>;
       const format = q.format === "pdf" ? "pdf" : "excel";
       const generatedAt = new Date().toISOString().slice(0, 10);

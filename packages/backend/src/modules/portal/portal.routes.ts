@@ -4,10 +4,12 @@
  * Clients can only see their own firm's cases and invoices.
  */
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../../db/prisma.js";
 
 const PORTAL_COOKIE = "elms_portal_token";
 const PORTAL_AUDIENCE = "elms-portal";
+const caseIdParamsSchema = z.object({ caseId: z.string().min(1) });
 
 interface PortalContext {
   clientId: string;
@@ -80,7 +82,7 @@ export async function registerPortalRoutes(app: FastifyInstance) {
     const ctx = await requirePortalAuth(app, request, reply);
     if (!ctx) return;
 
-    const { caseId } = request.params as { caseId: string };
+    const { caseId } = caseIdParamsSchema.parse(request.params);
     const c = await prisma.case.findFirst({
       where: { id: caseId, clientId: ctx.clientId, firmId: ctx.firmId, deletedAt: null },
       include: {

@@ -26,6 +26,7 @@ import { writeAuditLog, type AuditContext } from "../../services/audit.service.j
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { appError } from "../../errors/appError.js";
+import { inTenantTransaction } from "../../repositories/unitOfWork.js";
 
 function mapCourt(court: {
   id: string;
@@ -500,49 +501,51 @@ export async function checkConflictOfInterest(
   partyName: string,
   partyNationalId?: string | null
 ): Promise<ConflictWarningDto[]> {
-  // Find cases where this name appears as an opposing party
-  const conflicts = await prisma.caseParty.findMany({
-    where: {
-      case: { firmId, deletedAt: null },
-      partyType: "OPPONENT",
-      OR: [
-        { name: { contains: partyName, mode: "insensitive" } },
-        ...(partyNationalId
-          ? [
-              {
-                client: {
-                  nationalId: partyNationalId
+  const { conflicts, clientMatches } = await inTenantTransaction(firmId, async (tx) => {
+    const conflicts = await tx.caseParty.findMany({
+      where: {
+        case: { firmId, deletedAt: null },
+        partyType: "OPPONENT",
+        OR: [
+          { name: { contains: partyName, mode: "insensitive" } },
+          ...(partyNationalId
+            ? [
+                {
+                  client: {
+                    nationalId: partyNationalId
+                  }
                 }
-              }
-            ]
-          : [])
-      ]
-    },
-    select: {
-      name: true,
-      case: { select: { id: true, title: true } }
-    },
-    take: 10
-  });
+              ]
+            : [])
+        ]
+      },
+      select: {
+        name: true,
+        case: { select: { id: true, title: true } }
+      },
+      take: 10
+    });
 
-  // Also check if this party is a firm client
-  const clientMatches = await prisma.client.findMany({
-    where: {
-      firmId,
-      deletedAt: null,
-      OR: [
-        { name: { contains: partyName, mode: "insensitive" } },
-        ...(partyNationalId ? [{ nationalId: partyNationalId }] : [])
-      ]
-    },
-    select: {
-      name: true,
-      parties: {
-        where: { partyType: "OPPONENT" },
-        select: { case: { select: { id: true, title: true } } },
-        take: 5
+    const clientMatches = await tx.client.findMany({
+      where: {
+        firmId,
+        deletedAt: null,
+        OR: [
+          { name: { contains: partyName, mode: "insensitive" } },
+          ...(partyNationalId ? [{ nationalId: partyNationalId }] : [])
+        ]
+      },
+      select: {
+        name: true,
+        parties: {
+          where: { partyType: "OPPONENT" },
+          select: { case: { select: { id: true, title: true } } },
+          take: 5
+        }
       }
-    }
+    });
+
+    return { conflicts, clientMatches };
   });
 
   const warnings: ConflictWarningDto[] = [];

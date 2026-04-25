@@ -7,11 +7,13 @@ import { randomBytes, createHash } from "node:crypto";
 import type { SignOptions, VerifyOptions } from "@fastify/jwt";
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 import type { AppEnv } from "../../config/env.js";
 import { prisma } from "../../db/prisma.js";
 
 const PORTAL_COOKIE = "elms_portal_token";
 const PORTAL_AUDIENCE = "elms-portal";
+const clientIdParamsSchema = z.object({ clientId: z.string().min(1) });
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -144,7 +146,7 @@ export async function registerPortalAuthRoutes(app: FastifyInstance, env: AppEnv
     },
     async (request, reply) => {
       const actor = request.sessionUser!;
-      const { clientId } = request.params as { clientId: string };
+      const { clientId } = clientIdParamsSchema.parse(request.params);
       const { email } = request.body as { email: string };
 
       const client = await prisma.client.findFirst({
@@ -187,7 +189,7 @@ export async function registerPortalAuthRoutes(app: FastifyInstance, env: AppEnv
     },
     async (request) => {
       const actor = request.sessionUser!;
-      const { clientId } = request.params as { clientId: string };
+      const { clientId } = clientIdParamsSchema.parse(request.params);
 
       await prisma.client.updateMany({
         where: { id: clientId, firmId: actor.firmId },

@@ -36,6 +36,8 @@ const clientSchema = z.object({
   contacts: z.array(contactSchema).optional()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerClientRoutes(app: FastifyInstance) {
   app.get(
     "/api/clients",
@@ -84,7 +86,7 @@ export async function registerClientRoutes(app: FastifyInstance) {
       schema: { response: { 200: clientDtoSchema } },
       preHandler: [requireAuth, requirePermission("clients:read")]
     },
-    async (request) => getClient(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getClient(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   app.put(
@@ -97,7 +99,7 @@ export async function registerClientRoutes(app: FastifyInstance) {
       const payload = clientSchema.parse(request.body);
       return updateClient(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -110,12 +112,7 @@ export async function registerClientRoutes(app: FastifyInstance) {
       schema: { response: { 200: successSchema } },
       preHandler: [requireAuth, requirePermission("clients:delete")]
     },
-    async (request) =>
-      removeClient(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        getAuditContext(request)
-      )
+    async (request) => removeClient(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 
   app.get(
@@ -123,10 +120,6 @@ export async function registerClientRoutes(app: FastifyInstance) {
     {
       preHandler: [requireAuth, requirePermission("clients:read")]
     },
-    async (request) =>
-      listClientCases(
-        request.sessionUser!,
-        (request.params as { id: string }).id
-      )
+    async (request) => listClientCases(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 }

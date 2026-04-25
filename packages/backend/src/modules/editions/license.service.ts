@@ -1,6 +1,6 @@
 import { createHash, createVerify } from "node:crypto";
 import { EditionKey, FirmLifecycleStatus, type LicenseActivationResponseDto } from "@elms/shared";
-import { prisma } from "../../db/prisma.js";
+import { applyLicenseActivation, findFirmForLicenseActivation } from "../../repositories/editions/editions.repository.js";
 
 export interface LicensePayload {
   firmId: string;
@@ -37,7 +37,11 @@ function getPublicKey(): string {
   try {
     const decoded = Buffer.from(raw, "base64").toString("utf-8");
     if (!decoded.includes("-----BEGIN PUBLIC KEY-----")) {
-      throw new Error("decoded value does not look like a PEM public key");
+      throw new LicenseServiceError(
+        "LICENSE_NOT_CONFIGURED",
+        "DESKTOP_LICENSE_PUBLIC_KEY decoded value does not look like a PEM public key.",
+        500
+      );
     }
     return decoded;
   } catch {
@@ -95,20 +99,7 @@ export async function activateLicense(
 ): Promise<LicenseActivationResponseDto> {
   const { payload, raw } = decodeLicenseKey(licenseKey);
 
-  const firm = await prisma.firm.findUnique({
-    where: { id: firmId },
-    select: {
-      id: true,
-      editionKey: true,
-      pendingEditionKey: true,
-      lifecycleStatus: true,
-      settings: {
-        select: {
-          licenseKeyHash: true
-        }
-      }
-    }
-  });
+  const firm = await findFirmForLicenseActivation(firmId);
 
   if (!firm) {
     throw new LicenseServiceError("LICENSE_INVALID", "Firm not found", 404);
@@ -157,29 +148,13 @@ export async function activateLicense(
 
   const now = new Date();
 
-  await prisma.$transaction([
-    prisma.firmSettings.upsert({
-      where: { firmId },
-      create: {
-        firmId,
-        timezone: "Africa/Cairo",
-        licenseKeyHash: keyHash,
-        licenseActivatedAt: now
-      },
-      update: {
-        licenseKeyHash: keyHash,
-        licenseActivatedAt: now
-      }
-    }),
-    prisma.firm.update({
-      where: { id: firmId },
-      data: {
-        lifecycleStatus: FirmLifecycleStatus.LICENSED as never,
-        editionKey: payload.editionKey as never,
-        pendingEditionKey: null
-      }
-    })
-  ]);
+  await applyLicenseActivation({
+    firmId,
+    keyHash,
+    activatedAt: now,
+    editionKey: payload.editionKey,
+    lifecycleStatus: FirmLifecycleStatus.LICENSED
+  });
 
   return {
     editionKey: payload.editionKey,

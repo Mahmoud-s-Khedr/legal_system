@@ -9,16 +9,26 @@
  * Token encryption: AES-256-CBC using GOOGLE_OAUTH_ENCRYPTION_KEY (32-byte hex).
  */
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { prisma } from "../../db/prisma.js";
 import type { AppEnv } from "../../config/env.js";
+import { appError } from "../../errors/appError.js";
 import { hasEditionFeature } from "../editions/editionPolicy.js";
+import {
+  deleteGoogleCalendarTokenByUserAndFirm,
+  findCaseSessionById,
+  findCaseSessionWithCaseById,
+  findFirmEditionByIdOrThrow,
+  findGoogleCalendarTokenByUserId,
+  updateCaseSessionGoogleCalendarEventId,
+  updateGoogleCalendarTokenAccess,
+  upsertGoogleCalendarToken
+} from "../../repositories/integrations/googleCalendar.repository.js";
 
 // ─── Encryption helpers ───────────────────────────────────────────────────────
 
 function getEncryptionKey(env: AppEnv): Buffer {
   const hex = env.GOOGLE_OAUTH_ENCRYPTION_KEY ?? "";
   if (hex.length !== 64) {
-    throw new Error("GOOGLE_OAUTH_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)");
+    throw appError("GOOGLE_OAUTH_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)", 500);
   }
   return Buffer.from(hex, "hex");
 }
@@ -34,7 +44,7 @@ function encrypt(text: string, env: AppEnv): string {
 function decrypt(data: string, env: AppEnv): string {
   const key = getEncryptionKey(env);
   const [ivHex, encHex] = data.split(":");
-  if (!ivHex || !encHex) throw new Error("Invalid encrypted token format");
+  if (!ivHex || !encHex) throw appError("Invalid encrypted token format", 500);
   const iv = Buffer.from(ivHex, "hex");
   const encrypted = Buffer.from(encHex, "hex");
   const decipher = createDecipheriv("aes-256-cbc", key, iv);
@@ -80,7 +90,7 @@ async function exchangeCode(code: string, env: AppEnv): Promise<TokenResponse> {
       grant_type: "authorization_code"
     })
   });
-  if (!res.ok) throw new Error(`Google token exchange failed: ${res.status}`);
+  if (!res.ok) throw appError(`Google token exchange failed: ${res.status}`, 400);
   return res.json() as Promise<TokenResponse>;
 }
 
@@ -95,12 +105,12 @@ async function refreshAccessToken(refreshToken: string, env: AppEnv): Promise<To
       grant_type: "refresh_token"
     })
   });
-  if (!res.ok) throw new Error(`Google token refresh failed: ${res.status}`);
+  if (!res.ok) throw appError(`Google token refresh failed: ${res.status}`, 400);
   return res.json() as Promise<TokenResponse>;
 }
 
 async function getValidAccessToken(userId: string, env: AppEnv): Promise<string | null> {
-  const stored = await prisma.googleCalendarToken.findUnique({ where: { userId } });
+  const stored = await findGoogleCalendarTokenByUserId(userId);
   if (!stored) return null;
 
   if (new Date() < stored.expiresAt) {
@@ -112,12 +122,11 @@ async function getValidAccessToken(userId: string, env: AppEnv): Promise<string 
   try {
     const tokens = await refreshAccessToken(refreshToken, env);
     const newExpiry = new Date(Date.now() + tokens.expires_in * 1000);
-    await prisma.googleCalendarToken.updateMany({
-      where: { userId, firmId: stored.firmId },
-      data: {
-        encryptedAccessToken: encrypt(tokens.access_token, env),
-        expiresAt: newExpiry
-      }
+    await updateGoogleCalendarTokenAccess({
+      userId,
+      firmId: stored.firmId,
+      encryptedAccessToken: encrypt(tokens.access_token, env),
+      expiresAt: newExpiry
     });
     return tokens.access_token;
   } catch {
@@ -133,42 +142,30 @@ export async function handleOAuthCallback(
   firmId: string,
   env: AppEnv
 ): Promise<void> {
-  const firm = await prisma.firm.findUniqueOrThrow({
-    where: { id: firmId },
-    select: { editionKey: true }
-  });
-  if (!hasEditionFeature(firm.editionKey, "google_calendar_sync")) {
-    throw new Error("Google Calendar integration is not available for current edition");
+  const firmEditionKey = await findFirmEditionByIdOrThrow(firmId);
+  if (!hasEditionFeature(firmEditionKey, "google_calendar_sync")) {
+    throw appError("Google Calendar integration is not available for current edition", 403);
   }
 
   const tokens = await exchangeCode(code, env);
   if (!tokens.refresh_token) {
-    throw new Error("No refresh token returned — revoke access and reconnect to get a refresh token");
+    throw appError("No refresh token returned — revoke access and reconnect to get a refresh token", 409);
   }
 
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-  await prisma.googleCalendarToken.upsert({
-    where: { userId },
-    create: {
-      userId,
-      firmId,
-      encryptedAccessToken: encrypt(tokens.access_token, env),
-      encryptedRefreshToken: encrypt(tokens.refresh_token, env),
-      expiresAt,
-      scope: tokens.scope
-    },
-    update: {
-      encryptedAccessToken: encrypt(tokens.access_token, env),
-      encryptedRefreshToken: tokens.refresh_token ? encrypt(tokens.refresh_token, env) : undefined,
-      expiresAt,
-      scope: tokens.scope
-    }
+  await upsertGoogleCalendarToken({
+    userId,
+    firmId,
+    encryptedAccessToken: encrypt(tokens.access_token, env),
+    encryptedRefreshToken: encrypt(tokens.refresh_token, env),
+    expiresAt,
+    scope: tokens.scope
   });
 }
 
 export async function revokeCalendarAccess(userId: string, env: AppEnv): Promise<void> {
-  const stored = await prisma.googleCalendarToken.findUnique({ where: { userId } });
+  const stored = await findGoogleCalendarTokenByUserId(userId);
   if (!stored) return;
 
   const accessToken = decrypt(stored.encryptedAccessToken, env);
@@ -181,11 +178,11 @@ export async function revokeCalendarAccess(userId: string, env: AppEnv): Promise
       errorMessage: message
     });
   }
-  await prisma.googleCalendarToken.deleteMany({ where: { userId, firmId: stored.firmId } });
+  await deleteGoogleCalendarTokenByUserAndFirm(userId, stored.firmId);
 }
 
 export async function getConnectionStatus(userId: string): Promise<{ connected: boolean; calendarId?: string }> {
-  const stored = await prisma.googleCalendarToken.findUnique({ where: { userId } });
+  const stored = await findGoogleCalendarTokenByUserId(userId);
   return stored
     ? { connected: true, calendarId: stored.calendarId }
     : { connected: false };
@@ -216,7 +213,8 @@ async function calendarRequest(
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Calendar API ${method} ${path} failed (${res.status}): ${text}`);
+    const statusCode = res.status === 404 ? 404 : res.status === 409 ? 409 : 400;
+    throw appError(`Calendar API ${method} ${path} failed (${res.status}): ${text}`, statusCode);
   }
   if (res.status === 204) return null;
   return res.json();
@@ -230,13 +228,10 @@ export async function pushHearingToCalendar(
   const accessToken = await getValidAccessToken(userId, env);
   if (!accessToken) return; // user not connected
 
-  const stored = await prisma.googleCalendarToken.findUnique({ where: { userId } });
+  const stored = await findGoogleCalendarTokenByUserId(userId);
   if (!stored) return;
 
-  const hearing = await prisma.caseSession.findUnique({
-    where: { id: hearingId },
-    include: { case: { select: { title: true, caseNumber: true } } }
-  });
+  const hearing = await findCaseSessionWithCaseById(hearingId);
   if (!hearing) return;
 
   const calendarId = stored.calendarId;
@@ -263,10 +258,7 @@ export async function pushHearingToCalendar(
       accessToken,
       event
     ) as { id: string };
-    await prisma.caseSession.update({
-      where: { id: hearingId },
-      data: { googleCalendarEventId: created.id }
-    });
+    await updateCaseSessionGoogleCalendarEventId(hearingId, created.id);
   }
 }
 
@@ -278,10 +270,10 @@ export async function deleteHearingFromCalendar(
   const accessToken = await getValidAccessToken(userId, env);
   if (!accessToken) return;
 
-  const stored = await prisma.googleCalendarToken.findUnique({ where: { userId } });
+  const stored = await findGoogleCalendarTokenByUserId(userId);
   if (!stored) return;
 
-  const hearing = await prisma.caseSession.findUnique({ where: { id: hearingId } });
+  const hearing = await findCaseSessionById(hearingId);
   if (!hearing?.googleCalendarEventId) return;
 
   try {
@@ -302,8 +294,5 @@ export async function deleteHearingFromCalendar(
     }
   }
 
-  await prisma.caseSession.update({
-    where: { id: hearingId },
-    data: { googleCalendarEventId: null }
-  });
+  await updateCaseSessionGoogleCalendarEventId(hearingId, null);
 }

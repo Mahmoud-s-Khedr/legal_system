@@ -6,13 +6,13 @@
       "outputs": ["dist/**", "build/**", ".turbo/**"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": []
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": []
     },
     "test": {
-      "dependsOn": ["^test"],
+      "dependsOn": [],
       "outputs": []
     },
     "test:coverage": {

@@ -43,6 +43,8 @@ const listDocumentsQuerySchema = z.object({
   limit: z.string().optional()
 });
 
+const idParamsSchema = z.object({ id: z.string().min(1) });
+
 export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) {
   // List documents (with optional filters)
   app.get(
@@ -126,8 +128,7 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
   app.get(
     "/api/documents/:id",
     { schema: { response: { 200: documentDtoSchema } }, preHandler: [requireAuth, requirePermission("documents:read")] },
-    async (request) =>
-      getDocument(request.sessionUser!, (request.params as { id: string }).id)
+    async (request) => getDocument(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );
 
   // Update document metadata
@@ -138,7 +139,7 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
       const payload = updateDocumentSchema.parse(request.body);
       return updateDocument(
         request.sessionUser!,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         payload,
         getAuditContext(request)
       );
@@ -149,37 +150,21 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
   app.delete(
     "/api/documents/:id",
     { schema: { response: { 200: successSchema } }, preHandler: [requireAuth, requirePermission("documents:delete")] },
-    async (request) =>
-      softDeleteDocument(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        getAuditContext(request)
-      )
+    async (request) => softDeleteDocument(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 
   // Get download URL (redirect for cloud, URL for local)
   app.get(
     "/api/documents/:id/download",
     { preHandler: [requireAuth, requirePermission("documents:read")] },
-    async (request) =>
-      getDownloadUrl(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        app.storage
-      )
+    async (request) => getDownloadUrl(request.sessionUser!, idParamsSchema.parse(request.params).id, app.storage)
   );
 
   // Stream document bytes (local mode)
   app.get(
     "/api/documents/:id/stream",
     { preHandler: [requireAuth, requirePermission("documents:read")] },
-    async (request, reply) =>
-      streamDocument(
-        request.sessionUser!,
-        (request.params as { id: string }).id,
-        app.storage,
-        reply
-      )
+    async (request, reply) => streamDocument(request.sessionUser!, idParamsSchema.parse(request.params).id, app.storage, reply)
   );
 
   // Upload a new version of an existing document (multipart)
@@ -206,7 +191,7 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
 
       const doc = await uploadNewVersion(
         actor,
-        (request.params as { id: string }).id,
+        idParamsSchema.parse(request.params).id,
         {
           fileName: data.filename,
           mimeType: detectedMime,
