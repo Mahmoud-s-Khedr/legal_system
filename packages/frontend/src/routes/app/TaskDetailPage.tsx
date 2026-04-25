@@ -23,6 +23,7 @@ import {
   SelectField,
   TextAreaField
 } from "./ui";
+import { DocumentList } from "../../components/documents/DocumentList";
 
 export function TaskDetailPage() {
   const { t } = useTranslation("app");
@@ -239,6 +240,15 @@ export function TaskDetailPage() {
             </p>
           ) : null}
         </form>
+      </SectionCard>
+      <SectionCard
+        description={t("documents.listHelp")}
+        title={t("labels.documents")}
+      >
+        <DocumentList
+          taskId={taskId}
+          queryKey={["task-documents", taskId]}
+        />
       </SectionCard>
     </div>
   );

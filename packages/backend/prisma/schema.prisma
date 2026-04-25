@@ -534,6 +534,7 @@ model Task {
   case         Case?        @relation(fields: [caseId], references: [id], onDelete: SetNull)
   assignedTo   User?        @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   createdBy    User?        @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  documents    Document[]
 
   @@index([firmId, status, deletedAt])
   @@index([assignedToId, status])
@@ -546,6 +547,7 @@ model Document {
   firmId           String           @db.Uuid
   caseId           String?          @db.Uuid
   clientId         String?          @db.Uuid
+  taskId           String?          @db.Uuid
   uploadedById     String?          @db.Uuid
   title            String
   fileName         String
@@ -561,6 +563,7 @@ model Document {
   firm             Firm             @relation(fields: [firmId], references: [id], onDelete: Cascade)
   case             Case?            @relation(fields: [caseId], references: [id], onDelete: SetNull)
   client           Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  task             Task?            @relation(fields: [taskId], references: [id], onDelete: SetNull)
   uploadedBy       User?            @relation("DocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
   versions         DocumentVersion[]
   expenses         Expense[]
@@ -570,6 +573,7 @@ model Document {
   @@index([firmId, deletedAt, type, createdAt])
   @@index([caseId])
   @@index([clientId])
+  @@index([taskId])
 }
 
 model DocumentVersion {

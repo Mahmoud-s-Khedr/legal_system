@@ -38,6 +38,8 @@ export interface LibraryDocumentDetail extends LibraryDocumentSummary {
   contentText: string | null;
   legalPrinciple: string | null;
   author: string | null;
+  storageKey: string | null;
+  mimeType: string | null;
   articles: ArticleSummary[];
   tags: string[];
   annotations: AnnotationDto[];
@@ -289,6 +291,8 @@ export async function getDocument(
     contentText: doc.contentText,
     legalPrinciple: doc.legalPrinciple,
     author: doc.author,
+    storageKey: doc.storageKey,
+    mimeType: doc.mimeType,
     articles: doc.articles.map((a) => ({
       id: a.id,
       articleNumber: a.articleNumber,

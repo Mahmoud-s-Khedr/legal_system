@@ -27,6 +27,7 @@ import { DocumentViewer } from "./DocumentViewer";
 interface DocumentListProps {
   caseId?: string;
   clientId?: string;
+  taskId?: string;
   queryKey: unknown[];
   queryParams?: Record<string, string | number | undefined>;
   pagination?: {
@@ -47,6 +48,7 @@ export function canShowIndexedText(doc: DocumentDto) {
 export function DocumentList({
   caseId,
   clientId,
+  taskId,
   queryKey,
   queryParams,
   pagination
@@ -61,6 +63,7 @@ export function DocumentList({
   const params = new URLSearchParams();
   if (caseId) params.set("caseId", caseId);
   if (clientId) params.set("clientId", clientId);
+  if (taskId) params.set("taskId", taskId);
   for (const [key, value] of Object.entries(queryParams ?? {})) {
     if (value !== undefined && String(value).trim().length > 0) {
       params.set(key, String(value));

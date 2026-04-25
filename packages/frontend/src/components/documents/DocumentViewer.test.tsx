@@ -47,6 +47,7 @@ function makeDoc(overrides: Partial<DocumentDto>): DocumentDto {
     firmId: "firm-1",
     caseId: null,
     clientId: null,
+    taskId: null,
     uploadedById: null,
     title: "Test document",
     fileName: "test.pdf",

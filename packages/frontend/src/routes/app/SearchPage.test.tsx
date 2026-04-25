@@ -42,8 +42,8 @@ vi.mock("./ui", () => ({
   )
 }));
 
-vi.mock("../../components/search/SearchResultCard", () => ({
-  SearchResultCard: ({ result }: { result: { id: string; title: string } }) => (
+vi.mock("../../components/search/GlobalSearchResultCard", () => ({
+  GlobalSearchResultCard: ({ result }: { result: { id: string; title: string } }) => (
     <div data-testid={`result-${result.id}`}>{result.title}</div>
   )
 }));
@@ -94,7 +94,7 @@ beforeEach(() => {
   mockUseQuery.mockReturnValue({
     isLoading: false,
     isError: false,
-    data: { items: [], total: 0 },
+    data: [],
     refetch: vi.fn()
   });
 });

@@ -14,6 +14,7 @@ export interface DocumentDto {
   firmId: string;
   caseId: string | null;
   clientId: string | null;
+  taskId: string | null;
   uploadedById: string | null;
   title: string;
   fileName: string;
@@ -33,6 +34,7 @@ export interface CreateDocumentDto {
   type: DocumentType;
   caseId?: string;
   clientId?: string;
+  taskId?: string;
 }
 
 export interface UpdateDocumentDto {
@@ -40,6 +42,7 @@ export interface UpdateDocumentDto {
   type?: DocumentType;
   caseId?: string | null;
   clientId?: string | null;
+  taskId?: string | null;
 }
 
 export interface DocumentListResponseDto {
@@ -58,6 +61,7 @@ export interface DocumentSearchResultDto {
   extractionStatus: ExtractionStatus;
   caseId: string | null;
   clientId: string | null;
+  taskId: string | null;
   headline: string;
   rank: number;
   createdAt: string;

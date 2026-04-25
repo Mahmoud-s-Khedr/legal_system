@@ -361,8 +361,13 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
       const { documentId } = request.params as { documentId: string };
+      const actor = request.sessionUser!;
       const doc = await prisma.libraryDocument.findFirst({
-        where: { id: documentId, deletedAt: null }
+        where: {
+          id: documentId,
+          deletedAt: null,
+          OR: [{ scope: "SYSTEM" }, { firmId: actor.firmId }]
+        }
       });
       if (!doc || !doc.storageKey) {
         return reply.status(404).send({ error: "File not found" });
@@ -380,8 +385,13 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
       const { documentId } = request.params as { documentId: string };
+      const actor = request.sessionUser!;
       const doc = await prisma.libraryDocument.findFirst({
-        where: { id: documentId, deletedAt: null }
+        where: {
+          id: documentId,
+          deletedAt: null,
+          OR: [{ scope: "SYSTEM" }, { firmId: actor.firmId }]
+        }
       });
       if (!doc || !doc.storageKey) {
         return reply.status(404).send({ error: "File not found" });

@@ -1,9 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Pencil, Trash2, Plus, BookOpen } from "lucide-react";
-import { apiFetch } from "../../../lib/api";
+import { ArrowLeft, Pencil, Trash2, Plus, FileDown } from "lucide-react";
+import { apiFetch, apiDownload } from "../../../lib/api";
+import { PdfViewer } from "../../../components/documents/PdfViewer";
+import { DocxViewer } from "../../../components/documents/DocxViewer";
+import { saveBlobToDownloads } from "../../../lib/desktopDownloads";
+import { showErrorDialog } from "../../../lib/dialog";
 import {
   EmptyState,
   ErrorState,
@@ -54,6 +58,8 @@ interface LibraryDocumentDetail {
   description: string | null;
   descriptionAr: string | null;
   fileUrl: string | null;
+  storageKey: string | null;
+  mimeType: string | null;
   category: {
     id: string;
     nameAr: string;
@@ -81,12 +87,65 @@ export function LibraryDocumentPage() {
   const [linkNotes, setLinkNotes] = useState("");
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [filePreviewBlob, setFilePreviewBlob] = useState<Blob | null>(null);
+  const [filePreviewLoading, setFilePreviewLoading] = useState(false);
+  const [filePreviewError, setFilePreviewError] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const docQuery = useQuery({
     queryKey: ["library-document", documentId],
     queryFn: () =>
       apiFetch<LibraryDocumentDetail>(`/api/library/documents/${documentId}`)
   });
+
+  useEffect(() => {
+    const doc = docQuery.data;
+    if (!doc?.storageKey || !doc.mimeType) {
+      setFilePreviewUrl(null);
+      setFilePreviewBlob(null);
+      return;
+    }
+
+    const isPreviewable =
+      doc.mimeType === "application/pdf" ||
+      doc.mimeType.startsWith("image/") ||
+      doc.mimeType ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    if (!isPreviewable) {
+      setFilePreviewUrl(null);
+      setFilePreviewBlob(null);
+      return;
+    }
+
+    let cancelled = false;
+    setFilePreviewLoading(true);
+    setFilePreviewError(false);
+
+    apiDownload(`/api/library/documents/${documentId}/stream`)
+      .then(({ blob }) => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        setFilePreviewUrl(url);
+        setFilePreviewBlob(blob);
+      })
+      .catch(() => {
+        if (!cancelled) setFilePreviewError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setFilePreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      setFilePreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      setFilePreviewBlob(null);
+    };
+  }, [docQuery.data, documentId]);
 
   const createAnnotationMutation = useMutation({
     mutationFn: (body: string) =>
@@ -159,6 +218,23 @@ export function LibraryDocumentPage() {
   });
 
   const doc = docQuery.data;
+
+  async function handleDownload() {
+    try {
+      setIsDownloading(true);
+      const { blob, filename } = await apiDownload(
+        `/api/library/documents/${documentId}/stream`
+      );
+      await saveBlobToDownloads(
+        blob,
+        filename ?? doc?.title ?? `document-${documentId}`
+      );
+    } catch {
+      showErrorDialog(t("errors.fallback"));
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   if (docQuery.isLoading) {
     return <p className="p-6 text-sm text-slate-500">{t("common.loading")}</p>;
@@ -262,18 +338,42 @@ export function LibraryDocumentPage() {
         </SectionCard>
       )}
 
-      {/* PDF viewer link */}
-      {doc.fileUrl && (
+      {/* File preview */}
+      {doc.storageKey && (
         <SectionCard title={t("library.file")}>
-          <a
-            className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white"
-            href={doc.fileUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            <BookOpen aria-hidden="true" className="size-4" />
-            {t("library.openFile")}
-          </a>
+          <div className="space-y-3">
+            {filePreviewLoading ? (
+              <p className="text-sm text-slate-500">{t("documents.previewLoading")}</p>
+            ) : filePreviewError ? (
+              <p className="text-sm text-red-600">{t("documents.previewFailed")}</p>
+            ) : doc.mimeType === "application/pdf" && filePreviewUrl ? (
+              <PdfViewer url={filePreviewUrl} />
+            ) : doc.mimeType ===
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && filePreviewBlob ? (
+              <DocxViewer blob={filePreviewBlob} />
+            ) : doc.mimeType?.startsWith("image/") && filePreviewUrl ? (
+              <img
+                alt={doc.title}
+                className="max-w-full rounded-xl"
+                src={filePreviewUrl}
+              />
+            ) : (
+              <p className="text-sm text-slate-500">
+                {t("documents.previewNotSupported")}
+              </p>
+            )}
+            <button
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+              disabled={isDownloading}
+              onClick={() => {
+                void handleDownload();
+              }}
+              type="button"
+            >
+              <FileDown aria-hidden="true" className="size-4" />
+              {t("library.downloadFile")}
+            </button>
+          </div>
         </SectionCard>
       )}
 

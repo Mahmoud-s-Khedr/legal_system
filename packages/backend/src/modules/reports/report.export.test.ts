@@ -56,7 +56,12 @@ class FakePdfPrinter {
 vi.mock("exceljs", () => ({ default: { Workbook: FakeWorkbook } }));
 vi.mock("pdfmake", () => ({ default: FakePdfPrinter }));
 vi.mock("../../utils/pdfFonts.js", () => ({
-  resolvePdfFontConfig: () => ({ defaultFont: "Noto", fonts: { Noto: { normal: "Noto.ttf" } } })
+  resolvePdfFontConfig: () => ({
+    defaultFont: "Helvetica",
+    fonts: { Helvetica: { normal: "Helvetica" } },
+    usingFallback: true,
+    reason: "Cairo fonts missing"
+  })
 }));
 
 const { generateReportExcel, generateReportPdf } = await import("./report.export.js");
@@ -69,6 +74,7 @@ describe("report.export", () => {
   });
 
   it("generates pdf report for outstanding-balances", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const buffer = await generateReportPdf(
       "outstanding-balances",
       [{ invoiceNumber: "INV-1", clientName: "Client", totalAmount: 100, dueDate: "2026-04-01", daysOverdue: 21 }],
@@ -76,6 +82,10 @@ describe("report.export", () => {
     );
     expect(Buffer.isBuffer(buffer)).toBe(true);
     expect(buffer.toString()).toContain("pdf-data");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[report-export] Using fallback PDF font 'Helvetica' (Cairo fonts missing)"
+    );
+    warnSpy.mockRestore();
   });
 
   it("supports other report specs and throws on unknown report type", async () => {

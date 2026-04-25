@@ -62,6 +62,7 @@ function mapDocument(doc: {
   firmId: string;
   caseId: string | null;
   clientId: string | null;
+  taskId: string | null;
   uploadedById: string | null;
   title: string;
   fileName: string;
@@ -87,6 +88,7 @@ function mapDocument(doc: {
     firmId: doc.firmId,
     caseId: doc.caseId,
     clientId: doc.clientId,
+    taskId: doc.taskId,
     uploadedById: doc.uploadedById,
     title: doc.title,
     fileName: doc.fileName,
@@ -108,6 +110,7 @@ export async function listDocuments(
     q?: string;
     caseId?: string;
     clientId?: string;
+    taskId?: string;
     type?: string;
     sortBy?: string;
     sortDir?: SortDir;
@@ -130,6 +133,7 @@ export async function listDocuments(
       deletedAt: null,
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.clientId ? { clientId: filters.clientId } : {}),
+      ...(filters.taskId ? { taskId: filters.taskId } : {}),
       ...(filters.type ? { type: filters.type } : {}),
       ...(searchCandidates.length > 0
         ? {
@@ -182,6 +186,7 @@ export interface UploadPayload {
   type: string;
   caseId?: string;
   clientId?: string;
+  taskId?: string;
   fileName: string;
   mimeType: string;
   stream: NodeJS.ReadableStream;
@@ -219,6 +224,7 @@ export async function createDocument(
           firmId: actor.firmId,
           caseId: payload.caseId ?? null,
           clientId: payload.clientId ?? null,
+          taskId: payload.taskId ?? null,
           uploadedById: actor.id,
           title: payload.title,
           fileName: safeFilename,
@@ -293,6 +299,11 @@ export async function updateDocument(
           ? payload.clientId === null
             ? { client: { disconnect: true } }
             : { client: { connect: { id: payload.clientId } } }
+          : {}),
+        ...(payload.taskId !== undefined
+          ? payload.taskId === null
+            ? { task: { disconnect: true } }
+            : { task: { connect: { id: payload.taskId } } }
           : {})
       },
       include: { versions: { orderBy: { versionNumber: "desc" } } }

@@ -7,6 +7,7 @@ import { showErrorDialog } from "../../lib/dialog";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { VersionHistory } from "./VersionHistory";
 import { PdfViewer } from "./PdfViewer";
+import { DocxViewer } from "./DocxViewer";
 import { EnumBadge } from "../shared/EnumBadge";
 
 interface DocumentViewerProps {
@@ -26,10 +27,14 @@ export function DocumentViewer({
   const [previewError, setPreviewError] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const previewObjectUrlRef = useRef<string | null>(null);
+  const previewBlobRef = useRef<Blob | null>(null);
 
   const isPdf = doc.mimeType === "application/pdf";
   const isImage = doc.mimeType.startsWith("image/");
-  const canPreviewFile = isPdf || isImage;
+  const isDocx =
+    doc.mimeType ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const canPreviewFile = isPdf || isImage || isDocx;
   const versionsKey = doc.versions.map((version) => version.id).join("|");
 
   useEffect(() => {
@@ -38,6 +43,7 @@ export function DocumentViewer({
         URL.revokeObjectURL(previewObjectUrlRef.current);
         previewObjectUrlRef.current = null;
       }
+      previewBlobRef.current = null;
     }
 
     let cancelled = false;
@@ -61,6 +67,7 @@ export function DocumentViewer({
         }
         const objectUrl = URL.createObjectURL(blob);
         previewObjectUrlRef.current = objectUrl;
+        previewBlobRef.current = blob;
         setPreviewUrl(objectUrl);
       } catch {
         if (!cancelled) {
@@ -157,6 +164,8 @@ export function DocumentViewer({
             )
           ) : isPdf && previewUrl ? (
             <PdfViewer url={previewUrl} />
+          ) : isDocx && previewBlobRef.current ? (
+            <DocxViewer blob={previewBlobRef.current} />
           ) : isImage && previewUrl ? (
             <img
               alt={doc.title}

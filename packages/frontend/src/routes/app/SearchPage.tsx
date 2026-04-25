@@ -3,10 +3,18 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
-import type { DocumentSearchResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { EmptyState, ErrorState, PageHeader } from "./ui";
-import { SearchResultCard } from "../../components/search/SearchResultCard";
+import { GlobalSearchResultCard } from "../../components/search/GlobalSearchResultCard";
+
+interface GlobalSearchResult {
+  entityType: string;
+  id: string;
+  title: string;
+  snippet: string | null;
+  url: string;
+  rank: number;
+}
 
 export function SearchPage() {
   const { t } = useTranslation("app");
@@ -19,11 +27,11 @@ export function SearchPage() {
     setDraftQuery(q);
   }, [q]);
 
-  const searchQuery = useQuery({
-    queryKey: ["document-search", normalizedQuery],
+  const searchQuery = useQuery<GlobalSearchResult[]>({
+    queryKey: ["global-search", normalizedQuery],
     queryFn: () =>
-      apiFetch<DocumentSearchResponseDto>(
-        `/api/search/documents?q=${encodeURIComponent(normalizedQuery)}`
+      apiFetch<GlobalSearchResult[]>(
+        `/api/search/global?q=${encodeURIComponent(normalizedQuery)}`
       ),
     enabled: normalizedQuery.length > 0
   });
@@ -80,7 +88,7 @@ export function SearchPage() {
           retryLabel={t("errors.reload")}
           onRetry={() => void searchQuery.refetch()}
         />
-      ) : searchQuery.data?.items.length === 0 || !normalizedQuery ? (
+      ) : searchQuery.data?.length === 0 || !normalizedQuery ? (
         <EmptyState
           description={
             normalizedQuery
@@ -90,15 +98,44 @@ export function SearchPage() {
           title={normalizedQuery ? t("search.noResults") : t("search.title")}
         />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-6">
           <p className="text-sm text-slate-500">
-            {searchQuery.data?.total ?? 0} {t("search.rankLabel")}
+            {searchQuery.data?.length ?? 0} {t("search.rankLabel")}
           </p>
-          {searchQuery.data?.items.map((result) => (
-            <SearchResultCard key={result.id} result={result} />
-          ))}
+          <div className="space-y-4">
+            {groupByEntityType(searchQuery.data ?? []).map(
+              ([entityType, items]) => (
+                <div key={entityType} className="space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-700 capitalize">
+                    {t(`search.entity.${entityType}`, { defaultValue: entityType })}
+                  </h3>
+                  <div className="grid gap-2">
+                    {items.map((result) => (
+                      <GlobalSearchResultCard
+                        key={`${result.entityType}-${result.id}`}
+                        result={result}
+                        highlightQuery={normalizedQuery}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+function groupByEntityType(
+  results: GlobalSearchResult[]
+): Array<[string, GlobalSearchResult[]]> {
+  const groups = new Map<string, GlobalSearchResult[]>();
+  for (const result of results) {
+    const list = groups.get(result.entityType) ?? [];
+    list.push(result);
+    groups.set(result.entityType, list);
+  }
+  return Array.from(groups.entries());
 }

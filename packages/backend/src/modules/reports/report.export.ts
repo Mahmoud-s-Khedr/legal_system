@@ -206,6 +206,10 @@ export async function generateReportPdf(
 ): Promise<Buffer> {
   const PdfPrinter = (await import("pdfmake")).default;
   const fontConfig = (await import("../../utils/pdfFonts.js")).resolvePdfFontConfig();
+  if (fontConfig.usingFallback) {
+    const detail = fontConfig.reason ? ` (${fontConfig.reason})` : "";
+    console.warn(`[report-export] Using fallback PDF font '${fontConfig.defaultFont}'${detail}`);
+  }
   const printer = new PdfPrinter(fontConfig.fonts);
   const spec = buildSpec(reportType, data);
 

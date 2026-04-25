@@ -274,4 +274,57 @@ describe("library upload route authorization", () => {
     const createArgs = prisma.libraryDocument.create.mock.calls.at(-1)?.[0];
     expect(createArgs?.data?.title).toBe("WebP Scan");
   });
+
+  it("applies tenant/scope visibility filter to download route lookup", async () => {
+    const app = createApp();
+    await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
+
+    const downloadCall = app.get.mock.calls.find(
+      (call) => call[0] === "/api/library/documents/:documentId/download"
+    );
+    const handler = downloadCall?.[2] as (
+      request: unknown,
+      reply: unknown
+    ) => Promise<unknown>;
+
+    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    prisma.libraryDocument.findFirst.mockResolvedValueOnce({
+      id: "doc-1",
+      scope: "FIRM",
+      storageKey: "library/firm-1/doc-1/file.pdf"
+    });
+
+    const reply = createReplyRecorder();
+    await handler({ params: { documentId: "doc-1" }, sessionUser: actor }, reply);
+
+    expect(prisma.libraryDocument.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "doc-1",
+        deletedAt: null,
+        OR: [{ scope: "SYSTEM" }, { firmId: "firm-1" }]
+      }
+    });
+  });
+
+  it("returns 404 for stream route when no visible document is found", async () => {
+    const app = createApp();
+    await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
+
+    const streamCall = app.get.mock.calls.find(
+      (call) => call[0] === "/api/library/documents/:documentId/stream"
+    );
+    const handler = streamCall?.[2] as (
+      request: unknown,
+      reply: unknown
+    ) => Promise<unknown>;
+
+    prisma.libraryDocument.findFirst.mockResolvedValueOnce(null);
+    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const reply = createReplyRecorder();
+
+    await handler({ params: { documentId: "doc-x" }, sessionUser: actor }, reply);
+
+    expect(reply.statusCode).toBe(404);
+    expect(reply.payload).toEqual({ error: "File not found" });
+  });
 });

@@ -304,6 +304,7 @@ export const documentDtoSchema = {
     firmId: { type: "string" },
     caseId: { type: ["string", "null"] },
     clientId: { type: ["string", "null"] },
+    taskId: { type: ["string", "null"] },
     uploadedById: { type: ["string", "null"] },
     title: { type: "string" },
     fileName: { type: "string" },

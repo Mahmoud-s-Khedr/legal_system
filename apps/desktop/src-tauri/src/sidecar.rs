@@ -25,7 +25,7 @@ const DESKTOP_JWT_PRIVATE_KEY_FILE: &str = "jwt-private.pem";
 const DESKTOP_JWT_PUBLIC_KEY_FILE: &str = "jwt-public.pem";
 const DESKTOP_DB_MARKER_FILE: &str = "desktop-database-name";
 const MIGRATION_VERSION_MARKER_FILE: &str = "migration_version";
-const LATEST_MIGRATION_NAME: &str = "0018_document_hybrid_search";
+const LATEST_MIGRATION_NAME: &str = "0019_document_task_link";
 const FAILURE_CODE_POSTGRES_CLUSTER_VERSION_MISMATCH: &str = "postgres_cluster_version_mismatch";
 const FAILURE_CODE_POSTGRES_STARTUP_FAILED: &str = "postgres_startup_failed";
 const FAILURE_CODE_PREFIX: &str = "__ELMS_FAILURE_CODE__=";

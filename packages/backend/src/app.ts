@@ -23,6 +23,7 @@ import { registerTaskRoutes } from "./modules/tasks/tasks.routes.js";
 import { registerDashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { registerDocumentRoutes } from "./modules/documents/documents.routes.js";
 import { registerSearchRoutes } from "./modules/documents/search.routes.js";
+import { registerGlobalSearchRoutes } from "./modules/search/globalSearch.routes.js";
 import { registerLookupRoutes } from "./modules/lookups/lookups.routes.js";
 import { registerBillingRoutes } from "./modules/billing/billing.routes.js";
 import { registerNotificationRoutes } from "./modules/notifications/notifications.routes.js";
@@ -132,6 +133,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   await registerDashboardRoutes(app);
   await registerDocumentRoutes(app, env);
   await registerSearchRoutes(app);
+  await registerGlobalSearchRoutes(app);
   await registerLookupRoutes(app);
   await registerBillingRoutes(app);
   await registerNotificationRoutes(app);

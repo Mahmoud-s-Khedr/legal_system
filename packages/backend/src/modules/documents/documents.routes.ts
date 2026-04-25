@@ -26,7 +26,8 @@ const updateDocumentSchema = z.object({
   title: z.string().min(1).optional(),
   type: z.nativeEnum(DocumentType).optional(),
   caseId: z.string().uuid().nullable().optional(),
-  clientId: z.string().uuid().nullable().optional()
+  clientId: z.string().uuid().nullable().optional(),
+  taskId: z.string().uuid().nullable().optional()
 });
 
 const listDocumentsQuerySchema = z.object({
@@ -34,6 +35,7 @@ const listDocumentsQuerySchema = z.object({
   search: z.string().optional(),
   caseId: z.string().uuid().optional(),
   clientId: z.string().uuid().optional(),
+  taskId: z.string().uuid().optional(),
   type: z.string().optional(),
   sortBy: z.string().optional(),
   sortDir: z.enum(["asc", "desc"]).optional(),
@@ -55,6 +57,7 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
           q: query.q ?? query.search,
           caseId: query.caseId,
           clientId: query.clientId,
+          taskId: query.taskId,
           type: query.type,
           sortBy: query.sortBy,
           sortDir: query.sortDir
@@ -91,6 +94,7 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
       const type = fields.type?.value ?? DocumentType.GENERAL;
       const caseId = fields.caseId?.value || undefined;
       const clientId = fields.clientId?.value || undefined;
+      const taskId = fields.taskId?.value || undefined;
 
       // Validate type field
       if (!Object.values(DocumentType).includes(type as DocumentType)) {
@@ -104,6 +108,7 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
           type,
           caseId,
           clientId,
+          taskId,
           fileName: data.filename,
           mimeType: detectedMime,
           stream: Readable.from(fileBuffer)
