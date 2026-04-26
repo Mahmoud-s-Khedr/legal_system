@@ -389,15 +389,36 @@ export function CaseQuickIntakePage() {
   const submitting =
     createClientMutation.isPending || createCaseMutation.isPending;
 
+  const poaLabel = t("labels.poaNumber");
+
   const clientOptions = useMemo(
     () => [
       { value: "", label: t("labels.selectClient") },
-      ...(clientsQuery.data?.items ?? []).map((client) => ({
-        value: client.id,
-        label: client.name
-      }))
+      ...(clientsQuery.data?.items ?? []).map((client) => {
+        const typeLabel = getEnumLabel(t, "ClientType", client.type);
+        const poaValue = client.poaNumber?.trim() || "—";
+
+        return {
+          value: client.id,
+          label: `${client.name} — ${typeLabel} — ${poaLabel}: ${poaValue}`,
+          searchText: [
+            client.name,
+            client.type,
+            typeLabel,
+            client.poaNumber,
+            client.phone,
+            client.email,
+            client.nationalId,
+            client.commercialRegister,
+            client.taxNumber,
+            client.id
+          ]
+            .filter(Boolean)
+            .join(" ")
+        };
+      })
     ],
-    [clientsQuery.data?.items, t]
+    [clientsQuery.data?.items, poaLabel, t]
   );
 
   const caseTypeOptions = (caseTypesQuery.data?.items ?? []).map((o) => ({

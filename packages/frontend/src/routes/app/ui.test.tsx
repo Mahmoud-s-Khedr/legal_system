@@ -79,10 +79,16 @@ describe("shared ui fields", () => {
     expect(alert?.textContent).toContain("Login failed");
   });
 
-  it("filters select options by visible label text", () => {
+  it("filters select options by visible label and search metadata", () => {
     expect(selectLabelFilter("gov", { label: "Government" })).toBe(true);
     expect(selectLabelFilter("comp", { label: "Company" })).toBe(true);
     expect(selectLabelFilter("xyz", { label: "Company" })).toBe(false);
+    expect(
+      selectLabelFilter("poa-445", {
+        label: "Ahmed",
+        searchText: "Ahmed Individual POA-445 01001234567"
+      })
+    ).toBe(true);
   });
 
   it("renders select field metadata with searchable combobox", () => {

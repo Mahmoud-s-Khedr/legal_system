@@ -413,11 +413,12 @@ export function TablePagination({
 
 export function selectLabelFilter(
   input: string,
-  option?: { label?: ReactNode }
+  option?: { label?: ReactNode; searchText?: string }
 ) {
   const label = option?.label;
   const normalizedLabel =
-    typeof label === "string" ? label : String(label ?? "");
+    option?.searchText ??
+    (typeof label === "string" ? label : String(label ?? ""));
   return normalizedLabel.toLowerCase().includes(input.toLowerCase());
 }
 
@@ -689,7 +690,7 @@ export function SelectField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
+  options: Array<{ value: string; label: string; searchText?: string }>;
   dir?: "ltr" | "rtl" | "auto";
   required?: boolean;
   disabled?: boolean;
