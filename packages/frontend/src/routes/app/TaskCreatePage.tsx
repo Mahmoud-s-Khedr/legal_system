@@ -22,10 +22,12 @@ import {
   FormAlert,
   FormExitActions,
   PageHeader,
+  PrimaryButton,
   SectionCard,
   SelectField,
   TextAreaField
 } from "./ui";
+import { DocumentUploadForm } from "../../components/documents/DocumentUploadForm";
 
 export function TaskCreatePage() {
   const { t } = useTranslation("app");
@@ -44,6 +46,10 @@ export function TaskCreatePage() {
     assignedToId: "",
     dueAt: ""
   });
+  const [createdTask, setCreatedTask] = useState<{
+    id: string;
+    caseId: string | null;
+  } | null>(null);
 
   useUnsavedChanges(
     Boolean(
@@ -116,7 +122,7 @@ export function TaskCreatePage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateTaskDto) =>
-      apiFetch("/api/tasks", {
+      apiFetch<{ id: string; caseId: string | null }>("/api/tasks", {
         method: "POST",
         body: JSON.stringify({
           ...payload,
@@ -128,14 +134,22 @@ export function TaskCreatePage() {
           description: payload.description?.trim() ? payload.description : null
         } satisfies CreateTaskDto)
       }),
-    onSuccess: async () => {
+    onSuccess: async (task) => {
       feedback.success("messages.taskCreated");
       await queryClient.invalidateQueries({ queryKey: ["tasks"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
-      allowNextNavigation();
-      void navigate({ to: "/app/tasks" });
+      setCreatedTask({ id: task.id, caseId: task.caseId });
     }
   });
+
+  function finishAndReturn() {
+    allowNextNavigation();
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    void navigate({ to: "/app/tasks" });
+  }
 
   return (
     <div className="space-y-6">
@@ -148,73 +162,89 @@ export function TaskCreatePage() {
         title={t("tasks.createTitle")}
         description={t("tasks.createHelp")}
       >
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            createMutation.mutate(form);
-          }}
-        >
-          <Field
-            label={t("labels.taskTitle")}
-            onChange={(value) => updateField("title", value)}
-            required
-            value={form.title}
-          />
-          <TextAreaField
-            label={t("labels.description")}
-            onChange={(value) => updateField("description", value)}
-            value={form.description ?? ""}
-          />
-          <SelectField
-            label={t("labels.case")}
-            onChange={(value) => updateField("caseId", value)}
-            options={caseOptions}
-            value={form.caseId ?? ""}
-          />
-          <SelectField
-            label={t("labels.assignedLawyer")}
-            onChange={(value) => updateField("assignedToId", value)}
-            options={assigneeOptions}
-            value={form.assignedToId ?? ""}
-          />
-          <div className="grid gap-4 md:grid-cols-2">
-            <SelectField
-              label={t("labels.status")}
-              onChange={(value) => updateField("status", value as TaskStatus)}
-              options={statusOptions}
-              value={form.status ?? TaskStatus.PENDING}
+        {!createdTask ? (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              createMutation.mutate(form);
+            }}
+          >
+            <Field
+              label={t("labels.taskTitle")}
+              onChange={(value) => updateField("title", value)}
+              required
+              value={form.title}
+            />
+            <TextAreaField
+              label={t("labels.description")}
+              onChange={(value) => updateField("description", value)}
+              value={form.description ?? ""}
             />
             <SelectField
-              label={t("labels.priority")}
-              onChange={(value) =>
-                updateField("priority", value as TaskPriority)
+              label={t("labels.case")}
+              onChange={(value) => updateField("caseId", value)}
+              options={caseOptions}
+              value={form.caseId ?? ""}
+            />
+            <SelectField
+              label={t("labels.assignedLawyer")}
+              onChange={(value) => updateField("assignedToId", value)}
+              options={assigneeOptions}
+              value={form.assignedToId ?? ""}
+            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <SelectField
+                label={t("labels.status")}
+                onChange={(value) => updateField("status", value as TaskStatus)}
+                options={statusOptions}
+                value={form.status ?? TaskStatus.PENDING}
+              />
+              <SelectField
+                label={t("labels.priority")}
+                onChange={(value) =>
+                  updateField("priority", value as TaskPriority)
+                }
+                options={priorityOptions}
+                value={form.priority ?? TaskPriority.MEDIUM}
+              />
+            </div>
+            <Field
+              dir="ltr"
+              label={t("labels.dueDate")}
+              onChange={(value) => updateField("dueAt", value)}
+              type="datetime-local"
+              commitMode="blur"
+              value={form.dueAt ?? ""}
+            />
+            <FormExitActions
+              cancelTo="/app/tasks"
+              cancelLabel={t("actions.cancel")}
+              submitLabel={t("actions.createTask")}
+              savingLabel={t("labels.saving")}
+              submitting={
+                createMutation.isPending || form.title.trim().length < 2
               }
-              options={priorityOptions}
-              value={form.priority ?? TaskPriority.MEDIUM}
             />
+            {createMutation.error ? (
+              <FormAlert message={(createMutation.error as Error).message} />
+            ) : null}
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">{t("documents.listHelp")}</p>
+            <DocumentUploadForm
+              caseId={createdTask.caseId ?? undefined}
+              taskId={createdTask.id}
+              invalidateKey={["task-documents", createdTask.id]}
+            />
+            <div className="flex justify-end">
+              <PrimaryButton type="button" onClick={finishAndReturn}>
+                {t("actions.back")}
+              </PrimaryButton>
+            </div>
           </div>
-          <Field
-            dir="ltr"
-            label={t("labels.dueDate")}
-            onChange={(value) => updateField("dueAt", value)}
-            type="datetime-local"
-            commitMode="blur"
-            value={form.dueAt ?? ""}
-          />
-          <FormExitActions
-            cancelTo="/app/tasks"
-            cancelLabel={t("actions.cancel")}
-            submitLabel={t("actions.createTask")}
-            savingLabel={t("labels.saving")}
-            submitting={
-              createMutation.isPending || form.title.trim().length < 2
-            }
-          />
-          {createMutation.error ? (
-            <FormAlert message={(createMutation.error as Error).message} />
-          ) : null}
-        </form>
+        )}
       </SectionCard>
     </div>
   );

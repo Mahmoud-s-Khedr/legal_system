@@ -19,12 +19,36 @@ function findCairoFontDir() {
   for (const candidate of candidates) {
     const regularPath = join(candidate, "Cairo-Regular.ttf");
     const boldPath = join(candidate, "Cairo-Bold.ttf");
-    if (existsSync(regularPath) && existsSync(boldPath)) {
+    if (
+      existsSync(regularPath) &&
+      existsSync(boldPath) &&
+      isValidFontFile(regularPath) &&
+      isValidFontFile(boldPath)
+    ) {
       return { dir: candidate, regularPath, boldPath };
     }
   }
 
   return null;
+}
+
+function isValidFontFile(filePath: string): boolean {
+  try {
+    const data = readFileSync(filePath);
+    if (data.length < 4) {
+      return false;
+    }
+
+    const signature = data.subarray(0, 4).toString("latin1");
+    if (signature === "OTTO" || signature === "ttcf") {
+      return true;
+    }
+
+    // TrueType outlines: 0x00 0x01 0x00 0x00
+    return data[0] === 0x00 && data[1] === 0x01 && data[2] === 0x00 && data[3] === 0x00;
+  } catch {
+    return false;
+  }
 }
 
 export interface PdfFontConfig {

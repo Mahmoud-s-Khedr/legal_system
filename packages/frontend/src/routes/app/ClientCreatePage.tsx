@@ -20,10 +20,12 @@ import {
   Field,
   FormAlert,
   FormExitActions,
+  PrimaryButton,
   PageHeader,
   SectionCard,
   SelectField
 } from "./ui";
+import { DocumentUploadForm } from "../../components/documents/DocumentUploadForm";
 
 type ClientFormState = Omit<CreateClientDto, "type"> & {
   type: ClientType | "";
@@ -94,6 +96,7 @@ export function ClientCreatePage() {
     null
   );
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [createdClientId, setCreatedClientId] = useState<string | null>(null);
   useUnsavedChanges(form.name !== "" || form.type !== "", {
     bypassBlockRef: bypassRef
   });
@@ -142,17 +145,25 @@ export function ClientCreatePage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateClientDto) =>
-      apiFetch("/api/clients", {
+      apiFetch<{ id: string }>("/api/clients", {
         method: "POST",
         body: JSON.stringify(payload)
       }),
-    onSuccess: async () => {
+    onSuccess: async (client) => {
       feedback.success("messages.clientCreated");
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
-      allowNextNavigation();
-      void navigate({ to: "/app/clients" });
+      setCreatedClientId(client.id);
     }
   });
+
+  function finishAndReturn() {
+    allowNextNavigation();
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    void navigate({ to: "/app/clients" });
+  }
 
   return (
     <div className="space-y-6">
@@ -165,137 +176,158 @@ export function ClientCreatePage() {
         title={t("clients.createTitle")}
         description={t("clients.createHelp")}
       >
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!form.name.trim() || !form.type) {
-              setValidationMessage(t("errors.requiredNameAndType"));
-              return;
-            }
+        {!createdClientId ? (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!form.name.trim() || !form.type) {
+                setValidationMessage(t("errors.requiredNameAndType"));
+                return;
+              }
 
-            setValidationMessage(null);
-            createMutation.mutate(normalizePayload(form));
-          }}
-        >
-          <Field
-            label={t("labels.name")}
-            onChange={(value) => {
-              setForm({ ...form, name: value });
-              scheduleCheck(value);
+              setValidationMessage(null);
+              createMutation.mutate(normalizePayload(form));
             }}
-            required
-            value={form.name}
-          />
-          <SelectField
-            label={t("labels.type")}
-            onChange={(value) =>
-              setForm({ ...form, type: value as ClientType | "" })
-            }
-            options={[
-              { value: "", label: t("labels.selectType") },
-              ...clientTypeOptions
-            ]}
-            required
-            value={form.type}
-          />
-          {form.type ? (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                  dir="ltr"
-                  label={t("labels.email")}
-                  onChange={(value) => {
-                    setForm({ ...form, email: value });
-                    scheduleCheck(value);
-                  }}
-                  type="email"
-                  value={form.email ?? ""}
-                />
-                <Field
-                  dir="ltr"
-                  label={t("labels.phone")}
-                  onChange={(value) => setForm({ ...form, phone: value })}
-                  value={form.phone ?? ""}
-                />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <SelectField
-                  label={t("labels.governorate")}
-                  onChange={(value) => setForm({ ...form, governorate: value })}
-                  options={[{ value: "", label: "-" }, ...governorateOptions]}
-                  value={form.governorate ?? ""}
-                />
-                <SelectField
-                  label={t("labels.language")}
-                  onChange={(value) =>
-                    setForm({ ...form, preferredLanguage: value as Language })
-                  }
-                  options={languageOptions}
-                  value={form.preferredLanguage ?? Language.AR}
-                />
-              </div>
-              {isIdentityType(form.type) ? (
-                <Field
-                  dir="ltr"
-                  label={t("labels.nationalId")}
-                  onChange={(value) => {
-                    setForm({ ...form, nationalId: value });
-                  }}
-                  value={form.nationalId ?? ""}
-                />
-              ) : null}
-              {form.type === ClientType.COMPANY ? (
+          >
+            <Field
+              label={t("labels.name")}
+              onChange={(value) => {
+                setForm({ ...form, name: value });
+                scheduleCheck(value);
+              }}
+              required
+              value={form.name}
+            />
+            <SelectField
+              label={t("labels.type")}
+              onChange={(value) =>
+                setForm({ ...form, type: value as ClientType | "" })
+              }
+              options={[
+                { value: "", label: t("labels.selectType") },
+                ...clientTypeOptions
+              ]}
+              required
+              value={form.type}
+            />
+            {form.type ? (
+              <>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field
                     dir="ltr"
-                    label={t("labels.commercialRegister")}
-                    onChange={(value) =>
-                      setForm({ ...form, commercialRegister: value })
-                    }
-                    value={form.commercialRegister ?? ""}
+                    label={t("labels.email")}
+                    onChange={(value) => {
+                      setForm({ ...form, email: value });
+                      scheduleCheck(value);
+                    }}
+                    type="email"
+                    value={form.email ?? ""}
                   />
                   <Field
                     dir="ltr"
-                    label={t("labels.taxNumber")}
-                    onChange={(value) => setForm({ ...form, taxNumber: value })}
-                    value={form.taxNumber ?? ""}
+                    label={t("labels.phone")}
+                    onChange={(value) => setForm({ ...form, phone: value })}
+                    value={form.phone ?? ""}
                   />
                 </div>
-              ) : null}
-              <Field
-                dir="ltr"
-                label={t("labels.poaNumber")}
-                onChange={(value) => setForm({ ...form, poaNumber: value })}
-                value={form.poaNumber ?? ""}
-              />
-            </>
-          ) : null}
-          {duplicateWarning ? (
-            <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <span>{duplicateWarning}</span>
-              <button
-                type="button"
-                className="shrink-0 text-amber-500 hover:text-amber-700"
-                onClick={() => setDuplicateWarning(null)}
-                aria-label={t("actions.dismiss")}
-              >
-                ✕
-              </button>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <SelectField
+                    label={t("labels.governorate")}
+                    onChange={(value) =>
+                      setForm({ ...form, governorate: value })
+                    }
+                    options={[{ value: "", label: "-" }, ...governorateOptions]}
+                    value={form.governorate ?? ""}
+                  />
+                  <SelectField
+                    label={t("labels.language")}
+                    onChange={(value) =>
+                      setForm({ ...form, preferredLanguage: value as Language })
+                    }
+                    options={languageOptions}
+                    value={form.preferredLanguage ?? Language.AR}
+                  />
+                </div>
+                {isIdentityType(form.type) ? (
+                  <Field
+                    dir="ltr"
+                    label={t("labels.nationalId")}
+                    onChange={(value) => {
+                      setForm({ ...form, nationalId: value });
+                    }}
+                    value={form.nationalId ?? ""}
+                  />
+                ) : null}
+                {form.type === ClientType.COMPANY ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field
+                      dir="ltr"
+                      label={t("labels.commercialRegister")}
+                      onChange={(value) =>
+                        setForm({ ...form, commercialRegister: value })
+                      }
+                      value={form.commercialRegister ?? ""}
+                    />
+                    <Field
+                      dir="ltr"
+                      label={t("labels.taxNumber")}
+                      onChange={(value) =>
+                        setForm({ ...form, taxNumber: value })
+                      }
+                      value={form.taxNumber ?? ""}
+                    />
+                  </div>
+                ) : null}
+                <Field
+                  dir="ltr"
+                  label={t("labels.poaNumber")}
+                  onChange={(value) => setForm({ ...form, poaNumber: value })}
+                  value={form.poaNumber ?? ""}
+                />
+              </>
+            ) : null}
+            {duplicateWarning ? (
+              <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <span>{duplicateWarning}</span>
+                <button
+                  type="button"
+                  className="shrink-0 text-amber-500 hover:text-amber-700"
+                  onClick={() => setDuplicateWarning(null)}
+                  aria-label={t("actions.dismiss")}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
+            <FormExitActions
+              cancelTo="/app/clients"
+              cancelLabel={t("actions.cancel")}
+              submitLabel={t("actions.createClient")}
+              savingLabel={t("labels.saving")}
+              submitting={createMutation.isPending}
+            />
+            {validationMessage ? (
+              <FormAlert message={validationMessage} />
+            ) : null}
+            {createMutation.error ? (
+              <FormAlert message={(createMutation.error as Error).message} />
+            ) : null}
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">{t("documents.listHelp")}</p>
+            <DocumentUploadForm
+              clientId={createdClientId}
+              invalidateKey={["client-documents", createdClientId]}
+            />
+            <div className="flex justify-end">
+              <PrimaryButton type="button" onClick={finishAndReturn}>
+                {t("actions.back")}
+              </PrimaryButton>
             </div>
-          ) : null}
-          <FormExitActions
-            cancelTo="/app/clients"
-            cancelLabel={t("actions.cancel")}
-            submitLabel={t("actions.createClient")}
-            savingLabel={t("labels.saving")}
-            submitting={createMutation.isPending}
-          />
-          {validationMessage ? <FormAlert message={validationMessage} /> : null}
-          {createMutation.error ? (
-            <FormAlert message={(createMutation.error as Error).message} />
-          ) : null}
-        </form>
+          </div>
+        )}
       </SectionCard>
     </div>
   );

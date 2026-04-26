@@ -24,6 +24,7 @@ import {
   TextAreaField
 } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
+import { DocumentUploadForm } from "../../components/documents/DocumentUploadForm";
 
 export function TaskDetailPage() {
   const { t } = useTranslation("app");
@@ -138,6 +139,14 @@ export function TaskDetailPage() {
     }
   });
 
+  function finishAndReturn() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    void navigate({ to: "/app/tasks" });
+  }
+
   if (taskQuery.isLoading) {
     return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
   }
@@ -234,12 +243,27 @@ export function TaskDetailPage() {
           >
             {t("actions.saveChanges")}
           </PrimaryButton>
+          <div className="pt-2">
+            <PrimaryButton type="button" onClick={finishAndReturn}>
+              {t("actions.back")}
+            </PrimaryButton>
+          </div>
           {updateMutation.error ? (
             <p className="text-sm text-red-600">
               {(updateMutation.error as Error).message}
             </p>
           ) : null}
         </form>
+      </SectionCard>
+      <SectionCard
+        title={t("actions.uploadDocument")}
+        description={t("documents.listHelp")}
+      >
+        <DocumentUploadForm
+          caseId={taskQuery.data.caseId ?? undefined}
+          taskId={taskId}
+          invalidateKey={["task-documents", taskId]}
+        />
       </SectionCard>
       <SectionCard
         description={t("documents.listHelp")}

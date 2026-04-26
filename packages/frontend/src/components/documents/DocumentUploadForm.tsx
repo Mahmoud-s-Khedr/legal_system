@@ -27,8 +27,9 @@ type FileUploadState = {
 interface DocumentUploadFormProps {
   caseId?: string;
   clientId?: string;
+  taskId?: string;
   onSuccess?: (summary: UploadQueueSummary<DocumentDto>) => void;
-  invalidateKey: string[];
+  invalidateKey: unknown[];
 }
 
 function makeFileId() {
@@ -38,6 +39,7 @@ function makeFileId() {
 export function DocumentUploadForm({
   caseId,
   clientId,
+  taskId,
   onSuccess,
   invalidateKey
 }: DocumentUploadFormProps) {
@@ -144,6 +146,7 @@ export function DocumentUploadForm({
           formData.append("type", type);
           if (caseId) formData.append("caseId", caseId);
           if (clientId) formData.append("clientId", clientId);
+          if (taskId) formData.append("taskId", taskId);
           formData.append("file", entry.file);
 
           return apiFormFetch<DocumentDto>("/api/documents", {

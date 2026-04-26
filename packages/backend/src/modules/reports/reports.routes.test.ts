@@ -144,4 +144,38 @@ describe("registerReportRoutes", () => {
     expect(reply.send).toHaveBeenCalledWith({ id: "custom-1", name: "A" });
     expect(result).toBe(reply);
   });
+
+  it("exports report as pdf with expected headers", async () => {
+    const app = createApp();
+    await registerReportRoutes(app as never);
+
+    caseStatusDistribution.mockResolvedValueOnce([{ status: "ACTIVE", count: 2 }]);
+    generateReportPdf.mockResolvedValueOnce(Buffer.from("pdf-content"));
+
+    const handler = findRouteHandler(app.get.mock.calls, "/api/reports/:reportType/export");
+    const reply = {
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+      header: vi.fn().mockReturnThis()
+    };
+
+    const actor = makeSessionUser({ permissions: ["reports:read"] });
+    const result = await handler!(
+      {
+        params: { reportType: "case-status" },
+        query: { format: "pdf", page: "1", limit: "20" },
+        sessionUser: actor
+      },
+      reply
+    );
+
+    expect(generateReportPdf).toHaveBeenCalled();
+    expect(reply.header).toHaveBeenCalledWith("Content-Type", "application/pdf");
+    expect(reply.header).toHaveBeenCalledWith(
+      "Content-Disposition",
+      expect.stringContaining("elms-report-case-status-")
+    );
+    expect(reply.send).toHaveBeenCalledWith(Buffer.from("pdf-content"));
+    expect(result).toBe(reply);
+  });
 });

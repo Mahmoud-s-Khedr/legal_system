@@ -334,4 +334,36 @@ describe("DocumentViewer", () => {
 
     expect(apiDownload).toHaveBeenCalledTimes(2);
   });
+
+  it("renders a large preview modal surface", async () => {
+    vi.mocked(apiDownload).mockResolvedValue({
+      blob: new Blob(["pdf"], { type: "application/pdf" }),
+      filename: "test.pdf",
+      contentType: "application/pdf"
+    });
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => "blob:pdf-preview")
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn()
+    });
+
+    const view = render(
+      <DocumentViewer
+        document={makeDoc({})}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+
+    await flushAsyncWork();
+
+    const modal = view.querySelector(".shadow-2xl");
+    expect(modal?.className).toContain("w-[95vw]");
+    expect(modal?.className).toContain("md:w-[70vw]");
+  });
 });

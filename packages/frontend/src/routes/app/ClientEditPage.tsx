@@ -22,11 +22,14 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  PrimaryButton,
   FormExitActions,
   PageHeader,
   SectionCard,
   SelectField
 } from "./ui";
+import { DocumentList } from "../../components/documents/DocumentList";
+import { DocumentUploadForm } from "../../components/documents/DocumentUploadForm";
 
 function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -137,6 +140,15 @@ export function ClientEditPage() {
       void navigate({ to: "/app/clients/$clientId", params: { clientId } });
     }
   });
+
+  function finishAndReturn() {
+    allowNextNavigation();
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    void navigate({ to: "/app/clients/$clientId", params: { clientId } });
+  }
 
   if (clientQuery.isLoading) {
     return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
@@ -268,12 +280,35 @@ export function ClientEditPage() {
             savingLabel={t("labels.saving")}
             submitting={updateMutation.isPending}
           />
+          <div className="flex justify-end">
+            <PrimaryButton type="button" onClick={finishAndReturn}>
+              {t("actions.back")}
+            </PrimaryButton>
+          </div>
           {updateMutation.error ? (
             <p className="text-sm text-red-600">
               {(updateMutation.error as Error).message}
             </p>
           ) : null}
         </form>
+      </SectionCard>
+      <SectionCard
+        title={t("actions.uploadDocument")}
+        description={t("documents.listHelp")}
+      >
+        <DocumentUploadForm
+          clientId={clientId}
+          invalidateKey={["client-documents", clientId]}
+        />
+      </SectionCard>
+      <SectionCard
+        description={t("documents.listHelp")}
+        title={t("labels.documents")}
+      >
+        <DocumentList
+          clientId={clientId}
+          queryKey={["client-documents", clientId]}
+        />
       </SectionCard>
     </div>
   );

@@ -107,11 +107,11 @@ export function DocumentViewer({
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="relative flex h-[80vh] w-[95vw] max-h-[90vh] max-w-[1200px] min-h-[420px] min-w-[320px] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl md:h-[70vh] md:w-[70vw]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-200 p-5">
+        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white p-5">
           <div className="min-w-0">
             <p className="font-heading text-lg">{doc.title}</p>
             <p className="text-sm text-slate-500">{doc.fileName}</p>
@@ -142,7 +142,7 @@ export function DocumentViewer({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
           {isPreviewLoading ? (
             <p className="text-sm text-slate-500">
               {t("documents.previewLoading")}
