@@ -115,8 +115,9 @@ describe("registerImportRoutes", () => {
     const casePreviewHandler = findHandler(app.post.mock.calls, "/api/import/cases/execute-preview");
     const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
 
-    await clientPreviewHandler!({ body: {}, sessionUser: { id: "u1" } } as never, reply as never);
-    expect(reply.status).toHaveBeenCalledWith(422);
+    await expect(
+      clientPreviewHandler!({ body: {}, sessionUser: { id: "u1" } } as never, reply as never)
+    ).rejects.toThrow();
 
     executeClientImportPreview.mockResolvedValueOnce(null);
     await clientPreviewHandler!(

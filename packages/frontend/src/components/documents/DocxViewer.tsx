@@ -168,7 +168,6 @@ export function DocxViewer({ blob }: DocxViewerProps) {
       <div
         ref={containerRef}
         className="max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 text-sm leading-relaxed prose prose-sm max-w-none"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={
           html ? { __html: html } : undefined
         }

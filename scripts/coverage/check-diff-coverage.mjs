@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const DEFAULT_MIN = 80;
+const EXEC_MAX_BUFFER = 64 * 1024 * 1024;
 const minArgIndex = process.argv.indexOf("--min");
 const minFromArg = minArgIndex >= 0 ? process.argv[minArgIndex + 1] : undefined;
 const minRaw = process.env.COVERAGE_DIFF_MIN ?? minFromArg ?? String(DEFAULT_MIN);
@@ -76,7 +77,7 @@ function getHeadRef() {
 function getChangedAddedLines(baseRef, headRef) {
   const diffOutput = execSync(
     `git diff --unified=0 --no-color ${baseRef}...${headRef} -- packages/backend/src packages/frontend/src packages/shared/src`,
-    { encoding: "utf8" }
+    { encoding: "utf8", maxBuffer: EXEC_MAX_BUFFER }
   );
 
   const changed = new Map();

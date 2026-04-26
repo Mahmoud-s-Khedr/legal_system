@@ -3,11 +3,12 @@ import { DocumentType, ExtractionStatus, OcrBackend, type DocumentDto } from "@e
 import { canShowIndexedText } from "./DocumentList";
 
 function makeDoc(overrides: Partial<DocumentDto>): DocumentDto {
-  return {
+  const doc: DocumentDto = {
     id: "doc-1",
     firmId: "firm-1",
     caseId: null,
     clientId: null,
+    taskId: null,
     uploadedById: null,
     title: "Test document",
     fileName: "test.pdf",
@@ -21,6 +22,11 @@ function makeDoc(overrides: Partial<DocumentDto>): DocumentDto {
     createdAt: "2026-03-01T00:00:00.000Z",
     updatedAt: "2026-03-01T00:00:00.000Z",
     ...overrides
+  };
+
+  return {
+    ...doc,
+    taskId: overrides.taskId ?? doc.taskId
   };
 }
 

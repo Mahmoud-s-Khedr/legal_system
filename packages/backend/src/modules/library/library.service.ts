@@ -39,7 +39,6 @@ export interface LibraryDocumentDetail extends LibraryDocumentSummary {
   legalPrinciple: string | null;
   author: string | null;
   storageKey: string | null;
-  mimeType: string | null;
   articles: ArticleSummary[];
   tags: string[];
   annotations: AnnotationDto[];
@@ -292,7 +291,6 @@ export async function getDocument(
     legalPrinciple: doc.legalPrinciple,
     author: doc.author,
     storageKey: doc.storageKey,
-    mimeType: doc.mimeType,
     articles: doc.articles.map((a) => ({
       id: a.id,
       articleNumber: a.articleNumber,
@@ -379,6 +377,7 @@ export async function createDocument(
     contentText: doc.contentText,
     legalPrinciple: doc.legalPrinciple,
     author: doc.author,
+    storageKey: doc.storageKey,
     articles: (doc.articles ?? []).map((a: { id: string; articleNumber: string; title: string | null; body: string }) => ({
       id: a.id,
       articleNumber: a.articleNumber,

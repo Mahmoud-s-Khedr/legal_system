@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TaskStatus } from "@prisma/client";
+import { TaskStatus as PrismaTaskStatus } from "@prisma/client";
+import { TaskStatus } from "@elms/shared";
 import { makeSessionUser } from "../../test-utils/session-user.js";
 
 const inTenantTransaction = vi.fn();
@@ -92,7 +93,7 @@ describe("tasks.service", () => {
         deletedAt: null,
         OR: expect.any(Array),
         dueAt: expect.objectContaining({ gte: expect.any(Date), lte: expect.any(Date), lt: expect.any(Date) }),
-        status: { not: TaskStatus.DONE }
+        status: { not: PrismaTaskStatus.DONE }
       }),
       [{ dueAt: "asc" }, { createdAt: "desc" }],
       { page: 2, limit: 10 }
@@ -126,7 +127,7 @@ describe("tasks.service", () => {
 
   it("updates task and logs old/new values", async () => {
     getFirmTaskRowByIdOrThrow.mockResolvedValue({ ...baseTask, status: "PENDING", priority: "LOW" });
-    updateTaskById.mockResolvedValue({ ...baseTask, title: "Updated", status: "DONE" });
+    updateTaskById.mockResolvedValue({ ...baseTask, title: "Updated", status: TaskStatus.DONE });
 
     const result = await updateTask(actor, "t-1", { title: "Updated" }, audit as never);
 
@@ -146,11 +147,11 @@ describe("tasks.service", () => {
 
   it("changes task status and deletes task with audit entries", async () => {
     getFirmTaskRowByIdOrThrow.mockResolvedValue(baseTask);
-    updateTaskStatusById.mockResolvedValue({ ...baseTask, status: "DONE" });
+    updateTaskStatusById.mockResolvedValue({ ...baseTask, status: TaskStatus.DONE });
 
-    const statusResult = await changeTaskStatus(actor, "t-1", { status: "DONE" }, audit as never);
-    expect(updateTaskStatusById).toHaveBeenCalledWith({ tx: true }, "t-1", "DONE");
-    expect(statusResult.status).toBe("DONE");
+    const statusResult = await changeTaskStatus(actor, "t-1", { status: TaskStatus.DONE }, audit as never);
+    expect(updateTaskStatusById).toHaveBeenCalledWith({ tx: true }, "t-1", TaskStatus.DONE);
+    expect(statusResult.status).toBe(TaskStatus.DONE);
 
     softDeleteTaskById.mockResolvedValue(undefined);
     const deleteResult = await deleteTask(actor, "t-1", audit as never);

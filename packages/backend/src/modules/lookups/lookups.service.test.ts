@@ -99,15 +99,25 @@ describe("lookups.service", () => {
       actor,
       "CaseType",
       "o-1",
-      { labelEn: "Updated" },
+      { labelAr: "محدث", labelEn: "Updated", labelFr: "Mis a jour", isActive: true, sortOrder: 1 },
       audit as never
     );
 
-    expect(updateLookupOptionById).toHaveBeenCalledWith({ tx: true }, "o-1", { labelEn: "Updated" });
+    expect(updateLookupOptionById).toHaveBeenCalledWith(
+      { tx: true },
+      "o-1",
+      { labelAr: "محدث", labelEn: "Updated", labelFr: "Mis a jour", isActive: true, sortOrder: 1 }
+    );
     expect(updated.labelEn).toBe("Updated");
 
     await expect(
-      updateLookupOption(actor, "CaseType", "o-1", { labelEn: "x" }, audit as never)
+      updateLookupOption(
+        actor,
+        "CaseType",
+        "o-1",
+        { labelAr: "س", labelEn: "x", labelFr: "x", isActive: true, sortOrder: 1 },
+        audit as never
+      )
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 

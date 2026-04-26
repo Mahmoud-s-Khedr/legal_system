@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,14 +31,14 @@ vi.mock("../../lib/tableQueryState", () => ({
 
 vi.mock("./ui", () => ({
   PageHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
-  SectionCard: ({ title, children }: { title: string; children: JSX.Element }) => (
+  SectionCard: ({ title, children }: { title: string; children: ReactNode }) => (
     <section>
       <h2>{title}</h2>
       {children}
     </section>
   ),
   Field: () => <div data-testid="field" />,
-  PrimaryButton: ({ disabled, onClick, children }: { disabled?: boolean; onClick?: () => void; children: unknown }) => (
+  PrimaryButton: ({ disabled, onClick, children }: { disabled?: boolean; onClick?: () => void; children: ReactNode }) => (
     <button disabled={disabled} onClick={onClick} type="button">
       {children}
     </button>

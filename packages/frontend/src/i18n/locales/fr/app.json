@@ -174,7 +174,9 @@
     "taskTitle": "Titre de la tâche",
     "documentTitle": "Nom du document",
     "notificationTitle": "Titre de la notification",
-    "eventTitle": "Titre de l'événement"
+    "eventTitle": "Titre de l'événement",
+    "partyType": "Type de partie",
+    "poaNumber": "Numéro de procuration"
   },
   "empty": {
     "noHearings": "Aucune audience",
@@ -230,7 +232,9 @@
     "noSessions": "Aucune session de recherche",
     "noSessionsHelp": "Démarrez une nouvelle session pour poser une question juridique à l'assistant IA.",
     "noCustomReports": "Aucun rapport personnalisé pour le moment.",
-    "noData": "Aucune donnée disponible."
+    "noData": "Aucune donnée disponible.",
+    "noLinkedCases": "Aucun dossier lié",
+    "noLinkedCasesHelp": "Liez ce client à un dossier pour afficher l’historique associé ici."
   },
   "common": {
     "loading": "Chargement…",
@@ -342,7 +346,8 @@
     "judgmentDate": "Date du jugement",
     "author": "Auteur",
     "publishedAt": "Date de publication",
-    "extractionPending": "Extraction du texte en attente"
+    "extractionPending": "Extraction du texte en attente",
+    "downloadFile": "Télécharger le fichier"
   },
   "research": {
     "eyebrow": "Recherche juridique par IA",
@@ -442,7 +447,10 @@
     "relatedTasks": "Tâches liées",
     "relatedTasksHelp": "Tâches ouvertes rattachées à ce dossier.",
     "searchPlaceholder": "Rechercher par titre ou numéro de dossier",
-    "assignedToMe": "Assigné à moi"
+    "assignedToMe": "Assigné à moi",
+    "editParty": "Modifier la partie",
+    "linkedCases": "Dossiers liés",
+    "linkedCasesHelp": "Dossiers associés à ce profil client."
   },
   "quickIntake": {
     "title": "Saisie rapide de dossier",
@@ -820,7 +828,10 @@
     "indexedTextTitle": "Texte indexé — {{title}}",
     "indexedTextTitleFallback": "Texte indexé",
     "indexedTextDescription": "Texte extrait consultable de ce document.",
-    "indexedTextUnavailable": "Le texte indexé n'est pas disponible pour ce document."
+    "indexedTextUnavailable": "Le texte indexé n'est pas disponible pour ce document.",
+    "docxRenderFailed": "Échec du rendu du document Word",
+    "loadingDocx": "Chargement du document Word...",
+    "previewNotSupported": "Aperçu non pris en charge pour ce type de fichier."
   },
   "search": {
     "eyebrow": "Recherche plein texte",
@@ -1200,5 +1211,10 @@
   },
   "caseTypes": {
     "CIVIL": "Civil"
+  },
+  "partyTypes": {
+    "CLIENT": "Client",
+    "OPPONENT": "Adversaire",
+    "EXTERNAL": "Externe"
   }
 }

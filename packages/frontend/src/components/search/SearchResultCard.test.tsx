@@ -45,6 +45,7 @@ describe("SearchResultCard", () => {
           extractionStatus: ExtractionStatus.INDEXED,
           caseId: null,
           clientId: null,
+          taskId: null,
           headline: "<mark>alpha</mark><img src=x onerror=alert(1)>",
           rank: 1,
           createdAt: new Date().toISOString()

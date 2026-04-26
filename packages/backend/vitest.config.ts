@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+// @ts-expect-error local mjs helper has no type declarations
 import { getPackageCoverageThresholds } from "../../scripts/coverage/threshold-policy.mjs";
 
 const thresholds = getPackageCoverageThresholds("@elms/backend");

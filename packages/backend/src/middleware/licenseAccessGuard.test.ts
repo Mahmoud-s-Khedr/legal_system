@@ -18,7 +18,7 @@ describe("registerLicenseAccessGuard", () => {
     await hook(
       {
         sessionUser: {
-          lifecycleStatus: FirmLifecycleStatus.TRIAL,
+          lifecycleStatus: FirmLifecycleStatus.ACTIVE,
           editionKey: EditionKey.ENTERPRISE
         },
         routeOptions: { url: "/api/cases" }
@@ -39,7 +39,7 @@ describe("registerLicenseAccessGuard", () => {
     await hook({ sessionUser: null, routeOptions: { url: "/api/cases" } } as never, reply as never);
     await hook(
       {
-        sessionUser: { lifecycleStatus: FirmLifecycleStatus.TRIAL, editionKey: EditionKey.ENTERPRISE },
+        sessionUser: { lifecycleStatus: FirmLifecycleStatus.ACTIVE, editionKey: EditionKey.ENTERPRISE },
         routeOptions: { url: "/api/auth/me" }
       } as never,
       reply as never
@@ -56,7 +56,7 @@ describe("registerLicenseAccessGuard", () => {
     isTrialEnabled.mockReturnValueOnce(true);
     await hook(
       {
-        sessionUser: { lifecycleStatus: FirmLifecycleStatus.TRIAL, editionKey: EditionKey.SOLO_OFFLINE },
+        sessionUser: { lifecycleStatus: FirmLifecycleStatus.ACTIVE, editionKey: EditionKey.SOLO_OFFLINE },
         routeOptions: { url: "/api/cases" }
       } as never,
       reply as never

@@ -174,7 +174,9 @@
     "taskTitle": "Task Title",
     "documentTitle": "Document Name",
     "notificationTitle": "Notification Title",
-    "eventTitle": "Event Title"
+    "eventTitle": "Event Title",
+    "partyType": "Party type",
+    "poaNumber": "Power of attorney number"
   },
   "empty": {
     "noCourts": "No court stages yet",
@@ -230,7 +232,9 @@
     "noSessions": "No research sessions yet",
     "noSessionsHelp": "Start a new session to ask the AI assistant a legal question.",
     "noCustomReports": "No custom reports yet.",
-    "noData": "No data available."
+    "noData": "No data available.",
+    "noLinkedCases": "No linked cases yet",
+    "noLinkedCasesHelp": "Link this client to a case to see related matters here."
   },
   "common": {
     "loading": "Loading…",
@@ -342,7 +346,8 @@
     "judgmentDate": "Judgment date",
     "author": "Author",
     "publishedAt": "Published at",
-    "extractionPending": "Text extraction is pending"
+    "extractionPending": "Text extraction is pending",
+    "downloadFile": "Download file"
   },
   "research": {
     "eyebrow": "AI-powered legal research",
@@ -442,7 +447,10 @@
     "relatedTasks": "Related tasks",
     "relatedTasksHelp": "Open tasks connected to this matter.",
     "searchPlaceholder": "Search by title or case number",
-    "assignedToMe": "Assigned to me"
+    "assignedToMe": "Assigned to me",
+    "editParty": "Edit party",
+    "linkedCases": "Linked cases",
+    "linkedCasesHelp": "Cases connected to this client record."
   },
   "quickIntake": {
     "title": "Quick case intake",
@@ -832,7 +840,10 @@
     "indexedTextTitle": "Indexed text — {{title}}",
     "indexedTextTitleFallback": "Indexed text",
     "indexedTextDescription": "Searchable extracted text from this document.",
-    "indexedTextUnavailable": "Indexed text is not available for this document."
+    "indexedTextUnavailable": "Indexed text is not available for this document.",
+    "docxRenderFailed": "Failed to render Word document",
+    "loadingDocx": "Loading Word document...",
+    "previewNotSupported": "Preview is not supported for this file type."
   },
   "search": {
     "eyebrow": "Full-text search",
@@ -1201,5 +1212,10 @@
   },
   "caseTypes": {
     "CIVIL": "Civil"
+  },
+  "partyTypes": {
+    "CLIENT": "Client",
+    "OPPONENT": "Opponent",
+    "EXTERNAL": "External"
   }
 }

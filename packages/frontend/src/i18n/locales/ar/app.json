@@ -183,8 +183,8 @@
     "noHearingsHelp": "قم بجدولة الجلسة القادمة لعرضها هنا.",
     "noTasks": "لا توجد مهام بعد",
     "noTasksHelp": "أنشئ مهمة جديدة أو غيّر الفلتر.",
-    "noLinkedCases": "لا توجد قضايا مرتبطة",
-    "noLinkedCasesHelp": "ستظهر قضايا هذا الموكل هنا عند تسجيله كطرف في قضية.",
+    "noLinkedCases": "لا توجد قضايا مرتبطة بعد",
+    "noLinkedCasesHelp": "اربط هذا الموكل بقضية لعرض القضايا المرتبطة هنا.",
     "noActivity": "لا يوجد نشاط حديث",
     "noActivityHelp": "سيظهر سجل النشاط بعد عمليات الإنشاء والتعديل.",
     "noClients": "لا يوجد موكلين بعد",
@@ -346,7 +346,8 @@
     "judgmentDate": "تاريخ الحكم",
     "author": "المؤلف",
     "publishedAt": "تاريخ النشر",
-    "extractionPending": "استخراج النص قيد الانتظار"
+    "extractionPending": "استخراج النص قيد الانتظار",
+    "downloadFile": "تنزيل الملف"
   },
   "research": {
     "eyebrow": "بحث قانوني بالذكاء الاصطناعي",
@@ -437,7 +438,7 @@
     "addPartyHelp": "أضف موكلًا أو خصمًا أو طرفًا خارجيًا للقضية.",
     "editParty": "تعديل الطرف",
     "linkedCases": "القضايا المرتبطة",
-    "linkedCasesHelp": "القضايا التي يظهر فيها هذا الموكل كطرف.",
+    "linkedCasesHelp": "القضايا المرتبطة بسجل هذا الموكل.",
     "assignments": "فريق العمل",
     "assignmentsHelp": "أعضاء الفريق النشطون على هذه القضية.",
     "assignLawyer": "تكليف عضو للقضية",
@@ -852,7 +853,10 @@
     "indexedTextTitle": "النص المفهرس — {{title}}",
     "indexedTextTitleFallback": "النص المفهرس",
     "indexedTextDescription": "النص المستخرج القابل للبحث من هذا المستند.",
-    "indexedTextUnavailable": "النص المفهرس غير متاح لهذا المستند."
+    "indexedTextUnavailable": "النص المفهرس غير متاح لهذا المستند.",
+    "docxRenderFailed": "تعذر عرض ملف Word",
+    "loadingDocx": "جارٍ تحميل ملف Word...",
+    "previewNotSupported": "المعاينة غير مدعومة لهذا النوع من الملفات."
   },
   "search": {
     "eyebrow": "البحث الشامل",

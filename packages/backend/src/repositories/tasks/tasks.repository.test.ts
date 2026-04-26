@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { TaskPriority, TaskStatus } from "@elms/shared";
 import {
   listFirmTasks,
   getFirmTaskByIdOrThrow,
@@ -70,7 +71,13 @@ describe("tasks.repository", () => {
       tx as never,
       "f-1",
       "u-1",
-      { title: "Task 2", status: "DONE", priority: "HIGH", dueAt: "2026-04-22T00:00:00.000Z", description: "x" }
+      {
+        title: "Task 2",
+        status: TaskStatus.DONE,
+        priority: TaskPriority.HIGH,
+        dueAt: "2026-04-22T00:00:00.000Z",
+        description: "x"
+      }
     );
 
     expect(tx.task.create).toHaveBeenNthCalledWith(
@@ -79,7 +86,13 @@ describe("tasks.repository", () => {
     );
     expect(tx.task.create).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ data: expect.objectContaining({ status: "DONE", priority: "HIGH", dueAt: expect.any(Date) }) })
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: TaskStatus.DONE,
+          priority: TaskPriority.HIGH,
+          dueAt: expect.any(Date)
+        })
+      })
     );
   });
 
@@ -96,14 +109,21 @@ describe("tasks.repository", () => {
     await updateTaskById(
       tx as never,
       "t-1",
-      { title: "Updated", status: "DONE", priority: "HIGH", description: "ok", assignedToId: "u-2", caseId: "c-1" },
+      {
+        title: "Updated",
+        status: TaskStatus.DONE,
+        priority: TaskPriority.HIGH,
+        description: "ok",
+        assignedToId: "u-2",
+        caseId: "c-1"
+      },
       { status: "PENDING" as never, priority: "LOW" as never }
     );
 
-    await updateTaskStatusById(tx as never, "t-1", "DONE" as never);
+    await updateTaskStatusById(tx as never, "t-1", TaskStatus.DONE as never);
 
     expect(tx.task.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: "t-1" }, data: expect.objectContaining({ status: "DONE" }) })
+      expect.objectContaining({ where: { id: "t-1" }, data: expect.objectContaining({ status: TaskStatus.DONE }) })
     );
   });
 

@@ -105,7 +105,7 @@ describe("cloudAuthService", () => {
 
     mockPrisma.user.create.mockResolvedValue({ id: "u-1" });
 
-    const result = await service.register({
+    const result = await service.register!({
       email: "owner@firm.com",
       fullName: "Owner",
       password: "Strong123!",
@@ -119,7 +119,7 @@ describe("cloudAuthService", () => {
       expect.objectContaining({ aud: "elms-api" })
     );
     expect(result.session.user?.id).toBe("u-1");
-    expect(service.getResponseCookies(result)).toEqual(
+    expect(service.getResponseCookies!(result)).toEqual(
       expect.objectContaining({ [ACCESS_COOKIE]: expect.any(String), [REFRESH_COOKIE]: expect.any(String) })
     );
   });
@@ -129,7 +129,7 @@ describe("cloudAuthService", () => {
     const service = createCloudAuthService(app as never, env as never);
 
     mockPrisma.invitation.findFirst.mockResolvedValueOnce(null);
-    await expect(service.acceptInvite({ token: "bad", password: "x", fullName: "User" })).rejects.toThrow(
+    await expect(service.acceptInvite!({ token: "bad", password: "x", fullName: "User" })).rejects.toThrow(
       "Invitation is invalid or expired"
     );
 
@@ -146,7 +146,7 @@ describe("cloudAuthService", () => {
       })
     );
 
-    const accepted = await service.acceptInvite({ token: "ok", password: "x", fullName: "User" });
+    const accepted = await service.acceptInvite!({ token: "ok", password: "x", fullName: "User" });
     expect(accepted.session.user?.id).toBe("u-1");
   });
 
@@ -158,11 +158,11 @@ describe("cloudAuthService", () => {
     const loggedIn = await service.login({ email: "user@test.com", password: "pass" });
     expect(loggedIn.session.user?.id).toBe("u-1");
 
-    await expect(service.refresh({})).rejects.toThrow("Missing refresh token");
-    await expect(service.refresh({ [REFRESH_COOKIE]: "missing" })).rejects.toThrow("Refresh token expired");
+    await expect(service.refresh!({})).rejects.toThrow("Missing refresh token");
+    await expect(service.refresh!({ [REFRESH_COOKIE]: "missing" })).rejects.toThrow("Refresh token expired");
 
     MockRedis.store.set("refresh:valid-token", "u-1");
-    const refreshed = await service.refresh({ [REFRESH_COOKIE]: "valid-token" });
+    const refreshed = await service.refresh!({ [REFRESH_COOKIE]: "valid-token" });
     expect(refreshed.session.user?.id).toBe("u-1");
 
     MockRedis.store.set("refresh:logout-token", "u-1");
@@ -170,7 +170,7 @@ describe("cloudAuthService", () => {
     expect(MockRedis.store.get("refresh:logout-token")).toBeUndefined();
 
     expect(service.clearResponseCookies()).toEqual([ACCESS_COOKIE, REFRESH_COOKIE]);
-    expect(service.getResponseCookies({ session: { user: null } } as never)).toEqual({});
+    expect(service.getResponseCookies!({ session: { user: null } } as never)).toEqual({});
   });
 
   it("rejects login when password mismatch or missing hash", async () => {

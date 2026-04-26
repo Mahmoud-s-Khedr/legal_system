@@ -1,4 +1,5 @@
 import type { SessionUser } from "@elms/shared";
+import { ExtractionStatus, LibraryScope, Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { normalizeArabic } from "../../utils/arabic.js";
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
@@ -196,10 +197,10 @@ export async function globalSearch(
   }
 
   if (entities.includes("documents")) {
-    const docWhere = {
+    const docWhere: Prisma.DocumentWhereInput = {
       firmId: actor.firmId,
       deletedAt: null,
-      extractionStatus: "INDEXED",
+      extractionStatus: ExtractionStatus.INDEXED,
       OR: searchCandidates.flatMap((candidate) => [
         { title: { contains: candidate, mode: "insensitive" as const } },
         { fileName: { contains: candidate, mode: "insensitive" as const } },
@@ -231,10 +232,10 @@ export async function globalSearch(
   }
 
   if (entities.includes("library")) {
-    const libWhere = {
+    const libWhere: Prisma.LibraryDocumentWhereInput = {
       deletedAt: null,
       OR: [
-        { scope: "SYSTEM" },
+        { scope: LibraryScope.SYSTEM },
         { firmId: actor.firmId }
       ],
       AND: {

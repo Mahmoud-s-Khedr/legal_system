@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeSessionUser } from "../../test-utils/session-user.js";
 
-const mockPrisma = {
-  $queryRaw: vi.fn()
-};
+const inTenantTransaction = vi.fn();
+const searchFirmDocumentsRaw = vi.fn();
 
-vi.mock("../../db/prisma.js", () => ({
-  prisma: mockPrisma
+vi.mock("../../repositories/unitOfWork.js", () => ({
+  inTenantTransaction
+}));
+vi.mock("../../repositories/documents/search.repository.js", () => ({
+  searchFirmDocumentsRaw
 }));
 
 const { searchDocuments } = await import("./search.service.js");
@@ -19,17 +21,46 @@ const actor = makeSessionUser({
 describe("searchDocuments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    inTenantTransaction.mockImplementation(async (_firmId, fn) => fn({ tx: true }));
   });
 
   it("returns empty payload for whitespace query without touching DB", async () => {
     const result = await searchDocuments(actor, { q: "   " });
 
     expect(result).toEqual({ items: [], total: 0, query: "" });
-    expect(mockPrisma.$queryRaw).not.toHaveBeenCalled();
+    expect(inTenantTransaction).not.toHaveBeenCalled();
+    expect(searchFirmDocumentsRaw).not.toHaveBeenCalled();
   });
 
-  it("maps hybrid rows and returns total with normalized query", async () => {
-    mockPrisma.$queryRaw.mockResolvedValueOnce([
+  it("calls repository through tenant transaction with normalized query and filters", async () => {
+    searchFirmDocumentsRaw.mockResolvedValueOnce([]);
+
+    await searchDocuments(actor, {
+      q: "  service agreement  ",
+      caseId: "case-1",
+      clientId: "client-1",
+      type: "CONTRACT",
+      page: 2,
+      pageSize: 5
+    });
+
+    expect(inTenantTransaction).toHaveBeenCalledWith(actor.firmId, expect.any(Function));
+    expect(searchFirmDocumentsRaw).toHaveBeenCalledWith(
+      { tx: true },
+      expect.objectContaining({
+        firmId: actor.firmId,
+        normalizedQuery: "service agreement",
+        caseId: "case-1",
+        clientId: "client-1",
+        type: "CONTRACT",
+        page: 2,
+        pageSize: 5
+      })
+    );
+  });
+
+  it("maps repository rows and returns total from totalCount", async () => {
+    searchFirmDocumentsRaw.mockResolvedValueOnce([
       {
         id: "doc-1",
         title: "Master Service Agreement",
@@ -39,6 +70,7 @@ describe("searchDocuments", () => {
         extractionStatus: "INDEXED",
         caseId: null,
         clientId: null,
+        taskId: null,
         createdAt: new Date("2026-04-01T10:00:00.000Z"),
         rank: 4.2,
         headline: "<mark>service</mark> agreement",
@@ -47,67 +79,56 @@ describe("searchDocuments", () => {
     ]);
 
     const result = await searchDocuments(actor, {
-      q: "  service agreement  ",
+      q: "service agreement",
       page: 1,
       pageSize: 5
     });
 
-    expect(result.query).toBe("service agreement");
-    expect(result.total).toBe(1);
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]).toMatchObject({
-      id: "doc-1",
-      title: "Master Service Agreement",
-      headline: "<mark>service</mark> agreement",
-      rank: 4.2
+    expect(result).toEqual({
+      query: "service agreement",
+      total: 1,
+      items: [
+        {
+          id: "doc-1",
+          title: "Master Service Agreement",
+          fileName: "msa.pdf",
+          mimeType: "application/pdf",
+          type: "CONTRACT",
+          extractionStatus: "INDEXED",
+          caseId: null,
+          clientId: null,
+          taskId: null,
+          headline: "<mark>service</mark> agreement",
+          rank: 4.2,
+          createdAt: "2026-04-01T10:00:00.000Z"
+        }
+      ]
     });
-    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
-  it("uses hybrid SQL with deterministic ordering and tenant/pagination parameters", async () => {
-    mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+  it("normalizes rank and createdAt when repository returns string values", async () => {
+    searchFirmDocumentsRaw.mockResolvedValueOnce([
+      {
+        id: "doc-2",
+        title: "Lease",
+        fileName: "lease.pdf",
+        mimeType: "application/pdf",
+        type: "CONTRACT",
+        extractionStatus: "INDEXED",
+        caseId: "case-1",
+        clientId: null,
+        taskId: null,
+        createdAt: "2026-04-10T00:00:00.000Z",
+        rank: "2.75",
+        headline: null,
+        totalCount: 1
+      }
+    ]);
 
-    await searchDocuments(actor, { q: "lease", page: 2, pageSize: 5 });
+    const result = await searchDocuments(actor, { q: "lease" });
 
-    const firstCall = mockPrisma.$queryRaw.mock.calls[0];
-    const template = firstCall[0] as TemplateStringsArray;
-    const values = firstCall.slice(1);
-
-    const sqlText = template.join(" ");
-    expect(sqlText).toContain("WITH params AS");
-    expect(sqlText).toContain("fuzzy_candidates AS");
-    expect(sqlText).toContain("UNION ALL");
-    expect(sqlText).toContain("COUNT(*) OVER() AS \"totalCount\"");
-    expect(sqlText).toContain("ORDER BY s.final_score DESC, d.\"createdAt\" DESC, d.id DESC");
-    expect(values).toContain(actor.firmId);
-    expect(values).toContain(5);
-  });
-
-  it("keeps punctuation-heavy queries in fuzzy branch while sanitizing tsquery input", async () => {
-    mockPrisma.$queryRaw.mockResolvedValueOnce([]);
-
-    await searchDocuments(actor, { q: "node.ts" });
-
-    const firstCall = mockPrisma.$queryRaw.mock.calls[0];
-    const values = firstCall.slice(1);
-
-    expect(values).toContain("node.ts");
-    expect(values).toContain("node ts");
-  });
-
-  it("enables short-query guard for length <= 2", async () => {
-    mockPrisma.$queryRaw.mockResolvedValueOnce([]);
-
-    await searchDocuments(actor, { q: "no" });
-
-    const firstCall = mockPrisma.$queryRaw.mock.calls[0];
-    const template = firstCall[0] as TemplateStringsArray;
-    const values = firstCall.slice(1);
-    const sqlText = template.join(" ");
-
-    expect(sqlText).toContain("short_query_candidate_cap");
-    expect(sqlText).toContain("NOT p.is_short_query");
-    expect(sqlText).toContain("p.is_short_query");
-    expect(values).toContain(true);
+    expect(result.items[0]?.rank).toBe(2.75);
+    expect(result.items[0]?.createdAt).toBe("2026-04-10T00:00:00.000Z");
+    expect(result.items[0]?.headline).toBe("");
   });
 });

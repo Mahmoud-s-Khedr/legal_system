@@ -24,7 +24,7 @@ export function GlobalSearchResultCard({
 
   return (
     <Link
-      to={result.url as any}
+      to={result.url as never}
       className="block rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition-shadow"
     >
       <div className="flex items-start justify-between gap-3">

@@ -2,13 +2,15 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LibraryDocumentPage } from "./LibraryDocumentPage";
-import { apiDownload } from "../../../lib/api";
+import { apiDownload, type ApiDownloadResult } from "../../../lib/api";
 import { saveBlobToDownloads } from "../../../lib/desktopDownloads";
 import { showErrorDialog } from "../../../lib/dialog";
 
-const mockUseQuery = vi.fn();
-const mockUseMutation = vi.fn();
-const mockUseQueryClient = vi.fn();
+const { mockUseQuery, mockUseMutation, mockUseQueryClient } = vi.hoisted(() => ({
+  mockUseQuery: vi.fn(),
+  mockUseMutation: vi.fn(),
+  mockUseQueryClient: vi.fn()
+}));
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: mockUseQuery,
@@ -138,6 +140,21 @@ beforeEach(() => {
     refetch: vi.fn()
   });
 
+  if (!("createObjectURL" in URL)) {
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: () => ""
+    });
+  }
+  if (!("revokeObjectURL" in URL)) {
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: () => undefined
+    });
+  }
+
   vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:preview");
   vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
 });
@@ -155,7 +172,7 @@ describe("LibraryDocumentPage download", () => {
       })
       .mockResolvedValueOnce({
         blob: downloadBlob,
-        filename: null,
+        filename: undefined,
         contentType: "application/pdf"
       });
 
@@ -179,7 +196,7 @@ describe("LibraryDocumentPage download", () => {
 
   it("disables download button while download is in progress", async () => {
     const previewBlob = new Blob(["preview"], { type: "application/pdf" });
-    const inFlight = deferred<{ blob: Blob; filename: string | null; contentType: string | null }>();
+    const inFlight = deferred<ApiDownloadResult>();
 
     vi.mocked(apiDownload)
       .mockResolvedValueOnce({

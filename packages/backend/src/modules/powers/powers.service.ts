@@ -17,7 +17,6 @@ import {
   findFirmPowerMinimalById,
   findPowerStatusById,
   listFirmPowers,
-  poaSelect,
   revokeFirmPower,
   updateFirmPower
 } from "../../repositories/powers/powers.repository.js";

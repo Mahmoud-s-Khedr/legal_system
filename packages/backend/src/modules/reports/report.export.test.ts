@@ -42,7 +42,6 @@ class FakeWorkbook {
 }
 
 class FakePdfPrinter {
-  constructor(_fonts: unknown) {}
   createPdfKitDocument() {
     const emitter = new EventEmitter() as EventEmitter & { end: () => void };
     emitter.end = () => {
