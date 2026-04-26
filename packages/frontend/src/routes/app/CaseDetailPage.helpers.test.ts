@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_COURT, caseTabs, pickActiveCourt } from "./CaseDetailPage";
+import {
+  EMPTY_COURT,
+  buildCaseHearingsUrl,
+  caseTabs,
+  pickActiveCourt
+} from "./CaseDetailPage";
 
 describe("CaseDetailPage helpers", () => {
   it("exposes stable case tabs and empty court default", () => {
@@ -20,5 +25,11 @@ describe("CaseDetailPage helpers", () => {
     expect(active?.id).toBe("2");
     expect(fallback?.id).toBe("1");
     expect(none).toBeNull();
+  });
+
+  it("builds hearings API URL with encoded caseId and explicit page/limit", () => {
+    expect(buildCaseHearingsUrl("case id/with space", 3, 20)).toBe(
+      "/api/hearings?caseId=case%20id%2Fwith%20space&page=3&limit=20"
+    );
   });
 });

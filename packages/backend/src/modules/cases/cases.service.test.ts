@@ -22,6 +22,7 @@ const mockParty = {
 const mockAssignment = {
   create: vi.fn(),
   findFirst: vi.fn(),
+  findFirstOrThrow: vi.fn(),
   update: vi.fn(),
   findMany: vi.fn(),
   count: vi.fn()
@@ -346,7 +347,7 @@ describe("addCaseAssignment", () => {
 describe("unassignCase", () => {
   it("sets unassignedAt on the assignment", async () => {
     const assignment = { id: "assignment-1", caseId: "case-1", userId: "user-2", unassignedAt: null };
-    mockAssignment.findFirst.mockResolvedValue(assignment);
+    mockAssignment.findFirstOrThrow.mockResolvedValue({ id: assignment.id });
     mockAssignment.update.mockResolvedValue({ ...assignment, unassignedAt: now });
     const caseRecord = makeCaseRecord();
     mockCaseDb.findFirstOrThrow.mockResolvedValue(caseRecord);
@@ -358,7 +359,29 @@ describe("unassignCase", () => {
         data: expect.objectContaining({ unassignedAt: expect.any(Date) })
       })
     );
+    expect(mockAssignment.findFirstOrThrow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: "assignment-1",
+          caseId: "case-1",
+          assignedCase: {
+            firmId: "firm-1",
+            deletedAt: null
+          }
+        }
+      })
+    );
     expect(result).toBeDefined();
+  });
+
+  it("rejects when assignment does not belong to the provided case", async () => {
+    mockAssignment.findFirstOrThrow.mockRejectedValueOnce(new Error("not found"));
+
+    await expect(unassignCase(actor, "case-1", "assignment-999", audit)).rejects.toThrow(
+      "not found"
+    );
+
+    expect(mockAssignment.update).not.toHaveBeenCalled();
   });
 });
 

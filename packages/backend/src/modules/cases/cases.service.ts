@@ -762,6 +762,18 @@ export async function unassignCase(
   audit: AuditContext
 ) {
   return withTenant(prisma, actor.firmId, async (tx) => {
+    await tx.caseAssignment.findFirstOrThrow({
+      where: {
+        id: assignmentId,
+        caseId,
+        assignedCase: {
+          firmId: actor.firmId,
+          deletedAt: null
+        }
+      },
+      select: { id: true }
+    });
+
     await tx.caseAssignment.update({
       where: { id: assignmentId },
       data: { unassignedAt: new Date() }

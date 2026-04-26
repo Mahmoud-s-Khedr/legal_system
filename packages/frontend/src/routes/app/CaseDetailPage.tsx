@@ -42,6 +42,7 @@ import {
   TableCell,
   TableHead,
   TableHeadCell,
+  TablePagination,
   TableRow,
   TableWrapper,
   formatDateTime
@@ -77,6 +78,10 @@ export function pickActiveCourt(courts: CaseCourtDto[]) {
   return courts.find((court) => court.isActive) ?? courts[0] ?? null;
 }
 
+export function buildCaseHearingsUrl(caseId: string, page: number, limit: number) {
+  return `/api/hearings?caseId=${encodeURIComponent(caseId)}&page=${page}&limit=${limit}`;
+}
+
 export function CaseDetailPage() {
   const { t } = useTranslation("app");
   const feedback = useMutationFeedback();
@@ -103,6 +108,8 @@ export function CaseDetailPage() {
   const [courtFormResetToken] = useState(0);
   const [showInlineHearingForm, setShowInlineHearingForm] = useState(false);
   const [showInlineTaskForm, setShowInlineTaskForm] = useState(false);
+  const [hearingsPage, setHearingsPage] = useState(1);
+  const [hearingsLimit, setHearingsLimit] = useState(20);
 
   const caseQuery = useQuery({
     queryKey: ["case", caseId],
@@ -117,9 +124,11 @@ export function CaseDetailPage() {
     queryFn: () => apiFetch<ClientListResponseDto>("/api/clients?limit=200")
   });
   const hearingsQuery = useQuery({
-    queryKey: ["case-hearings", caseId],
+    queryKey: ["case-hearings", caseId, hearingsPage, hearingsLimit],
     queryFn: () =>
-      apiFetch<HearingListResponseDto>(`/api/hearings?caseId=${caseId}`)
+      apiFetch<HearingListResponseDto>(
+        buildCaseHearingsUrl(caseId, hearingsPage, hearingsLimit)
+      )
   });
   const tasksQuery = useQuery({
     queryKey: ["case-tasks", caseId],
@@ -129,6 +138,10 @@ export function CaseDetailPage() {
   const courtLevelsQuery = useLookupOptions("CourtLevel");
   const caseTypesQuery = useLookupOptions("CaseType");
   const [editingCourt, setEditingCourt] = useState<CaseCourtDto | null>(null);
+
+  useEffect(() => {
+    setHearingsPage(1);
+  }, [caseId]);
 
   const addPartyMutation = useMutation({
     mutationFn: (payload: CreateCasePartyDto) =>
@@ -931,28 +944,40 @@ export function CaseDetailPage() {
               description={t("empty.noHearingsHelp")}
             />
           ) : (
-            <TableWrapper>
-              <DataTable>
-                <TableHead>
-                  <tr>
-                    <TableHeadCell>{t("labels.sessionDatetime")}</TableHeadCell>
-                    <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
-                  </tr>
-                </TableHead>
-                <TableBody>
-                  {hearingsQuery.data.items.map((hearing) => (
-                    <TableRow key={hearing.id}>
-                      <TableCell>
-                        {formatDateTime(hearing.sessionDatetime)}
-                      </TableCell>
-                      <TableCell>
-                        {hearing.assignedLawyerName ?? t("labels.unassigned")}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </DataTable>
-            </TableWrapper>
+            <>
+              <TableWrapper>
+                <DataTable>
+                  <TableHead>
+                    <tr>
+                      <TableHeadCell>{t("labels.sessionDatetime")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.assignedLawyer")}</TableHeadCell>
+                    </tr>
+                  </TableHead>
+                  <TableBody>
+                    {hearingsQuery.data.items.map((hearing) => (
+                      <TableRow key={hearing.id}>
+                        <TableCell>
+                          {formatDateTime(hearing.sessionDatetime)}
+                        </TableCell>
+                        <TableCell>
+                          {hearing.assignedLawyerName ?? t("labels.unassigned")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </DataTable>
+              </TableWrapper>
+              <TablePagination
+                page={hearingsPage}
+                pageSize={hearingsLimit}
+                total={hearingsQuery.data.total}
+                onPageChange={setHearingsPage}
+                onPageSizeChange={(size) => {
+                  setHearingsLimit(size);
+                  setHearingsPage(1);
+                }}
+              />
+            </>
           )}
         </SectionCard>
       ) : null}

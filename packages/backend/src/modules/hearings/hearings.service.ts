@@ -94,7 +94,6 @@ export async function listHearings(
       case: { firmId: actor.firmId, deletedAt: null },
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.assignedLawyerId ? { assignedLawyerId: filters.assignedLawyerId } : {}),
-      ...(filters.overdue === "true" ? { sessionDatetime: { lt: new Date() } } : {}),
       ...buildSessionDatetimeFilter(filters)
     };
 
@@ -130,8 +129,35 @@ export async function listHearings(
   });
 }
 
-export function buildSessionDatetimeFilter(filters: { from?: string; to?: string }) {
-  const sessionDatetime: { gte?: Date; lte?: Date } = {};
+async function ensureActiveCaseInFirm(
+  tx: Prisma.TransactionClient,
+  firmId: string,
+  caseId: string
+) {
+  const caseRecord = await tx.case.findFirst({
+    where: {
+      id: caseId,
+      firmId,
+      deletedAt: null
+    },
+    select: { id: true }
+  });
+
+  if (!caseRecord) {
+    throw appError("Case not found or archived/deleted", 404);
+  }
+}
+
+export function buildSessionDatetimeFilter(filters: {
+  from?: string;
+  to?: string;
+  overdue?: string;
+}) {
+  const sessionDatetime: { gte?: Date; lte?: Date; lt?: Date } = {};
+
+  if (filters.overdue === "true") {
+    sessionDatetime.lt = new Date();
+  }
 
   if (filters.from) {
     sessionDatetime.gte = new Date(filters.from);
@@ -162,6 +188,8 @@ export async function createHearing(
   audit: AuditContext
 ) {
   return inTenantTransaction(actor.firmId, async (tx) => {
+    await ensureActiveCaseInFirm(tx, actor.firmId, payload.caseId);
+
     const sessionDatetime = new Date(payload.sessionDatetime);
 
     if (payload.assignedLawyerId) {
@@ -204,6 +232,8 @@ export async function updateHearing(
 ) {
   return inTenantTransaction(actor.firmId, async (tx) => {
     const existing = await getFirmHearingRowByIdOrThrow(tx, actor.firmId, hearingId);
+
+    await ensureActiveCaseInFirm(tx, actor.firmId, payload.caseId);
 
     const sessionDatetime = new Date(payload.sessionDatetime);
 
