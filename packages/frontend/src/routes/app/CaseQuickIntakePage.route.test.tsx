@@ -256,6 +256,7 @@ beforeEach(() => {
   permissionMap["cases:status"] = true;
   permissionMap["hearings:create"] = true;
   permissionMap["tasks:create"] = true;
+  permissionMap["documents:create"] = true;
 
   queryMock.mockImplementation((input: { queryKey: string[] }) => {
     const key = input.queryKey[0];
@@ -409,5 +410,147 @@ describe("CaseQuickIntakePage route behavior", () => {
     expect(navigateMock).not.toHaveBeenCalledWith(
       expect.objectContaining({ to: "/app/cases/$caseId" })
     );
+  });
+
+  it("retries failed optional sections without creating a duplicate case", async () => {
+    let courtAttempts = 0;
+    apiFetchMock.mockImplementation((url: string) => {
+      if (url.includes("/courts")) {
+        courtAttempts += 1;
+        if (courtAttempts === 1) {
+          throw new Error("court failed");
+        }
+      }
+      return Promise.resolve({});
+    });
+
+    const view = render(<CaseQuickIntakePage />);
+    const titleInput = view.querySelector(
+      'input[aria-label="labels.caseTitle"]'
+    ) as HTMLInputElement | null;
+    const caseNumberInput = view.querySelector(
+      'input[aria-label="labels.caseNumber"]'
+    ) as HTMLInputElement | null;
+    const courtNameInput = view.querySelector(
+      'input[aria-label="labels.courtName"]'
+    ) as HTMLInputElement | null;
+    const courtLevelSelect = view.querySelector(
+      'select[aria-label="labels.courtLevel"]'
+    ) as HTMLSelectElement | null;
+    const form = view.querySelector("form");
+
+    act(() => {
+      if (titleInput) setInputValue(titleInput, "Case Retry");
+      if (caseNumberInput) setInputValue(caseNumberInput, "2026/003");
+      if (courtNameInput) setInputValue(courtNameInput, "Retry Court");
+      if (courtLevelSelect) setSelectValue(courtLevelSelect, "FIRST");
+    });
+
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(view.textContent).toContain("quickIntake.savedWithIssues");
+    expect(createCaseMutateAsyncMock).toHaveBeenCalledTimes(1);
+    expect(courtAttempts).toBe(1);
+
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(createCaseMutateAsyncMock).toHaveBeenCalledTimes(1);
+    expect(courtAttempts).toBe(2);
+    expect(successMock).toHaveBeenCalledWith("messages.caseCreated");
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: "/app/cases/$caseId",
+      params: { caseId: "case-1" }
+    });
+  });
+
+  it("uses unsaved-changes bypass when opening created case from partial summary", async () => {
+    apiFetchMock.mockImplementation((url: string) => {
+      if (url.includes("/courts")) {
+        throw new Error("court failed");
+      }
+      return Promise.resolve({});
+    });
+
+    const view = render(<CaseQuickIntakePage />);
+    const titleInput = view.querySelector(
+      'input[aria-label="labels.caseTitle"]'
+    ) as HTMLInputElement | null;
+    const caseNumberInput = view.querySelector(
+      'input[aria-label="labels.caseNumber"]'
+    ) as HTMLInputElement | null;
+    const courtNameInput = view.querySelector(
+      'input[aria-label="labels.courtName"]'
+    ) as HTMLInputElement | null;
+    const courtLevelSelect = view.querySelector(
+      'select[aria-label="labels.courtLevel"]'
+    ) as HTMLSelectElement | null;
+    const form = view.querySelector("form");
+
+    act(() => {
+      if (titleInput) setInputValue(titleInput, "Case Partial");
+      if (caseNumberInput) setInputValue(caseNumberInput, "2026/004");
+      if (courtNameInput) setInputValue(courtNameInput, "Court X");
+      if (courtLevelSelect) setSelectValue(courtLevelSelect, "FIRST");
+    });
+
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    const openButton = Array.from(view.querySelectorAll("button")).find(
+      (button) => button.textContent === "quickIntake.openCreatedCase"
+    );
+
+    act(() => {
+      openButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(allowNextNavigationMock).toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: "/app/cases/$caseId",
+      params: { caseId: "case-1" }
+    });
+  });
+
+  it("skips document upload and surfaces permission message when documents:create is missing", async () => {
+    permissionMap["documents:create"] = false;
+
+    const view = render(<CaseQuickIntakePage />);
+    const titleInput = view.querySelector(
+      'input[aria-label="labels.caseTitle"]'
+    ) as HTMLInputElement | null;
+    const caseNumberInput = view.querySelector(
+      'input[aria-label="labels.caseNumber"]'
+    ) as HTMLInputElement | null;
+    const fileInput = view.querySelector('input[type="file"]') as HTMLInputElement | null;
+    const form = view.querySelector("form");
+
+    act(() => {
+      if (titleInput) setInputValue(titleInput, "Case Docs");
+      if (caseNumberInput) setInputValue(caseNumberInput, "2026/005");
+      if (fileInput) {
+        const file = new File(["sample"], "evidence.pdf", {
+          type: "application/pdf"
+        });
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        Object.defineProperty(fileInput, "files", {
+          value: transfer.files,
+          configurable: true
+        });
+        fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(runUploadQueueMock).not.toHaveBeenCalled();
+    expect(view.textContent).toContain("quickIntake.noDocumentCreatePermission");
   });
 });

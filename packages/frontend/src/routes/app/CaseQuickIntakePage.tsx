@@ -273,6 +273,7 @@ export function CaseQuickIntakePage() {
   const canChangeCaseStatus = useHasPermission("cases:status");
   const canCreateHearings = useHasPermission("hearings:create");
   const canCreateTasks = useHasPermission("tasks:create");
+  const canCreateDocuments = useHasPermission("documents:create");
 
   const [clientMode, setClientMode] = useState<ClientMode>(
     canReadClients ? "existing" : "new"
@@ -288,6 +289,10 @@ export function CaseQuickIntakePage() {
     caseId: string | null;
     failedSections: SubmitSection[];
     message: string;
+  } | null>(null);
+  const [retryContext, setRetryContext] = useState<{
+    caseId: string;
+    failedSections: SubmitSection[];
   } | null>(null);
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
   const documentPickerRef = useRef<HTMLInputElement>(null);
@@ -701,50 +706,62 @@ export function CaseQuickIntakePage() {
       return;
     }
 
-    if (!hasRequiredReady) {
+    if (!retryContext && !hasRequiredReady) {
       setValidationMessage(t("quickIntake.validation.caseRequired"));
       return;
     }
 
+    const shouldAttemptSection = (section: SubmitSection) =>
+      !retryContext || retryContext.failedSections.includes(section);
+
     let resolvedClientId = existingClientId;
+    let caseId = retryContext?.caseId ?? null;
 
     try {
-      if (clientMode === "existing") {
-        if (!canReadClients) {
-          setValidationMessage(t("quickIntake.noClientReadPermission"));
-          return;
+      if (!caseId) {
+        if (clientMode === "existing") {
+          if (!canReadClients) {
+            setValidationMessage(t("quickIntake.noClientReadPermission"));
+            return;
+          }
+        } else {
+          if (!canCreateClients) {
+            setValidationMessage(t("quickIntake.noClientCreatePermission"));
+            return;
+          }
+          const createdClient = await createClientMutation.mutateAsync(
+            normalizeClientPayload(clientForm)
+          );
+          resolvedClientId = createdClient.id;
+          await queryClient.invalidateQueries({ queryKey: ["clients"] });
         }
-      } else {
-        if (!canCreateClients) {
-          setValidationMessage(t("quickIntake.noClientCreatePermission"));
-          return;
-        }
-        const createdClient = await createClientMutation.mutateAsync(
-          normalizeClientPayload(clientForm)
-        );
-        resolvedClientId = createdClient.id;
-        await queryClient.invalidateQueries({ queryKey: ["clients"] });
+
+        const createdCase = await createCaseMutation.mutateAsync({
+          ...caseForm,
+          clientId: resolvedClientId,
+          title: caseForm.title.trim(),
+          caseNumber: caseForm.caseNumber.trim(),
+          internalReference: toNullable(caseForm.internalReference),
+          judicialYear: caseForm.judicialYear
+        });
+
+        caseId = createdCase.id;
       }
-
-      const createdCase = await createCaseMutation.mutateAsync({
-        ...caseForm,
-        clientId: resolvedClientId,
-        title: caseForm.title.trim(),
-        caseNumber: caseForm.caseNumber.trim(),
-        internalReference: toNullable(caseForm.internalReference),
-        judicialYear: caseForm.judicialYear
-      });
-
-      const caseId = createdCase.id;
       const failedSections: SubmitSection[] = [];
 
-      if (canUpdateCases) {
+      if (caseId === null) {
+        setValidationMessage(t("errors.fallback"));
+        return;
+      }
+      const resolvedCaseId = caseId;
+
+      if (canUpdateCases && shouldAttemptSection("courts")) {
         const rows = courts.filter(
           (row) => row.courtName.trim() && row.courtLevel.trim()
         );
         if (rows.length) {
           const result = await Promise.allSettled(
-            rows.map((row) => postCourt(caseId, row))
+            rows.map((row) => postCourt(resolvedCaseId, row))
           );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("courts");
@@ -752,7 +769,7 @@ export function CaseQuickIntakePage() {
         }
       }
 
-      if (canUpdateCases) {
+      if (canUpdateCases && shouldAttemptSection("parties")) {
         const rows = parties.filter(
           (row) =>
             row.name.trim() &&
@@ -761,7 +778,7 @@ export function CaseQuickIntakePage() {
         );
         if (rows.length) {
           const result = await Promise.allSettled(
-            rows.map((row) => postParty(caseId, row))
+            rows.map((row) => postParty(resolvedCaseId, row))
           );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("parties");
@@ -769,11 +786,11 @@ export function CaseQuickIntakePage() {
         }
       }
 
-      if (canAssignCases) {
+      if (canAssignCases && shouldAttemptSection("assignments")) {
         const rows = assignments.filter((row) => row.userId.trim() !== "");
         if (rows.length) {
           const result = await Promise.allSettled(
-            rows.map((row) => postAssignment(caseId, row))
+            rows.map((row) => postAssignment(resolvedCaseId, row))
           );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("assignments");
@@ -781,20 +798,24 @@ export function CaseQuickIntakePage() {
         }
       }
 
-      if (canChangeCaseStatus && statusForm.status !== CaseStatus.ACTIVE) {
-        const result = await Promise.allSettled([patchStatus(caseId)]);
+      if (
+        canChangeCaseStatus &&
+        shouldAttemptSection("status") &&
+        statusForm.status !== CaseStatus.ACTIVE
+      ) {
+        const result = await Promise.allSettled([patchStatus(resolvedCaseId)]);
         if (result.some((r) => r.status === "rejected")) {
           failedSections.push("status");
         }
       }
 
-      if (canCreateHearings) {
+      if (canCreateHearings && shouldAttemptSection("hearings")) {
         const rows = hearings.filter(
           (row) => row.sessionDatetime.trim() !== ""
         );
         if (rows.length) {
           const result = await Promise.allSettled(
-            rows.map((row) => postHearing(caseId, row))
+            rows.map((row) => postHearing(resolvedCaseId, row))
           );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("hearings");
@@ -802,11 +823,11 @@ export function CaseQuickIntakePage() {
         }
       }
 
-      if (canCreateTasks) {
+      if (canCreateTasks && shouldAttemptSection("tasks")) {
         const rows = tasks.filter((row) => row.title.trim() !== "");
         if (rows.length) {
           const result = await Promise.allSettled(
-            rows.map((row) => postTask(caseId, row))
+            rows.map((row) => postTask(resolvedCaseId, row))
           );
           if (result.some((r) => r.status === "rejected")) {
             failedSections.push("tasks");
@@ -815,30 +836,46 @@ export function CaseQuickIntakePage() {
       }
 
       const docRows = documents.filter((row) => row.file !== null);
-      if (docRows.length) {
-        const docSummary = await runUploadQueue({
-          items: docRows,
-          concurrency: 3,
-          upload: async (row) => postDocument(caseId, row)
-        });
-        if (docSummary.failedCount > 0) {
+      if (shouldAttemptSection("documents") && docRows.length) {
+        if (!canCreateDocuments) {
+          setValidationMessage(
+            t(
+              "quickIntake.noDocumentCreatePermission",
+              "You do not have permission to upload documents. Documents were skipped."
+            )
+          );
           failedSections.push("documents");
+        } else {
+          const docSummary = await runUploadQueue({
+            items: docRows,
+            concurrency: 3,
+            upload: async (row) => postDocument(resolvedCaseId, row)
+          });
+          if (docSummary.failedCount > 0) {
+            failedSections.push("documents");
+          }
         }
       }
 
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
-      await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["case", resolvedCaseId] });
       await queryClient.invalidateQueries({
-        queryKey: ["case-hearings", caseId]
+        queryKey: ["case-hearings", resolvedCaseId]
       });
-      await queryClient.invalidateQueries({ queryKey: ["case-tasks", caseId] });
       await queryClient.invalidateQueries({
-        queryKey: ["case-documents", caseId]
+        queryKey: ["case-tasks", resolvedCaseId]
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["case-documents", resolvedCaseId]
       });
 
       if (failedSections.length > 0) {
+        setRetryContext({
+          caseId: resolvedCaseId,
+          failedSections
+        });
         setSubmitSummary({
-          caseId,
+          caseId: resolvedCaseId,
           failedSections,
           message: t("quickIntake.savedWithIssues", {
             sections: failedSections
@@ -849,9 +886,10 @@ export function CaseQuickIntakePage() {
         return;
       }
 
+      setRetryContext(null);
       feedback.success("messages.caseCreated");
       allowNextNavigation();
-      void navigate({ to: "/app/cases/$caseId", params: { caseId } });
+      void navigate({ to: "/app/cases/$caseId", params: { caseId: resolvedCaseId } });
     } catch (error) {
       setValidationMessage((error as Error)?.message ?? t("errors.fallback"));
     }
@@ -1572,10 +1610,14 @@ export function CaseQuickIntakePage() {
             <FormExitActions
               cancelTo="/app/cases"
               cancelLabel={t("actions.cancel")}
-              submitLabel={t("quickIntake.submitAll")}
+              submitLabel={
+                retryContext
+                  ? t("quickIntake.retryFailedSections", "Retry failed steps")
+                  : t("quickIntake.submitAll")
+              }
               savingLabel={t("labels.saving")}
               submitting={submitting}
-              disabled={!hasRequiredReady}
+              disabled={!retryContext && !hasRequiredReady}
             />
           </div>
 
@@ -1593,6 +1635,7 @@ export function CaseQuickIntakePage() {
                 className="rounded-xl border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/5"
                 onClick={() => {
                   if (!submitSummary.caseId) return;
+                  allowNextNavigation();
                   void navigate({
                     to: "/app/cases/$caseId",
                     params: { caseId: submitSummary.caseId }
