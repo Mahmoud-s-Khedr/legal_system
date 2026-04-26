@@ -487,6 +487,8 @@
     "addHearing": "إضافة جلسة",
     "addTask": "إضافة مهمة",
     "addDocument": "إضافة مستند",
+    "showAdditionalDetails": "إظهار التفاصيل الإضافية",
+    "hideAdditionalDetails": "إخفاء التفاصيل الإضافية",
     "noCasePermission": "ليس لديك صلاحية إنشاء القضايا.",
     "noClientReadPermission": "ليس لديك صلاحية اختيار موكل موجود.",
     "noClientCreatePermission": "ليس لديك صلاحية إنشاء موكل.",

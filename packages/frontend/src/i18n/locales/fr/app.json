@@ -484,6 +484,8 @@
     "addHearing": "Ajouter une audience",
     "addTask": "Ajouter une tâche",
     "addDocument": "Ajouter un document",
+    "showAdditionalDetails": "Afficher les détails supplémentaires",
+    "hideAdditionalDetails": "Masquer les détails supplémentaires",
     "noCasePermission": "Vous n'avez pas la permission de créer des dossiers.",
     "noClientReadPermission": "Vous n'avez pas la permission de sélectionner des clients existants.",
     "noClientCreatePermission": "Vous n'avez pas la permission de créer des clients.",

@@ -335,6 +335,7 @@ export function CaseQuickIntakePage() {
   const [hearings, setHearings] = useState<DraftHearing[]>([emptyHearing()]);
   const [tasks, setTasks] = useState<DraftTask[]>([emptyTask()]);
   const [documents, setDocuments] = useState<DraftDocument[]>([]);
+  const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
 
   const quickIntakeDirty = isQuickIntakeDirty({
     caseForm,
@@ -1146,6 +1147,23 @@ export function CaseQuickIntakePage() {
           </div>
         </SectionCard>
 
+        <div>
+          <button
+            type="button"
+            className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            onClick={() => setShowAdditionalDetails((current) => !current)}
+            aria-expanded={showAdditionalDetails}
+            aria-controls="quick-intake-additional-sections"
+          >
+            {showAdditionalDetails
+              ? t("quickIntake.hideAdditionalDetails")
+              : t("quickIntake.showAdditionalDetails")}
+          </button>
+        </div>
+
+        {showAdditionalDetails ? (
+          <div id="quick-intake-additional-sections" className="space-y-4">
+
         <SectionCard
           title={t("quickIntake.section.status")}
           description={t("quickIntake.statusHelp")}
@@ -1581,6 +1599,9 @@ export function CaseQuickIntakePage() {
             ))}
           </div>
         </SectionCard>
+
+          </div>
+        ) : null}
 
         <SectionCard
           title={t("quickIntake.reviewTitle")}

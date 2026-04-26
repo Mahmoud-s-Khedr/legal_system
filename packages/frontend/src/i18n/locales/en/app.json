@@ -484,6 +484,8 @@
     "addHearing": "Add hearing",
     "addTask": "Add task",
     "addDocument": "Add document",
+    "showAdditionalDetails": "Show additional details",
+    "hideAdditionalDetails": "Hide additional details",
     "noCasePermission": "You do not have permission to create cases.",
     "noClientReadPermission": "You do not have permission to select existing clients.",
     "noClientCreatePermission": "You do not have permission to create clients.",

@@ -244,6 +244,15 @@ function setSelectValue(select: HTMLSelectElement, value: string) {
   select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+function expandAdditionalDetails(view: HTMLElement) {
+  const toggleButton = Array.from(view.querySelectorAll("button")).find(
+    (button) => button.textContent === "quickIntake.showAdditionalDetails"
+  );
+  act(() => {
+    toggleButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mutationCallIndex = 0;
@@ -310,8 +319,17 @@ describe("CaseQuickIntakePage route behavior", () => {
     expect(createCaseMutateAsyncMock).not.toHaveBeenCalled();
   });
 
+  it("keeps optional sections hidden until the toggle is used", () => {
+    const view = render(<CaseQuickIntakePage />);
+    expect(view.querySelector('input[aria-label="labels.courtName"]')).toBeNull();
+
+    expandAdditionalDetails(view);
+    expect(view.querySelector('input[aria-label="labels.courtName"]')).not.toBeNull();
+  });
+
   it("submits quick intake successfully with existing client", async () => {
     const view = render(<CaseQuickIntakePage />);
+    expandAdditionalDetails(view);
     const titleInput = view.querySelector(
       'input[aria-label="labels.caseTitle"]'
     ) as HTMLInputElement | null;
@@ -360,6 +378,7 @@ describe("CaseQuickIntakePage route behavior", () => {
     act(() => {
       switchButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
+    expandAdditionalDetails(view);
 
     const clientNameInput = view.querySelector(
       'input[aria-label="labels.name"]'
@@ -425,6 +444,7 @@ describe("CaseQuickIntakePage route behavior", () => {
     });
 
     const view = render(<CaseQuickIntakePage />);
+    expandAdditionalDetails(view);
     const titleInput = view.querySelector(
       'input[aria-label="labels.caseTitle"]'
     ) as HTMLInputElement | null;
@@ -476,6 +496,7 @@ describe("CaseQuickIntakePage route behavior", () => {
     });
 
     const view = render(<CaseQuickIntakePage />);
+    expandAdditionalDetails(view);
     const titleInput = view.querySelector(
       'input[aria-label="labels.caseTitle"]'
     ) as HTMLInputElement | null;
@@ -520,6 +541,7 @@ describe("CaseQuickIntakePage route behavior", () => {
     permissionMap["documents:create"] = false;
 
     const view = render(<CaseQuickIntakePage />);
+    expandAdditionalDetails(view);
     const titleInput = view.querySelector(
       'input[aria-label="labels.caseTitle"]'
     ) as HTMLInputElement | null;
