@@ -13,12 +13,14 @@ describe("InvoicesPage helpers", () => {
   it("computes remaining amount and clamps at zero", () => {
     const partialInvoice = {
       totalAmount: "500",
-      payments: [{ amount: "150" }, { amount: "100" }]
-    } as InvoiceDto;
+      payments: [{ amount: "150" }, { amount: "100" }],
+      creditApplications: []
+    } as unknown as InvoiceDto;
     const overPaidInvoice = {
       totalAmount: "200",
-      payments: [{ amount: "300" }]
-    } as InvoiceDto;
+      payments: [{ amount: "300" }],
+      creditApplications: []
+    } as unknown as InvoiceDto;
 
     expect(getRemainingInvoiceAmount(partialInvoice)).toBe("250.00");
     expect(getRemainingInvoiceAmount(overPaidInvoice)).toBe("0.00");

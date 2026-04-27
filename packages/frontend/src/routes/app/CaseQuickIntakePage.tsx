@@ -27,6 +27,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch, apiFormFetch } from "../../lib/api";
+import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
 import { runUploadQueue } from "../../lib/uploadQueue";
@@ -387,36 +388,14 @@ export function CaseQuickIntakePage() {
   const submitting =
     createClientMutation.isPending || createCaseMutation.isPending;
 
-  const poaLabel = t("labels.poaNumber");
-
   const clientOptions = useMemo(
     () => [
       { value: "", label: t("labels.selectClient") },
-      ...(clientsQuery.data?.items ?? []).map((client) => {
-        const typeLabel = getEnumLabel(t, "ClientType", client.type);
-        const poaValue = client.poaNumber?.trim() || "—";
-
-        return {
-          value: client.id,
-          label: `${client.name} — ${typeLabel} — ${poaLabel}: ${poaValue}`,
-          searchText: [
-            client.name,
-            client.type,
-            typeLabel,
-            client.poaNumber,
-            client.phone,
-            client.email,
-            client.nationalId,
-            client.commercialRegister,
-            client.taxNumber,
-            client.id
-          ]
-            .filter(Boolean)
-            .join(" ")
-        };
-      })
+      ...(clientsQuery.data?.items ?? []).map((client) =>
+        toClientSelectOption(t, client)
+      )
     ],
-    [clientsQuery.data?.items, poaLabel, t]
+    [clientsQuery.data?.items, t]
   );
 
   const caseTypeOptions = (caseTypesQuery.data?.items ?? []).map((o) => ({

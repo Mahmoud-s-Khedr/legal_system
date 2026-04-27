@@ -15,6 +15,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch, apiFormFetch } from "../../lib/api";
+import { toCaseSelectOption } from "../../lib/caseOptions";
 import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
@@ -107,10 +108,9 @@ export function TaskCreatePage() {
   const caseOptions = useMemo(
     () => [
       { value: "", label: t("labels.generalTask") },
-      ...(casesQuery.data?.items ?? []).map((caseItem) => ({
-        value: caseItem.id,
-        label: caseItem.title
-      }))
+      ...(casesQuery.data?.items ?? []).map((caseItem) =>
+        toCaseSelectOption(t, caseItem)
+      )
     ],
     [casesQuery.data?.items, t]
   );

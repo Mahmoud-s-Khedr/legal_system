@@ -45,7 +45,12 @@ export function getRemainingInvoiceAmount(invoice: InvoiceDto) {
       (sum, payment) => sum + Number(payment.amount ?? 0),
       0
     ) ?? 0;
-  return Math.max(total - paid, 0).toFixed(2);
+  const credits =
+    invoice.creditApplications?.reduce(
+      (sum, app) => sum + Number(app.amount ?? 0),
+      0
+    ) ?? 0;
+  return Math.max(total - paid - credits, 0).toFixed(2);
 }
 
 export function InvoicesPage() {

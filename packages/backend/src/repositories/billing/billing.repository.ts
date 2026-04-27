@@ -5,7 +5,15 @@ export const invoiceInclude = {
   case: { select: { title: true } },
   client: { select: { name: true } },
   items: true,
-  payments: true
+  payments: true,
+  creditApplications: {
+    select: {
+      id: true,
+      amount: true,
+      paymentId: true,
+      createdAt: true
+    }
+  }
 } as const;
 
 export const expenseInclude = {
@@ -149,8 +157,8 @@ export async function createPayment(
     referenceNumber: string | null;
     paidAt: Date;
   }
-): Promise<void> {
-  await tx.payment.create({ data });
+): Promise<{ id: string }> {
+  return tx.payment.create({ data, select: { id: true } });
 }
 
 export async function listInvoicePayments(
@@ -161,6 +169,90 @@ export async function listInvoicePayments(
     where: { invoiceId },
     select: { amount: true }
   });
+}
+
+export async function listInvoiceCreditApplications(
+  tx: RepositoryTx,
+  invoiceId: string
+): Promise<Array<{ amount: Prisma.Decimal }>> {
+  return tx.invoiceCreditApplication.findMany({
+    where: { invoiceId },
+    select: { amount: true }
+  });
+}
+
+export async function createInvoiceCreditApplication(
+  tx: RepositoryTx,
+  data: {
+    firmId: string;
+    invoiceId: string;
+    clientId: string;
+    paymentId: string | null;
+    amount: Prisma.Decimal;
+  }
+): Promise<void> {
+  await tx.invoiceCreditApplication.create({ data });
+}
+
+export async function getClientCreditBalance(
+  tx: RepositoryTx,
+  firmId: string,
+  clientId: string
+): Promise<{ availableAmount: Prisma.Decimal } | null> {
+  return tx.clientCreditBalance.findUnique({
+    where: { firmId_clientId: { firmId, clientId } },
+    select: { availableAmount: true }
+  });
+}
+
+export async function incrementClientCreditBalance(
+  tx: RepositoryTx,
+  firmId: string,
+  clientId: string,
+  amount: Prisma.Decimal
+): Promise<void> {
+  await tx.clientCreditBalance.upsert({
+    where: { firmId_clientId: { firmId, clientId } },
+    update: { availableAmount: { increment: amount } },
+    create: {
+      firmId,
+      clientId,
+      availableAmount: amount
+    }
+  });
+}
+
+export async function decrementClientCreditBalance(
+  tx: RepositoryTx,
+  firmId: string,
+  clientId: string,
+  amount: Prisma.Decimal
+): Promise<boolean> {
+  const updated = await tx.clientCreditBalance.updateMany({
+    where: {
+      firmId,
+      clientId,
+      availableAmount: { gte: amount }
+    },
+    data: {
+      availableAmount: { decrement: amount }
+    }
+  });
+  return updated.count > 0;
+}
+
+export async function createClientCreditEntry(
+  tx: RepositoryTx,
+  data: {
+    firmId: string;
+    clientId: string;
+    invoiceId: string | null;
+    type: string;
+    amount: Prisma.Decimal;
+    note: string | null;
+  }
+): Promise<void> {
+  await tx.clientCreditEntry.create({ data });
 }
 
 export async function listFirmExpenses(
@@ -237,10 +329,10 @@ export async function listCaseInvoicesWithPayments(
   tx: RepositoryTx,
   firmId: string,
   caseId: string
-): Promise<Array<Prisma.InvoiceGetPayload<{ include: { payments: true } }>>> {
+): Promise<Array<Prisma.InvoiceGetPayload<{ include: { payments: true; creditApplications: true } }>>> {
   return tx.invoice.findMany({
     where: { caseId, firmId, status: { not: "VOID" } },
-    include: { payments: true }
+    include: { payments: true, creditApplications: true }
   });
 }
 

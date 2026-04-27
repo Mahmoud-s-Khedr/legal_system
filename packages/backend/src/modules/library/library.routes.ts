@@ -43,6 +43,11 @@ const articleIdParamsSchema = z.object({ articleId: z.string().min(1) });
 const annotationIdParamsSchema = z.object({ annotationId: z.string().min(1) });
 const caseIdParamsSchema = z.object({ caseId: z.string().min(1) });
 const referenceIdParamsSchema = z.object({ referenceId: z.string().min(1) });
+const caseLegalReferenceLinkBodySchema = z.object({
+  documentId: z.string().min(1),
+  articleId: z.string().min(1).optional(),
+  notes: z.string().optional()
+});
 
 export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
   // ── Categories ──────────────────────────────────────────────────────────────
@@ -226,7 +231,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
     { preHandler: [requireAuth, requirePermission("library:read")] },
     async (request, reply) => {
       const { caseId } = caseIdParamsSchema.parse(request.params);
-      const body = request.body as { documentId: string; articleId?: string; notes?: string };
+      const body = caseLegalReferenceLinkBodySchema.parse(request.body ?? {});
       const result = await linkDocumentToCase(request.sessionUser!, caseId, body.documentId, body.articleId, body.notes);
       return reply.status(201).send(result);
     }

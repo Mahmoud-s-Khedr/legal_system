@@ -91,7 +91,7 @@ describe("revenueReport", () => {
     expect(sql).toContain('"totalAmount"');
     expect(sql).toContain('p."invoiceId"');
     expect(sql).toContain('"firmId"');
-    expect(sql).toContain('"createdAt"');
+    expect(sql).toContain('"issuedAt"');
     expect(sql).not.toContain("total_amount");
     expect(result).toEqual([{ month: "2026-03", invoiced: "1000", paid: "500" }]);
   });

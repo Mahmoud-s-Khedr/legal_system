@@ -33,10 +33,12 @@ vi.mock("./invoice.pdf.js", () => ({
 
 vi.mock("./billing.service.js", () => ({
   addPayment,
+  applyInvoiceCredit: vi.fn(),
   createExpense: vi.fn(),
   createInvoice: vi.fn(),
   deleteExpense: vi.fn(),
   deleteInvoice,
+  getClientCreditBalanceForClient: vi.fn(),
   getCaseBillingSummary: vi.fn(),
   getExpense: vi.fn(),
   getInvoice,

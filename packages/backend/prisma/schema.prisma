@@ -223,6 +223,9 @@ model Firm {
   templates       DocumentTemplate[]
   invoices        Invoice[]
   expenses        Expense[]
+  clientCreditBalances     ClientCreditBalance[]
+  clientCreditEntries      ClientCreditEntry[]
+  invoiceCreditApplications InvoiceCreditApplication[]
   events          Event[]
   notifications   Notification[]
   auditLogs       AuditLog[]
@@ -360,6 +363,9 @@ model Client {
   powers                PowerOfAttorney[]
   documents             Document[]
   invoices              Invoice[]
+  creditBalance         ClientCreditBalance?
+  creditEntries         ClientCreditEntry[]
+  invoiceCreditApplications InvoiceCreditApplication[]
   portalInvites         ClientPortalInvite[]
 
   @@index([firmId, deletedAt, createdAt])
@@ -619,6 +625,8 @@ model Invoice {
   client         Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
   items          InvoiceItem[]
   payments       Payment[]
+  creditEntries  ClientCreditEntry[]
+  creditApplications InvoiceCreditApplication[]
 
   @@unique([firmId, invoiceNumber])
   @@index([firmId, createdAt])
@@ -647,6 +655,55 @@ model Payment {
   paidAt           DateTime      @default(now())
   createdAt        DateTime      @default(now())
   invoice          Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  creditApplications InvoiceCreditApplication[]
+}
+
+model ClientCreditBalance {
+  id              String   @id @default(uuid()) @db.Uuid
+  firmId          String   @db.Uuid
+  clientId        String   @unique @db.Uuid
+  availableAmount Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  firm            Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([firmId, clientId])
+  @@index([firmId, updatedAt])
+}
+
+model ClientCreditEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  firmId    String   @db.Uuid
+  clientId  String   @db.Uuid
+  invoiceId String?  @db.Uuid
+  type      String
+  amount    Decimal  @db.Decimal(12, 2)
+  note      String?
+  createdAt DateTime @default(now())
+  firm      Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([firmId, clientId, createdAt])
+  @@index([invoiceId, createdAt])
+}
+
+model InvoiceCreditApplication {
+  id        String   @id @default(uuid()) @db.Uuid
+  firmId    String   @db.Uuid
+  invoiceId String   @db.Uuid
+  clientId  String   @db.Uuid
+  paymentId String?  @db.Uuid
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+  firm      Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([firmId, invoiceId, createdAt])
+  @@index([firmId, clientId, createdAt])
 }
 
 model Expense {

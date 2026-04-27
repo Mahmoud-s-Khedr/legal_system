@@ -29,15 +29,14 @@ function FieldWrap({
 
 interface LegalReference {
   id: string;
+  documentId: string;
   notes: string | null;
   document: {
-    id: string;
     title: string;
     type: string;
   };
   article: {
-    id: string;
-    number: string | null;
+    articleNumber: string;
     title: string | null;
   } | null;
 }
@@ -48,6 +47,16 @@ interface SearchResult {
   type: string;
   kind: "document" | "article";
   documentId: string;
+}
+
+interface LibrarySearchApiResult {
+  id: string;
+  title: string;
+  type: string;
+  articleMatch?: {
+    id: string;
+    articleNumber: string;
+  };
 }
 
 export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
@@ -68,10 +77,33 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
   const searchQuery = useQuery({
     enabled: normalizedSearchQ.length > 0,
     queryKey: ["library-search-link", normalizedSearchQ],
-    queryFn: () =>
-      apiFetch<{ results: SearchResult[] }>(
+    queryFn: async () => {
+      const response = await apiFetch<{ results: LibrarySearchApiResult[] }>(
         `/api/library/search?q=${encodeURIComponent(normalizedSearchQ)}&limit=10`
-      )
+      );
+
+      const mappedResults: SearchResult[] = response.results.map((result) => {
+        if (result.articleMatch) {
+          return {
+            id: result.articleMatch.id,
+            title: result.title,
+            type: result.type,
+            kind: "article",
+            documentId: result.id
+          };
+        }
+
+        return {
+          id: result.id,
+          title: result.title,
+          type: result.type,
+          kind: "document",
+          documentId: result.id
+        };
+      });
+
+      return { results: mappedResults };
+    }
   });
 
   const linkMutation = useMutation({
@@ -154,7 +186,7 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
                 <div className="min-w-0 flex-1">
                   <Link
                     className="font-semibold hover:text-accent"
-                    params={{ documentId: ref.document.id }}
+                    params={{ documentId: ref.documentId }}
                     to="/app/library/documents/$documentId"
                   >
                     {docTitle}
@@ -162,7 +194,7 @@ export function CaseLegalReferencesTab({ caseId }: { caseId: string }) {
                   <p className="text-xs text-slate-500">{ref.document.type}</p>
                   {ref.article && (
                     <p className="mt-0.5 text-sm text-slate-600">
-                      {t("library.article")} {ref.article.number}
+                      {t("library.article")} {ref.article.articleNumber}
                       {ref.article.title ? ` — ${ref.article.title}` : ""}
                     </p>
                   )}

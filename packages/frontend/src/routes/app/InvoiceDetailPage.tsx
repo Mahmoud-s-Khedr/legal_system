@@ -6,7 +6,9 @@ import {
   useInvoice,
   useIssueInvoice,
   useVoidInvoice,
-  useAddPayment
+  useAddPayment,
+  useApplyInvoiceCredit,
+  useClientCreditBalance
 } from "../../lib/billing";
 import { apiDownload } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
@@ -35,14 +37,19 @@ export function InvoiceDetailPage() {
   const issueInvoice = useIssueInvoice(invoiceId);
   const voidInvoice = useVoidInvoice(invoiceId);
   const addPayment = useAddPayment(invoiceId);
+  const applyCredit = useApplyInvoiceCredit(invoiceId);
 
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentError, setPaymentError] = useState("");
+  const [creditAmount, setCreditAmount] = useState("");
+  const [creditError, setCreditError] = useState("");
   const [actionError, setActionError] = useState("");
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showCreditForm, setShowCreditForm] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
+  const creditBalance = useClientCreditBalance(invoice?.clientId);
 
   if (isLoading)
     return <p className="p-8 text-slate-500">{t("labels.loading")}</p>;
@@ -57,6 +64,21 @@ export function InvoiceDetailPage() {
         />
       </div>
     );
+  }
+
+  async function handleApplyCredit(e: React.FormEvent) {
+    e.preventDefault();
+    setCreditError("");
+    try {
+      await applyCredit.mutateAsync({ amount: creditAmount });
+      addToast(t("messages.creditApplied", "Credit applied"), "success");
+      setCreditAmount("");
+      setShowCreditForm(false);
+    } catch (err) {
+      setCreditError(
+        err instanceof Error ? err.message : t("errors.fallback")
+      );
+    }
   }
   if (!invoice)
     return <p className="p-8 text-red-500">{t("errors.notFound")}</p>;
@@ -85,6 +107,10 @@ export function InvoiceDetailPage() {
   const canPay =
     invoice.status === InvoiceStatus.ISSUED ||
     invoice.status === InvoiceStatus.PARTIALLY_PAID;
+  const canApplyCredit =
+    canPay &&
+    !!invoice.clientId &&
+    Number(creditBalance.data?.availableAmount ?? 0) > 0;
 
   const pdfUrl = `/api/invoices/${invoiceId}/pdf`;
 
@@ -152,6 +178,14 @@ export function InvoiceDetailPage() {
                 className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
               >
                 {t("billing.recordPayment")}
+              </button>
+            )}
+            {canApplyCredit && (
+              <button
+                onClick={() => setShowCreditForm(true)}
+                className="rounded-2xl border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50"
+              >
+                {t("billing.applyCredit", "Apply Credit")}
               </button>
             )}
             {canVoid && (
@@ -234,6 +268,14 @@ export function InvoiceDetailPage() {
 
       {/* Payments */}
       <SectionCard title={t("billing.payments")}>
+        {invoice.clientId ? (
+          <p className="mb-3 text-sm text-slate-600">
+            {t("billing.availableClientCredit", "Available client credit")}: {" "}
+            <span className="font-semibold">
+              {formatCurrency(creditBalance.data?.availableAmount ?? "0.00")}
+            </span>
+          </p>
+        ) : null}
         {currentInvoice.payments.length === 0 ? (
           <p className="text-sm text-slate-500">{t("billing.noPayments")}</p>
         ) : (
@@ -295,6 +337,49 @@ export function InvoiceDetailPage() {
               <button
                 type="button"
                 onClick={() => setShowPaymentForm(false)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
+              >
+                {t("actions.cancel")}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {showCreditForm && (
+          <form
+            onSubmit={(e) => void handleApplyCredit(e)}
+            className="mt-4 space-y-3 rounded-2xl border border-indigo-200 p-4"
+          >
+            <div>
+              <label className="block text-sm font-medium">
+                {t("billing.creditAmount", "Credit Amount")}
+              </label>
+              <input
+                required
+                type="number"
+                min="0.01"
+                step="0.01"
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                {t("billing.creditMaxHint", "Max available")}: {" "}
+                {formatCurrency(creditBalance.data?.availableAmount ?? "0.00")}
+              </p>
+            </div>
+            {creditError ? <FormAlert message={creditError} /> : null}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={applyCredit.isPending}
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {t("actions.apply", "Apply")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreditForm(false)}
                 className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
               >
                 {t("actions.cancel")}

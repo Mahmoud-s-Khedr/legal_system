@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import type { CaseListResponseDto, ClientListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
+import { toCaseSelectOption, toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useCreateInvoice } from "../../lib/billing";
 import {
@@ -70,10 +71,9 @@ export function InvoiceCreatePage() {
   const caseOptions = useMemo(
     () => [
       { value: "", label: `— ${t("labels.optional")} —` },
-      ...(casesQuery.data?.items ?? []).map((c) => ({
-        value: c.id,
-        label: c.title
-      }))
+      ...(casesQuery.data?.items ?? []).map((caseItem) =>
+        toCaseSelectOption(t, caseItem)
+      )
     ],
     [casesQuery.data?.items, t]
   );
@@ -81,10 +81,9 @@ export function InvoiceCreatePage() {
   const clientOptions = useMemo(
     () => [
       { value: "", label: `— ${t("labels.optional")} —` },
-      ...(clientsQuery.data?.items ?? []).map((c) => ({
-        value: c.id,
-        label: c.name
-      }))
+      ...(clientsQuery.data?.items ?? []).map((client) =>
+        toClientSelectOption(t, client)
+      )
     ],
     [clientsQuery.data?.items, t]
   );

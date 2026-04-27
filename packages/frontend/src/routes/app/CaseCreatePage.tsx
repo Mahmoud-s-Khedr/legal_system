@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CaseDto, ClientListResponseDto, CreateCaseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { getEnumLabel } from "../../lib/enumLabel";
+import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
 import {
@@ -69,33 +69,11 @@ export function CaseCreatePage() {
     }
   });
 
-  const poaLabel = t("labels.poaNumber");
-
   const clientOptions = [
     { value: "", label: t("labels.selectClient") },
-    ...(clientsQuery.data?.items ?? []).map((client) => {
-      const typeLabel = getEnumLabel(t, "ClientType", client.type);
-      const poaValue = client.poaNumber?.trim() || "—";
-
-      return {
-        value: client.id,
-        label: `${client.name} — ${typeLabel} — ${poaLabel}: ${poaValue}`,
-        searchText: [
-          client.name,
-          client.type,
-          typeLabel,
-          client.poaNumber,
-          client.phone,
-          client.email,
-          client.nationalId,
-          client.commercialRegister,
-          client.taxNumber,
-          client.id
-        ]
-          .filter(Boolean)
-          .join(" ")
-      };
-    })
+    ...(clientsQuery.data?.items ?? []).map((client) =>
+      toClientSelectOption(t, client)
+    )
   ];
 
   const caseTypeOptions = (caseTypesQuery.data?.items ?? []).map((o) => ({

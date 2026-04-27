@@ -352,6 +352,18 @@ const paymentSchema = {
   additionalProperties: false
 } as const;
 
+const invoiceCreditApplicationSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    amount: { type: "string" },
+    paymentId: { type: ["string", "null"] },
+    createdAt: { type: "string" }
+  },
+  required: ["id", "amount", "paymentId", "createdAt"],
+  additionalProperties: false
+} as const;
+
 export const invoiceDtoSchema = {
   type: "object",
   properties: {
@@ -372,10 +384,21 @@ export const invoiceDtoSchema = {
     dueDate: { type: ["string", "null"] },
     items: { type: "array", items: invoiceItemSchema },
     payments: { type: "array", items: paymentSchema },
+    creditApplications: { type: "array", items: invoiceCreditApplicationSchema },
     createdAt: { type: "string" },
     updatedAt: { type: "string" }
   },
-  required: ["id", "firmId", "invoiceNumber", "status", "feeType", "subtotalAmount", "taxAmount", "discountAmount", "totalAmount", "items", "payments", "createdAt", "updatedAt"],
+  required: ["id", "firmId", "invoiceNumber", "status", "feeType", "subtotalAmount", "taxAmount", "discountAmount", "totalAmount", "items", "payments", "creditApplications", "createdAt", "updatedAt"],
+  additionalProperties: false
+} as const;
+
+export const clientCreditBalanceSchema = {
+  type: "object",
+  properties: {
+    clientId: { type: "string" },
+    availableAmount: { type: "string" }
+  },
+  required: ["clientId", "availableAmount"],
   additionalProperties: false
 } as const;
 

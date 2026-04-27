@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  ApplyInvoiceCreditDto,
   BillingSummaryDto,
+  ClientCreditBalanceDto,
   CreateExpenseDto,
   CreateInvoiceDto,
   CreatePaymentDto,
@@ -42,6 +44,32 @@ export function useInvoices(filters?: {
   return useQuery({
     queryKey: ["invoices", filters],
     queryFn: () => apiFetch<InvoiceListResponseDto>(`/api/invoices${qs ? `?${qs}` : ""}`)
+  });
+}
+
+export function useApplyInvoiceCredit(invoiceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: ApplyInvoiceCreditDto) =>
+      apiFetch<InvoiceDto>(`/api/invoices/${invoiceId}/apply-credit`, {
+        method: "POST",
+        body: JSON.stringify(dto)
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["invoices"] });
+      void qc.invalidateQueries({ queryKey: ["billing-summary"] });
+    }
+  });
+}
+
+export function useClientCreditBalance(clientId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["client-credit-balance", clientId],
+    queryFn: () =>
+      apiFetch<ClientCreditBalanceDto>(
+        `/api/clients/${clientId}/credit-balance`
+      ),
+    enabled: !!clientId
   });
 }
 

@@ -1,5 +1,7 @@
 import type {
+  ApplyInvoiceCreditDto,
   BillingSummaryDto,
+  ClientCreditBalanceDto,
   CreateExpenseDto,
   CreateInvoiceDto,
   CreatePaymentDto,
@@ -23,15 +25,21 @@ import { inTenantTransaction } from "../../repositories/unitOfWork.js";
 import { appError } from "../../errors/appError.js";
 import {
   createExpense as createExpenseRecord,
+  createClientCreditEntry,
+  createInvoiceCreditApplication,
   createInvoiceWithItems,
   createPayment,
+  decrementClientCreditBalance,
   deleteExpenseById,
   deleteInvoiceById,
+  getClientCreditBalance,
   getFirmExpenseByIdOrThrow,
   getFirmInvoiceByIdOrThrow,
   getFirmInvoiceRowByIdOrThrow,
+  incrementClientCreditBalance,
   listCaseExpenses,
   listCaseInvoicesWithPayments,
+  listInvoiceCreditApplications,
   listFirmExpenses,
   listFirmInvoices,
   listInvoicePayments,
@@ -58,6 +66,20 @@ function mapItem(item: {
     quantity: item.quantity,
     unitPrice: item.unitPrice.toFixed(2),
     total: item.total.toFixed(2)
+  };
+}
+
+function mapCreditApplication(item: {
+  id: string;
+  amount: Decimal;
+  paymentId: string | null;
+  createdAt: Date;
+}) {
+  return {
+    id: item.id,
+    amount: item.amount.toFixed(2),
+    paymentId: item.paymentId,
+    createdAt: item.createdAt.toISOString()
   };
 }
 
@@ -101,6 +123,7 @@ function mapInvoice(inv: {
   client: { name: string } | null;
   items: Parameters<typeof mapItem>[0][];
   payments: Parameters<typeof mapPayment>[0][];
+  creditApplications: Parameters<typeof mapCreditApplication>[0][];
 }): InvoiceDto {
   return {
     id: inv.id,
@@ -120,6 +143,7 @@ function mapInvoice(inv: {
     dueDate: inv.dueDate?.toISOString() ?? null,
     items: inv.items.map(mapItem),
     payments: inv.payments.map(mapPayment),
+    creditApplications: inv.creditApplications.map(mapCreditApplication),
     createdAt: inv.createdAt.toISOString(),
     updatedAt: inv.updatedAt.toISOString()
   };
@@ -175,10 +199,24 @@ function computeTotal(subtotal: Decimal, tax: Decimal, discount: Decimal): Decim
 }
 
 function deriveStatus(totalAmount: Decimal, payments: { amount: Decimal }[]): PrismaInvoiceStatus {
-  const paid = payments.reduce((sum, p) => sum.add(p.amount), new Decimal(0));
-  if (paid.gte(totalAmount)) return "PAID";
-  if (paid.gt(0)) return "PARTIALLY_PAID";
+  const applied = payments.reduce((sum, p) => sum.add(p.amount), new Decimal(0));
+  if (applied.gte(totalAmount)) return "PAID";
+  if (applied.gt(0)) return "PARTIALLY_PAID";
   return "ISSUED";
+}
+
+function buildAppliedAmounts(
+  payments: Array<{ amount: Decimal }>,
+  creditApplications: Array<{ amount: Decimal }>
+) {
+  return [
+    ...payments.map((p) => ({ amount: p.amount })),
+    ...creditApplications.map((c) => ({ amount: c.amount }))
+  ];
+}
+
+function clampRemaining(total: Decimal, applied: Decimal): Decimal {
+  return applied.gte(total) ? new Decimal(0) : total.sub(applied);
 }
 
 // ── List ──────────────────────────────────────────────────────────────────────
@@ -405,23 +443,177 @@ export async function addPayment(
   audit: AuditContext
 ): Promise<InvoiceDto> {
   return inTenantTransaction(actor.firmId, async (tx) => {
-    const invoice = await getFirmInvoiceByIdOrThrow(tx, actor.firmId, invoiceId);
+    const paymentAmount = new Decimal(payload.amount);
+    if (!paymentAmount.gt(0)) {
+      throw appError("Payment amount must be greater than zero", 422);
+    }
+
+    let invoice = await getFirmInvoiceByIdOrThrow(tx, actor.firmId, invoiceId);
     if (invoice.status === "VOID") throw appError("Cannot add payment to a voided invoice", 422);
 
-    await createPayment(tx, {
+    if (invoice.status === "DRAFT") {
+      invoice = await updateFirmInvoiceById(tx, invoiceId, actor.firmId, {
+        status: "ISSUED",
+        issuedAt: invoice.issuedAt ?? new Date()
+      });
+      await writeAuditLog(tx, audit, {
+        action: "invoice.auto_issued_on_payment",
+        entityType: "Invoice",
+        entityId: invoiceId
+      });
+    }
+
+    const existingPayments = await listInvoicePayments(tx, invoiceId);
+    const existingCredits = await listInvoiceCreditApplications(tx, invoiceId);
+    const existingApplied = buildAppliedAmounts(existingPayments, existingCredits).reduce(
+      (sum, entry) => sum.add(entry.amount),
+      new Decimal(0)
+    );
+    const remainingBeforePayment = clampRemaining(invoice.totalAmount, existingApplied);
+
+    const appliedToInvoice = paymentAmount.lte(remainingBeforePayment)
+      ? paymentAmount
+      : remainingBeforePayment;
+    const creditExcess = paymentAmount.sub(appliedToInvoice);
+
+    if (creditExcess.gt(0) && !invoice.clientId) {
+      throw appError("Overpayment requires an invoice linked to a client", 422);
+    }
+
+    const payment = await createPayment(tx, {
       invoiceId,
-      amount: new Decimal(payload.amount),
+      amount: paymentAmount,
       method: payload.method,
       referenceNumber: payload.referenceNumber ?? null,
       paidAt: payload.paidAt ? new Date(payload.paidAt) : new Date()
     });
 
+    if (appliedToInvoice.gt(0) && invoice.clientId) {
+      await createInvoiceCreditApplication(tx, {
+        firmId: actor.firmId,
+        invoiceId,
+        clientId: invoice.clientId,
+        paymentId: payment.id,
+        amount: appliedToInvoice
+      });
+    }
+
+    if (creditExcess.gt(0) && invoice.clientId) {
+      await incrementClientCreditBalance(tx, actor.firmId, invoice.clientId, creditExcess);
+      await createClientCreditEntry(tx, {
+        firmId: actor.firmId,
+        clientId: invoice.clientId,
+        invoiceId,
+        type: "OVERPAYMENT",
+        amount: creditExcess,
+        note: `Overpayment from invoice ${invoice.invoiceNumber}`
+      });
+      await writeAuditLog(tx, audit, {
+        action: "credit.created_from_overpayment",
+        entityType: "Invoice",
+        entityId: invoiceId
+      });
+    }
+
     const allPayments = await listInvoicePayments(tx, invoiceId);
-    const newStatus = deriveStatus(invoice.totalAmount, allPayments);
+    const allCredits = await listInvoiceCreditApplications(tx, invoiceId);
+    const newStatus = deriveStatus(invoice.totalAmount, buildAppliedAmounts(allPayments, allCredits));
     const inv = await updateFirmInvoiceById(tx, invoiceId, actor.firmId, { status: newStatus });
 
     await writeAuditLog(tx, audit, { action: "payment.added", entityType: "Invoice", entityId: invoiceId });
     return mapInvoice(inv);
+  });
+}
+
+export async function applyInvoiceCredit(
+  actor: SessionUser,
+  invoiceId: string,
+  payload: ApplyInvoiceCreditDto,
+  audit: AuditContext
+): Promise<InvoiceDto> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const requestedAmount = new Decimal(payload.amount);
+    if (!requestedAmount.gt(0)) {
+      throw appError("Credit amount must be greater than zero", 422);
+    }
+
+    const invoice = await getFirmInvoiceByIdOrThrow(tx, actor.firmId, invoiceId);
+    if (invoice.status !== "ISSUED" && invoice.status !== "PARTIALLY_PAID") {
+      throw appError("Credit can only be applied to issued invoices", 422);
+    }
+    if (!invoice.clientId) {
+      throw appError("Invoice must be linked to a client to apply credit", 422);
+    }
+
+    const [payments, creditApplications] = await Promise.all([
+      listInvoicePayments(tx, invoiceId),
+      listInvoiceCreditApplications(tx, invoiceId)
+    ]);
+    const applied = buildAppliedAmounts(payments, creditApplications).reduce(
+      (sum, item) => sum.add(item.amount),
+      new Decimal(0)
+    );
+    const remaining = clampRemaining(invoice.totalAmount, applied);
+    if (!remaining.gt(0)) {
+      throw appError("Invoice has no remaining balance", 422);
+    }
+
+    const balance = await getClientCreditBalance(tx, actor.firmId, invoice.clientId);
+    if (!balance || !balance.availableAmount.gt(0)) {
+      throw appError("No available credit for this client", 422);
+    }
+
+    const amountToApply = Decimal.min(requestedAmount, remaining, balance.availableAmount);
+    if (!amountToApply.gt(0)) {
+      throw appError("No credit can be applied", 422);
+    }
+
+    const decremented = await decrementClientCreditBalance(tx, actor.firmId, invoice.clientId, amountToApply);
+    if (!decremented) {
+      throw appError("Insufficient available credit", 422);
+    }
+
+    await createInvoiceCreditApplication(tx, {
+      firmId: actor.firmId,
+      invoiceId,
+      clientId: invoice.clientId,
+      paymentId: null,
+      amount: amountToApply
+    });
+    await createClientCreditEntry(tx, {
+      firmId: actor.firmId,
+      clientId: invoice.clientId,
+      invoiceId,
+      type: "APPLY_TO_INVOICE",
+      amount: amountToApply.neg(),
+      note: `Applied credit to invoice ${invoice.invoiceNumber}`
+    });
+
+    const finalPayments = await listInvoicePayments(tx, invoiceId);
+    const finalCredits = await listInvoiceCreditApplications(tx, invoiceId);
+    const newStatus = deriveStatus(invoice.totalAmount, buildAppliedAmounts(finalPayments, finalCredits));
+    const inv = await updateFirmInvoiceById(tx, invoiceId, actor.firmId, { status: newStatus });
+
+    await writeAuditLog(tx, audit, {
+      action: "credit.applied_to_invoice",
+      entityType: "Invoice",
+      entityId: invoiceId
+    });
+
+    return mapInvoice(inv);
+  });
+}
+
+export async function getClientCreditBalanceForClient(
+  actor: SessionUser,
+  clientId: string
+): Promise<ClientCreditBalanceDto> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const balance = await getClientCreditBalance(tx, actor.firmId, clientId);
+    return {
+      clientId,
+      availableAmount: balance?.availableAmount.toFixed(2) ?? "0.00"
+    };
   });
 }
 
@@ -537,16 +729,28 @@ export async function getCaseBillingSummary(actor: SessionUser, caseId: string):
 
   const totalBilled = invoices.reduce((sum, inv) => sum.add(inv.totalAmount), new Decimal(0));
   const totalPaid = invoices.reduce(
-    (sum, inv) => sum.add(inv.payments.reduce((ps, p) => ps.add(p.amount), new Decimal(0))),
+    (sum, inv) => {
+      const credits = (
+        inv as unknown as { creditApplications?: Array<{ amount: Decimal }> }
+      ).creditApplications ?? [];
+      return (
+      sum.add(
+        inv.payments.reduce((ps, p) => ps.add(p.amount), new Decimal(0)).add(
+            credits.reduce((cs, c) => cs.add(c.amount), new Decimal(0))
+        )
+      )
+      );
+    },
     new Decimal(0)
   );
   const totalExpenses = expenses.reduce((sum, exp) => sum.add(exp.amount), new Decimal(0));
+  const outstanding = totalBilled.sub(totalPaid);
 
   return {
     caseId,
     totalBilled: totalBilled.toFixed(2),
     totalPaid: totalPaid.toFixed(2),
-    outstanding: totalBilled.sub(totalPaid).toFixed(2),
+    outstanding: outstanding.lt(0) ? "0.00" : outstanding.toFixed(2),
     totalExpenses: totalExpenses.toFixed(2),
     profitability: totalPaid.sub(totalExpenses).toFixed(2),
     invoiceCount: invoices.length,

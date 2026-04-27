@@ -38,6 +38,7 @@ export interface InvoiceDto {
   dueDate: string | null;
   items: InvoiceItemDto[];
   payments: PaymentDto[];
+  creditApplications: InvoiceCreditApplicationDto[];
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +82,22 @@ export interface CreatePaymentDto {
   method: string;
   referenceNumber?: string | null;
   paidAt?: string | null;
+}
+
+export interface InvoiceCreditApplicationDto {
+  id: string;
+  amount: string;
+  paymentId: string | null;
+  createdAt: string;
+}
+
+export interface ClientCreditBalanceDto {
+  clientId: string;
+  availableAmount: string;
+}
+
+export interface ApplyInvoiceCreditDto {
+  amount: string;
 }
 
 // ── Expense ───────────────────────────────────────────────────────────────────

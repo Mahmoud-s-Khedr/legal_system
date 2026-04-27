@@ -37,6 +37,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { apiFetch } from "../../lib/api";
+import { toCaseSelectOption } from "../../lib/caseOptions";
 import { useInvoices } from "../../lib/billing";
 import {
   DATE_PICKER_DATETIME_FORMAT,
@@ -48,6 +49,7 @@ import {
   ErrorState,
   PageHeader,
   SectionCard,
+  selectLabelFilter,
   formatDate,
   formatDateTime
 } from "./ui";
@@ -432,6 +434,14 @@ export function CalendarPage() {
     }));
   }, [t, usersQuery.data?.items]);
 
+  const caseOptions = useMemo(
+    () =>
+      (casesQuery.data?.items ?? []).map((caseItem) =>
+        toCaseSelectOption(t, caseItem)
+      ),
+    [casesQuery.data?.items, t]
+  );
+
   const hasError =
     hearingsQuery.isError || tasksQuery.isError || invoicesQuery.isError;
 
@@ -710,11 +720,11 @@ export function CalendarPage() {
         >
           <Form.Item label={t("labels.case")} required>
             <Select
+              showSearch
+              filterOption={(input, option) => selectLabelFilter(input, option)}
+              optionFilterProp="label"
               value={quickHearingForm.caseId}
-              options={(casesQuery.data?.items ?? []).map((caseItem) => ({
-                value: caseItem.id,
-                label: caseItem.title
-              }))}
+              options={caseOptions}
               onChange={(value) =>
                 setQuickHearingForm((current) => ({
                   ...current,
@@ -1109,11 +1119,11 @@ export function CalendarPage() {
           >
             <Form.Item label={t("labels.case")} required>
               <Select
+                showSearch
+                filterOption={(input, option) => selectLabelFilter(input, option)}
+                optionFilterProp="label"
                 value={quickHearingForm.caseId}
-                options={(casesQuery.data?.items ?? []).map((caseItem) => ({
-                  value: caseItem.id,
-                  label: caseItem.title
-                }))}
+                options={caseOptions}
                 onChange={(value) =>
                   setQuickHearingForm((current) => ({
                     ...current,

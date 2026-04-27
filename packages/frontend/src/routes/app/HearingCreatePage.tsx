@@ -13,6 +13,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { toCaseSelectOption } from "../../lib/caseOptions";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
 import {
@@ -102,10 +103,9 @@ export function HearingCreatePage() {
   const caseOptions = useMemo(
     () => [
       { value: "", label: t("labels.selectCase") },
-      ...(casesQuery.data?.items ?? []).map((caseItem) => ({
-        value: caseItem.id,
-        label: caseItem.title
-      }))
+      ...(casesQuery.data?.items ?? []).map((caseItem) =>
+        toCaseSelectOption(t, caseItem)
+      )
     ],
     [casesQuery.data?.items, t]
   );

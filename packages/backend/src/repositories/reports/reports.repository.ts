@@ -98,7 +98,7 @@ export async function queryRevenueReport(
 ): Promise<Array<{ month: string; invoiced: string; paid: string }>> {
   return tx.$queryRaw<Array<{ month: string; invoiced: string; paid: string }>>`
       SELECT
-        TO_CHAR(DATE_TRUNC('month', "createdAt"), 'YYYY-MM') AS month,
+        TO_CHAR(DATE_TRUNC('month', "issuedAt"), 'YYYY-MM') AS month,
         SUM("totalAmount")::text AS invoiced,
         SUM(CASE WHEN status IN ('PAID','PARTIALLY_PAID')
           THEN (SELECT COALESCE(SUM(amount), 0) FROM "Payment" p WHERE p."invoiceId" = "Invoice".id)
@@ -106,9 +106,10 @@ export async function queryRevenueReport(
       FROM "Invoice"
       WHERE "firmId" = ${firmId}::uuid
         AND status != 'VOID'
-        AND (${filter.dateFrom ?? null}::timestamptz IS NULL OR "createdAt" >= ${filter.dateFrom ?? null}::timestamptz)
-        AND (${filter.dateTo ?? null}::timestamptz IS NULL OR "createdAt" <= ${filter.dateTo ?? null}::timestamptz)
-      GROUP BY DATE_TRUNC('month', "createdAt")
+        AND "issuedAt" IS NOT NULL
+        AND (${filter.dateFrom ?? null}::timestamptz IS NULL OR "issuedAt" >= ${filter.dateFrom ?? null}::timestamptz)
+        AND (${filter.dateTo ?? null}::timestamptz IS NULL OR "issuedAt" <= ${filter.dateTo ?? null}::timestamptz)
+      GROUP BY DATE_TRUNC('month', "issuedAt")
       ORDER BY month ASC
     `;
 }

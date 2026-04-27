@@ -201,7 +201,7 @@ export function CasesPage() {
                 {
                   key: "title",
                   label: t("labels.caseTitle"),
-                  render: (item) => `${item.title} (${item.caseNumber})`
+                  render: (item) => item.title
                 },
                 {
                   key: "status",
@@ -252,7 +252,7 @@ export function CasesPage() {
                 <TableBody>
                   {casesQuery.data.items.map((caseItem) => (
                     <TableRow key={caseItem.id}>
-                      <TableCell>{`${caseItem.title} (${caseItem.caseNumber})`}</TableCell>
+                      <TableCell>{caseItem.title}</TableCell>
                       <TableCell>{caseItem.caseNumber}</TableCell>
                       <TableCell>
                         {getEnumLabel(t, "CaseStatus", caseItem.status)}

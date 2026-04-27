@@ -24,6 +24,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -301,10 +302,9 @@ export function CaseDetailPage() {
   }));
   const clientOptions = [
     { value: "", label: t("labels.selectClient") },
-    ...(clientsQuery.data?.items ?? []).map((client) => ({
-      value: client.id,
-      label: client.name
-    }))
+    ...(clientsQuery.data?.items ?? []).map((client) =>
+      toClientSelectOption(t, client)
+    )
   ];
 
   return (

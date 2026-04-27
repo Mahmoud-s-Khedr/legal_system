@@ -6,6 +6,7 @@ import { getAuditContext } from "../../utils/auditContext.js";
 import { parsePaginationQuery } from "../../utils/pagination.js";
 import {
   billingSummarySchema,
+  clientCreditBalanceSchema,
   expenseDtoSchema,
   invoiceDtoSchema,
   listResponseSchema,
@@ -13,10 +14,12 @@ import {
 } from "../../schemas/index.js";
 import {
   addPayment,
+  applyInvoiceCredit,
   createExpense,
   createInvoice,
   deleteExpense,
   deleteInvoice,
+  getClientCreditBalanceForClient,
   getCaseBillingSummary,
   getExpense,
   getInvoice,
@@ -62,6 +65,10 @@ const createPaymentSchema = z.object({
   paidAt: z.string().datetime().nullable().optional()
 });
 
+const applyInvoiceCreditSchema = z.object({
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid decimal")
+});
+
 const createExpenseSchema = z.object({
   caseId: z.string().uuid().nullable().optional(),
   category: z.string().min(1),
@@ -86,6 +93,7 @@ const invoiceListQuerySchema = z.object({
 });
 
 const idParamsSchema = z.object({ id: z.string().min(1) });
+const clientIdParamsSchema = z.object({ clientId: z.string().uuid() });
 
 const expenseListQuerySchema = z.object({
   q: z.string().optional(),
@@ -149,6 +157,37 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         getAuditContext(request)
       );
     }
+  );
+
+  app.post(
+    "/api/invoices/:id/apply-credit",
+    {
+      schema: { response: { 200: invoiceDtoSchema } },
+      preHandler: [requireAuth, requirePermission("invoices:update")],
+      config: { rateLimit: { max: 20, timeWindow: "1 minute" } }
+    },
+    async (request) => {
+      const payload = applyInvoiceCreditSchema.parse(request.body);
+      return applyInvoiceCredit(
+        request.sessionUser!,
+        idParamsSchema.parse(request.params).id,
+        payload,
+        getAuditContext(request)
+      );
+    }
+  );
+
+  app.get(
+    "/api/clients/:clientId/credit-balance",
+    {
+      schema: { response: { 200: clientCreditBalanceSchema } },
+      preHandler: [requireAuth, requirePermission("invoices:read")]
+    },
+    async (request) =>
+      getClientCreditBalanceForClient(
+        request.sessionUser!,
+        clientIdParamsSchema.parse(request.params).clientId
+      )
   );
 
   app.post(

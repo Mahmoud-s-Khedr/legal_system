@@ -24,6 +24,21 @@ const mockPayment = {
   findMany: vi.fn()
 };
 
+const mockInvoiceCreditApplication = {
+  findMany: vi.fn(),
+  create: vi.fn()
+};
+
+const mockClientCreditBalance = {
+  findUnique: vi.fn(),
+  upsert: vi.fn(),
+  updateMany: vi.fn()
+};
+
+const mockClientCreditEntry = {
+  create: vi.fn()
+};
+
 const mockExpense = {
   findMany: vi.fn(),
   findFirstOrThrow: vi.fn(),
@@ -39,6 +54,9 @@ const mockPrisma = {
   invoice: mockInvoice,
   invoiceItem: mockInvoiceItem,
   payment: mockPayment,
+  invoiceCreditApplication: mockInvoiceCreditApplication,
+  clientCreditBalance: mockClientCreditBalance,
+  clientCreditEntry: mockClientCreditEntry,
   expense: mockExpense,
   auditLog: mockAuditLog
 };
@@ -108,6 +126,7 @@ function makeInvoiceRecord(overrides: Partial<Record<string, unknown>> = {}) {
       }
     ],
     payments: [],
+    creditApplications: [],
     ...overrides
   };
 }
@@ -130,6 +149,9 @@ function makeExpenseRecord(overrides: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockInvoiceCreditApplication.findMany.mockResolvedValue([]);
+  mockClientCreditBalance.findUnique.mockResolvedValue(null);
+  mockClientCreditBalance.updateMany.mockResolvedValue({ count: 0 });
 });
 
 // ── listInvoices ───────────────────────────────────────────────────────────────
@@ -320,7 +342,9 @@ describe("addPayment", () => {
       makeInvoiceRecord({ status: "ISSUED", totalAmount: new Decimal("1100.00"), payments: [] })
     );
     mockPayment.create.mockResolvedValue({});
-    mockPayment.findMany.mockResolvedValue([{ amount: new Decimal("1100.00") }]);
+    mockPayment.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ amount: new Decimal("1100.00") }]);
     mockInvoice.update.mockResolvedValue(makeInvoiceRecord({ status: "PAID" }));
 
     const result = await addPayment(actor, "inv-1", { amount: "1100.00", method: "BANK_TRANSFER" }, audit);
@@ -339,7 +363,9 @@ describe("addPayment", () => {
       makeInvoiceRecord({ status: "ISSUED", totalAmount: new Decimal("1100.00"), payments: [] })
     );
     mockPayment.create.mockResolvedValue({});
-    mockPayment.findMany.mockResolvedValue([{ amount: new Decimal("500.00") }]);
+    mockPayment.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ amount: new Decimal("500.00") }]);
     mockInvoice.update.mockResolvedValue(makeInvoiceRecord({ status: "PARTIALLY_PAID" }));
 
     const result = await addPayment(actor, "inv-1", { amount: "500.00", method: "CASH" }, audit);
