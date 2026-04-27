@@ -340,7 +340,7 @@ describe("InvoiceCreatePage", () => {
       'select[aria-label="labels.case (labels.optional)"]'
     ) as HTMLSelectElement | null;
     const clearButton = Array.from(view.querySelectorAll("button")).find(
-      (button) => button.textContent === "billing.clearCaseAndClient"
+      (button) => button.textContent === "actions.clearCaseAndClient"
     ) as HTMLButtonElement | undefined;
 
     act(() => {

@@ -65,7 +65,10 @@
     "copyText": "Copier le texte",
     "markDone": "Marquer comme fait",
     "backToTop": "Haut de page",
-    "view": "Voir"
+    "view": "Voir",
+    "select": "Sélectionner",
+    "apply": "Appliquer",
+    "remove": "Retirer"
   },
   "nav": {
     "home": "Accueil",
@@ -490,6 +493,8 @@
     "noCasePermission": "Vous n'avez pas la permission de créer des dossiers.",
     "noClientReadPermission": "Vous n'avez pas la permission de sélectionner des clients existants.",
     "noClientCreatePermission": "Vous n'avez pas la permission de créer des clients.",
+    "noDocumentCreatePermission": "Vous n'avez pas la permission de créer des documents.",
+    "retryFailedSections": "Réessayer les sections en échec",
     "section": {
       "client": "Client",
       "case": "Fiche dossier",
@@ -1012,7 +1017,17 @@
     "status": "Statut",
     "invoiceNumber": "N° facture",
     "searchPlaceholder": "Rechercher par numéro de facture ou client",
-    "deleteExpenseConfirm": "Supprimer cette dépense ?"
+    "deleteExpenseConfirm": "Supprimer cette dépense ?",
+    "invalidTaxAmount": "Le montant de la taxe doit être un nombre valide non négatif.",
+    "invalidDiscountAmount": "Le montant de la remise doit être un nombre valide non négatif.",
+    "caseClientMismatch": "Le dossier sélectionné appartient à un autre client.",
+    "invalidLineItem": "Chaque ligne doit contenir une description, une quantité et un prix unitaire.",
+    "clientDerivedFromCase": "Le client est sélectionné automatiquement à partir du dossier.",
+    "overpaymentNote": "Remarque : tout trop-perçu sera ajouté comme crédit client.",
+    "applyCredit": "Appliquer un crédit",
+    "availableClientCredit": "Crédit client disponible",
+    "creditAmount": "Montant du crédit",
+    "creditMaxHint": "Maximum disponible"
   },
   "reports": {
     "title": "Rapports",
@@ -1160,7 +1175,8 @@
     "invoiceIssued": "Facture émise avec succès.",
     "invoiceVoided": "Facture annulée avec succès.",
     "indexedTextCopied": "Texte indexé copié.",
-    "indexedTextCopyFailed": "Échec de la copie du texte indexé."
+    "indexedTextCopyFailed": "Échec de la copie du texte indexé.",
+    "creditApplied": "Crédit appliqué avec succès."
   },
   "calendar": {
     "title": "Calendrier unifié",

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
@@ -61,10 +61,13 @@ export function InvoiceCreatePage() {
   const navigate = useNavigate();
   const feedback = useMutationFeedback();
   const createInvoice = useCreateInvoice();
-  const search = useSearch({ strict: false }) as { clientId?: string };
+  const search = useSearch({ strict: false }) as {
+    caseId?: string;
+    clientId?: string;
+  };
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
 
-  const [caseId, setCaseId] = useState("");
+  const [caseId, setCaseId] = useState(search.caseId ?? "");
   const [clientId, setClientId] = useState(search.clientId ?? "");
   const [feeType, setFeeType] = useState("FIXED");
   const [taxAmount, setTaxAmount] = useState("0");
@@ -116,6 +119,15 @@ export function InvoiceCreatePage() {
       new Map((casesQuery.data?.items ?? []).map((caseItem) => [caseItem.id, caseItem.clientId])),
     [casesQuery.data?.items]
   );
+
+  useEffect(() => {
+    if (!caseId) return;
+    const selectedCaseClientId = caseClientById.get(caseId);
+    if (!selectedCaseClientId) return;
+    if (clientId !== selectedCaseClientId) {
+      setClientId(selectedCaseClientId);
+    }
+  }, [caseClientById, caseId, clientId]);
 
   const clientOptions = useMemo(
     () => [

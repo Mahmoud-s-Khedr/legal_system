@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { CaseListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Pencil, Trash2, Plus, FileDown } from "lucide-react";
 import { apiFetch, apiDownload } from "../../../lib/api";
+import { toCaseSelectOption } from "../../../lib/caseOptions";
 import { PdfViewer } from "../../../components/documents/PdfViewer";
 import { DocxViewer } from "../../../components/documents/DocxViewer";
 import { saveBlobToDownloads } from "../../../lib/desktopDownloads";
@@ -13,6 +15,7 @@ import {
   ErrorState,
   PageHeader,
   PrimaryButton,
+  SelectField,
   SectionCard,
   formatDate
 } from "../ui";
@@ -97,6 +100,10 @@ export function LibraryDocumentPage() {
     queryKey: ["library-document", documentId],
     queryFn: () =>
       apiFetch<LibraryDocumentDetail>(`/api/library/documents/${documentId}`)
+  });
+  const casesQuery = useQuery({
+    queryKey: ["cases", "library-link"],
+    queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=200")
   });
 
   useEffect(() => {
@@ -218,6 +225,12 @@ export function LibraryDocumentPage() {
   });
 
   const doc = docQuery.data;
+  const caseOptions = [
+    { value: "", label: t("labels.selectCase") },
+    ...(casesQuery.data?.items ?? []).map((caseItem) =>
+      toCaseSelectOption(t, caseItem)
+    )
+  ];
 
   async function handleDownload() {
     try {
@@ -488,15 +501,12 @@ export function LibraryDocumentPage() {
       >
         {showLinkForm ? (
           <div className="space-y-3">
-            <FieldWrap label={t("library.caseId")}>
-              <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                placeholder={t("library.caseIdPlaceholder")}
-                type="text"
-                value={linkCaseId}
-                onChange={(e) => setLinkCaseId(e.target.value)}
-              />
-            </FieldWrap>
+            <SelectField
+              label={t("library.caseId")}
+              options={caseOptions}
+              value={linkCaseId}
+              onChange={setLinkCaseId}
+            />
             <FieldWrap label={t("library.linkNotes")}>
               <input
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"

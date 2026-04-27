@@ -135,7 +135,9 @@ describe("quick intake dirty state", () => {
     expect(source).toContain("useUnsavedChanges(quickIntakeDirty, { bypassBlockRef: bypassRef })");
 
     const bypassIndex = source.indexOf("allowNextNavigation();");
-    const navigateIndex = source.indexOf('navigate({ to: "/app/cases/$caseId", params: { caseId } })');
+    const navigateIndex = source.indexOf(
+      'navigate({ to: "/app/cases/$caseId", params: { caseId: resolvedCaseId } })'
+    );
     expect(bypassIndex).toBeGreaterThan(-1);
     expect(navigateIndex).toBeGreaterThan(-1);
     expect(bypassIndex).toBeLessThan(navigateIndex);

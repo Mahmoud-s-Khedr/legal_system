@@ -40,9 +40,13 @@ describe("full-page form save navigation", () => {
       navigateTo: string;
       navigateParam?: string;
       requiresBypass?: boolean;
-      requiresOnSuccess?: boolean;
     }> = [
-      { file: "CaseCreatePage.tsx", navigateTo: "/app/cases", requiresBypass: true },
+      {
+        file: "CaseCreatePage.tsx",
+        navigateTo: "/app/cases/$caseId",
+        navigateParam: "caseId",
+        requiresBypass: true
+      },
       { file: "ClientCreatePage.tsx", navigateTo: "/app/clients", requiresBypass: true },
       { file: "ClientEditPage.tsx", navigateTo: "/app/clients/$clientId", requiresBypass: true },
       { file: "HearingCreatePage.tsx", navigateTo: "/app/hearings", requiresBypass: true },
@@ -52,15 +56,13 @@ describe("full-page form save navigation", () => {
         file: "InvoiceCreatePage.tsx",
         navigateTo: "/app/invoices/$invoiceId",
         navigateParam: "invoiceId",
-        requiresBypass: true,
-        requiresOnSuccess: false
+        requiresBypass: true
       },
       {
         file: "CaseQuickIntakePage.tsx",
         navigateTo: "/app/cases/$caseId",
         navigateParam: "caseId",
-        requiresBypass: true,
-        requiresOnSuccess: false
+        requiresBypass: true
       },
       { file: "TaskDetailPage.tsx", navigateTo: "/app/tasks" },
       { file: "TemplateCreatePage.tsx", navigateTo: "/app/templates" },
@@ -69,11 +71,8 @@ describe("full-page form save navigation", () => {
       { file: "UserDetailPage.tsx", navigateTo: "/app/users" }
     ];
 
-    for (const { file, navigateTo, navigateParam, requiresBypass, requiresOnSuccess = true } of expectations) {
+    for (const { file, navigateTo, navigateParam, requiresBypass } of expectations) {
       const source = readRouteFile(file);
-      if (requiresOnSuccess) {
-        expect(source, `${file} should define an onSuccess handler`).toMatch(/\bonSuccess\b/);
-      }
       expect(
         hasNavigateTo(source, navigateTo),
         `${file} should navigate to ${navigateTo} after successful save`

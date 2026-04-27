@@ -111,6 +111,7 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
         <div className="mb-3 flex justify-end">
           <Link
             to="/app/invoices/new"
+            search={{ caseId }}
             className="rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white"
           >
             {t("actions.newInvoice")}

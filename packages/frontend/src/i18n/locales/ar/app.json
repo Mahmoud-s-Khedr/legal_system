@@ -68,7 +68,8 @@
     "copyText": "نسخ النص",
     "markDone": "تمييز كمنجز",
     "backToTop": "العودة للأعلى",
-    "view": "عرض"
+    "view": "عرض",
+    "remove": "إزالة"
   },
   "nav": {
     "home": "الرئيسية",
@@ -495,6 +496,8 @@
     "noCasePermission": "ليس لديك صلاحية إنشاء القضايا.",
     "noClientReadPermission": "ليس لديك صلاحية اختيار موكل موجود.",
     "noClientCreatePermission": "ليس لديك صلاحية إنشاء موكل.",
+    "noDocumentCreatePermission": "ليس لديك صلاحية إنشاء مستندات.",
+    "retryFailedSections": "إعادة محاولة الأقسام التي فشل حفظها",
     "section": {
       "client": "الموكل",
       "case": "البيانات الأساسية للقضية",
@@ -1040,6 +1043,11 @@
     "status": "الحالة",
     "searchPlaceholder": "ابحث برقم الفاتورة أو الموكل",
     "deleteExpenseConfirm": "هل تريد حذف هذا المصروف؟",
+    "invalidTaxAmount": "يجب أن تكون قيمة الضريبة رقمًا صالحًا غير سالب.",
+    "invalidDiscountAmount": "يجب أن تكون قيمة الخصم رقمًا صالحًا غير سالب.",
+    "caseClientMismatch": "القضية المحددة مرتبطة بموكل مختلف.",
+    "invalidLineItem": "يجب أن يحتوي كل بند على الوصف والكمية وسعر الوحدة.",
+    "clientDerivedFromCase": "يتم تحديد الموكل تلقائيًا من القضية.",
     "overpaymentNote": "ملاحظة: سيتم إضافة المبلغ الزائد كرصيد دائن للموكل.",
     "applyCredit": "تطبيق رصيد",
     "availableClientCredit": "رصيد الموكل المتاح",
@@ -1222,7 +1230,8 @@
     "invoiceIssued": "تم إصدار الفاتورة بنجاح.",
     "invoiceVoided": "تم إلغاء الفاتورة بنجاح.",
     "indexedTextCopied": "تم نسخ النص المفهرس.",
-    "indexedTextCopyFailed": "تعذر نسخ النص المفهرس."
+    "indexedTextCopyFailed": "تعذر نسخ النص المفهرس.",
+    "creditApplied": "تم تطبيق الرصيد بنجاح."
   },
   "import": {
     "eyebrow": "استيراد جماعي",

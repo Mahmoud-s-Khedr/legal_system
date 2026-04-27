@@ -558,10 +558,8 @@ describe("CaseQuickIntakePage route behavior", () => {
         const file = new File(["sample"], "evidence.pdf", {
           type: "application/pdf"
         });
-        const transfer = new DataTransfer();
-        transfer.items.add(file);
         Object.defineProperty(fileInput, "files", {
-          value: transfer.files,
+          value: [file],
           configurable: true
         });
         fileInput.dispatchEvent(new Event("change", { bubbles: true }));

@@ -65,7 +65,10 @@
     "copyText": "Copy text",
     "markDone": "Mark as done",
     "backToTop": "Back to top",
-    "view": "View"
+    "view": "View",
+    "select": "Select",
+    "apply": "Apply",
+    "remove": "Remove"
   },
   "nav": {
     "home": "Home",
@@ -490,6 +493,8 @@
     "noCasePermission": "You do not have permission to create cases.",
     "noClientReadPermission": "You do not have permission to select existing clients.",
     "noClientCreatePermission": "You do not have permission to create clients.",
+    "noDocumentCreatePermission": "You do not have permission to create documents.",
+    "retryFailedSections": "Retry failed sections",
     "section": {
       "client": "Client",
       "case": "Case shell",
@@ -1024,7 +1029,17 @@
     "void": "Void",
     "status": "Status",
     "searchPlaceholder": "Search by invoice number or client",
-    "deleteExpenseConfirm": "Delete this expense?"
+    "deleteExpenseConfirm": "Delete this expense?",
+    "invalidTaxAmount": "Tax amount must be a valid non-negative number.",
+    "invalidDiscountAmount": "Discount amount must be a valid non-negative number.",
+    "caseClientMismatch": "Selected case belongs to a different client.",
+    "invalidLineItem": "Each line item must include description, quantity, and unit price.",
+    "clientDerivedFromCase": "Client is auto-selected from the case.",
+    "overpaymentNote": "Note: any overpayment will be added as client credit.",
+    "applyCredit": "Apply credit",
+    "availableClientCredit": "Available client credit",
+    "creditAmount": "Credit amount",
+    "creditMaxHint": "Max available"
   },
   "reports": {
     "title": "Reports",
@@ -1173,7 +1188,8 @@
     "invoiceIssued": "Invoice issued successfully.",
     "invoiceVoided": "Invoice voided successfully.",
     "indexedTextCopied": "Indexed text copied.",
-    "indexedTextCopyFailed": "Failed to copy indexed text."
+    "indexedTextCopyFailed": "Failed to copy indexed text.",
+    "creditApplied": "Credit applied successfully."
   },
   "import": {
     "eyebrow": "Bulk import",

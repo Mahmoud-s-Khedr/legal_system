@@ -60,6 +60,7 @@ vi.mock("../ui", () => ({
       {children as never}
     </button>
   ),
+  SelectField: () => <div data-testid="select-field" />,
   SectionCard: ({ children }: { children: unknown }) => <div>{children as never}</div>,
   formatDate: () => "2026-04-26"
 }));
