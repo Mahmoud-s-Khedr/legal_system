@@ -48,6 +48,10 @@ const mockExpense = {
   count: vi.fn()
 };
 
+const mockCase = {
+  findFirst: vi.fn()
+};
+
 const mockAuditLog = { create: vi.fn() };
 
 const mockPrisma = {
@@ -58,6 +62,7 @@ const mockPrisma = {
   clientCreditBalance: mockClientCreditBalance,
   clientCreditEntry: mockClientCreditEntry,
   expense: mockExpense,
+  case: mockCase,
   auditLog: mockAuditLog
 };
 
@@ -152,6 +157,7 @@ beforeEach(() => {
   mockInvoiceCreditApplication.findMany.mockResolvedValue([]);
   mockClientCreditBalance.findUnique.mockResolvedValue(null);
   mockClientCreditBalance.updateMany.mockResolvedValue({ count: 0 });
+  mockCase.findFirst.mockResolvedValue({ id: "case-1", clientId: "client-1" });
 });
 
 // ── listInvoices ───────────────────────────────────────────────────────────────
@@ -268,6 +274,50 @@ describe("createInvoice", () => {
     expect(mockInvoice.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ invoiceNumber: "INV-2026-0004" })
+      })
+    );
+  });
+
+  it("rejects mismatched case and client combinations", async () => {
+    mockInvoice.findFirst.mockResolvedValue(null);
+    mockCase.findFirst.mockResolvedValue({ id: "case-1", clientId: "client-1" });
+
+    await expect(
+      createInvoice(
+        actor,
+        {
+          caseId: "case-1",
+          clientId: "client-2",
+          feeType: "FIXED",
+          items: [{ description: "x", quantity: 1, unitPrice: "100" }]
+        },
+        audit
+      )
+    ).rejects.toThrow("Selected case does not belong to selected client");
+
+    expect(mockInvoice.create).not.toHaveBeenCalled();
+  });
+
+  it("derives clientId from case when case is selected", async () => {
+    mockInvoice.findFirst.mockResolvedValue(null);
+    mockCase.findFirst.mockResolvedValue({ id: "case-1", clientId: "client-1" });
+    mockInvoice.create.mockResolvedValue(
+      makeInvoiceRecord({ caseId: "case-1", clientId: "client-1" })
+    );
+
+    await createInvoice(
+      actor,
+      {
+        caseId: "case-1",
+        feeType: "FIXED",
+        items: [{ description: "x", quantity: 1, unitPrice: "100" }]
+      },
+      audit
+    );
+
+    expect(mockInvoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ caseId: "case-1", clientId: "client-1" })
       })
     );
   });

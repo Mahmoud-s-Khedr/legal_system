@@ -57,6 +57,7 @@
     "disconnect": "Disconnect",
     "more": "More actions",
     "clear": "Clear",
+    "clearCaseAndClient": "Clear case/client",
     "dismiss": "Dismiss",
     "close": "Close",
     "uploadAnother": "Upload another",

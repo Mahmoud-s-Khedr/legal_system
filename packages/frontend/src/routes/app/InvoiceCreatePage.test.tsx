@@ -143,6 +143,15 @@ function setInputValue(element: HTMLInputElement, value: string) {
   element.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function setSelectValue(element: HTMLSelectElement, value: string) {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    HTMLSelectElement.prototype,
+    "value"
+  );
+  descriptor?.set?.call(element, value);
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   useQueryMock.mockReturnValue({
@@ -191,10 +200,10 @@ describe("InvoiceCreatePage", () => {
         caseId: null,
         clientId: null,
         feeType: "FIXED",
-        taxAmount: "0",
-        discountAmount: "0",
+        taxAmount: "0.00",
+        discountAmount: "0.00",
         dueDate: null,
-        items: [{ description: "Drafting fee", quantity: 1, unitPrice: "0" }]
+        items: [{ description: "Drafting fee", quantity: 1, unitPrice: "0.00" }]
       })
     );
     expect(successMock).toHaveBeenCalledWith("messages.invoiceCreated");
@@ -206,6 +215,149 @@ describe("InvoiceCreatePage", () => {
     expect(useUnsavedChangesMock).toHaveBeenCalled();
     expect(allowNextNavigationMock.mock.invocationCallOrder[0]).toBeLessThan(
       navigateMock.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("normalizes empty tax and discount to zero before submit", async () => {
+    const view = render(<InvoiceCreatePage />);
+    const descriptionInput = view.querySelector(
+      'input[placeholder="billing.itemDescription"]'
+    ) as HTMLInputElement | null;
+    const numberInputs = view.querySelectorAll('input[type="number"]');
+    const taxInput = numberInputs.item(0) as HTMLInputElement;
+    const discountInput = numberInputs.item(1) as HTMLInputElement;
+
+    act(() => {
+      if (descriptionInput) setInputValue(descriptionInput, "Drafting fee");
+      setInputValue(taxInput, "");
+      setInputValue(discountInput, "");
+    });
+
+    const form = view.querySelector("form");
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(mutateAsyncMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taxAmount: "0",
+        discountAmount: "0"
+      })
+    );
+  });
+
+  it("clears selected case when user switches to a different client", async () => {
+    useQueryMock.mockImplementation((args: { queryKey: string[] }) => {
+      if (args.queryKey[0] === "cases") {
+        return {
+          data: {
+            items: [
+              {
+                id: "case-1",
+                clientId: "client-1",
+                title: "Case A",
+                caseNumber: "A-1",
+                status: "ACTIVE",
+                parties: [],
+                courts: []
+              }
+            ]
+          }
+        };
+      }
+      return {
+        data: {
+          items: [
+            { id: "client-1", name: "Client One", type: "INDIVIDUAL" },
+            { id: "client-2", name: "Client Two", type: "INDIVIDUAL" }
+          ]
+        }
+      };
+    });
+
+    const view = render(<InvoiceCreatePage />);
+    const descriptionInput = view.querySelector(
+      'input[placeholder="billing.itemDescription"]'
+    ) as HTMLInputElement | null;
+    const caseSelect = view.querySelector(
+      'select[aria-label="labels.case (labels.optional)"]'
+    ) as HTMLSelectElement | null;
+    const clientSelect = view.querySelector(
+      'select[aria-label="labels.client (labels.optional)"]'
+    ) as HTMLSelectElement | null;
+
+    act(() => {
+      if (descriptionInput) setInputValue(descriptionInput, "Drafting fee");
+      if (caseSelect) setSelectValue(caseSelect, "case-1");
+      if (clientSelect) setSelectValue(clientSelect, "client-2");
+    });
+
+    expect(caseSelect?.value).toBe("");
+
+    const form = view.querySelector("form");
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(mutateAsyncMock).toHaveBeenCalledWith(
+      expect.objectContaining({ caseId: null, clientId: "client-2" })
+    );
+  });
+
+  it("clears both case and client using the clear button", async () => {
+    useQueryMock.mockImplementation((args: { queryKey: string[] }) => {
+      if (args.queryKey[0] === "cases") {
+        return {
+          data: {
+            items: [
+              {
+                id: "case-1",
+                clientId: "client-1",
+                title: "Case A",
+                caseNumber: "A-1",
+                status: "ACTIVE",
+                parties: [],
+                courts: []
+              }
+            ]
+          }
+        };
+      }
+      return {
+        data: {
+          items: [
+            { id: "client-1", name: "Client One", type: "INDIVIDUAL" }
+          ]
+        }
+      };
+    });
+
+    const view = render(<InvoiceCreatePage />);
+    const descriptionInput = view.querySelector(
+      'input[placeholder="billing.itemDescription"]'
+    ) as HTMLInputElement | null;
+    const caseSelect = view.querySelector(
+      'select[aria-label="labels.case (labels.optional)"]'
+    ) as HTMLSelectElement | null;
+    const clearButton = Array.from(view.querySelectorAll("button")).find(
+      (button) => button.textContent === "billing.clearCaseAndClient"
+    ) as HTMLButtonElement | undefined;
+
+    act(() => {
+      if (descriptionInput) setInputValue(descriptionInput, "Drafting fee");
+      if (caseSelect) setSelectValue(caseSelect, "case-1");
+      clearButton?.click();
+    });
+
+    expect(caseSelect?.value).toBe("");
+
+    const form = view.querySelector("form");
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(mutateAsyncMock).toHaveBeenCalledWith(
+      expect.objectContaining({ caseId: null, clientId: null })
     );
   });
 });

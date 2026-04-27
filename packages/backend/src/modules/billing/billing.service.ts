@@ -323,6 +323,21 @@ export async function createInvoice(
   audit: AuditContext
 ): Promise<InvoiceDto> {
   return inTenantTransaction(actor.firmId, async (tx) => {
+    let normalizedClientId = payload.clientId ?? null;
+    if (payload.caseId) {
+      const invoiceCase = await tx.case.findFirst({
+        where: { id: payload.caseId, firmId: actor.firmId, deletedAt: null },
+        select: { id: true, clientId: true }
+      });
+      if (!invoiceCase) {
+        throw appError("Case not found", 404);
+      }
+      if (normalizedClientId && normalizedClientId !== invoiceCase.clientId) {
+        throw appError("Selected case does not belong to selected client", 422);
+      }
+      normalizedClientId = invoiceCase.clientId;
+    }
+
     const invoiceNumber = await nextInvoiceNumber(tx, actor.firmId);
     const taxAmount = new Decimal(payload.taxAmount ?? "0");
     const discountAmount = new Decimal(payload.discountAmount ?? "0");
@@ -338,7 +353,7 @@ export async function createInvoice(
     const inv = await createInvoiceWithItems(tx, {
       firmId: actor.firmId,
       caseId: payload.caseId ?? null,
-      clientId: payload.clientId ?? null,
+      clientId: normalizedClientId,
       invoiceNumber,
       status: "DRAFT",
       feeType: payload.feeType ?? "FIXED",
