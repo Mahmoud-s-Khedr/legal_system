@@ -19,6 +19,8 @@
     "evening": "مساء الخير"
   },
   "actions": {
+    "select": "اختر",
+    "apply": "تطبيق",
     "logout": "تسجيل الخروج",
     "createClient": "إضافة موكل",
     "createCase": "إنشاء قضية",
@@ -1037,7 +1039,12 @@
     "void": "إلغاء",
     "status": "الحالة",
     "searchPlaceholder": "ابحث برقم الفاتورة أو الموكل",
-    "deleteExpenseConfirm": "هل تريد حذف هذا المصروف؟"
+    "deleteExpenseConfirm": "هل تريد حذف هذا المصروف؟",
+    "overpaymentNote": "ملاحظة: سيتم إضافة المبلغ الزائد كرصيد دائن للموكل.",
+    "applyCredit": "تطبيق رصيد",
+    "availableClientCredit": "رصيد الموكل المتاح",
+    "creditAmount": "مبلغ الرصيد",
+    "creditMaxHint": "الحد الأقصى المتاح"
   },
   "reports": {
     "title": "التقارير",

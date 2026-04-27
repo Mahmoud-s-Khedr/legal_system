@@ -946,11 +946,14 @@ export function formatCurrency(
     return "—";
   }
 
+  // Prevent negative zero from displaying as "-0.00"
+  const normalizedNumeric = numeric === 0 ? 0 : numeric;
+
   const lang = i18n.resolvedLanguage ?? "ar";
   const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EGP",
     maximumFractionDigits: 2
-  }).format(numeric);
+  }).format(normalizedNumeric);
 }

@@ -12,6 +12,8 @@ import {
 } from "../../lib/billing";
 import { apiDownload } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
+import { useLookupOptions } from "../../lib/lookups";
+import i18n from "../../i18n";
 import {
   ErrorState,
   FormAlert,
@@ -50,6 +52,9 @@ export function InvoiceDetailPage() {
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
   const creditBalance = useClientCreditBalance(invoice?.clientId);
+  const paymentMethods = useLookupOptions("PaymentMethod");
+  const lang = (i18n.resolvedLanguage ?? "ar") as "ar" | "en" | "fr";
+  const labelKey = `label${lang.charAt(0).toUpperCase()}${lang.slice(1)}` as "labelAr" | "labelEn" | "labelFr";
 
   if (isLoading)
     return <p className="p-8 text-slate-500">{t("labels.loading")}</p>;
@@ -213,7 +218,7 @@ export function InvoiceDetailPage() {
 
       {/* Totals */}
       {actionError ? <FormAlert message={actionError} /> : null}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {[
           {
             label: t("billing.subtotal"),
@@ -224,14 +229,36 @@ export function InvoiceDetailPage() {
             label: t("billing.discount"),
             value: currentInvoice.discountAmount
           },
-          { label: t("billing.total"), value: currentInvoice.totalAmount }
-        ].map(({ label, value }) => (
+          { label: t("billing.total"), value: currentInvoice.totalAmount },
+          {
+            label: t("billing.totalPaid"),
+            value: currentInvoice.payments.reduce(
+              (sum, p) => sum + Number(p.amount),
+              0
+            ),
+            highlight: "text-emerald-600"
+          },
+          {
+            label: t("billing.outstanding"),
+            value: Math.max(
+              0,
+              Number(currentInvoice.totalAmount) -
+                currentInvoice.payments.reduce(
+                  (sum, p) => sum + Number(p.amount),
+                  0
+                )
+            ),
+            highlight: "text-red-600"
+          }
+        ].map(({ label, value, highlight }) => (
           <div
             key={label}
             className="rounded-2xl border border-slate-200 bg-white p-4"
           >
             <p className="text-xs text-slate-500">{label}</p>
-            <p className="mt-1 font-semibold">{formatCurrency(value)}</p>
+            <p className={`mt-1 font-semibold ${highlight || ""}`}>
+              {formatCurrency(value)}
+            </p>
           </div>
         ))}
       </div>
@@ -280,16 +307,20 @@ export function InvoiceDetailPage() {
           <p className="text-sm text-slate-500">{t("billing.noPayments")}</p>
         ) : (
           <div className="space-y-2">
-            {currentInvoice.payments.map((payment) => (
+            {currentInvoice.payments.map((payment) => {
+              const methodObj = paymentMethods.data?.items.find(m => m.key === payment.method);
+              const methodLabel = methodObj ? methodObj[labelKey] : payment.method;
+              return (
               <div key={payment.id} className="flex justify-between text-sm">
                 <span>
-                  {payment.method} — {formatDate(payment.paidAt)}
+                  <bdi>{methodLabel}</bdi> &bull; <bdi>{formatDate(payment.paidAt)}</bdi>
                 </span>
                 <span className="font-semibold text-emerald-700">
-                  +{formatCurrency(payment.amount)}
+                  <bdi>+{formatCurrency(payment.amount)}</bdi>
                 </span>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -312,17 +343,40 @@ export function InvoiceDetailPage() {
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
                 />
+                {Number(paymentAmount) >
+                  Number(currentInvoice.totalAmount) -
+                    currentInvoice.payments.reduce(
+                      (sum, p) => sum + Number(p.amount),
+                      0
+                    ) && invoice.clientId ? (
+                  <p className="mt-2 text-xs text-sky-700 bg-sky-50 p-2 rounded-lg border border-sky-100">
+                    {t(
+                      "billing.overpaymentNote",
+                      "Note: Excess payment will be added to the client's credit balance."
+                    )}
+                  </p>
+                ) : null}
               </div>
               <div>
                 <label className="block text-sm font-medium">
                   {t("billing.paymentMethod")}
                 </label>
-                <input
+                <select
                   required
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                />
+                  disabled={paymentMethods.isLoading}
+                >
+                  <option value="" disabled>
+                    {t("actions.select", "Select")}
+                  </option>
+                  {paymentMethods.data?.items.map((m) => (
+                    <option key={m.key} value={m.key}>
+                      {m[labelKey]}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             {paymentError ? <FormAlert message={paymentError} /> : null}

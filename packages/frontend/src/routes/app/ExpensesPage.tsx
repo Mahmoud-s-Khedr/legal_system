@@ -1,5 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import type { CaseListResponseDto } from "@elms/shared";
+import { apiFetch } from "../../lib/api";
+import { toCaseSelectOption } from "../../lib/caseOptions";
 import {
   useExpenses,
   useCreateExpense,
@@ -23,6 +27,7 @@ import {
   TableRow,
   TableToolbar,
   TableWrapper,
+  SelectField,
   formatCurrency
 } from "./ui";
 
@@ -48,9 +53,17 @@ export function ExpensesPage() {
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [caseId, setCaseId] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const casesQuery = useQuery({
+    queryKey: ["cases"],
+    queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=200")
+  });
+  const caseOptions = useMemo(() => {
+    return (casesQuery.data?.items ?? []).map((c) => toCaseSelectOption(t, c));
+  }, [casesQuery.data, t]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -59,11 +72,13 @@ export function ExpensesPage() {
       await createExpense.mutateAsync({
         category,
         amount,
-        description: description || null
+        description: description || null,
+        caseId: caseId || null
       });
       setCategory("");
       setAmount("");
       setDescription("");
+      setCaseId("");
       setShowForm(false);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t("errors.fallback"));
@@ -113,6 +128,14 @@ export function ExpensesPage() {
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <SelectField
+                  label={`${t("labels.case")} (${t("labels.optional")})`}
+                  value={caseId}
+                  onChange={setCaseId}
+                  options={caseOptions}
                 />
               </div>
               <div className="sm:col-span-2">
