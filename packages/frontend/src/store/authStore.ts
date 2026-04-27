@@ -23,6 +23,8 @@ interface AuthState {
 }
 
 let bootstrapPromise: Promise<void> | null = null;
+const disableAuthBootstrap =
+  import.meta.env.VITE_DISABLE_AUTH_BOOTSTRAP === "true";
 
 const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -32,6 +34,15 @@ const useAuthStore = create<AuthState>((set, get) => ({
   async bootstrap() {
     if (get().isBootstrapped) return;
     if (bootstrapPromise) return bootstrapPromise;
+    if (disableAuthBootstrap) {
+      set({
+        mode: null,
+        user: null,
+        needsSetup: false,
+        isBootstrapped: true
+      });
+      return;
+    }
     bootstrapPromise = (async () => {
       try {
         const response = await apiFetch<AuthResponseDto>("/api/auth/me");

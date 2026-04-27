@@ -105,6 +105,8 @@ jobs:
 
       - name: Build frontend
         run: pnpm --filter @elms/frontend build
+        env:
+          VITE_DISABLE_AUTH_BOOTSTRAP: "true"
 
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli@0.14.x
@@ -113,3 +115,4 @@ jobs:
         run: lhci autorun
         env:
           LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
+          VITE_DISABLE_AUTH_BOOTSTRAP: "true"

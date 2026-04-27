@@ -18,6 +18,7 @@ vi.mock("../i18n", () => ({
 afterEach(() => {
   vi.resetModules();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   apiFetchMock.mockReset();
   persistDesktopLocalSessionTokenMock.mockReset();
   clearDesktopLocalSessionTokenMock.mockReset();
@@ -26,6 +27,16 @@ afterEach(() => {
 });
 
 describe("authStore language preference integration", () => {
+  it("skips network bootstrap when disabled via env", async () => {
+    vi.stubEnv("VITE_DISABLE_AUTH_BOOTSTRAP", "true");
+
+    const { useAuthBootstrap } = await import("./authStore");
+    await useAuthBootstrap.getState().bootstrap();
+
+    expect(apiFetchMock).not.toHaveBeenCalled();
+    expect(useAuthBootstrap.getState().isBootstrapped).toBe(true);
+  });
+
   it("applies preferred language after bootstrap", async () => {
     apiFetchMock.mockResolvedValueOnce({
       session: {
