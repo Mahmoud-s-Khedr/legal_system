@@ -129,7 +129,7 @@ describe("ImportPage", () => {
     });
 
     expect(saveTextToDownloadsMock).toHaveBeenCalledWith(
-      "title,caseNumber,type,status,internalReference,judicialYear,client_id\n",
+      "title,caseNumber,type,status,judicialYear,client_id\n",
       "cases-import-template.csv",
       "text/csv;charset=utf-8"
     );

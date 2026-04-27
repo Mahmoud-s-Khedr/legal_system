@@ -205,11 +205,18 @@ async function getTemplateWithCaseContext(actor: SessionUser, templateId: string
     }
 
     const latestCourt = payload.caseRow.courts[0];
+    const primaryLegalReference = payload.caseRow.legalReferences[0];
+    const legalReferenceValue =
+      primaryLegalReference?.article?.articleNumber &&
+      primaryLegalReference.document?.title
+        ? `${primaryLegalReference.document.title} § ${primaryLegalReference.article.articleNumber}`
+        : primaryLegalReference?.document?.title ?? "";
 
     const variables: Record<string, string> = {
       caseName: payload.caseRow.title,
       caseNumber: payload.caseRow.caseNumber ?? "",
-      internalReference: payload.caseRow.internalReference ?? "",
+      legalReference: legalReferenceValue,
+      internalReference: legalReferenceValue,
       clientName: payload.caseRow.client?.name ?? "",
       clientNameAr: payload.caseRow.client?.name ?? "",
       courtName: latestCourt?.courtName ?? "",

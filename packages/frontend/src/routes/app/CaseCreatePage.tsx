@@ -5,7 +5,7 @@ import {
   useUnsavedChangesBypass
 } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ClientListResponseDto, CreateCaseDto } from "@elms/shared";
+import type { CaseDto, ClientListResponseDto, CreateCaseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -33,7 +33,6 @@ export function CaseCreatePage() {
     clientId: initialClientId,
     title: "",
     caseNumber: "",
-    internalReference: "",
     judicialYear: null,
     type: "CIVIL"
   });
@@ -50,7 +49,6 @@ export function CaseCreatePage() {
         clientId: initialClientId,
         title: "",
         caseNumber: "",
-        internalReference: "",
         judicialYear: null,
         type: "CIVIL"
       } satisfies CreateCaseDto),
@@ -59,15 +57,15 @@ export function CaseCreatePage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateCaseDto) =>
-      apiFetch("/api/cases", {
+      apiFetch<CaseDto>("/api/cases", {
         method: "POST",
         body: JSON.stringify(payload)
       }),
-    onSuccess: async () => {
+    onSuccess: async (createdCase) => {
       feedback.success("messages.caseCreated");
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
       allowNextNavigation();
-      void navigate({ to: "/app/cases" });
+      void navigate({ to: "/app/cases/$caseId", params: { caseId: createdCase.id } });
     }
   });
 
@@ -150,11 +148,6 @@ export function CaseCreatePage() {
             onChange={(value) => setForm({ ...form, caseNumber: value })}
             required
             value={form.caseNumber}
-          />
-          <Field
-            label={t("labels.internalReference")}
-            onChange={(value) => setForm({ ...form, internalReference: value })}
-            value={form.internalReference ?? ""}
           />
           <SelectField
             label={t("labels.caseType")}

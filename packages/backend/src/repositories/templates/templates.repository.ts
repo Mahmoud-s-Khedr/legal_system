@@ -71,7 +71,10 @@ export async function findTemplateWithCaseContext(
       caseRow: {
         title: string;
         caseNumber: string;
-        internalReference: string | null;
+        legalReferences: Array<{
+          document: { title: string };
+          article: { articleNumber: string; title: string | null } | null;
+        }>;
         client: { name: string } | null;
         courts: Array<{ courtName: string; courtLevel: string }>;
       };
@@ -88,7 +91,15 @@ export async function findTemplateWithCaseContext(
     where: { id: input.caseId, firmId: input.firmId },
     include: {
       client: true,
-      courts: { orderBy: { createdAt: "desc" }, take: 1 }
+      courts: { orderBy: { createdAt: "desc" }, take: 1 },
+      legalReferences: {
+        select: {
+          document: { select: { title: true } },
+          article: { select: { articleNumber: true, title: true } }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 3
+      }
     }
   });
 
@@ -110,7 +121,7 @@ export async function findTemplateWithCaseContext(
     caseRow: {
       title: caseRow.title,
       caseNumber: caseRow.caseNumber,
-      internalReference: caseRow.internalReference,
+      legalReferences: caseRow.legalReferences,
       client: caseRow.client,
       courts: caseRow.courts.map((court) => ({ courtName: court.courtName, courtLevel: court.courtLevel }))
     },

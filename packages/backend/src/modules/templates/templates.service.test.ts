@@ -133,7 +133,12 @@ describe("templates.service", () => {
       id: "case-1",
       title: "Case A",
       caseNumber: "100",
-      internalReference: "INT-1",
+      legalReferences: [
+        {
+          document: { title: "Civil Code" },
+          article: { articleNumber: "12", title: "General scope" }
+        }
+      ],
       client: { name: "Client" },
       courts: [{ courtName: "Court", courtLevel: "First" }]
     });
@@ -142,6 +147,7 @@ describe("templates.service", () => {
     const rendered = await renderTemplate(actor, "tpl-1", "case-1");
     expect(rendered?.renderedHtml).toContain("Case A");
     expect(rendered?.variables.caseNumber).toBe("100");
+    expect(rendered?.variables.legalReference).toBe("Civil Code § 12");
   });
 
   it("exports template and rendered docx variants", async () => {
@@ -162,7 +168,7 @@ describe("templates.service", () => {
       id: "case-1",
       title: "Case A",
       caseNumber: "100",
-      internalReference: null,
+      legalReferences: [],
       client: { name: "Client" },
       courts: []
     });

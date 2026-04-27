@@ -208,7 +208,7 @@ export function isPartyPristine(party: DraftParty): boolean {
 
 export function isQuickIntakeDirty(state: {
   caseForm: Pick<CreateCaseDto, "title" | "caseNumber"> &
-    Partial<Pick<CreateCaseDto, "internalReference" | "type">>;
+    Partial<Pick<CreateCaseDto, "type">>;
   statusForm?: { status: CaseStatus; note: string };
   existingClientId: string;
   initialExistingClientId?: string;
@@ -223,7 +223,6 @@ export function isQuickIntakeDirty(state: {
   return (
     hasText(state.caseForm.title) ||
     hasText(state.caseForm.caseNumber) ||
-    hasText(state.caseForm.internalReference) ||
     (state.caseForm.type ?? "CIVIL") !== "CIVIL" ||
     state.existingClientId !== (state.initialExistingClientId ?? "") ||
     (state.statusForm?.status ?? CaseStatus.ACTIVE) !== CaseStatus.ACTIVE ||
@@ -314,7 +313,6 @@ export function CaseQuickIntakePage() {
     clientId: search.clientId ?? "",
     title: "",
     caseNumber: "",
-    internalReference: "",
     judicialYear: null,
     type: "CIVIL"
   });
@@ -763,7 +761,6 @@ export function CaseQuickIntakePage() {
           clientId: resolvedClientId,
           title: caseForm.title.trim(),
           caseNumber: caseForm.caseNumber.trim(),
-          internalReference: toNullable(caseForm.internalReference),
           judicialYear: caseForm.judicialYear
         });
 
@@ -1130,13 +1127,6 @@ export function CaseQuickIntakePage() {
               required
             />
             <div className="grid gap-4 md:grid-cols-2">
-              <Field
-                label={t("labels.internalReference")}
-                value={caseForm.internalReference ?? ""}
-                onChange={(value) =>
-                  setCaseForm({ ...caseForm, internalReference: value })
-                }
-              />
               <Field
                 label={t("labels.judicialYear")}
                 type="number"

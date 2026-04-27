@@ -252,7 +252,7 @@ export function ImportPage() {
                   const headers =
                     entityType === "clients"
                       ? "name,type,phone,email,nationalId,governorate"
-                      : "title,caseNumber,type,status,internalReference,judicialYear,client_id";
+                      : "title,caseNumber,type,status,judicialYear,client_id";
                   void saveTextToDownloads(
                     `${headers}\n`,
                     `${entityType}-import-template.csv`,

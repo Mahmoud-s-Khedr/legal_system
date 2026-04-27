@@ -349,7 +349,6 @@ export function CaseDetailPage() {
                       body: JSON.stringify({
                         title: v,
                         caseNumber: caseItem.caseNumber,
-                        internalReference: caseItem.internalReference,
                         judicialYear: caseItem.judicialYear,
                         type: caseItem.type,
                         clientId: caseItem.clientId

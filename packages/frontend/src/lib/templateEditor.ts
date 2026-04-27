@@ -6,7 +6,7 @@ export interface PlaceholderDefinition {
 export const TEMPLATE_PLACEHOLDERS: PlaceholderDefinition[] = [
   { key: "caseName", labelKey: "templates.placeholder.caseName" },
   { key: "caseNumber", labelKey: "templates.placeholder.caseNumber" },
-  { key: "internalReference", labelKey: "templates.placeholder.internalReference" },
+  { key: "legalReference", labelKey: "templates.placeholder.internalReference" },
   { key: "clientName", labelKey: "templates.placeholder.clientName" },
   { key: "clientNameAr", labelKey: "templates.placeholder.clientNameAr" },
   { key: "courtName", labelKey: "templates.placeholder.courtName" },

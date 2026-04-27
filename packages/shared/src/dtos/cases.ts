@@ -49,7 +49,6 @@ export interface CaseDto {
   clientId: string | null;
   title: string;
   caseNumber: string;
-  internalReference: string | null;
   judicialYear: number | null;
   type: string;
   status: CaseStatus;
@@ -67,7 +66,6 @@ export interface CreateCaseDto {
   clientId: string;
   title: string;
   caseNumber: string;
-  internalReference?: string | null;
   judicialYear?: number | null;
   type: string;
 }

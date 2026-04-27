@@ -90,7 +90,6 @@ function makeCaseRecord(overrides: Partial<Record<string, unknown>> = {}) {
     id: "case-1",
     title: "Test Case",
     caseNumber: "2026/001",
-    internalReference: null,
     judicialYear: 2026,
     type: "CIVIL",
     courtName: "Cairo Court",

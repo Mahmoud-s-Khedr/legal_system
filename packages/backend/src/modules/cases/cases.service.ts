@@ -99,7 +99,6 @@ function mapCase(caseRecord: {
   clientId: string | null;
   title: string;
   caseNumber: string;
-  internalReference: string | null;
   judicialYear: number | null;
   type: string;
   status: CaseStatus;
@@ -152,7 +151,6 @@ function mapCase(caseRecord: {
     clientId: caseRecord.clientId,
     title: caseRecord.title,
     caseNumber: caseRecord.caseNumber,
-    internalReference: caseRecord.internalReference,
     judicialYear: caseRecord.judicialYear,
     type: caseRecord.type,
     status: caseRecord.status as SharedCaseStatus,
@@ -278,9 +276,35 @@ export async function listCases(
                 }
               },
               {
-                internalReference: {
-                  contains: candidate,
-                  mode: "insensitive" as const
+                legalReferences: {
+                  some: {
+                    OR: [
+                      {
+                        document: {
+                          title: {
+                            contains: candidate,
+                            mode: "insensitive" as const
+                          }
+                        }
+                      },
+                      {
+                        article: {
+                          articleNumber: {
+                            contains: candidate,
+                            mode: "insensitive" as const
+                          }
+                        }
+                      },
+                      {
+                        article: {
+                          title: {
+                            contains: candidate,
+                            mode: "insensitive" as const
+                          }
+                        }
+                      }
+                    ]
+                  }
                 }
               }
             ])
@@ -330,7 +354,6 @@ export async function createCase(
         clientId: payload.clientId,
         title: payload.title,
         caseNumber: payload.caseNumber,
-        internalReference: payload.internalReference ?? null,
         judicialYear: payload.judicialYear ?? null,
         type: payload.type,
         status: CaseStatus.ACTIVE,
@@ -392,7 +415,6 @@ export async function updateCase(
         clientId: payload.clientId ?? existing.clientId,
         title: payload.title,
         caseNumber: payload.caseNumber,
-        internalReference: payload.internalReference ?? null,
         judicialYear: payload.judicialYear ?? null,
         type: payload.type
       },

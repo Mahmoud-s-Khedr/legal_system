@@ -63,7 +63,6 @@ const caseRowSchema = z.object({
   caseNumber: z.string().min(1, "Case number is required"),
   type: z.string().default("CIVIL"),
   status: z.enum(["ACTIVE", "SUSPENDED", "CLOSED", "WON", "LOST", "SETTLED", "ARCHIVED"]).default("ACTIVE"),
-  internalReference: z.string().optional(),
   judicialYear: z.string().optional()
 });
 
@@ -420,7 +419,6 @@ export async function executeCaseImportPreview(
           caseNumber: d.caseNumber,
           type: d.type,
           status: d.status,
-          internalReference: d.internalReference || null,
           judicialYear: d.judicialYear ? Number(d.judicialYear) : null
         }
       });
@@ -488,7 +486,6 @@ export async function executeCaseImport(
           caseNumber: d.caseNumber,
           type: d.type,
           status: d.status,
-          internalReference: d.internalReference || null,
           judicialYear: d.judicialYear ? Number(d.judicialYear) : null
         }
       });

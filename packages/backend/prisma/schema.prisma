@@ -383,7 +383,6 @@ model Case {
   clientId          String              @db.Uuid
   title             String
   caseNumber        String
-  internalReference String?
   judicialYear      Int?
   type              String              @default("CIVIL")
   status            CaseStatus          @default(ACTIVE)
@@ -830,6 +829,8 @@ model CaseLegalReference {
   case       Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
   document   LibraryDocument     @relation(fields: [documentId], references: [id], onDelete: Cascade)
   article    LegislationArticle? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+
+  @@unique([caseId, documentId, articleId])
 }
 
 model ResearchSession {

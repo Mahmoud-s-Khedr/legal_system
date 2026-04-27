@@ -209,7 +209,6 @@ export const caseDtoSchema = {
     clientId: { type: ["string", "null"] },
     title: { type: "string" },
     caseNumber: { type: "string" },
-    internalReference: { type: ["string", "null"] },
     judicialYear: { type: ["number", "null"] },
     type: { type: "string" },
     status: { type: "string" },

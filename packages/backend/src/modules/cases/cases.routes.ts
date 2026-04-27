@@ -32,7 +32,6 @@ const caseSchema = z.object({
   clientId: z.string().uuid(),
   title: z.string().min(2),
   caseNumber: z.string().min(1),
-  internalReference: z.string().nullable().optional(),
   judicialYear: z.number().int().nullable().optional(),
   type: z.string().min(1)
 });
@@ -41,7 +40,6 @@ const caseUpdateSchema = z.object({
   clientId: z.string().uuid().optional(),
   title: z.string().min(2),
   caseNumber: z.string().min(1),
-  internalReference: z.string().nullable().optional(),
   judicialYear: z.number().int().nullable().optional(),
   type: z.string().min(1)
 });

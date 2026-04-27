@@ -101,13 +101,57 @@ export async function globalSearch(
       OR: searchCandidates.flatMap((candidate) => [
         { title: { contains: candidate, mode: "insensitive" as const } },
         { caseNumber: { contains: candidate, mode: "insensitive" as const } },
-        { internalReference: { contains: candidate, mode: "insensitive" as const } }
+        {
+          legalReferences: {
+            some: {
+              OR: [
+                {
+                  document: {
+                    title: {
+                      contains: candidate,
+                      mode: "insensitive" as const
+                    }
+                  }
+                },
+                {
+                  article: {
+                    articleNumber: {
+                      contains: candidate,
+                      mode: "insensitive" as const
+                    }
+                  }
+                },
+                {
+                  article: {
+                    title: {
+                      contains: candidate,
+                      mode: "insensitive" as const
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
       ])
     };
 
     const cases = await prisma.case.findMany({
       where: caseWhere,
-      select: { id: true, title: true, caseNumber: true, status: true },
+      select: {
+        id: true,
+        title: true,
+        caseNumber: true,
+        status: true,
+        legalReferences: {
+          select: {
+            document: { select: { title: true } },
+            article: { select: { articleNumber: true, title: true } }
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1
+        }
+      },
       orderBy: { updatedAt: "desc" },
       take: perEntityLimit
     });
@@ -117,11 +161,20 @@ export async function globalSearch(
         entityType: "case",
         id: c.id,
         title: c.title,
-        snippet: `${c.caseNumber}${c.status ? ` · ${c.status}` : ""}`,
+        snippet:
+          c.legalReferences[0]?.article?.articleNumber &&
+          c.legalReferences[0]?.document?.title
+            ? `${c.caseNumber} · ${c.legalReferences[0].document.title} § ${c.legalReferences[0].article.articleNumber}`
+            : c.legalReferences[0]?.document?.title
+              ? `${c.caseNumber} · ${c.legalReferences[0].document.title}`
+              : `${c.caseNumber}${c.status ? ` · ${c.status}` : ""}`,
         url: `/app/cases/${c.id}`,
         rank: rankScore(normalizedQuery, searchCandidates, [
           c.title,
           c.caseNumber,
+          c.legalReferences[0]?.document?.title,
+          c.legalReferences[0]?.article?.articleNumber,
+          c.legalReferences[0]?.article?.title,
           c.status ?? undefined
         ])
       }))
