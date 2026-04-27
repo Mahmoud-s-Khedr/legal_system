@@ -57,6 +57,7 @@ describe("globalSearch", () => {
 
     expect(results.map((result) => result.id)).toEqual(["doc-strong", "doc-weak"]);
     expect(results[0]?.rank).toBeGreaterThan(results[1]?.rank ?? 0);
+    expect(results[0]?.url).toBe("/app/documents/doc-strong");
   });
 
   it("uses deterministic title sorting when ranks are equal", async () => {

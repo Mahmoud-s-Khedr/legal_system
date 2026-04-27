@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { PermissionGate } from "../components/PermissionGate";
 import { DocumentsPage } from "./app/DocumentsPage";
 import { DocumentUploadPage } from "./app/DocumentUploadPage";
+import { DocumentDetailPage } from "./app/DocumentDetailPage";
 import { SearchPage } from "./app/SearchPage";
 import { LibraryPage } from "./app/library/LibraryPage";
 import { LibraryDocumentPage } from "./app/library/LibraryDocumentPage";
@@ -15,6 +16,16 @@ export function createDocumentRoutes(appRoute: AnyRoute) {
     getParentRoute: () => appRoute,
     path: "/documents",
     component: DocumentsPage
+  });
+
+  const documentDetailRoute = createRoute({
+    getParentRoute: () => appRoute,
+    path: "/documents/$documentId",
+    component: () =>
+      createElement(PermissionGate, {
+        permission: "documents:read",
+        children: createElement(DocumentDetailPage)
+      })
   });
 
   const documentUploadRoute = createRoute({
@@ -64,6 +75,7 @@ export function createDocumentRoutes(appRoute: AnyRoute) {
 
   return {
     documentsRoute,
+    documentDetailRoute,
     documentUploadRoute,
     searchRoute,
     libraryRoute,

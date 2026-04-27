@@ -41,6 +41,7 @@ import { RoleCreatePage } from "./routes/app/RoleCreatePage";
 import { RoleEditPage } from "./routes/app/RoleEditPage";
 import { DocumentsPage } from "./routes/app/DocumentsPage";
 import { DocumentUploadPage } from "./routes/app/DocumentUploadPage";
+import { DocumentDetailPage } from "./routes/app/DocumentDetailPage";
 import { SearchPage } from "./routes/app/SearchPage";
 import { InvoicesPage } from "./routes/app/InvoicesPage";
 import { InvoiceCreatePage } from "./routes/app/InvoiceCreatePage";
@@ -406,6 +407,16 @@ const documentsRoute = createRoute({
   component: DocumentsPage
 });
 
+const documentDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/documents/$documentId",
+  component: () => (
+    <PermissionGate permission="documents:read">
+      <DocumentDetailPage />
+    </PermissionGate>
+  )
+});
+
 const documentUploadRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/documents/new",
@@ -679,6 +690,7 @@ const routeTree = rootRoute.addChildren([
     roleCreateRoute,
     roleEditRoute,
     documentsRoute,
+    documentDetailRoute,
     documentUploadRoute,
     searchRoute,
     invoicesRoute,
