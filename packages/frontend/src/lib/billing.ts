@@ -189,11 +189,11 @@ export function useCreateExpense() {
   });
 }
 
-export function useUpdateExpense(id: string) {
+export function useUpdateExpense() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: UpdateExpenseDto) =>
-      apiFetch<{ id: string }>(`/api/expenses/${id}`, { method: "PUT", body: JSON.stringify(dto) }),
+    mutationFn: ({ id, data }: { id: string; data: UpdateExpenseDto }) =>
+      apiFetch<{ id: string }>(`/api/expenses/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["expenses"] });
       void qc.invalidateQueries({ queryKey: ["billing-summary"] });

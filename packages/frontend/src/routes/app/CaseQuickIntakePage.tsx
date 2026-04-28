@@ -1,4 +1,11 @@
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent
+} from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   useUnsavedChanges,
@@ -138,6 +145,8 @@ export function normalizeClientPayload(form: ClientFormState): CreateClientDto {
         : null,
     taxNumber:
       form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
+    poaNumber: toNullable(form.poaNumber),
+    internalRef: toNullable(form.internalRef),
     contacts: []
   };
 }
@@ -209,11 +218,11 @@ export function isPartyPristine(party: DraftParty): boolean {
 
 export function isQuickIntakeDirty(state: {
   caseForm: Pick<CreateCaseDto, "title" | "caseNumber"> &
-    Partial<Pick<CreateCaseDto, "type">>;
+    Partial<Pick<CreateCaseDto, "type" | "internalRef">>;
   statusForm?: { status: CaseStatus; note: string };
   existingClientId: string;
   initialExistingClientId?: string;
-  clientForm: Pick<ClientFormState, "name">;
+  clientForm: Pick<ClientFormState, "name" | "poaNumber" | "internalRef">;
   courts: DraftCourt[];
   parties: DraftParty[];
   assignments: DraftAssignment[];
@@ -224,11 +233,14 @@ export function isQuickIntakeDirty(state: {
   return (
     hasText(state.caseForm.title) ||
     hasText(state.caseForm.caseNumber) ||
+    hasText(state.caseForm.internalRef) ||
     (state.caseForm.type ?? "CIVIL") !== "CIVIL" ||
     state.existingClientId !== (state.initialExistingClientId ?? "") ||
     (state.statusForm?.status ?? CaseStatus.ACTIVE) !== CaseStatus.ACTIVE ||
     hasText(state.statusForm?.note) ||
     hasText(state.clientForm.name) ||
+    hasText(state.clientForm.poaNumber) ||
+    hasText(state.clientForm.internalRef) ||
     state.courts.some(
       (court) =>
         hasText(court.courtName) ||
@@ -307,15 +319,21 @@ export function CaseQuickIntakePage() {
     nationalId: "",
     commercialRegister: "",
     taxNumber: "",
+    poaNumber: "",
+    internalRef: "",
     contacts: []
   });
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const dupCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dupCheckSeq = useRef(0);
 
   const [caseForm, setCaseForm] = useState<CreateCaseDto>({
     clientId: search.clientId ?? "",
     title: "",
     caseNumber: "",
     judicialYear: null,
-    type: "CIVIL"
+    type: "CIVIL",
+    internalRef: null
   });
 
   const [statusForm, setStatusForm] = useState<{
@@ -487,6 +505,41 @@ export function CaseQuickIntakePage() {
     caseForm.title.trim() !== "" &&
     caseForm.caseNumber.trim() !== "" &&
     caseForm.type.trim() !== "";
+
+  const checkDuplicate = useCallback(
+    async (q: string, seq: number) => {
+      if (!q.trim()) return;
+      const result = await apiFetch<ClientListResponseDto>(
+        `/api/clients?q=${encodeURIComponent(q.trim())}&limit=1`
+      );
+      if (seq !== dupCheckSeq.current) return;
+      if (result.items.length > 0) {
+        setDuplicateWarning(
+          t("clients.duplicateWarning", { name: result.items[0].name })
+        );
+      } else {
+        setDuplicateWarning(null);
+      }
+    },
+    [t]
+  );
+
+  function scheduleDuplicateCheck(q: string) {
+    if (dupCheckTimer.current) clearTimeout(dupCheckTimer.current);
+    setDuplicateWarning(null);
+    dupCheckSeq.current += 1;
+    const seq = dupCheckSeq.current;
+    dupCheckTimer.current = setTimeout(() => {
+      void checkDuplicate(q, seq);
+    }, 500);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (dupCheckTimer.current) clearTimeout(dupCheckTimer.current);
+      dupCheckSeq.current += 1;
+    };
+  }, []);
 
   function addCourtRow() {
     setCourts((prev) => [...prev, emptyCourt()]);
@@ -988,11 +1041,13 @@ export function CaseQuickIntakePage() {
                 <Field
                   label={t("labels.name")}
                   value={clientForm.name}
-                  onChange={(value) =>
-                    setClientForm({ ...clientForm, name: value })
-                  }
+                  onChange={(value) => {
+                    setClientForm({ ...clientForm, name: value });
+                    scheduleDuplicateCheck(value);
+                  }}
                   required
                 />
+                {duplicateWarning ? <FormAlert message={duplicateWarning} variant="info" /> : null}
                 <SelectField
                   label={t("labels.type")}
                   value={clientForm.type}
@@ -1081,6 +1136,24 @@ export function CaseQuickIntakePage() {
                     />
                   </div>
                 ) : null}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field
+                    dir="ltr"
+                    label={t("labels.poaNumber")}
+                    value={clientForm.poaNumber ?? ""}
+                    onChange={(value) =>
+                      setClientForm({ ...clientForm, poaNumber: value })
+                    }
+                  />
+                  <Field
+                    dir="ltr"
+                    label={t("labels.internalRef")}
+                    value={clientForm.internalRef ?? ""}
+                    onChange={(value) =>
+                      setClientForm({ ...clientForm, internalRef: value })
+                    }
+                  />
+                </div>
               </>
             )}
           </div>
@@ -1125,6 +1198,14 @@ export function CaseQuickIntakePage() {
                     judicialYear: Number.isNaN(parsed) ? null : parsed
                   });
                 }}
+              />
+              <Field
+                dir="ltr"
+                label={t("labels.internalRef")}
+                value={caseForm.internalRef ?? ""}
+                onChange={(value) =>
+                  setCaseForm({ ...caseForm, internalRef: value || null })
+                }
               />
             </div>
             <SelectField

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { InvoiceStatus } from "@elms/shared";
 import {
@@ -10,8 +10,9 @@ import {
   useApplyInvoiceCredit,
   useClientCreditBalance
 } from "../../lib/billing";
-import { apiDownload } from "../../lib/api";
+import { apiDownload, apiFetch } from "../../lib/api";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
+import { confirmAction } from "../../lib/dialog";
 import { useLookupOptions } from "../../lib/lookups";
 import i18n from "../../i18n";
 import {
@@ -27,6 +28,7 @@ import { useToastStore } from "../../store/toastStore";
 
 export function InvoiceDetailPage() {
   const { invoiceId } = useParams({ from: "/app/invoices/$invoiceId" });
+  const navigate = useNavigate();
   const { t } = useTranslation("app");
   const {
     data: invoice,
@@ -108,6 +110,7 @@ export function InvoiceDetailPage() {
   }
 
   const canIssue = invoice.status === InvoiceStatus.DRAFT;
+  const canDelete = invoice.status === InvoiceStatus.DRAFT;
   const canVoid = invoice.status !== InvoiceStatus.VOID;
   const canPay =
     invoice.status === InvoiceStatus.ISSUED ||
@@ -133,6 +136,23 @@ export function InvoiceDetailPage() {
       addToast(message, "error");
     } finally {
       setIsDownloadingPdf(false);
+    }
+  }
+
+  async function handleDeleteInvoice() {
+    const approved = await confirmAction({
+      title: t("actions.confirmDelete"),
+      content: t("actions.deleteConfirmMessage"),
+      okButtonProps: { danger: true }
+    });
+    if (!approved) return;
+    try {
+      setActionError("");
+      await apiFetch(`/api/invoices/${invoiceId}`, { method: "DELETE" });
+      addToast(t("messages.saved"), "success");
+      void navigate({ to: "/app/invoices" });
+    } catch (error) {
+      setActionError((error as Error)?.message ?? t("errors.fallback"));
     }
   }
 
@@ -210,6 +230,17 @@ export function InvoiceDetailPage() {
                 className="rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
               >
                 {t("billing.void")}
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={() => {
+                  void handleDeleteInvoice();
+                }}
+                className="rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                type="button"
+              >
+                {t("actions.delete")}
               </button>
             )}
           </div>

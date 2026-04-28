@@ -33,6 +33,12 @@ You are a legal research assistant specializing in Egyptian and Middle Eastern l
 Assist lawyers with research and legal analysis. When sources are provided, cite them explicitly.
 If uncertain, say so clearly rather than providing unverified information.`;
 
+type UsageCacheValue = {
+  expiresAt: number;
+  value: { allowed: boolean; used: number; limit: number };
+};
+const usageCache = new Map<string, UsageCacheValue>();
+
 function buildSystemPromptWithSources(excerpts: RetrievedExcerpt[]): string {
   let prompt = SYSTEM_PROMPT;
 
@@ -86,6 +92,14 @@ export async function deleteSession(actor: SessionUser, sessionId: string): Prom
 // ── Usage tracking ───────────────────────────────────────────────────────────
 
 export async function checkUsageLimit(firmId: string): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const env = loadEnv();
+  const now = Date.now();
+  const cacheKey = `${firmId}:${new Date().toISOString().slice(0, 7)}`;
+  const cached = usageCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
   const editionKey = await inTenantTransaction(firmId, async (tx) => getFirmEditionKey(tx, firmId));
 
   if (!hasEditionFeature(editionKey, "ai_research")) {
@@ -93,7 +107,6 @@ export async function checkUsageLimit(firmId: string): Promise<{ allowed: boolea
   }
 
   const policyLimit = getAiMonthlyLimit(editionKey) ?? 0;
-  const env = loadEnv();
   const limit = env.AI_MONTHLY_LIMIT === 0 ? policyLimit : Math.min(env.AI_MONTHLY_LIMIT, policyLimit);
   if (limit === 0) return { allowed: true, used: 0, limit: 0 };
 
@@ -105,7 +118,12 @@ export async function checkUsageLimit(firmId: string): Promise<{ allowed: boolea
     countFirmUserResearchMessagesSince(tx, { firmId, startOfMonth, role: ResearchRole.USER })
   );
 
-  return { allowed: used < limit, used, limit };
+  const value = { allowed: used < limit, used, limit };
+  usageCache.set(cacheKey, {
+    value,
+    expiresAt: now + env.RESEARCH_USAGE_CACHE_TTL_MS
+  });
+  return value;
 }
 
 // ── Message streaming ────────────────────────────────────────────────────────
@@ -138,6 +156,19 @@ export async function* sendMessage(
   await inTenantTransaction(actor.firmId, async (tx) =>
     createResearchMessage(tx, { sessionId, role: ResearchRole.USER, content: userContent })
   );
+  const usageKey = `${actor.firmId}:${new Date().toISOString().slice(0, 7)}`;
+  const cachedUsage = usageCache.get(usageKey);
+  if (cachedUsage) {
+    const nextUsed = cachedUsage.value.used + 1;
+    usageCache.set(usageKey, {
+      ...cachedUsage,
+      value: {
+        ...cachedUsage.value,
+        used: nextUsed,
+        allowed: cachedUsage.value.limit === 0 ? true : nextUsed < cachedUsage.value.limit
+      }
+    });
+  }
 
   // Retrieve context from library
   const excerpts = await inTenantTransaction(actor.firmId, async (tx) =>

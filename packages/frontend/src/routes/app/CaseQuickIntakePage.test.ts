@@ -14,11 +14,14 @@ function baseState(): Parameters<typeof isQuickIntakeDirty>[0] {
   return {
     caseForm: {
       title: "",
-      caseNumber: ""
+      caseNumber: "",
+      internalRef: ""
     },
     existingClientId: "",
     clientForm: {
-      name: ""
+      name: "",
+      poaNumber: "",
+      internalRef: ""
     },
     courts: [
       {
@@ -100,13 +103,17 @@ describe("quick intake dirty state", () => {
         nationalId: " 123 ",
         commercialRegister: " 999 ",
         taxNumber: " 888 ",
+        poaNumber: " poa ",
+        internalRef: " ref ",
         contacts: []
       })
     ).toMatchObject({
       name: "ACME",
       nationalId: null,
       commercialRegister: "999",
-      taxNumber: "888"
+      taxNumber: "888",
+      poaNumber: "poa",
+      internalRef: "ref"
     });
   });
 

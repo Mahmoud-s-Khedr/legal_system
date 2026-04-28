@@ -26,6 +26,8 @@
     "test:load": "k6 run tests/load/api-baseline.js",
     "test:load:auth": "k6 run tests/load/auth.js",
     "test:load:upload": "k6 run tests/load/document-upload.js",
+    "perf:baseline": "node ./scripts/perf/run-baselines.mjs",
+    "perf:check-regression": "node ./scripts/perf/check-no-regression.mjs",
     "format:check": "prettier --check .",
     "prisma:generate": "pnpm --filter @elms/backend prisma generate",
     "prisma:seed": "pnpm --filter @elms/backend prisma db seed",

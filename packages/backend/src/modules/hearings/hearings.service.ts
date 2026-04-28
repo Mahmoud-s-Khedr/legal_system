@@ -92,6 +92,7 @@ export async function listHearings(
   return inTenantTransaction(actor.firmId, async (tx) => {
     const where: Prisma.CaseSessionWhereInput = {
       case: { firmId: actor.firmId, deletedAt: null },
+      deletedAt: null,
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
       ...(filters.assignedLawyerId ? { assignedLawyerId: filters.assignedLawyerId } : {}),
       ...buildSessionDatetimeFilter(filters)
@@ -329,5 +330,32 @@ export async function updateHearingOutcome(
     });
 
     return mapHearing(hearing, null);
+  });
+}
+
+export async function deleteHearing(
+  actor: SessionUser,
+  hearingId: string,
+  audit: AuditContext
+) {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const existing = await getFirmHearingByIdOrThrow(tx, actor.firmId, hearingId);
+
+    await tx.caseSession.update({
+      where: { id: hearingId },
+      data: { deletedAt: new Date() }
+    });
+
+    await writeAuditLog(tx, audit, {
+      action: "hearings.delete",
+      entityType: "CaseSession",
+      entityId: hearingId,
+      oldData: {
+        caseId: existing.caseId,
+        sessionDatetime: existing.sessionDatetime.toISOString()
+      }
+    });
+
+    return { success: true as const };
   });
 }

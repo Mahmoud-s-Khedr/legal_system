@@ -10,6 +10,7 @@ import type { AppEnv } from "../../config/env.js";
 import {
   checkHearingConflict,
   createHearing,
+  deleteHearing,
   getHearing,
   listHearings,
   updateHearingOutcome,
@@ -153,5 +154,15 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
         hearingOutcomeSchema.parse(request.body),
         getAuditContext(request)
       )
+  );
+
+  app.delete(
+    "/api/hearings/:id",
+    {
+      schema: { response: { 200: { type: "object", properties: { success: { type: "boolean" } }, required: ["success"], additionalProperties: false } } },
+      preHandler: [requireAuth, requirePermission("hearings:delete")]
+    },
+    async (request) =>
+      deleteHearing(request.sessionUser!, idParamsSchema.parse(request.params).id, getAuditContext(request))
   );
 }

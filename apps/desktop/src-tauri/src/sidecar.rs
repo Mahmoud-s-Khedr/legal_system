@@ -25,7 +25,7 @@ const DESKTOP_JWT_PRIVATE_KEY_FILE: &str = "jwt-private.pem";
 const DESKTOP_JWT_PUBLIC_KEY_FILE: &str = "jwt-public.pem";
 const DESKTOP_DB_MARKER_FILE: &str = "desktop-database-name";
 const MIGRATION_VERSION_MARKER_FILE: &str = "migration_version";
-const LATEST_MIGRATION_NAME: &str = "0021_billing_credit_and_issued_at";
+const LATEST_MIGRATION_NAME: &str = "0022_internal_ref_and_soft_deletes";
 const FAILURE_CODE_POSTGRES_CLUSTER_VERSION_MISMATCH: &str = "postgres_cluster_version_mismatch";
 const FAILURE_CODE_POSTGRES_STARTUP_FAILED: &str = "postgres_startup_failed";
 const FAILURE_CODE_PREFIX: &str = "__ELMS_FAILURE_CODE__=";
@@ -74,6 +74,13 @@ fn log_bootstrap_checkpoint(
         &format!(
             "checkpoint stage={stage} step={step} action={action} result={result} detail={detail}"
         ),
+    );
+}
+
+fn log_startup_milestone(log_file: &Path, milestone: &str, elapsed_ms: u128) {
+    log_startup_diagnostic(
+        log_file,
+        &format!("milestone name={milestone} elapsedMs={elapsed_ms}"),
     );
 }
 
@@ -1022,6 +1029,11 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             postgres_phase_started_at.elapsed().as_millis()
         ),
     );
+    log_startup_milestone(
+        &bootstrap_log_file,
+        "postgres_ready",
+        postgres_phase_started_at.elapsed().as_millis(),
+    );
     log_startup_diagnostic(
         &bootstrap_log_file,
         &format!(
@@ -1135,6 +1147,11 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             migration_phase_started_at.elapsed().as_millis()
         ),
     );
+    log_startup_milestone(
+        &bootstrap_log_file,
+        "migrations_complete",
+        migration_phase_started_at.elapsed().as_millis(),
+    );
 
     let backend_port = desktop_env
         .get("BACKEND_PORT")
@@ -1228,6 +1245,11 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             spawn_started_at.elapsed().as_millis()
         ),
     );
+    log_startup_milestone(
+        &bootstrap_log_file,
+        "backend_spawned",
+        spawn_started_at.elapsed().as_millis(),
+    );
 
     log_bootstrap_checkpoint(
         &bootstrap_log_file,
@@ -1262,6 +1284,11 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             health_started_at.elapsed().as_millis()
         ),
     );
+    log_startup_milestone(
+        &bootstrap_log_file,
+        "backend_healthy",
+        health_started_at.elapsed().as_millis(),
+    );
 
     log_bootstrap_checkpoint(
         &bootstrap_log_file,
@@ -1285,6 +1312,11 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             "Desktop runtime bootstrap completed in {}ms total",
             bootstrap_started_at.elapsed().as_millis()
         ),
+    );
+    log_startup_milestone(
+        &bootstrap_log_file,
+        "desktop_runtime_ready",
+        bootstrap_started_at.elapsed().as_millis(),
     );
     log_startup_diagnostic(
         &bootstrap_log_file,

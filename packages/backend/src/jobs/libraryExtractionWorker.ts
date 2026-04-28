@@ -12,7 +12,7 @@ import type { LibraryExtractionJobData } from "./libraryExtractionQueue.js";
 const env = loadEnv();
 const storage = createStorageAdapter(env);
 
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = env.EXTRACTION_QUEUE_ATTEMPTS;
 
 const deadLetterQueue = new Queue<LibraryExtractionJobData & { originalJobId: string | undefined; error: string }>(
   "library-extraction-dlq",
@@ -29,7 +29,7 @@ const worker = new Worker<LibraryExtractionJobData>(
   },
   {
     connection: { url: env.REDIS_URL },
-    concurrency: 3,
+    concurrency: env.EXTRACTION_WORKER_CONCURRENCY,
     removeOnComplete: { count: 100 },
     removeOnFail: { count: 100 }
   }

@@ -43,6 +43,8 @@
     "uploadNew": "Téléverser un document",
     "edit": "Modifier",
     "delete": "Supprimer",
+    "confirmDelete": "Confirmer la suppression",
+    "deleteConfirmMessage": "Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.",
     "cancel": "Annuler",
     "newInvoice": "Nouvelle facture",
     "skipToContent": "Aller au contenu principal",
@@ -180,7 +182,8 @@
     "notificationTitle": "Titre de la notification",
     "eventTitle": "Titre de l'événement",
     "partyType": "Type de partie",
-    "poaNumber": "Numéro de procuration"
+    "poaNumber": "Numéro de procuration",
+    "internalRef": "Numéro de série"
   },
   "empty": {
     "noHearings": "Aucune audience",

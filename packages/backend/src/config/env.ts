@@ -75,7 +75,14 @@ const baseSchema = z.object({
   GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
   GOOGLE_OAUTH_REDIRECT_URI: z.string().optional(),
-  GOOGLE_OAUTH_ENCRYPTION_KEY: z.string().optional()
+  GOOGLE_OAUTH_ENCRYPTION_KEY: z.string().optional(),
+  PERFORMANCE_LOGGING_ENABLED: booleanish.default(false),
+  PERFORMANCE_DB_SLOW_QUERY_MS: z.coerce.number().default(200),
+  EXTRACTION_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(3),
+  EXTRACTION_QUEUE_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  EXTRACTION_QUEUE_BACKOFF_MS: z.coerce.number().int().positive().default(5000),
+  RESEARCH_USAGE_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
+  DASHBOARD_CACHE_TTL_MS: z.coerce.number().int().positive().default(5000)
 });
 
 export type AppEnv = z.infer<typeof baseSchema> & {

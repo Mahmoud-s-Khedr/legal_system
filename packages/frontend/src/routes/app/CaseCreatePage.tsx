@@ -34,7 +34,8 @@ export function CaseCreatePage() {
     title: "",
     caseNumber: "",
     judicialYear: null,
-    type: "CIVIL"
+    type: "CIVIL",
+    internalRef: null
   });
 
   const clientsQuery = useQuery({
@@ -50,7 +51,8 @@ export function CaseCreatePage() {
         title: "",
         caseNumber: "",
         judicialYear: null,
-        type: "CIVIL"
+        type: "CIVIL",
+        internalRef: null
       } satisfies CreateCaseDto),
     { bypassBlockRef: bypassRef }
   );
@@ -126,6 +128,11 @@ export function CaseCreatePage() {
             onChange={(value) => setForm({ ...form, caseNumber: value })}
             required
             value={form.caseNumber}
+          />
+          <Field
+            label={t("labels.internalRef")}
+            onChange={(value) => setForm({ ...form, internalRef: value || null })}
+            value={form.internalRef ?? ""}
           />
           <SelectField
             label={t("labels.caseType")}

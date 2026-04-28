@@ -1,10 +1,11 @@
-import { useParams, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import type { ClientDto } from "@elms/shared";
 import { InvoiceStatus } from "@elms/shared";
 import { InlineEditField } from "../../components/InlineEditField";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { useState } from "react";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { EnumBadge } from "../../components/shared/EnumBadge";
 import {
@@ -26,7 +27,9 @@ import { useInvoices } from "../../lib/billing";
 export function ClientDetailPage() {
   const { t } = useTranslation("app");
   const { clientId } = useParams({ from: "/app/clients/$clientId" });
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const clientQuery = useQuery({
     queryKey: ["client", clientId],
     queryFn: () => apiFetch<ClientDto>(`/api/clients/${clientId}`)
@@ -63,6 +66,14 @@ export function ClientDetailPage() {
     });
     await queryClient.invalidateQueries({ queryKey: ["client", clientId] });
   }
+
+  const deleteMutation = useMutation({
+    mutationFn: () => apiFetch(`/api/clients/${clientId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["clients"] });
+      void navigate({ to: "/app/clients" });
+    }
+  });
 
   const client = clientQuery.data;
 
@@ -129,9 +140,41 @@ export function ClientDetailPage() {
             >
               {t("clients.editTitle")}
             </Link>
+            <button
+              className="rounded-2xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+              onClick={() => setShowDeleteConfirm(true)}
+              type="button"
+            >
+              {t("actions.delete")}
+            </button>
           </div>
         }
       />
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <p className="font-semibold">{t("actions.confirmDelete")}</p>
+            <p className="mt-2 text-sm text-slate-500">{t("actions.deleteConfirmMessage")}</p>
+            <div className="mt-5 flex gap-3">
+              <button
+                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate()}
+                type="button"
+              >
+                {t("actions.delete")}
+              </button>
+              <button
+                className="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold"
+                onClick={() => setShowDeleteConfirm(false)}
+                type="button"
+              >
+                {t("actions.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="grid gap-4 xl:grid-cols-3">
         <SectionCard
           title={t("clients.profile")}
@@ -174,6 +217,12 @@ export function ClientDetailPage() {
               <Detail
                 label={t("labels.poaNumber")}
                 value={client.poaNumber}
+              />
+            ) : null}
+            {client.internalRef ? (
+              <Detail
+                label={t("labels.internalRef")}
+                value={client.internalRef}
               />
             ) : null}
           </dl>

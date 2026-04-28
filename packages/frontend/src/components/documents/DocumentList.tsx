@@ -97,7 +97,8 @@ export function DocumentList({
 
   const handleDelete = async (doc: DocumentDto) => {
     const approved = await confirmAction({
-      content: t("actions.delete"),
+      title: t("actions.confirmDelete"),
+      content: t("actions.deleteConfirmMessage"),
       okButtonProps: { danger: true }
     });
     if (!approved) {

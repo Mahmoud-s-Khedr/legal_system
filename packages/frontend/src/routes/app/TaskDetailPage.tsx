@@ -11,6 +11,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { confirmAction } from "../../lib/dialog";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -138,6 +139,24 @@ export function TaskDetailPage() {
       void navigate({ to: "/app/tasks" });
     }
   });
+  const deleteMutation = useMutation({
+    mutationFn: () => apiFetch(`/api/tasks/${taskId}`, { method: "DELETE" }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      void navigate({ to: "/app/tasks" });
+    }
+  });
+
+  async function handleDelete() {
+    const approved = await confirmAction({
+      title: t("actions.confirmDelete"),
+      content: t("actions.deleteConfirmMessage"),
+      okButtonProps: { danger: true }
+    });
+    if (!approved) return;
+    await deleteMutation.mutateAsync();
+  }
 
   function finishAndReturn() {
     if (window.history.length > 1) {
@@ -179,6 +198,16 @@ export function TaskDetailPage() {
         eyebrow={t("tasks.eyebrow")}
         title={taskQuery.data?.title ?? "..."}
         description={t("tasks.editHelp")}
+        actions={
+          <button
+            className="rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+            disabled={deleteMutation.isPending}
+            onClick={() => void handleDelete()}
+            type="button"
+          >
+            {t("actions.delete")}
+          </button>
+        }
       />
       <SectionCard
         title={t("tasks.editTitle")}

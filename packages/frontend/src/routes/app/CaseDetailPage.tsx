@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { InlineHearingForm } from "./InlineHearingForm";
 import { InlineTaskForm } from "./InlineTaskForm";
 import { InlineEditField } from "../../components/InlineEditField";
-import { useParams } from "@tanstack/react-router";
+import { useParams, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CaseRoleOnCase,
@@ -87,8 +87,10 @@ export function CaseDetailPage() {
   const { t } = useTranslation("app");
   const feedback = useMutationFeedback();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { caseId } = useParams({ from: "/app/cases/$caseId" });
   const [activeTab, setActiveTab] = useState<CaseTab>("overview");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [partyForm, setPartyForm] = useState<CreateCasePartyDto>({
     name: "",
     role: "PLAINTIFF",
@@ -243,6 +245,14 @@ export function CaseDetailPage() {
     }
   });
 
+  const deleteCaseMutation = useMutation({
+    mutationFn: () => apiFetch(`/api/cases/${caseId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["cases"] });
+      void navigate({ to: "/app/cases" });
+    }
+  });
+
   const caseItem = caseQuery.data;
 
   const clientQuery = useQuery({
@@ -313,8 +323,44 @@ export function CaseDetailPage() {
         eyebrow={t("cases.detailEyebrow")}
         title={`${caseItem.title} (${caseItem.caseNumber})`}
         description={activeCourt ? activeCourt.courtName : ""}
-        actions={<EnumBadge enumName="CaseStatus" value={caseItem.status} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <EnumBadge enumName="CaseStatus" value={caseItem.status} />
+            <button
+              className="rounded-2xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+              onClick={() => setShowDeleteConfirm(true)}
+              type="button"
+            >
+              {t("actions.delete")}
+            </button>
+          </div>
+        }
       />
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <p className="font-semibold">{t("actions.confirmDelete")}</p>
+            <p className="mt-2 text-sm text-slate-500">{t("actions.deleteConfirmMessage")}</p>
+            <div className="mt-5 flex gap-3">
+              <button
+                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                disabled={deleteCaseMutation.isPending}
+                onClick={() => deleteCaseMutation.mutate()}
+                type="button"
+              >
+                {t("actions.delete")}
+              </button>
+              <button
+                className="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold"
+                onClick={() => setShowDeleteConfirm(false)}
+                type="button"
+              >
+                {t("actions.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="sticky top-[calc(var(--header-height)+8px)] z-10 flex gap-2 overflow-x-auto rounded-xl bg-white/90 pb-1 pt-1 backdrop-blur">
         {caseTabs.map((tab) => (
           <button
@@ -394,6 +440,9 @@ export function CaseDetailPage() {
             </div>
             <Detail label={t("labels.caseType")} value={caseTypeLabel} />
             <Detail label={t("labels.client")} value={clientDisplayName} />
+            {caseItem.internalRef ? (
+              <Detail label={t("labels.internalRef")} value={caseItem.internalRef} />
+            ) : null}
             <Detail
               label={t("labels.hearings")}
               value={String(caseItem.hearingCount)}

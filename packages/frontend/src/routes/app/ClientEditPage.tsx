@@ -54,7 +54,8 @@ function normalizePayload(form: CreateClientDto): CreateClientDto {
         : null,
     taxNumber:
       form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
-    poaNumber: toNullable(form.poaNumber)
+    poaNumber: toNullable(form.poaNumber),
+    internalRef: toNullable(form.internalRef)
   };
 }
 
@@ -90,6 +91,7 @@ export function ClientEditPage() {
     commercialRegister: "",
     taxNumber: "",
     poaNumber: "",
+    internalRef: "",
     contacts: []
   });
   const loadedFormRef = useRef<CreateClientDto | null>(null);
@@ -120,6 +122,7 @@ export function ClientEditPage() {
         commercialRegister: c.commercialRegister ?? "",
         taxNumber: c.taxNumber ?? "",
         poaNumber: c.poaNumber ?? "",
+        internalRef: c.internalRef ?? "",
         contacts: c.contacts ?? []
       };
       setForm(loaded);
@@ -271,6 +274,11 @@ export function ClientEditPage() {
             label={t("labels.poaNumber")}
             onChange={(value) => setForm({ ...form, poaNumber: value })}
             value={form.poaNumber ?? ""}
+          />
+          <Field
+            label={t("labels.internalRef")}
+            onChange={(value) => setForm({ ...form, internalRef: value })}
+            value={form.internalRef ?? ""}
           />
           <FormExitActions
             cancelTo="/app/clients/$clientId"

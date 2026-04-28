@@ -1,0 +1,50 @@
+name: performance-smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"
+
+jobs:
+  k6-smoke:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.PERF_BASE_URL != '' && secrets.PERF_ADMIN_EMAIL != '' && secrets.PERF_ADMIN_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Run API baseline suite
+        run: k6 run --summary-export .logs/perf-api-baseline.summary.json tests/load/api-baseline.js
+        env:
+          BASE_URL: ${{ secrets.PERF_BASE_URL }}
+          ADMIN_EMAIL: ${{ secrets.PERF_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PERF_ADMIN_PASSWORD }}
+
+      - name: Run auth suite
+        run: k6 run --summary-export .logs/perf-auth.summary.json tests/load/auth.js
+        env:
+          BASE_URL: ${{ secrets.PERF_BASE_URL }}
+          ADMIN_EMAIL: ${{ secrets.PERF_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PERF_ADMIN_PASSWORD }}
+
+      - name: Run document upload suite
+        run: k6 run --summary-export .logs/perf-document-upload.summary.json tests/load/document-upload.js
+        env:
+          BASE_URL: ${{ secrets.PERF_BASE_URL }}
+          ADMIN_EMAIL: ${{ secrets.PERF_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PERF_ADMIN_PASSWORD }}
+
+      - name: Upload performance summaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-smoke-summaries
+          path: .logs/*.summary.json
+          if-no-files-found: error
+

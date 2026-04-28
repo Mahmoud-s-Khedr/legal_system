@@ -36,6 +36,7 @@ function mapClient(client: ClientRecord): ClientDto {
     commercialRegister: client.commercialRegister,
     taxNumber: client.taxNumber,
     poaNumber: (client as ClientRecord & { poaNumber?: string | null }).poaNumber ?? null,
+    internalRef: (client as ClientRecord & { internalRef?: string | null }).internalRef ?? null,
     contacts: client.contacts,
     linkedCaseCount: client._count.parties,
     invoiceCount: client._count.invoices,

@@ -33,7 +33,8 @@ const caseSchema = z.object({
   title: z.string().min(2),
   caseNumber: z.string().min(1),
   judicialYear: z.number().int().nullable().optional(),
-  type: z.string().min(1)
+  type: z.string().min(1),
+  internalRef: z.string().nullable().optional()
 });
 
 const caseUpdateSchema = z.object({
@@ -41,7 +42,8 @@ const caseUpdateSchema = z.object({
   title: z.string().min(2),
   caseNumber: z.string().min(1),
   judicialYear: z.number().int().nullable().optional(),
-  type: z.string().min(1)
+  type: z.string().min(1),
+  internalRef: z.string().nullable().optional()
 });
 
 const caseStatusSchema = z.object({

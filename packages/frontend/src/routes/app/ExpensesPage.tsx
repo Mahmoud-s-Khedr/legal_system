@@ -7,7 +7,8 @@ import { toCaseSelectOption } from "../../lib/caseOptions";
 import {
   useExpenses,
   useCreateExpense,
-  useDeleteExpense
+  useDeleteExpense,
+  useUpdateExpense
 } from "../../lib/billing";
 import { confirmAction } from "../../lib/dialog";
 import { useTableQueryState } from "../../lib/tableQueryState";
@@ -49,6 +50,7 @@ export function ExpensesPage() {
   });
   const createExpense = useCreateExpense();
   const deleteExpense = useDeleteExpense();
+  const updateExpense = useUpdateExpense();
 
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
@@ -57,6 +59,12 @@ export function ExpensesPage() {
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCategory, setEditCategory] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCaseId, setEditCaseId] = useState("");
+  const [editError, setEditError] = useState("");
   const casesQuery = useQuery({
     queryKey: ["cases"],
     queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=200")
@@ -82,6 +90,26 @@ export function ExpensesPage() {
       setShowForm(false);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t("errors.fallback"));
+    }
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    setEditError("");
+    try {
+      await updateExpense.mutateAsync({
+        id: editingId,
+        data: {
+          category: editCategory,
+          amount: editAmount,
+          description: editDescription || null,
+          caseId: editCaseId || null
+        }
+      });
+      setEditingId(null);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : t("errors.fallback"));
     }
   }
 
@@ -236,42 +264,81 @@ export function ExpensesPage() {
                 <TableBody>
                   {data.items.map((exp) => (
                     <TableRow key={exp.id}>
-                      <TableCell>{exp.category}</TableCell>
-                      <TableCell>{exp.description ?? "—"}</TableCell>
-                      <TableCell>{exp.caseTitle ?? "—"}</TableCell>
-                      <TableCell align="end">
-                        {formatCurrency(exp.amount)}
-                      </TableCell>
-                      <TableCell align="end">
-                        <button
-                          onClick={() => {
-                            void (async () => {
-                              const approved = await confirmAction({
-                                content: t(
-                                  "billing.deleteExpenseConfirm",
-                                  "Delete this expense?"
-                                )
-                              });
-                              if (!approved) {
-                                return;
-                              }
-                              try {
-                                setDeleteError("");
-                                await deleteExpense.mutateAsync(exp.id);
-                              } catch (error) {
-                                setDeleteError(
-                                  (error as Error)?.message ??
-                                    t("errors.fallback")
-                                );
-                              }
-                            })();
-                          }}
-                          disabled={deleteExpense.isPending}
-                          className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          {t("actions.delete")}
-                        </button>
-                      </TableCell>
+                      {editingId === exp.id ? (
+                        <td colSpan={5} className="px-3 py-2">
+                          <form onSubmit={(e) => void handleUpdate(e)} className="flex flex-wrap items-end gap-2 py-1">
+                            <div>
+                              <label className="block text-xs font-medium">{t("billing.category")}</label>
+                              <input required className="mt-1 rounded-xl border border-slate-200 px-2 py-1 text-sm" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium">{t("billing.amount")}</label>
+                              <input required type="number" min="0.01" step="0.01" className="mt-1 w-28 rounded-xl border border-slate-200 px-2 py-1 text-sm" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium">{t("billing.description")}</label>
+                              <input className="mt-1 w-full rounded-xl border border-slate-200 px-2 py-1 text-sm" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                            </div>
+                            {editError && <p className="w-full text-xs text-red-600">{editError}</p>}
+                            <button type="submit" disabled={updateExpense.isPending} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60">{t("actions.save")}</button>
+                            <button type="button" onClick={() => setEditingId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">{t("actions.cancel")}</button>
+                          </form>
+                        </td>
+                      ) : (
+                        <>
+                          <TableCell>{exp.category}</TableCell>
+                          <TableCell>{exp.description ?? "—"}</TableCell>
+                          <TableCell>{exp.caseTitle ?? "—"}</TableCell>
+                          <TableCell align="end">
+                            {formatCurrency(exp.amount)}
+                          </TableCell>
+                          <TableCell align="end">
+                            <div className="flex justify-end gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditingId(exp.id);
+                                  setEditCategory(exp.category);
+                                  setEditAmount(String(exp.amount));
+                                  setEditDescription(exp.description ?? "");
+                                  setEditCaseId(exp.caseId ?? "");
+                                  setEditError("");
+                                }}
+                                className="rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                              >
+                                {t("actions.edit")}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  void (async () => {
+                                    const approved = await confirmAction({
+                                      content: t(
+                                        "billing.deleteExpenseConfirm",
+                                        "Delete this expense?"
+                                      )
+                                    });
+                                    if (!approved) {
+                                      return;
+                                    }
+                                    try {
+                                      setDeleteError("");
+                                      await deleteExpense.mutateAsync(exp.id);
+                                    } catch (error) {
+                                      setDeleteError(
+                                        (error as Error)?.message ??
+                                          t("errors.fallback")
+                                      );
+                                    }
+                                  })();
+                                }}
+                                disabled={deleteExpense.isPending}
+                                className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {t("actions.delete")}
+                              </button>
+                            </div>
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

@@ -7,6 +7,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { useToastStore } from "../../store/toastStore";
@@ -84,6 +85,27 @@ export function HearingsPage() {
         `/api/hearings?${table.toApiQueryString()}`
       )
   });
+  const queryClient = useQueryClient();
+  const addToast = useToastStore((state) => state.addToast);
+  const deleteHearingMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/hearings/${id}`, { method: "DELETE" }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["hearings-management"] });
+    },
+    onError: (error: Error) => {
+      addToast(error.message || t("errors.fallback"), "error");
+    }
+  });
+
+  async function handleDelete(hearingId: string) {
+    const approved = await confirmAction({
+      title: t("actions.confirmDelete"),
+      content: t("actions.deleteConfirmMessage"),
+      okButtonProps: { danger: true }
+    });
+    if (!approved) return;
+    await deleteHearingMutation.mutateAsync(hearingId);
+  }
 
   return (
     <div className="space-y-6">
@@ -182,13 +204,23 @@ export function HearingsPage() {
                 }
               ]}
               actions={(item) => (
-                <Link
-                  className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  params={{ hearingId: item.id }}
-                  to="/app/hearings/$hearingId/edit"
-                >
-                  {t("actions.edit")}
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    params={{ hearingId: item.id }}
+                    to="/app/hearings/$hearingId/edit"
+                  >
+                    {t("actions.edit")}
+                  </Link>
+                  <button
+                    className="inline-flex rounded-xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    disabled={deleteHearingMutation.isPending}
+                    onClick={() => void handleDelete(item.id)}
+                    type="button"
+                  >
+                    {t("actions.delete")}
+                  </button>
+                </div>
               )}
             />
             <TableWrapper mobileMode="cards">
@@ -230,13 +262,23 @@ export function HearingsPage() {
                         <OutcomeCell hearing={hearing} />
                       </TableCell>
                       <TableCell align="end">
-                        <Link
-                          className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                          params={{ hearingId: hearing.id }}
-                          to="/app/hearings/$hearingId/edit"
-                        >
-                          {t("actions.edit")}
-                        </Link>
+                        <div className="flex justify-end gap-2">
+                          <Link
+                            className="inline-flex rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            params={{ hearingId: hearing.id }}
+                            to="/app/hearings/$hearingId/edit"
+                          >
+                            {t("actions.edit")}
+                          </Link>
+                          <button
+                            className="inline-flex rounded-xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            disabled={deleteHearingMutation.isPending}
+                            onClick={() => void handleDelete(hearing.id)}
+                            type="button"
+                          >
+                            {t("actions.delete")}
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -79,6 +79,7 @@ function normalizePayload(form: ClientFormState): CreateClientDto {
     taxNumber:
       form.type === ClientType.COMPANY ? toNullable(form.taxNumber) : null,
     poaNumber: toNullable(form.poaNumber),
+    internalRef: toNullable(form.internalRef),
     contacts: []
   };
 }
@@ -113,6 +114,7 @@ export function ClientCreatePage() {
     commercialRegister: "",
     taxNumber: "",
     poaNumber: "",
+    internalRef: "",
     contacts: []
   });
   const [validationMessage, setValidationMessage] = useState<string | null>(
@@ -458,6 +460,11 @@ export function ClientCreatePage() {
                 label={t("labels.poaNumber")}
                 onChange={(value) => setForm({ ...form, poaNumber: value })}
                 value={form.poaNumber ?? ""}
+              />
+              <Field
+                label={t("labels.internalRef")}
+                onChange={(value) => setForm({ ...form, internalRef: value })}
+                value={form.internalRef ?? ""}
               />
             </>
           ) : null}

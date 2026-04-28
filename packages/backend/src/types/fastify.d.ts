@@ -11,5 +11,6 @@ declare module "fastify" {
 
   interface FastifyRequest {
     sessionUser: SessionUser | null;
+    startTime?: bigint;
   }
 }

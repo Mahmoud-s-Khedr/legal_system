@@ -21,6 +21,7 @@ export interface ClientDto {
   commercialRegister: string | null;
   taxNumber: string | null;
   poaNumber: string | null;
+  internalRef: string | null;
   contacts: ClientContactDto[];
   linkedCaseCount: number;
   invoiceCount: number;
@@ -40,6 +41,7 @@ export interface CreateClientDto {
   commercialRegister?: string | null;
   taxNumber?: string | null;
   poaNumber?: string | null;
+  internalRef?: string | null;
   contacts?: Array<{
     name: string;
     phone: string;

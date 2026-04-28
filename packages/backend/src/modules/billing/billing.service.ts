@@ -652,6 +652,7 @@ export async function listExpenses(
   const sortDir = toPrismaSortOrder(filters.sortDir ?? "desc");
   const where: Prisma.ExpenseWhereInput = {
     firmId: actor.firmId,
+    deletedAt: null,
     ...(filters.caseId ? { caseId: filters.caseId } : {}),
     ...(filters.category ? { category: filters.category } : {}),
     ...(searchCandidates.length > 0
@@ -726,7 +727,10 @@ export async function updateExpense(
 
 export async function deleteExpense(actor: SessionUser, id: string, audit: AuditContext): Promise<void> {
   return inTenantTransaction(actor.firmId, async (tx) => {
-    await deleteExpenseById(tx, id, actor.firmId);
+    await tx.expense.updateMany({
+      where: { id, firmId: actor.firmId, deletedAt: null },
+      data: { deletedAt: new Date() }
+    });
     await writeAuditLog(tx, audit, { action: "expense.deleted", entityType: "Expense", entityId: id });
   });
 }

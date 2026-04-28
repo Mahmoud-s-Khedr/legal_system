@@ -52,6 +52,7 @@ export interface CaseDto {
   judicialYear: number | null;
   type: string;
   status: CaseStatus;
+  internalRef: string | null;
   courts: CaseCourtDto[];
   assignments: CaseAssignmentDto[];
   parties: CasePartyDto[];
@@ -68,6 +69,7 @@ export interface CreateCaseDto {
   caseNumber: string;
   judicialYear?: number | null;
   type: string;
+  internalRef?: string | null;
 }
 
 export type UpdateCaseDto = Omit<CreateCaseDto, "clientId"> & { clientId?: string };

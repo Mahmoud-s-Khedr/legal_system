@@ -346,6 +346,7 @@ model Client {
   commercialRegister    String?
   taxNumber             String?
   poaNumber             String?
+  internalRef           String?
   phone                 String?
   email                 String?
   governorate           String?
@@ -392,6 +393,7 @@ model Case {
   judicialYear      Int?
   type              String              @default("CIVIL")
   status            CaseStatus          @default(ACTIVE)
+  internalRef       String?
   deletedAt         DateTime?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -482,6 +484,7 @@ model CaseSession {
   outcome              SessionOutcome?
   notes                String?        @db.Text
   googleCalendarEventId String?
+  deletedAt            DateTime?
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
   case                 Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
@@ -714,6 +717,7 @@ model Expense {
   amount            Decimal         @default(0) @db.Decimal(12, 2)
   description       String?         @db.Text
   receiptDocumentId String?         @db.Uuid
+  deletedAt         DateTime?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   firm              Firm            @relation(fields: [firmId], references: [id], onDelete: Cascade)

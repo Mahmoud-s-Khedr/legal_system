@@ -33,6 +33,7 @@ const clientSchema = z.object({
   commercialRegister: z.string().nullable().optional(),
   taxNumber: z.string().nullable().optional(),
   poaNumber: z.string().nullable().optional(),
+  internalRef: z.string().nullable().optional(),
   contacts: z.array(contactSchema).optional()
 });
 

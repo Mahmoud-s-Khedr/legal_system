@@ -135,6 +135,7 @@ export async function createFirmClient(
       commercialRegister: payload.commercialRegister ?? null,
       taxNumber: payload.taxNumber ?? null,
       poaNumber: payload.poaNumber ?? null,
+      internalRef: payload.internalRef ?? null,
       contacts: contacts
         ? {
             createMany: contacts
@@ -181,7 +182,8 @@ export async function updateFirmClientById(
       nationalId: payload.nationalId ?? null,
       commercialRegister: payload.commercialRegister ?? null,
       taxNumber: payload.taxNumber ?? null,
-      poaNumber: payload.poaNumber ?? null
+      poaNumber: payload.poaNumber ?? null,
+      internalRef: payload.internalRef ?? null
     },
     include: clientInclude
   });

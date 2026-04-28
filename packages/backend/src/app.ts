@@ -5,6 +5,7 @@ import { registerCookiePlugin } from "./plugins/cookie.js";
 import { registerCorsPlugin } from "./plugins/cors.js";
 import { registerRateLimitPlugin } from "./plugins/rateLimit.js";
 import { registerMultipartPlugin } from "./plugins/multipart.js";
+import { registerPerformanceHooks } from "./plugins/performance.js";
 import { registerErrorHandler } from "./plugins/errorHandler.js";
 import { registerJwtPlugin } from "./plugins/auth.js";
 import { registerSessionContext } from "./plugins/sessionContext.js";
@@ -39,6 +40,7 @@ import { registerPowersRoutes } from "./modules/powers/powers.routes.js";
 import { registerLicenseRoutes } from "./modules/editions/license.routes.js";
 import { createStorageAdapter } from "./storage/index.js";
 import { initializeBackendMonitoring } from "./monitoring/sentry.js";
+import { getPerformanceSnapshot } from "./monitoring/performance.js";
 import { prisma } from "./db/prisma.js";
 
 export async function createApp(env: AppEnv): Promise<FastifyInstance> {
@@ -84,6 +86,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   await registerCorsPlugin(app, env);
   await registerRateLimitPlugin(app, env);
   await registerMultipartPlugin(app, env);
+  await registerPerformanceHooks(app, env.PERFORMANCE_LOGGING_ENABLED);
   await registerJwtPlugin(app, env);
   registerSessionContext(app, env);
   registerLicenseAccessGuard(app);
@@ -108,6 +111,9 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
     }
 
     checks.deployment = "local-only";
+    if (env.PERFORMANCE_LOGGING_ENABLED) {
+      checks.performance = "enabled";
+    }
 
     const statusCode = overallStatus === "error" ? 503 : 200;
 
@@ -117,6 +123,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
       mode: "local",
       timestamp: new Date().toISOString(),
       checks,
+      ...(env.PERFORMANCE_LOGGING_ENABLED ? { perf: getPerformanceSnapshot() } : {}),
       ...(includeDesktopBootstrapToken ? { desktopBootstrapToken } : {})
     });
   });

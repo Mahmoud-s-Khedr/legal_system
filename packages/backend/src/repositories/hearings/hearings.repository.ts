@@ -137,6 +137,7 @@ export async function getFirmHearingByIdOrThrow(
   return tx.caseSession.findFirstOrThrow({
     where: {
       id: hearingId,
+      deletedAt: null,
       case: {
         firmId,
         deletedAt: null
@@ -154,6 +155,7 @@ export async function getFirmHearingRowByIdOrThrow(
   return tx.caseSession.findFirstOrThrow({
     where: {
       id: hearingId,
+      deletedAt: null,
       case: {
         firmId,
         deletedAt: null

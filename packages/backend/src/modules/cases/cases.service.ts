@@ -102,6 +102,7 @@ function mapCase(caseRecord: {
   judicialYear: number | null;
   type: string;
   status: CaseStatus;
+  internalRef: string | null;
   createdAt: Date;
   updatedAt: Date;
   courts: Array<{
@@ -154,6 +155,7 @@ function mapCase(caseRecord: {
     judicialYear: caseRecord.judicialYear,
     type: caseRecord.type,
     status: caseRecord.status as SharedCaseStatus,
+    internalRef: caseRecord.internalRef,
     courts: caseRecord.courts
       .sort((a, b) => a.stageOrder - b.stageOrder)
       .map(mapCourt),
@@ -356,6 +358,7 @@ export async function createCase(
         caseNumber: payload.caseNumber,
         judicialYear: payload.judicialYear ?? null,
         type: payload.type,
+        internalRef: payload.internalRef ?? null,
         status: CaseStatus.ACTIVE,
         statusHistory: {
           create: {
@@ -416,7 +419,8 @@ export async function updateCase(
         title: payload.title,
         caseNumber: payload.caseNumber,
         judicialYear: payload.judicialYear ?? null,
-        type: payload.type
+        type: payload.type,
+        internalRef: payload.internalRef ?? null
       },
       include: CASE_INCLUDE
     });
