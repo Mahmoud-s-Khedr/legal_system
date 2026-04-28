@@ -204,6 +204,21 @@ export function CasesPage() {
                   render: (item) => item.title
                 },
                 {
+                  key: "caseNumber",
+                  label: t("labels.caseNumber"),
+                  render: (item) => item.caseNumber
+                },
+                {
+                  key: "internalRef",
+                  label: t("labels.internalRef"),
+                  render: (item) => item.internalRef ?? "—"
+                },
+                {
+                  key: "judicialYear",
+                  label: t("labels.judicialYear"),
+                  render: (item) => item.judicialYear ?? "—"
+                },
+                {
                   key: "status",
                   label: t("labels.status"),
                   render: (item) => getEnumLabel(t, "CaseStatus", item.status)
@@ -237,6 +252,8 @@ export function CasesPage() {
                       sortDir={table.state.sortDir}
                       onSort={table.setSort}
                     />
+                    <TableHeadCell>{t("labels.internalRef")}</TableHeadCell>
+                    <TableHeadCell>{t("labels.judicialYear")}</TableHeadCell>
                     <SortableTableHeadCell
                       label={t("labels.status")}
                       sortKey="status"
@@ -254,6 +271,8 @@ export function CasesPage() {
                     <TableRow key={caseItem.id}>
                       <TableCell>{caseItem.title}</TableCell>
                       <TableCell>{caseItem.caseNumber}</TableCell>
+                      <TableCell>{caseItem.internalRef ?? "—"}</TableCell>
+                      <TableCell>{caseItem.judicialYear ?? "—"}</TableCell>
                       <TableCell>
                         {getEnumLabel(t, "CaseStatus", caseItem.status)}
                       </TableCell>

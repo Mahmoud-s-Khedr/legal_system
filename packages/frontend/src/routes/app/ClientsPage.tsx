@@ -112,9 +112,14 @@ export function ClientsPage() {
                     render: (item) => item.name
                   },
                   {
-                    key: "email",
-                    label: t("labels.email"),
-                    render: (item) => item.email ?? "—"
+                    key: "internalRef",
+                    label: t("labels.internalRef"),
+                    render: (item) => item.internalRef ?? "—"
+                  },
+                  {
+                    key: "poaNumber",
+                    label: t("labels.poaNumber"),
+                    render: (item) => item.poaNumber ?? "—"
                   },
                   {
                     key: "phone",
@@ -150,13 +155,8 @@ export function ClientsPage() {
                         sortDir={table.state.sortDir}
                         onSort={table.setSort}
                       />
-                      <SortableTableHeadCell
-                        label={t("labels.email")}
-                        sortKey="email"
-                        sortBy={table.state.sortBy}
-                        sortDir={table.state.sortDir}
-                        onSort={table.setSort}
-                      />
+                      <TableHeadCell>{t("labels.internalRef")}</TableHeadCell>
+                      <TableHeadCell>{t("labels.poaNumber")}</TableHeadCell>
                       <TableHeadCell>{t("labels.phone")}</TableHeadCell>
                       <SortableTableHeadCell
                         label={t("labels.type")}
@@ -174,7 +174,8 @@ export function ClientsPage() {
                     {clientsQuery.data.items.map((client) => (
                       <TableRow key={client.id}>
                         <TableCell>{client.name}</TableCell>
-                        <TableCell>{client.email ?? "—"}</TableCell>
+                        <TableCell>{client.internalRef ?? "—"}</TableCell>
+                        <TableCell>{client.poaNumber ?? "—"}</TableCell>
                         <TableCell>{client.phone ?? "—"}</TableCell>
                         <TableCell>
                           <EnumBadge
