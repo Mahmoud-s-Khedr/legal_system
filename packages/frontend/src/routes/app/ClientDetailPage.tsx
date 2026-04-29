@@ -19,10 +19,11 @@ import {
   TableHead,
   TableHeadCell,
   TableRow,
-  TableWrapper
+  TableWrapper,
+  formatCurrency
 } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
-import { useInvoices } from "../../lib/billing";
+import { useClientCreditBalance, useInvoices } from "../../lib/billing";
 
 export function ClientDetailPage() {
   const { t } = useTranslation("app");
@@ -34,6 +35,7 @@ export function ClientDetailPage() {
     queryKey: ["client", clientId],
     queryFn: () => apiFetch<ClientDto>(`/api/clients/${clientId}`)
   });
+  const clientCreditBalanceQuery = useClientCreditBalance(clientId);
   const invoicesQuery = useInvoices({ clientId });
   const linkedCasesQuery = useQuery({
     queryKey: ["client-cases", clientId],
@@ -76,6 +78,11 @@ export function ClientDetailPage() {
   });
 
   const client = clientQuery.data;
+  const availableCreditText = clientCreditBalanceQuery.isLoading
+    ? t("labels.loading")
+    : clientCreditBalanceQuery.isError
+      ? "—"
+      : formatCurrency(Number(clientCreditBalanceQuery.data?.availableAmount ?? 0));
 
   if (clientQuery.isLoading) {
     return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
@@ -110,38 +117,38 @@ export function ClientDetailPage() {
         title={client.name}
         description={client.email ?? t("labels.noContact")}
         actions={
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 lg:w-auto">
             <EnumBadge enumName="ClientType" value={client.type} />
             <Link
-              className="rounded-2xl border border-accent px-4 py-2.5 text-sm font-semibold text-accent hover:bg-accent/5"
+              className="rounded-2xl border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/5 sm:px-4 sm:py-2.5"
               search={{ clientId }}
               to="/app/cases/quick-new"
             >
               {t("actions.quickIntake")}
             </Link>
             <Link
-              className="rounded-2xl border border-accent px-4 py-2.5 text-sm font-semibold text-accent hover:bg-accent/5"
+              className="rounded-2xl border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/5 sm:px-4 sm:py-2.5"
               search={{ clientId }}
               to="/app/cases/new"
             >
               {t("actions.newCase")}
             </Link>
             <Link
-              className="rounded-2xl border border-accent px-4 py-2.5 text-sm font-semibold text-accent hover:bg-accent/5"
+              className="rounded-2xl border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/5 sm:px-4 sm:py-2.5"
               search={{ clientId }}
               to="/app/invoices/new"
             >
               {t("actions.newInvoice")}
             </Link>
             <Link
-              className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
+              className="rounded-2xl bg-accent px-3 py-2 text-sm font-semibold text-white sm:px-4 sm:py-3"
               params={{ clientId }}
               to="/app/clients/$clientId/edit"
             >
               {t("clients.editTitle")}
             </Link>
             <button
-              className="rounded-2xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+              className="rounded-2xl border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 sm:px-4 sm:py-2.5"
               onClick={() => setShowDeleteConfirm(true)}
               type="button"
             >
@@ -175,7 +182,7 @@ export function ClientDetailPage() {
           </div>
         </div>
       )}
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
         <SectionCard
           title={t("clients.profile")}
           description={t("clients.profileHelp")}
@@ -231,12 +238,18 @@ export function ClientDetailPage() {
           title={t("clients.linkedSummary")}
           description={t("clients.linkedSummaryHelp")}
         >
-          <dl className="grid gap-4 sm:grid-cols-3">
+          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Metric label={t("labels.cases")} value={client.linkedCaseCount} />
             <Metric label={t("labels.invoices")} value={client.invoiceCount} />
             <Metric
               label={t("labels.documents")}
               value={client.documentCount}
+            />
+            <Metric
+              label={t("billing.availableClientCredit")}
+              value={availableCreditText}
+              className="sm:col-span-2 lg:col-span-4 xl:col-span-2"
+              valueClassName="text-2xl sm:text-3xl"
             />
           </dl>
         </SectionCard>
@@ -409,11 +422,23 @@ function Detail({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({
+  label,
+  value,
+  className = "",
+  valueClassName = "text-3xl"
+}: {
+  label: string;
+  value: string | number;
+  className?: string;
+  valueClassName?: string;
+}) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-4 ${className}`.trim()}>
       <dt className="text-sm text-slate-500">{label}</dt>
-      <dd className="mt-2 font-heading text-3xl">{value}</dd>
+      <dd className={`mt-2 min-w-0 font-heading leading-tight ${valueClassName}`}>
+        <bdi className="block break-words">{value}</bdi>
+      </dd>
     </div>
   );
 }

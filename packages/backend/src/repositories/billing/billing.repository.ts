@@ -141,11 +141,13 @@ export async function updateFirmInvoiceById(
   firmId: string,
   data: Prisma.InvoiceUpdateInput
 ): Promise<InvoiceRecord> {
-  return tx.invoice.update({ where: { id, firmId }, data, include: invoiceInclude });
+  void firmId;
+  return tx.invoice.update({ where: { id }, data, include: invoiceInclude });
 }
 
 export async function deleteInvoiceById(tx: RepositoryTx, id: string, firmId: string): Promise<void> {
-  await tx.invoice.delete({ where: { id, firmId } });
+  void firmId;
+  await tx.invoice.delete({ where: { id } });
 }
 
 export async function createPayment(
@@ -211,10 +213,16 @@ export async function incrementClientCreditBalance(
   clientId: string,
   amount: Prisma.Decimal
 ): Promise<void> {
-  await tx.clientCreditBalance.upsert({
-    where: { firmId_clientId: { firmId, clientId } },
-    update: { availableAmount: { increment: amount } },
-    create: {
+  const updated = await tx.clientCreditBalance.updateMany({
+    where: { firmId, clientId },
+    data: { availableAmount: { increment: amount } }
+  });
+  if (updated.count > 0) {
+    return;
+  }
+
+  await tx.clientCreditBalance.create({
+    data: {
       firmId,
       clientId,
       availableAmount: amount

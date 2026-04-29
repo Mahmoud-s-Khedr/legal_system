@@ -58,6 +58,7 @@ export function useApplyInvoiceCredit(invoiceId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["invoices"] });
       void qc.invalidateQueries({ queryKey: ["billing-summary"] });
+      void qc.invalidateQueries({ queryKey: ["client-credit-balance"] });
     }
   });
 }
@@ -146,6 +147,7 @@ export function useAddPayment(invoiceId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["invoices"] });
       void qc.invalidateQueries({ queryKey: ["billing-summary"] });
+      void qc.invalidateQueries({ queryKey: ["client-credit-balance"] });
     }
   });
 }

@@ -31,6 +31,7 @@ const mockInvoiceCreditApplication = {
 
 const mockClientCreditBalance = {
   findUnique: vi.fn(),
+  create: vi.fn(),
   upsert: vi.fn(),
   updateMany: vi.fn()
 };
@@ -334,7 +335,7 @@ describe("issueInvoice", () => {
 
     expect(mockInvoice.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ id: "inv-1", firmId: "firm-1" }),
+        where: expect.objectContaining({ id: "inv-1" }),
         data: expect.objectContaining({ status: "ISSUED" })
       })
     );
@@ -358,7 +359,7 @@ describe("voidInvoice", () => {
 
     expect(mockInvoice.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ id: "inv-1", firmId: "firm-1" }),
+        where: expect.objectContaining({ id: "inv-1" }),
         data: expect.objectContaining({ status: "VOID" })
       })
     );
@@ -374,7 +375,7 @@ describe("deleteInvoice", () => {
     mockInvoice.delete = vi.fn().mockResolvedValue({});
 
     await expect(deleteInvoice(actor, "inv-1", audit)).resolves.not.toThrow();
-    expect(mockInvoice.delete).toHaveBeenCalledWith({ where: { id: "inv-1", firmId: "firm-1" } });
+    expect(mockInvoice.delete).toHaveBeenCalledWith({ where: { id: "inv-1" } });
   });
 
   it("rejects deleting a non-DRAFT invoice", async () => {
@@ -401,7 +402,7 @@ describe("addPayment", () => {
 
     expect(mockInvoice.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ id: "inv-1", firmId: "firm-1" }),
+        where: expect.objectContaining({ id: "inv-1" }),
         data: expect.objectContaining({ status: "PAID" })
       })
     );
@@ -422,7 +423,7 @@ describe("addPayment", () => {
 
     expect(mockInvoice.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ id: "inv-1", firmId: "firm-1" }),
+        where: expect.objectContaining({ id: "inv-1" }),
         data: expect.objectContaining({ status: "PARTIALLY_PAID" })
       })
     );
@@ -437,6 +438,63 @@ describe("addPayment", () => {
     await expect(
       addPayment(actor, "inv-1", { amount: "100.00", method: "CASH" }, audit)
     ).rejects.toThrow("Cannot add payment to a voided invoice");
+  });
+
+  it("records client credit when payment exceeds the remaining amount", async () => {
+    mockInvoice.findFirstOrThrow.mockResolvedValue(
+      makeInvoiceRecord({
+        status: "ISSUED",
+        clientId: "client-1",
+        payments: [],
+        creditApplications: [],
+        totalAmount: new Decimal("1100.00")
+      })
+    );
+    mockPayment.create.mockResolvedValue({ id: "pay-1" });
+    mockPayment.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ amount: new Decimal("1100.00") }]);
+    mockInvoiceCreditApplication.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ amount: new Decimal("1100.00") }]);
+    mockClientCreditBalance.updateMany.mockResolvedValue({ count: 0 });
+    mockClientCreditBalance.create.mockResolvedValue({});
+    mockClientCreditEntry.create.mockResolvedValue({});
+    mockInvoice.update.mockResolvedValue(
+      makeInvoiceRecord({ status: "PAID", clientId: "client-1" })
+    );
+
+    const result = await addPayment(
+      actor,
+      "inv-1",
+      { amount: "1400.00", method: "CASH" },
+      audit
+    );
+
+    expect(mockClientCreditBalance.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { firmId: "firm-1", clientId: "client-1" },
+        data: expect.objectContaining({
+          availableAmount: expect.any(Object)
+        })
+      })
+    );
+    expect(mockClientCreditBalance.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ firmId: "firm-1", clientId: "client-1" })
+      })
+    );
+    expect(mockClientCreditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          firmId: "firm-1",
+          clientId: "client-1",
+          invoiceId: "inv-1",
+          type: "OVERPAYMENT"
+        })
+      })
+    );
+    expect(result.status).toBe("PAID");
   });
 });
 
@@ -476,11 +534,14 @@ describe("createExpense", () => {
 });
 
 describe("deleteExpense", () => {
-  it("deletes the expense", async () => {
-    mockExpense.delete = vi.fn().mockResolvedValue({});
+  it("soft-deletes the expense", async () => {
+    mockExpense.updateMany = vi.fn().mockResolvedValue({ count: 1 });
 
     await expect(deleteExpense(actor, "exp-1", audit)).resolves.not.toThrow();
-    expect(mockExpense.delete).toHaveBeenCalledWith({ where: { id: "exp-1", firmId: "firm-1" } });
+    expect(mockExpense.updateMany).toHaveBeenCalledWith({
+      where: { id: "exp-1", firmId: "firm-1", deletedAt: null },
+      data: { deletedAt: expect.any(Date) }
+    });
   });
 });
 

@@ -53,11 +53,11 @@ export function PageHeader({
       </div>
       {actions ? (
         <div
-          className={`flex ${actionsWrap === "nowrap" ? "flex-nowrap overflow-x-auto" : "flex-wrap"} gap-2.5 ${
+          className={`flex w-full ${actionsWrap === "nowrap" ? "flex-nowrap overflow-x-auto" : "flex-wrap"} gap-2.5 ${
             stickyActions
               ? "lg:sticky lg:top-[calc(var(--header-height)+8px)] lg:z-10"
               : ""
-          }`}
+          } lg:w-auto lg:justify-end`}
         >
           {actions}
         </div>
