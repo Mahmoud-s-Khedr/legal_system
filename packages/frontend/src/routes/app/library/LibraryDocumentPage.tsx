@@ -5,11 +5,13 @@ import type { CaseListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Pencil, Trash2, Plus, FileDown } from "lucide-react";
 import { apiFetch, apiDownload } from "../../../lib/api";
+import { formatFileSaveSuccessMessage } from "../../../lib/fileSaveFeedback";
 import { toCaseSelectOption } from "../../../lib/caseOptions";
 import { PdfViewer } from "../../../components/documents/PdfViewer";
 import { DocxViewer } from "../../../components/documents/DocxViewer";
 import { saveBlobToDownloads } from "../../../lib/desktopDownloads";
 import { showErrorDialog } from "../../../lib/dialog";
+import { useToastStore } from "../../../store/toastStore";
 import {
   EmptyState,
   ErrorState,
@@ -81,6 +83,7 @@ export function LibraryDocumentPage() {
     from: "/app/library/documents/$documentId"
   });
   const queryClient = useQueryClient();
+  const addToast = useToastStore((state) => state.addToast);
   const [annotationBody, setAnnotationBody] = useState("");
   const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(
     null
@@ -238,10 +241,11 @@ export function LibraryDocumentPage() {
       const { blob, filename } = await apiDownload(
         `/api/library/documents/${documentId}/stream`
       );
-      await saveBlobToDownloads(
+      const savedPath = await saveBlobToDownloads(
         blob,
         filename ?? doc?.title ?? `document-${documentId}`
       );
+      addToast(formatFileSaveSuccessMessage(t, savedPath), "success");
     } catch {
       showErrorDialog(t("errors.fallback"));
     } finally {

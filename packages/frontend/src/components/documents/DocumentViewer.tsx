@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DocumentDto } from "@elms/shared";
 import { apiDownload } from "../../lib/api";
+import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { showErrorDialog } from "../../lib/dialog";
+import { useToastStore } from "../../store/toastStore";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { VersionHistory } from "./VersionHistory";
 import { PdfViewer } from "./PdfViewer";
@@ -26,6 +28,7 @@ export function DocumentViewer({
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const addToast = useToastStore((state) => state.addToast);
   const previewObjectUrlRef = useRef<string | null>(null);
   const previewBlobRef = useRef<Blob | null>(null);
 
@@ -93,7 +96,8 @@ export function DocumentViewer({
       const { blob, filename } = await apiDownload(
         `/api/documents/${doc.id}/stream`
       );
-      await saveBlobToDownloads(blob, filename ?? doc.fileName);
+      const savedPath = await saveBlobToDownloads(blob, filename ?? doc.fileName);
+      addToast(formatFileSaveSuccessMessage(t, savedPath), "success");
     } catch {
       showErrorDialog(t("errors.fallback"));
     } finally {

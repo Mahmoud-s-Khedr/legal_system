@@ -32,8 +32,10 @@ import {
   isDesktopDownloadsEnabled,
   resetDesktopDownloadDirectory
 } from "../../lib/desktopDownloads";
+import { formatDesktopBackupSuccessMessage } from "../../lib/fileSaveFeedback";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
+import { useToastStore } from "../../store/toastStore";
 import {
   Badge,
   EmptyState,
@@ -106,6 +108,7 @@ export function SettingsPage() {
   const { user, refreshSession } = useAuthBootstrap();
   const canUpdateSettings =
     user?.permissions.includes("settings:update") ?? false;
+  const addToast = useToastStore((state) => state.addToast);
   const queryClient = useQueryClient();
   const firmQuery = useQuery({
     queryKey: ["firm-me"],
@@ -219,7 +222,15 @@ export function SettingsPage() {
   });
   const chooseDownloadDirectoryMutation = useMutation({
     mutationFn: () => chooseDesktopDownloadDirectory(),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      if (data) {
+        addToast(
+          t("settings.downloadFolderUpdatedTo", {
+            path: data.effectivePath
+          }),
+          "success"
+        );
+      }
       await queryClient.invalidateQueries({
         queryKey: ["desktop-download-settings"]
       });
@@ -227,7 +238,15 @@ export function SettingsPage() {
   });
   const resetDownloadDirectoryMutation = useMutation({
     mutationFn: () => resetDesktopDownloadDirectory(),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      if (data) {
+        addToast(
+          t("settings.downloadFolderResetTo", {
+            path: data.effectivePath
+          }),
+          "success"
+        );
+      }
       await queryClient.invalidateQueries({
         queryKey: ["desktop-download-settings"]
       });
@@ -235,7 +254,15 @@ export function SettingsPage() {
   });
   const chooseBackupDirectoryMutation = useMutation({
     mutationFn: () => chooseDesktopBackupDirectory(),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      if (data) {
+        addToast(
+          t("settings.backupFolderUpdatedTo", {
+            path: data.effectiveBackupDirectory
+          }),
+          "success"
+        );
+      }
       await queryClient.invalidateQueries({
         queryKey: ["desktop-backup-policy"]
       });
@@ -243,7 +270,15 @@ export function SettingsPage() {
   });
   const resetBackupDirectoryMutation = useMutation({
     mutationFn: () => resetDesktopBackupDirectory(),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      if (data) {
+        addToast(
+          t("settings.backupFolderResetTo", {
+            path: data.effectiveBackupDirectory
+          }),
+          "success"
+        );
+      }
       await queryClient.invalidateQueries({
         queryKey: ["desktop-backup-policy"]
       });
@@ -253,6 +288,7 @@ export function SettingsPage() {
     mutationFn: (payload: DesktopBackupPolicy) =>
       setDesktopBackupPolicy(payload),
     onSuccess: async () => {
+      addToast(t("settings.backupPolicySaved"), "success");
       await queryClient.invalidateQueries({
         queryKey: ["desktop-backup-policy"]
       });
@@ -260,7 +296,8 @@ export function SettingsPage() {
   });
   const runBackupNowMutation = useMutation({
     mutationFn: () => runDesktopBackupNow(),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      addToast(formatDesktopBackupSuccessMessage(t, data), "success");
       await queryClient.invalidateQueries({
         queryKey: ["desktop-backup-policy"]
       });
@@ -268,7 +305,8 @@ export function SettingsPage() {
   });
   const restoreBackupMutation = useMutation({
     mutationFn: (backupPath: string) => restoreDesktopBackup(backupPath),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      addToast(formatDesktopBackupSuccessMessage(t, data), "success");
       setRestoreCheckOne(false);
       setRestoreCheckTwo(false);
       await queryClient.invalidateQueries({

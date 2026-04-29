@@ -3,14 +3,37 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EditionKey, Language } from "@elms/shared";
 
-const queryMock = vi.fn();
-const mutationMocks: Array<{
-  mutate: ReturnType<typeof vi.fn>;
-  mutateAsync: ReturnType<typeof vi.fn>;
-}> = [];
-let mutationCallCount = 0;
-
-const authBootstrapMock = vi.fn();
+const {
+  queryMock,
+  addToastMock,
+  mutationMocks,
+  authBootstrapMock,
+  desktopDownloadData,
+  desktopBackupData
+} = vi.hoisted(() => ({
+  queryMock: vi.fn(),
+  addToastMock: vi.fn(),
+  mutationMocks: [] as Array<{
+    mutate: ReturnType<typeof vi.fn>;
+    mutateAsync: ReturnType<typeof vi.fn>;
+  }>,
+  authBootstrapMock: vi.fn(),
+  desktopDownloadData: { effectivePath: "/tmp/downloads" },
+  desktopBackupData: {
+    policy: {
+      enabled: true,
+      frequency: "daily" as const,
+      timeLocal: "02:00",
+      weeklyDay: null,
+      retentionCount: 14
+    },
+    effectiveBackupDirectory: "/tmp/backups",
+    backups: [{ path: "/tmp/backups/a.zip", name: "A.zip" }],
+    lastBackupAt: null,
+    lastBackupResult: null,
+    nextScheduledBackupAt: null
+  }
+}));
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -27,17 +50,31 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({
     invalidateQueries: vi.fn()
   }),
-  useMutation: () => {
-    const index = mutationCallCount % 11;
-    mutationCallCount += 1;
-    if (!mutationMocks[index]) {
-      mutationMocks[index] = {
-        mutate: vi.fn(),
-        mutateAsync: vi.fn(async () => undefined)
-      };
-    }
+  useMutation: (options: {
+    mutationFn: (variables: unknown) => Promise<unknown> | unknown;
+    onSuccess?: (data: unknown) => Promise<void> | void;
+    onError?: (error: unknown) => Promise<void> | void;
+  }) => {
+    const mutateAsync = vi.fn(async (variables: unknown) => {
+      try {
+        const data = await options.mutationFn(variables);
+        await options.onSuccess?.(data);
+        return data;
+      } catch (error) {
+        await options.onError?.(error);
+        throw error;
+      }
+    });
+    const mutate = vi.fn((variables: unknown) => {
+      void mutateAsync(variables);
+    });
+    const entry = {
+      mutate,
+      mutateAsync
+    };
+    mutationMocks.push(entry);
     return {
-      ...mutationMocks[index],
+      ...entry,
       isPending: false,
       error: null
     };
@@ -54,6 +91,11 @@ vi.mock("../../store/authStore", () => ({
   useAuthBootstrap: () => authBootstrapMock()
 }));
 
+vi.mock("../../store/toastStore", () => ({
+  useToastStore: (selector: (state: { addToast: typeof addToastMock }) => unknown) =>
+    selector({ addToast: addToastMock })
+}));
+
 vi.mock("../../lib/enumLabel", () => ({
   getEnumLabel: (_t: unknown, _type: string, value: string) => value
 }));
@@ -63,16 +105,16 @@ vi.mock("../../lib/api", () => ({
 }));
 
 vi.mock("../../lib/desktopDownloads", () => ({
-  chooseDesktopDownloadDirectory: vi.fn(async () => undefined),
+  chooseDesktopDownloadDirectory: vi.fn(async () => desktopDownloadData),
   getDesktopDownloadSettings: vi.fn(async () => ({
     effectivePath: "/tmp/downloads"
   })),
   isDesktopDownloadsEnabled: vi.fn(() => true),
-  resetDesktopDownloadDirectory: vi.fn(async () => undefined)
+  resetDesktopDownloadDirectory: vi.fn(async () => desktopDownloadData)
 }));
 
 vi.mock("../../lib/desktopBackup", () => ({
-  chooseDesktopBackupDirectory: vi.fn(async () => undefined),
+  chooseDesktopBackupDirectory: vi.fn(async () => desktopBackupData),
   getDesktopBackupPolicy: vi.fn(async () => ({
     policy: {
       enabled: true,
@@ -88,10 +130,18 @@ vi.mock("../../lib/desktopBackup", () => ({
     nextScheduledBackupAt: null
   })),
   isDesktopBackupEnabled: vi.fn(() => true),
-  resetDesktopBackupDirectory: vi.fn(async () => undefined),
-  restoreDesktopBackup: vi.fn(async () => undefined),
-  runDesktopBackupNow: vi.fn(async () => undefined),
-  setDesktopBackupPolicy: vi.fn(async () => undefined),
+  resetDesktopBackupDirectory: vi.fn(async () => desktopBackupData),
+  restoreDesktopBackup: vi.fn(async () => ({
+    ok: true,
+    message: "Restore started. Desktop services are restarting.",
+    backupPath: null
+  })),
+  runDesktopBackupNow: vi.fn(async () => ({
+    ok: true,
+    message: "Backup completed",
+    backupPath: "/tmp/backups/new.zip"
+  })),
+  setDesktopBackupPolicy: vi.fn(async () => desktopBackupData),
   validateBackupTimeLocal: vi.fn(() => true),
   canSubmitRestoreAcknowledgement: (a: boolean, b: boolean) => a && b
 }));
@@ -228,23 +278,6 @@ const selfData = {
   preferredLanguage: Language.AR
 };
 
-const desktopDownloadData = { effectivePath: "/tmp/downloads" };
-
-const desktopBackupData = {
-  policy: {
-    enabled: true,
-    frequency: "daily" as const,
-    timeLocal: "02:00",
-    weeklyDay: null,
-    retentionCount: 14
-  },
-  effectiveBackupDirectory: "/tmp/backups",
-  backups: [{ path: "/tmp/backups/a.zip", name: "A.zip" }],
-  lastBackupAt: null,
-  lastBackupResult: null,
-  nextScheduledBackupAt: null
-};
-
 function render(element: JSX.Element) {
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -266,9 +299,14 @@ function unmountCurrent() {
   container = null;
 }
 
+async function flush() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mutationCallCount = 0;
   mutationMocks.length = 0;
   authBootstrapMock.mockReturnValue({
     user: baseUser,
@@ -300,7 +338,7 @@ describe("SettingsPage route behavior", () => {
     expect(view.textContent).toContain("empty.noSettings");
   });
 
-  it("renders settings sections and triggers key submit/click handlers", () => {
+  it("renders settings sections and triggers key submit/click handlers", async () => {
     const view = render(<SettingsPage />);
 
     expect(view.textContent).toContain("settings.title");
@@ -360,8 +398,9 @@ describe("SettingsPage route behavior", () => {
         button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       });
     });
+    await flush();
 
-    expect(mutationMocks.length).toBe(11);
+    expect(mutationMocks.length).toBeGreaterThanOrEqual(11);
     const mutateCalls = mutationMocks.flatMap((mutation) => mutation.mutate.mock.calls);
     const mutateAsyncCalls = mutationMocks.flatMap(
       (mutation) => mutation.mutateAsync.mock.calls
@@ -373,5 +412,33 @@ describe("SettingsPage route behavior", () => {
     ]);
     expect(mutateAsyncCalls.length).toBeGreaterThanOrEqual(6);
     expect(mutateAsyncCalls).toContainEqual(["/tmp/backups/a.zip"]);
+    expect(addToastMock).toHaveBeenCalledWith(
+      "settings.downloadFolderUpdatedTo",
+      "success"
+    );
+    expect(addToastMock).toHaveBeenCalledWith(
+      "settings.downloadFolderResetTo",
+      "success"
+    );
+    expect(addToastMock).toHaveBeenCalledWith(
+      "settings.backupFolderUpdatedTo",
+      "success"
+    );
+    expect(addToastMock).toHaveBeenCalledWith(
+      "settings.backupFolderResetTo",
+      "success"
+    );
+    expect(addToastMock).toHaveBeenCalledWith(
+      "settings.backupPolicySaved",
+      "success"
+    );
+    expect(addToastMock).toHaveBeenCalledWith(
+      "Backup completed messages.fileSavedTo",
+      "success"
+    );
+    expect(addToastMock).toHaveBeenCalledWith(
+      "Restore started. Desktop services are restarting.",
+      "success"
+    );
   });
 });

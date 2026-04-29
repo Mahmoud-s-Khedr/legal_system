@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
 import { Modal } from "antd";
 import { apiDownload, apiFetch } from "../../lib/api";
+import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { confirmAction, showErrorDialog } from "../../lib/dialog";
 import {
@@ -117,7 +118,8 @@ export function DocumentList({
       const { blob, filename } = await apiDownload(
         `/api/documents/${doc.id}/stream`
       );
-      await saveBlobToDownloads(blob, filename ?? doc.fileName);
+      const savedPath = await saveBlobToDownloads(blob, filename ?? doc.fileName);
+      addToast(formatFileSaveSuccessMessage(t, savedPath), "success");
     } catch {
       showErrorDialog(t("errors.fallback"));
     }

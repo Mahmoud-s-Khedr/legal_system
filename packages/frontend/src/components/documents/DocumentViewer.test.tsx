@@ -10,6 +10,10 @@ import {
 import { DocumentViewer } from "./DocumentViewer";
 import { apiDownload } from "../../lib/api";
 
+const { addToastMock } = vi.hoisted(() => ({
+  addToastMock: vi.fn()
+}));
+
 vi.mock("../../lib/api", () => ({
   apiDownload: vi.fn()
 }));
@@ -20,6 +24,11 @@ vi.mock("../../lib/desktopDownloads", () => ({
 
 vi.mock("../../lib/dialog", () => ({
   showErrorDialog: vi.fn()
+}));
+
+vi.mock("../../store/toastStore", () => ({
+  useToastStore: (selector: (state: { addToast: typeof addToastMock }) => unknown) =>
+    selector({ addToast: addToastMock })
 }));
 
 vi.mock("./VersionHistory", () => ({
@@ -100,6 +109,7 @@ afterEach(() => {
     value: originalRevokeObjectURL
   });
   vi.restoreAllMocks();
+  addToastMock.mockReset();
 });
 
 describe("DocumentViewer", () => {
@@ -261,6 +271,42 @@ describe("DocumentViewer", () => {
     expect((error?.textContent ?? "").trim().length).toBeGreaterThan(0);
     const fallbackText = view.querySelector("pre");
     expect(fallbackText?.textContent).toContain("sample indexed text");
+  });
+
+  it("shows a download started toast after saving the file", async () => {
+    const blob = new Blob(["pdf"], { type: "application/pdf" });
+    vi.mocked(apiDownload)
+      .mockResolvedValueOnce({
+        blob,
+        filename: "test.pdf",
+        contentType: "application/pdf"
+      })
+      .mockResolvedValueOnce({
+        blob,
+        filename: "download.pdf",
+        contentType: "application/pdf"
+      });
+
+    render(
+      <DocumentViewer
+        document={makeDoc({})}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+
+    await flushAsyncWork();
+
+    const downloadButton = container?.querySelectorAll("button")[0];
+    expect(downloadButton).toBeDefined();
+
+    act(() => {
+      (downloadButton as HTMLButtonElement | undefined)?.click();
+    });
+
+    await flushAsyncWork();
+
+    expect(addToastMock).toHaveBeenCalledWith("بدأ التنزيل.", "success");
   });
 
   it("reloads preview when the same document receives a new version", async () => {

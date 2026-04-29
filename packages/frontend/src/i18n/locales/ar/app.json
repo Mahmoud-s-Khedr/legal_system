@@ -691,6 +691,10 @@
     "downloadsCurrent": "المجلد الحالي",
     "chooseDownloadFolder": "اختيار مجلد",
     "resetDownloadFolder": "إعادة التعيين إلى التنزيلات",
+    "downloadFolderUpdatedTo": "تم تعيين مجلد تنزيلات سطح المكتب إلى {{path}}.",
+    "downloadFolderResetTo": "تمت إعادة مجلد تنزيلات سطح المكتب إلى {{path}}.",
+    "backupFolderUpdatedTo": "تم تعيين مجلد النسخ الاحتياطي إلى {{path}}.",
+    "backupFolderResetTo": "تمت إعادة مجلد النسخ الاحتياطي إلى {{path}}.",
     "backupTitle": "النسخ الاحتياطي والاستعادة",
     "backupHelp": "إعداد النسخ الاحتياطي التلقائي، تشغيل نسخ يدوي، واستعادة البيانات المحلية.",
     "backupDirectory": "مجلد النسخ الاحتياطي",
@@ -707,6 +711,7 @@
     "resetBackupFolder": "إعادة تعيين مجلد النسخ",
     "saveBackupPolicy": "حفظ سياسة النسخ",
     "runBackupNow": "نسخ احتياطي الآن",
+    "backupPolicySaved": "تم حفظ سياسة النسخ الاحتياطي.",
     "lastBackupAt": "آخر نسخة احتياطية",
     "lastBackupResult": "آخر نتيجة",
     "nextBackupAt": "النسخة المجدولة القادمة",
@@ -1234,7 +1239,11 @@
     "invoiceVoided": "تم إلغاء الفاتورة بنجاح.",
     "indexedTextCopied": "تم نسخ النص المفهرس.",
     "indexedTextCopyFailed": "تعذر نسخ النص المفهرس.",
-    "creditApplied": "تم تطبيق الرصيد بنجاح."
+    "creditApplied": "تم تطبيق الرصيد بنجاح.",
+    "fileDownloadStarted": "بدأ التنزيل.",
+    "fileSavedTo": "تم الحفظ في {{path}}.",
+    "fileSaveFailed": "فشل التنزيل.",
+    "backupCompleted": "اكتمل النسخ الاحتياطي."
   },
   "import": {
     "eyebrow": "استيراد جماعي",

@@ -11,6 +11,7 @@ import {
   useClientCreditBalance
 } from "../../lib/billing";
 import { apiDownload, apiFetch } from "../../lib/api";
+import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { confirmAction } from "../../lib/dialog";
 import { useLookupOptions } from "../../lib/lookups";
@@ -126,10 +127,11 @@ export function InvoiceDetailPage() {
     try {
       setIsDownloadingPdf(true);
       const { blob, filename } = await apiDownload(pdfUrl);
-      await saveBlobToDownloads(
+      const savedPath = await saveBlobToDownloads(
         blob,
         filename ?? `invoice-${currentInvoice.invoiceNumber}.pdf`
       );
+      addToast(formatFileSaveSuccessMessage(t, savedPath), "success");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : t("errors.fallback");

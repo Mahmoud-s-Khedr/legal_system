@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useToastStore } from "../../store/toastStore";
 import { apiFetch } from "../../lib/api";
+import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import {
   EmptyState,
@@ -128,16 +129,11 @@ export function ReportsPage() {
     );
 
     try {
-      await downloadReportFile(
+      const savedPath = await downloadReportFile(
         exportMeta.requestPath,
         exportMeta.fallbackFilename
       );
-      addToast(
-        t("reports.exportReady", {
-          format: format === "pdf" ? "PDF" : "Excel"
-        }),
-        "success"
-      );
+      addToast(formatFileSaveSuccessMessage(t, savedPath), "success");
     } catch (error) {
       const message = (error as Error)?.message ?? t("errors.fallback");
       setExportError(message);

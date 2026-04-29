@@ -6,6 +6,10 @@ import { apiDownload, type ApiDownloadResult } from "../../../lib/api";
 import { saveBlobToDownloads } from "../../../lib/desktopDownloads";
 import { showErrorDialog } from "../../../lib/dialog";
 
+const { addToastMock } = vi.hoisted(() => ({
+  addToastMock: vi.fn()
+}));
+
 const { mockUseQuery, mockUseMutation, mockUseQueryClient } = vi.hoisted(() => ({
   mockUseQuery: vi.fn(),
   mockUseMutation: vi.fn(),
@@ -41,6 +45,11 @@ vi.mock("../../../lib/desktopDownloads", () => ({
 
 vi.mock("../../../lib/dialog", () => ({
   showErrorDialog: vi.fn()
+}));
+
+vi.mock("../../../store/toastStore", () => ({
+  useToastStore: (selector: (state: { addToast: typeof addToastMock }) => unknown) =>
+    selector({ addToast: addToastMock })
 }));
 
 vi.mock("../../../components/documents/PdfViewer", () => ({
@@ -124,6 +133,7 @@ afterEach(() => {
   container?.remove();
   root = null;
   container = null;
+  addToastMock.mockReset();
 });
 
 beforeEach(() => {
@@ -176,6 +186,7 @@ describe("LibraryDocumentPage download", () => {
         filename: undefined,
         contentType: "application/pdf"
       });
+    vi.mocked(saveBlobToDownloads).mockResolvedValue("/tmp/Law One.pdf");
 
     const view = render();
     await flushAsyncWork();
@@ -193,6 +204,7 @@ describe("LibraryDocumentPage download", () => {
 
     expect(apiDownload).toHaveBeenNthCalledWith(2, "/api/library/documents/doc-1/stream");
     expect(saveBlobToDownloads).toHaveBeenCalledWith(downloadBlob, "Law One");
+    expect(addToastMock).toHaveBeenCalledWith("messages.fileSavedTo", "success");
   });
 
   it("disables download button while download is in progress", async () => {

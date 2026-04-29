@@ -630,6 +630,10 @@
     "downloadsCurrent": "Current folder",
     "chooseDownloadFolder": "Choose folder",
     "resetDownloadFolder": "Reset to Downloads",
+    "downloadFolderUpdatedTo": "Desktop downloads folder set to {{path}}.",
+    "downloadFolderResetTo": "Desktop downloads folder reset to {{path}}.",
+    "backupFolderUpdatedTo": "Backup folder set to {{path}}.",
+    "backupFolderResetTo": "Backup folder reset to {{path}}.",
     "backupTitle": "Backup and restore",
     "backupHelp": "Configure automatic backups, run manual backups, and restore local data.",
     "backupDirectory": "Backup folder",
@@ -646,6 +650,7 @@
     "resetBackupFolder": "Reset backup folder",
     "saveBackupPolicy": "Save backup policy",
     "runBackupNow": "Back up now",
+    "backupPolicySaved": "Backup policy saved.",
     "lastBackupAt": "Last backup",
     "lastBackupResult": "Last result",
     "nextBackupAt": "Next scheduled backup",
@@ -1192,7 +1197,11 @@
     "invoiceVoided": "Invoice voided successfully.",
     "indexedTextCopied": "Indexed text copied.",
     "indexedTextCopyFailed": "Failed to copy indexed text.",
-    "creditApplied": "Credit applied successfully."
+    "creditApplied": "Credit applied successfully.",
+    "fileDownloadStarted": "Download started.",
+    "fileSavedTo": "Saved to {{path}}.",
+    "fileSaveFailed": "Download failed.",
+    "backupCompleted": "Backup completed."
   },
   "import": {
     "eyebrow": "Bulk import",

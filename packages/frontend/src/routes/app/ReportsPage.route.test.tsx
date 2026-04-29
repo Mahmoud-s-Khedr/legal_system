@@ -243,7 +243,7 @@ describe("ReportsPage route behavior", () => {
       "/api/reports/case-status/export?page=1&limit=20&format=excel",
       "report-case-status.xlsx"
     );
-    expect(addToastMock).toHaveBeenCalledWith("reports.exportReady", "success");
+    expect(addToastMock).toHaveBeenCalledWith("messages.fileDownloadStarted", "success");
   });
 
   it("changes report type and updates sort defaults", () => {

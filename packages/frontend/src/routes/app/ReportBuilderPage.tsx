@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Plus, Play, Trash2, Download, Loader2 } from "lucide-react";
 import { useToastStore } from "../../store/toastStore";
 import { apiFetch } from "../../lib/api";
+import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import {
   FormAlert,
@@ -140,11 +141,11 @@ export function ReportBuilderPage() {
   async function handleExport(id: string) {
     setExportError(null);
     try {
-      await downloadReportFile(
+      const savedPath = await downloadReportFile(
         `/api/reports/custom/${id}/export?format=excel`,
         `custom-report-${id}.xlsx`
       );
-      addToast(t("reports.exportReady", { format: "Excel" }), "success");
+      addToast(formatFileSaveSuccessMessage(t, savedPath), "success");
     } catch (error) {
       const message = (error as Error)?.message ?? t("errors.fallback");
       setExportError(message);

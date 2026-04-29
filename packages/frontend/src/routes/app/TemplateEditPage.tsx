@@ -24,6 +24,7 @@ import {
   sanitizeTemplateHtml
 } from "../../lib/templateEditor";
 import { useToastStore } from "../../store/toastStore";
+import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 
 const LANGUAGES = ["AR", "EN", "FR"];
 
@@ -192,9 +193,9 @@ export function TemplateEditPage() {
             onClick={() => {
               setExportingTemplate(true);
               void exportTemplateDocx(templateId, "template")
-                .then(() =>
+                .then((savedPath) =>
                   addToast(
-                    t("reports.exportReady", { format: "DOCX" }),
+                    formatFileSaveSuccessMessage(t, savedPath),
                     "success"
                   )
                 )
@@ -217,9 +218,9 @@ export function TemplateEditPage() {
               }
               setExportingRendered(true);
               void exportTemplateDocx(templateId, "rendered", renderCaseId)
-                .then(() =>
+                .then((savedPath) =>
                   addToast(
-                    t("reports.exportReady", { format: "DOCX" }),
+                    formatFileSaveSuccessMessage(t, savedPath),
                     "success"
                   )
                 )
