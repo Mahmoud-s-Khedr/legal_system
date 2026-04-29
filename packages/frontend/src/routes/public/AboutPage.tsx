@@ -130,7 +130,9 @@ export function AboutPage() {
                       )
                     }
                   >
-                    {contact.phone}
+                    <bdi className="inline-block whitespace-nowrap" dir="ltr">
+                      {contact.phone}
+                    </bdi>
                   </a>
                   <button
                     type="button"

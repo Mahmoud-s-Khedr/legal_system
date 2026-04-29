@@ -124,7 +124,14 @@ export function ClientsPage() {
                   {
                     key: "phone",
                     label: t("labels.phone"),
-                    render: (item) => item.phone ?? "—"
+                    render: (item) =>
+                      item.phone ? (
+                        <bdi className="inline-block whitespace-nowrap" dir="ltr">
+                          {item.phone}
+                        </bdi>
+                      ) : (
+                        "—"
+                      )
                   },
                   {
                     key: "type",
@@ -176,7 +183,15 @@ export function ClientsPage() {
                         <TableCell>{client.name}</TableCell>
                         <TableCell>{client.internalRef ?? "—"}</TableCell>
                         <TableCell>{client.poaNumber ?? "—"}</TableCell>
-                        <TableCell>{client.phone ?? "—"}</TableCell>
+                        <TableCell>
+                          {client.phone ? (
+                            <bdi className="inline-block whitespace-nowrap" dir="ltr">
+                              {client.phone}
+                            </bdi>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
                         <TableCell>
                           <EnumBadge
                             enumName="ClientType"

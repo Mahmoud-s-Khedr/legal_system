@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type InputHTMLAttributes } from "react";
 import { Check, X, Pencil } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -18,6 +18,12 @@ interface Props {
   options?: SelectOption[];
   /** Placeholder text */
   placeholder?: string;
+  /** Direction for the value input and display */
+  dir?: "ltr" | "rtl" | "auto";
+  /** Browser input mode hint */
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
+  /** Browser autocomplete hint */
+  autoComplete?: string;
   /** Extra classes on the wrapper */
   className?: string;
 }
@@ -33,6 +39,9 @@ export function InlineEditField({
   type = "text",
   options,
   placeholder,
+  dir,
+  inputMode,
+  autoComplete,
   className
 }: Props) {
   const { t } = useTranslation("app");
@@ -69,6 +78,7 @@ export function InlineEditField({
     return (
       <span
         className={`group inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-1 py-0.5 hover:bg-slate-100 ${className ?? ""}`}
+        dir={dir}
         onClick={startEdit}
         role="button"
         tabIndex={0}
@@ -119,12 +129,15 @@ export function InlineEditField({
           autoFocus
           className="rounded-lg border border-accent px-2 py-1 text-sm focus:outline-none"
           disabled={saving}
+          autoComplete={autoComplete}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") void confirmEdit();
             if (e.key === "Escape") cancelEdit();
           }}
+          inputMode={inputMode}
           type="text"
+          dir={dir}
           value={draft}
         />
       )}

@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import type { ClientDto } from "@elms/shared";
-import { InvoiceStatus } from "@elms/shared";
+import { InvoiceStatus, isValidPhoneNumber, normalizePhoneNumber } from "@elms/shared";
 import { InlineEditField } from "../../components/InlineEditField";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
@@ -25,6 +25,8 @@ import {
 import { DocumentList } from "../../components/documents/DocumentList";
 import { useClientCreditBalance, useInvoices } from "../../lib/billing";
 
+const PHONE_ERROR = "Enter a valid phone number";
+
 export function ClientDetailPage() {
   const { t } = useTranslation("app");
   const { clientId } = useParams({ from: "/app/clients/$clientId" });
@@ -46,6 +48,13 @@ export function ClientDetailPage() {
   });
 
   async function patchClient(field: "email" | "phone", value: string) {
+    if (field === "phone") {
+      const normalized = normalizePhoneNumber(value);
+      if (normalized && !isValidPhoneNumber(normalized)) {
+        throw new Error(PHONE_ERROR);
+      }
+      value = normalized;
+    }
     const current = await queryClient.fetchQuery({
       queryKey: ["client", clientId],
       queryFn: () => apiFetch<ClientDto>(`/api/clients/${clientId}`)
@@ -206,7 +215,10 @@ export function ClientDetailPage() {
               </dt>
               <dd className="mt-0.5">
                 <InlineEditField
+                  autoComplete="tel"
+                  dir="ltr"
                   onSave={(v) => patchClient("phone", v)}
+                  inputMode="tel"
                   placeholder="—"
                   value={client.phone}
                 />
@@ -271,9 +283,13 @@ export function ClientDetailPage() {
                 >
                   <p className="font-semibold">{contact.name}</p>
                   <p className="mt-1 text-sm text-slate-600">
-                    {contact.phone} · {contact.email ?? t("labels.noEmail")}
-                  </p>
-                </article>
+                  <bdi className="inline-block whitespace-nowrap" dir="ltr">
+                    {contact.phone}
+                  </bdi>
+                  {" · "}
+                  {contact.email ?? t("labels.noEmail")}
+                </p>
+              </article>
               ))}
             </div>
           )}

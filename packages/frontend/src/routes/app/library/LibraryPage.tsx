@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
 import { useHasPermission } from "../../../store/authStore";
+import { isArabicLanguage } from "../../../lib/language";
 import { EmptyState, ErrorState, PageHeader, SectionCard } from "../ui";
 
 interface CategoryNode {
@@ -46,8 +47,9 @@ interface DocumentsResponse {
 export function LibraryPage() {
   const { t, i18n } = useTranslation("app");
   const canUploadLibraryDocuments = useHasPermission("library:read");
-  const isRtl = i18n.resolvedLanguage === "ar";
-  const isFrench = i18n.resolvedLanguage === "fr";
+  const resolvedLanguage = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const isRtl = isArabicLanguage(resolvedLanguage);
+  const isFrench = resolvedLanguage.startsWith("fr");
   const ChevronIcon = isRtl ? ChevronLeft : ChevronRight;
   const [selectedCategoryId, setSelectedCategoryId] = useState<
     string | undefined

@@ -14,6 +14,7 @@ import { buildSidebarNavSections } from "./navConfig";
 import { BackToTopButton } from "../../components/navigation/BackToTopButton";
 import { ShellFooter } from "../../components/navigation/ShellFooter";
 import { buildAppShellFooterLinks } from "../../components/navigation/shellFooterLinks";
+import { isArabicLanguage } from "../../lib/language";
 
 export function AppLayout() {
   const { t, i18n } = useTranslation("app");
@@ -37,7 +38,7 @@ export function AppLayout() {
   const headerMenuRef = useRef<HTMLDivElement>(null);
   const headerMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const matches = useMatches();
-  const isRtl = i18n.resolvedLanguage === "ar";
+  const isRtl = isArabicLanguage(i18n.resolvedLanguage ?? i18n.language ?? "en");
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const closeHeaderMenu = useCallback(() => setHeaderMenuOpen(false), []);
 

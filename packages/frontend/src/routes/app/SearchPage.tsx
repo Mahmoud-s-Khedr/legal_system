@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
+import { normalizeDigits } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { EmptyState, ErrorState, PageHeader, TablePagination } from "./ui";
 import { GlobalSearchResultCard } from "../../components/search/GlobalSearchResultCard";
@@ -31,7 +32,7 @@ export function SearchPage() {
   const [draftQuery, setDraftQuery] = useState(q);
 
   useEffect(() => {
-    setDraftQuery(q);
+    setDraftQuery(normalizeDigits(q));
   }, [q]);
 
   const searchQuery = useQuery<GlobalSearchResponse>({
@@ -45,7 +46,7 @@ export function SearchPage() {
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
-    const nextQuery = draftQuery.trim();
+    const nextQuery = normalizeDigits(draftQuery).trim();
     void navigate({
       to: "/app/search",
       search: { q: nextQuery, page: 1, pageSize }
@@ -83,7 +84,7 @@ export function SearchPage() {
           <input
             aria-label={t("search.placeholder")}
             className="w-full rounded-2xl border border-slate-200 bg-white py-3 ps-9 pe-4 text-sm outline-none focus:border-accent"
-            onChange={(event) => setDraftQuery(event.target.value)}
+            onChange={(event) => setDraftQuery(normalizeDigits(event.target.value))}
             placeholder={t("search.placeholder")}
             type="search"
             value={draftQuery}

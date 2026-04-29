@@ -5,6 +5,7 @@ import { TaskStatus, type TaskListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { isArabicLanguage } from "../../lib/language";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { useToastStore } from "../../store/toastStore";
 import {
@@ -69,7 +70,7 @@ export function TasksPage() {
     enabled: viewMode === "kanban"
   });
 
-  const isRtl = i18n.resolvedLanguage === "ar";
+  const isRtl = isArabicLanguage(i18n.resolvedLanguage ?? i18n.language ?? "en");
 
   const kanbanColumns = useMemo(() => {
     const statuses = Object.values(TaskStatus);

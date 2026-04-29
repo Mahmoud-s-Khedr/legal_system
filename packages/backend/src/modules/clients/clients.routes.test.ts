@@ -111,4 +111,102 @@ describe("registerClientRoutes", () => {
     expect(response).not.toHaveProperty("client");
     expect(response).not.toHaveProperty("conflictWarnings");
   });
+
+  it("rejects invalid phone numbers on create", async () => {
+    const post = vi.fn();
+    const app = {
+      get: vi.fn(),
+      post,
+      put: vi.fn(),
+      delete: vi.fn()
+    };
+
+    await registerClientRoutes(app as never);
+    const postCall = post.mock.calls.find((call) => call[0] === "/api/clients");
+    const handler = postCall?.[2] as ((request: unknown) => Promise<unknown>) | undefined;
+    expect(handler).toBeDefined();
+
+    await expect(
+      handler!({
+        body: {
+          name: "Ahmed Hassan",
+          type: "INDIVIDUAL",
+          phone: "010 1234567",
+          email: null,
+          governorate: null,
+          preferredLanguage: Language.AR,
+          nationalId: null,
+          commercialRegister: null,
+          taxNumber: null,
+          contacts: []
+        },
+        sessionUser: makeSessionUser({ permissions: ["clients:create"] }),
+        ip: "127.0.0.1",
+        headers: { "user-agent": "vitest" }
+      })
+    ).rejects.toThrow();
+  });
+
+  it("normalizes Arabic-Indic phone digits on create", async () => {
+    const post = vi.fn();
+    const app = {
+      get: vi.fn(),
+      post,
+      put: vi.fn(),
+      delete: vi.fn()
+    };
+
+    await registerClientRoutes(app as never);
+    const postCall = post.mock.calls.find((call) => call[0] === "/api/clients");
+    const handler = postCall?.[2] as ((request: unknown) => Promise<unknown>) | undefined;
+    expect(handler).toBeDefined();
+
+    createClient.mockResolvedValueOnce({
+      client: {
+        id: "client-2",
+        name: "Fatima Ali",
+        type: "INDIVIDUAL",
+        phone: "0123456789",
+        email: null,
+        governorate: null,
+        preferredLanguage: Language.AR,
+        nationalId: null,
+        commercialRegister: null,
+        taxNumber: null,
+        contacts: [],
+        linkedCaseCount: 0,
+        invoiceCount: 0,
+        documentCount: 0,
+        createdAt: new Date("2026-03-21T00:00:00.000Z").toISOString(),
+        updatedAt: new Date("2026-03-21T00:00:00.000Z").toISOString()
+      },
+      conflictWarnings: []
+    });
+
+    await handler!({
+      body: {
+        name: "Fatima Ali",
+        type: "INDIVIDUAL",
+        phone: "٠١٢٣٤٥٦٧٨٩",
+        email: null,
+        governorate: null,
+        preferredLanguage: Language.AR,
+        nationalId: null,
+        commercialRegister: null,
+        taxNumber: null,
+        contacts: []
+      },
+      sessionUser: makeSessionUser({ permissions: ["clients:create"] }),
+      ip: "127.0.0.1",
+      headers: { "user-agent": "vitest" }
+    });
+
+    expect(createClient).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        phone: "0123456789"
+      }),
+      expect.anything()
+    );
+  });
 });

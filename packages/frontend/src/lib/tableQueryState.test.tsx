@@ -137,4 +137,27 @@ describe("useTableQueryState", () => {
 
     expect(latestTable?.toApiQueryString()).not.toContain("q=");
   });
+
+  it("normalizes Arabic-Indic digits in the query state and API string", () => {
+    mockedSearch = {
+      q: "",
+      sortBy: "createdAt",
+      sortDir: "desc",
+      page: 1,
+      limit: 20
+    };
+    renderProbe();
+
+    act(() => {
+      latestTable?.setQ("١٢٣");
+    });
+
+    setMockedSearchFromUrlWithNumericPageAndLimit();
+    act(() => {
+      root?.render(<Probe />);
+    });
+
+    expect(latestTable?.state.q).toBe("123");
+    expect(latestTable?.toApiQueryString()).toContain("q=123");
+  });
 });

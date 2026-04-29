@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useSearch } from "@tanstack/react-router";
+import { normalizeDigits } from "@elms/shared";
 
 export type SortDir = "asc" | "desc";
 
@@ -56,7 +57,7 @@ export function useTableQueryState(options: {
       filterKeys.map((key) => [key, getString(search[key])])
     );
     return {
-      q: getString(search.q),
+      q: normalizeDigits(getString(search.q)),
       sortBy: getString(search.sortBy, options.defaultSortBy),
       sortDir: (getString(search.sortDir, defaultSortDir) === "asc" ? "asc" : "desc"),
       page: parsePositiveIntSearchParam(search.page, defaultPage),
@@ -75,7 +76,7 @@ export function useTableQueryState(options: {
     replace?: boolean;
   }) {
     const params = new URLSearchParams(window.location.search);
-    const q = next.q ?? state.q;
+    const q = normalizeDigits(next.q ?? state.q);
     const sortBy = next.sortBy ?? state.sortBy;
     const sortDir = next.sortDir ?? state.sortDir;
     const page = next.page ?? state.page;
@@ -101,7 +102,7 @@ export function useTableQueryState(options: {
   }
 
   function setQ(q: string) {
-    update({ q, page: 1 });
+    update({ q: normalizeDigits(q), page: 1 });
   }
 
   function setFilter(key: string, value: string) {
@@ -126,7 +127,8 @@ export function useTableQueryState(options: {
 
   function toApiQueryString(extra: Record<string, string | number | undefined> = {}) {
     const params = new URLSearchParams();
-    if (state.q.trim().length > 0) params.set("q", state.q.trim());
+    const q = normalizeDigits(state.q).trim();
+    if (q.length > 0) params.set("q", q);
     params.set("sortBy", state.sortBy);
     params.set("sortDir", state.sortDir);
     params.set("page", String(state.page));

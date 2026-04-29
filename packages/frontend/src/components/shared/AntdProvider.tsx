@@ -5,17 +5,18 @@ import enUS from "antd/locale/en_US";
 import frFR from "antd/locale/fr_FR";
 import { useTranslation } from "react-i18next";
 import { setDialogHandlers } from "../../lib/dialog";
+import { isArabicLanguage } from "../../lib/language";
 
 function resolveAntdLocale(language: string) {
-  if (language === "ar") return arEG;
-  if (language === "fr") return frFR;
+  if (isArabicLanguage(language)) return arEG;
+  if (language.toLowerCase().startsWith("fr")) return frFR;
   return enUS;
 }
 
 export function AntdProvider({ children }: PropsWithChildren) {
   const { i18n } = useTranslation();
-  const language = i18n.resolvedLanguage ?? "ar";
-  const direction = language === "ar" ? "rtl" : "ltr";
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "ar";
+  const direction = isArabicLanguage(language) ? "rtl" : "ltr";
 
   return (
     <ConfigProvider

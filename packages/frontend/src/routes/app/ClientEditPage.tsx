@@ -9,7 +9,9 @@ import {
   ClientType,
   Language,
   type ClientDto,
-  type CreateClientDto
+  type CreateClientDto,
+  isValidPhoneNumber,
+  normalizePhoneNumber
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
@@ -31,9 +33,17 @@ import {
 import { DocumentList } from "../../components/documents/DocumentList";
 import { DocumentUploadForm } from "../../components/documents/DocumentUploadForm";
 
+const PHONE_ERROR = "Enter a valid phone number";
+
 function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function validatePhone(value: string) {
+  const normalized = normalizePhoneNumber(value);
+  if (!normalized) return null;
+  return isValidPhoneNumber(normalized) ? null : PHONE_ERROR;
 }
 
 function isIdentityType(type: ClientType) {
@@ -94,6 +104,7 @@ export function ClientEditPage() {
     internalRef: "",
     contacts: []
   });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const loadedFormRef = useRef<CreateClientDto | null>(null);
   useUnsavedChanges(
     loadedFormRef.current !== null &&
@@ -194,6 +205,11 @@ export function ClientEditPage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            const nextPhoneError = validatePhone(form.phone ?? "");
+            setPhoneError(nextPhoneError);
+            if (nextPhoneError) {
+              return;
+            }
             updateMutation.mutate(normalizePayload(form));
           }}
         >
@@ -220,12 +236,18 @@ export function ClientEditPage() {
               type="email"
               value={form.email ?? ""}
             />
-            <Field
-              dir="ltr"
-              label={t("labels.phone")}
-              onChange={(value) => setForm({ ...form, phone: value })}
-              value={form.phone ?? ""}
-            />
+          <Field
+            dir="ltr"
+            label={t("labels.phone")}
+            autoComplete="tel"
+            inputMode="tel"
+            onChange={(value) => {
+              setForm({ ...form, phone: value });
+              setPhoneError(validatePhone(value));
+            }}
+            error={phoneError ?? undefined}
+            value={form.phone ?? ""}
+          />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField

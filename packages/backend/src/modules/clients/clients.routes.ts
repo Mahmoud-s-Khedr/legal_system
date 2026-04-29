@@ -6,6 +6,7 @@ import { requirePermission } from "../../middleware/requirePermission.js";
 import { getAuditContext } from "../../utils/auditContext.js";
 import { parsePaginationQuery } from "../../utils/pagination.js";
 import { clientDtoSchema, listResponseSchema, successSchema } from "../../schemas/index.js";
+import { isValidPhoneNumber, normalizePhoneNumber } from "@elms/shared";
 import {
   createClient,
   getClient,
@@ -15,9 +16,15 @@ import {
   updateClient
 } from "./clients.service.js";
 
+const phoneValidationMessage = "Enter a valid phone number";
+const phoneSchema = z
+  .string()
+  .transform((value) => normalizePhoneNumber(value))
+  .refine((value) => isValidPhoneNumber(value), { message: phoneValidationMessage });
+
 const contactSchema = z.object({
   name: z.string().min(2),
-  phone: z.string().min(3),
+  phone: phoneSchema,
   email: z.string().email().nullable().optional(),
   role: z.string().nullable().optional()
 });
@@ -25,7 +32,7 @@ const contactSchema = z.object({
 const clientSchema = z.object({
   name: z.string().min(2),
   type: z.nativeEnum(ClientType),
-  phone: z.string().nullable().optional(),
+  phone: phoneSchema.nullish(),
   email: z.string().email().nullable().optional(),
   governorate: z.string().nullable().optional(),
   preferredLanguage: z.nativeEnum(Language).optional(),

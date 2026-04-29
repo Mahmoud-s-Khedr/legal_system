@@ -12,6 +12,7 @@ import {
   listResponseSchema,
   successSchema
 } from "../../schemas/index.js";
+import { appError, isAppError } from "../../errors/appError.js";
 import {
   addPayment,
   applyInvoiceCredit,
@@ -317,14 +318,32 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     "/api/invoices/:id/pdf",
     { preHandler: [requireAuth, requirePermission("invoices:read")] },
     async (request, reply) => {
-      const invoice = await getInvoice(request.sessionUser!, idParamsSchema.parse(request.params).id);
-      const firmName = (request.sessionUser! as { firmName?: string }).firmName ?? "ELMS";
-      const pdf = await generateInvoicePdf(invoice, firmName);
-      reply
-        .header("Content-Type", "application/pdf")
-        .header("Content-Disposition", `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`)
-        .header("Content-Length", pdf.length);
-      return reply.send(pdf);
+      try {
+        const invoice = await getInvoice(
+          request.sessionUser!,
+          idParamsSchema.parse(request.params).id
+        );
+        const firmName = (request.sessionUser! as { firmName?: string }).firmName ?? "ELMS";
+        const pdf = await generateInvoicePdf(invoice, firmName);
+        reply
+          .header("Content-Type", "application/pdf")
+          .header(
+            "Content-Disposition",
+            `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`
+          )
+          .header("Content-Length", pdf.length);
+        return reply.send(pdf);
+      } catch (error) {
+        if (isAppError(error)) {
+          throw error;
+        }
+        if (error instanceof Error) {
+          throw appError("Failed to generate invoice PDF", 500, {
+            details: { cause: error.message }
+          });
+        }
+        throw appError("Failed to generate invoice PDF", 500);
+      }
     }
   );
 

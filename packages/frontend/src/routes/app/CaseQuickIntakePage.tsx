@@ -30,7 +30,9 @@ import {
   type CreateClientDto,
   type CreateHearingDto,
   type CreateTaskDto,
-  type UserListResponseDto
+  type UserListResponseDto,
+  isValidPhoneNumber,
+  normalizePhoneNumber
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch, apiFormFetch } from "../../lib/api";
@@ -121,6 +123,8 @@ function makeId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+const PHONE_ERROR = "Enter a valid phone number";
+
 export function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -149,6 +153,12 @@ export function normalizeClientPayload(form: ClientFormState): CreateClientDto {
     internalRef: toNullable(form.internalRef),
     contacts: []
   };
+}
+
+function validatePhone(value: string) {
+  const normalized = normalizePhoneNumber(value);
+  if (!normalized) return null;
+  return isValidPhoneNumber(normalized) ? null : PHONE_ERROR;
 }
 
 function emptyCourt(): DraftCourt {
@@ -323,6 +333,7 @@ export function CaseQuickIntakePage() {
     internalRef: "",
     contacts: []
   });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const dupCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dupCheckSeq = useRef(0);
@@ -781,6 +792,12 @@ export function CaseQuickIntakePage() {
             setValidationMessage(t("quickIntake.noClientCreatePermission"));
             return;
           }
+          const nextPhoneError = validatePhone(clientForm.phone ?? "");
+          setPhoneError(nextPhoneError);
+          if (nextPhoneError) {
+            setValidationMessage(nextPhoneError);
+            return;
+          }
           const createdClient = await createClientMutation.mutateAsync(
             normalizeClientPayload(clientForm)
           );
@@ -1076,10 +1093,15 @@ export function CaseQuickIntakePage() {
                   <Field
                     dir="ltr"
                     label={t("labels.phone")}
+                    autoComplete="tel"
+                    inputMode="tel"
                     value={clientForm.phone ?? ""}
-                    onChange={(value) =>
-                      setClientForm({ ...clientForm, phone: value })
-                    }
+                    error={phoneError ?? undefined}
+                    onChange={(value) => {
+                      setClientForm({ ...clientForm, phone: value });
+                      setPhoneError(validatePhone(value));
+                      setValidationMessage(null);
+                    }}
                   />
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">

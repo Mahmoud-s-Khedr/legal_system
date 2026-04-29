@@ -17,3 +17,4 @@ export * from "./dtos/billing";
 export * from "./dtos/reports";
 export * from "./dtos/notifications";
 export * from "./dtos/powers";
+export * from "./utils/text";

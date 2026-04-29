@@ -3,12 +3,14 @@ import {
   useId,
   useState,
   type PropsWithChildren,
+  type InputHTMLAttributes,
   type ReactNode
 } from "react";
 import { DatePicker, Select } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import i18n from "../../i18n";
+import { resolveLocale } from "../../lib/language";
 import {
   DATE_PICKER_DATETIME_FORMAT,
   DATE_PICKER_DATE_FORMAT,
@@ -349,8 +351,8 @@ export function TablePagination({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
-  const lang = i18n.resolvedLanguage ?? "ar";
-  const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
+  const lang = i18n.resolvedLanguage ?? i18n.language ?? "ar";
+  const locale = resolveLocale(lang);
   const numberFormatter = new Intl.NumberFormat(locale);
 
   const formattedFrom = numberFormatter.format(from);
@@ -528,6 +530,7 @@ export function Field({
   placeholder,
   type = "text",
   autoComplete,
+  inputMode,
   minLength,
   maxLength,
   dir,
@@ -545,6 +548,7 @@ export function Field({
   placeholder?: string;
   type?: string;
   autoComplete?: string;
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
   minLength?: number;
   maxLength?: number;
   dir?: "ltr" | "rtl" | "auto";
@@ -633,6 +637,7 @@ export function Field({
           placeholder={placeholder}
           type={type}
           autoComplete={autoComplete}
+          inputMode={inputMode}
           minLength={minLength}
           maxLength={maxLength}
           value={isBlurCommit ? draftValue : value}
@@ -914,8 +919,8 @@ export function formatDateTime(value: string | null) {
     return "—";
   }
 
-  const lang = i18n.resolvedLanguage ?? "ar";
-  const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
+  const lang = i18n.resolvedLanguage ?? i18n.language ?? "ar";
+  const locale = resolveLocale(lang);
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short"
@@ -927,8 +932,8 @@ export function formatDate(value: string | null) {
     return "—";
   }
 
-  const lang = i18n.resolvedLanguage ?? "ar";
-  const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
+  const lang = i18n.resolvedLanguage ?? i18n.language ?? "ar";
+  const locale = resolveLocale(lang);
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium"
   }).format(new Date(value));
@@ -949,8 +954,8 @@ export function formatCurrency(
   // Prevent negative zero from displaying as "-0.00"
   const normalizedNumeric = numeric === 0 ? 0 : numeric;
 
-  const lang = i18n.resolvedLanguage ?? "ar";
-  const locale = lang === "ar" ? "ar-EG" : lang === "fr" ? "fr-FR" : "en-US";
+  const lang = i18n.resolvedLanguage ?? i18n.language ?? "ar";
+  const locale = resolveLocale(lang);
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EGP",

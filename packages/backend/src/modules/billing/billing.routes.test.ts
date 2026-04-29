@@ -156,6 +156,27 @@ describe("registerBillingRoutes", () => {
     expect(result).toBe(reply);
   });
 
+  it("fails with a controlled error when invoice PDF generation throws", async () => {
+    const app = createApp();
+    await registerBillingRoutes(app as never);
+
+    getInvoice.mockResolvedValueOnce({ invoiceNumber: "INV-2026-02" });
+    generateInvoicePdf.mockRejectedValueOnce(new Error("pdfmake exploded"));
+
+    const actor = makeSessionUser({ permissions: ["invoices:read"] });
+    const handler = findRouteHandler(app.get.mock.calls, "/api/invoices/:id/pdf");
+    await expect(
+      handler!({ params: { id: "invoice-1" }, sessionUser: actor }, {
+        header: vi.fn(),
+        send: vi.fn()
+      })
+    ).rejects.toMatchObject({
+      name: "AppError",
+      statusCode: 500,
+      message: "Failed to generate invoice PDF"
+    });
+  });
+
   it("configures payment endpoint rate limit and forwards id param", async () => {
     const app = createApp();
     await registerBillingRoutes(app as never);

@@ -8,6 +8,7 @@ import type {
   ClientListResponseDto,
   DocumentSearchResponseDto
 } from "@elms/shared";
+import { normalizeDigits } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { useAccessibleOverlay } from "../shared/useAccessibleOverlay";
 
@@ -137,7 +138,10 @@ export function CommandPalette({ open, onClose }: Props) {
         score: 0,
         icon: <Plus className="h-4 w-4" />,
         action: () => {
-          void navigate({ to: "/app/search", search: { q: "" } });
+          void navigate({
+            to: "/app/search",
+            search: { q: "", page: 1, pageSize: 20 }
+          });
           onClose();
         }
       },
@@ -231,7 +235,7 @@ export function CommandPalette({ open, onClose }: Props) {
         action: () => {
           void navigate({
             to: "/app/search",
-            search: { q: debouncedQ.trim() }
+            search: { q: debouncedQ.trim(), page: 1, pageSize: 20 }
           });
           onClose();
         }
@@ -337,7 +341,7 @@ export function CommandPalette({ open, onClose }: Props) {
             ref={inputRef}
             aria-label={t("search.placeholder")}
             className="flex-1 bg-transparent text-sm focus:outline-none"
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => setQ(normalizeDigits(e.target.value))}
             placeholder={t(
               "search.commandPlaceholder",
               "Search or type a command…"
@@ -432,7 +436,7 @@ export function CommandPalette({ open, onClose }: Props) {
               e.preventDefault();
               void navigate({
                 to: "/app/search",
-                search: { q: debouncedQ.trim() }
+                search: { q: debouncedQ.trim(), page: 1, pageSize: 20 }
               });
               onClose();
             }}

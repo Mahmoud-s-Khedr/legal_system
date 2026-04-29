@@ -11,6 +11,7 @@ import { PdfViewer } from "../../../components/documents/PdfViewer";
 import { DocxViewer } from "../../../components/documents/DocxViewer";
 import { saveBlobToDownloads } from "../../../lib/desktopDownloads";
 import { showErrorDialog } from "../../../lib/dialog";
+import { isArabicLanguage } from "../../../lib/language";
 import { useToastStore } from "../../../store/toastStore";
 import {
   EmptyState,
@@ -77,8 +78,9 @@ interface LibraryDocumentDetail {
 
 export function LibraryDocumentPage() {
   const { t, i18n } = useTranslation("app");
-  const isRtl = i18n.resolvedLanguage === "ar";
-  const isFrench = i18n.resolvedLanguage === "fr";
+  const resolvedLanguage = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const isRtl = isArabicLanguage(resolvedLanguage);
+  const isFrench = resolvedLanguage.startsWith("fr");
   const { documentId } = useParams({
     from: "/app/library/documents/$documentId"
   });

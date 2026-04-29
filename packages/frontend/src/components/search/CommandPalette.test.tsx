@@ -178,4 +178,17 @@ describe("CommandPalette", () => {
       )
     ).toBe(true);
   });
+
+  it("normalizes Arabic-Indic digits when typing into the search box", () => {
+    const view = render(true);
+    const input = view.querySelector('input[type="search"]') as HTMLInputElement;
+
+    act(() => {
+      setTextInputValue(input, "١٢٣");
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(input.value).toBe("123");
+    expect(mockUseQuery.mock.calls.some((call) => call[0]?.queryKey?.[1] === "123")).toBe(true);
+  });
 });

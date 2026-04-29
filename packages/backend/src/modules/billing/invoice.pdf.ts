@@ -9,16 +9,27 @@ import type { InvoiceDto } from "@elms/shared";
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
 import { resolvePdfFontConfig } from "../../utils/pdfFonts.js";
 
+function formatPdfText(value: string | null | undefined, fallback = "—"): string {
+  const text = value?.trim();
+  return text ? text : fallback;
+}
+
+function formatPdfDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("ar-EG");
+}
+
 export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string): Promise<Buffer> {
   const PdfPrinter = (await import("pdfmake")).default;
   const fontConfig = resolvePdfFontConfig();
   const printer = new PdfPrinter(fontConfig.fonts);
 
-  const itemRows = invoice.items.map((item) => [
-    { text: item.description, alignment: "right" as const },
-    { text: String(item.quantity), alignment: "center" as const },
-    { text: item.unitPrice, alignment: "left" as const },
-    { text: item.total, alignment: "left" as const }
+  const itemRows = (invoice.items ?? []).map((item) => [
+    { text: formatPdfText(item.description), alignment: "right" as const },
+    { text: String(item.quantity ?? "—"), alignment: "center" as const },
+    { text: formatPdfText(item.unitPrice), alignment: "left" as const },
+    { text: formatPdfText(item.total), alignment: "left" as const }
   ]);
 
   const docDefinition: TDocumentDefinitions = {
@@ -28,17 +39,21 @@ export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string):
       { text: "فاتورة", style: "title", alignment: "center", marginBottom: 16 },
       {
         columns: [
-          { text: `رقم الفاتورة: ${invoice.invoiceNumber}`, width: "*" },
+          { text: `رقم الفاتورة: ${formatPdfText(invoice.invoiceNumber)}`, width: "*" },
           {
-            text: `تاريخ الإصدار: ${invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString("ar-EG") : "—"}`,
+            text: `تاريخ الإصدار: ${formatPdfDate(invoice.issuedAt)}`,
             width: "*",
             alignment: "left"
           }
         ],
         marginBottom: 4
       },
-      invoice.clientName ? { text: `العميل: ${invoice.clientName}`, marginBottom: 4 } : null,
-      invoice.caseTitle ? { text: `القضية: ${invoice.caseTitle}`, marginBottom: 16 } : null,
+      invoice.clientName
+        ? { text: `العميل: ${formatPdfText(invoice.clientName)}`, marginBottom: 4 }
+        : null,
+      invoice.caseTitle
+        ? { text: `القضية: ${formatPdfText(invoice.caseTitle)}`, marginBottom: 16 }
+        : null,
       {
         table: {
           headerRows: 1,
@@ -62,12 +77,21 @@ export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string):
             width: "auto",
             table: {
               body: [
-                [{ text: "المجموع الفرعي", alignment: "right" }, { text: invoice.subtotalAmount, alignment: "left" }],
-                [{ text: "الضريبة", alignment: "right" }, { text: invoice.taxAmount, alignment: "left" }],
-                [{ text: "الخصم", alignment: "right" }, { text: invoice.discountAmount, alignment: "left" }],
+                [
+                  { text: "المجموع الفرعي", alignment: "right" },
+                  { text: formatPdfText(invoice.subtotalAmount), alignment: "left" }
+                ],
+                [
+                  { text: "الضريبة", alignment: "right" },
+                  { text: formatPdfText(invoice.taxAmount), alignment: "left" }
+                ],
+                [
+                  { text: "الخصم", alignment: "right" },
+                  { text: formatPdfText(invoice.discountAmount), alignment: "left" }
+                ],
                 [
                   { text: "الإجمالي", alignment: "right", bold: true },
-                  { text: invoice.totalAmount, alignment: "left", bold: true }
+                  { text: formatPdfText(invoice.totalAmount), alignment: "left", bold: true }
                 ]
               ]
             },

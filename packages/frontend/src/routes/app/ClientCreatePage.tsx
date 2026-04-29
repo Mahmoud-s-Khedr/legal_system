@@ -10,7 +10,9 @@ import {
   type DocumentDto,
   Language,
   type ClientListResponseDto,
-  type CreateClientDto
+  type CreateClientDto,
+  isValidPhoneNumber,
+  normalizePhoneNumber
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch, apiFormFetch } from "../../lib/api";
@@ -33,6 +35,7 @@ import {
 } from "./ui";
 
 const ACCEPTED_TYPES = ".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif";
+const PHONE_ERROR = "Enter a valid phone number";
 
 type DraftDocument = {
   id: string;
@@ -53,6 +56,12 @@ type ClientFormState = Omit<CreateClientDto, "type"> & {
 function toNullable(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function validatePhone(value: string) {
+  const normalized = normalizePhoneNumber(value);
+  if (!normalized) return null;
+  return isValidPhoneNumber(normalized) ? null : PHONE_ERROR;
 }
 
 function isIdentityType(type: ClientType | "") {
@@ -120,6 +129,7 @@ export function ClientCreatePage() {
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null
   );
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [createdClientId, setCreatedClientId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DraftDocument[]>([]);
@@ -325,6 +335,13 @@ export function ClientCreatePage() {
                 return;
               }
 
+              const nextPhoneError = validatePhone(form.phone ?? "");
+              setPhoneError(nextPhoneError);
+              if (nextPhoneError) {
+                setValidationMessage(nextPhoneError);
+                return;
+              }
+
               setValidationMessage(null);
               setSubmitSummary(null);
 
@@ -403,7 +420,14 @@ export function ClientCreatePage() {
                 <Field
                   dir="ltr"
                   label={t("labels.phone")}
-                  onChange={(value) => setForm({ ...form, phone: value })}
+                  autoComplete="tel"
+                  inputMode="tel"
+                  onChange={(value) => {
+                    setForm({ ...form, phone: value });
+                    setPhoneError(validatePhone(value));
+                    setValidationMessage(null);
+                  }}
+                  error={phoneError ?? undefined}
                   value={form.phone ?? ""}
                 />
               </div>
