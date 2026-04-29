@@ -207,6 +207,9 @@ export async function litigationSheetRows(actor: SessionUser): Promise<Litigatio
       return a.sortDate.localeCompare(b.sortDate);
     });
 
-    return reportRows.map(({ sortDate: _sortDate, ...row }) => row);
+    return reportRows.map(({ sortDate, ...row }) => {
+      void sortDate;
+      return row;
+    });
   });
 }

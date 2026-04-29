@@ -1,6 +1,20 @@
 import { PrismaClient } from "@prisma/client";
 import { recordDbTiming } from "../monitoring/performance.js";
 
+type PrismaMiddlewareParams = {
+  model?: string;
+  action?: string;
+};
+
+type PrismaWithUse = PrismaClient & {
+  $use?: (
+    middleware: (
+      params: PrismaMiddlewareParams,
+      next: (params: PrismaMiddlewareParams) => Promise<unknown>
+    ) => Promise<unknown>
+  ) => void;
+};
+
 declare global {
   var __elmsPrisma: PrismaClient | undefined;
 }
@@ -12,9 +26,9 @@ const basePrisma =
   });
 
 const slowQueryThresholdMs = Number(process.env.PERFORMANCE_DB_SLOW_QUERY_MS ?? "200");
-const prismaWithMiddleware = basePrisma as any;
+const prismaWithMiddleware = basePrisma as PrismaWithUse;
 if (typeof prismaWithMiddleware.$use === "function") {
-  prismaWithMiddleware.$use(async (params: any, next: any) => {
+  prismaWithMiddleware.$use(async (params, next) => {
     const startedAt = process.hrtime.bigint();
     const result = await next(params);
     const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;

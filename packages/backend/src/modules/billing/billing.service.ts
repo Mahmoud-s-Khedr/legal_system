@@ -30,7 +30,6 @@ import {
   createInvoiceWithItems,
   createPayment,
   decrementClientCreditBalance,
-  deleteExpenseById,
   deleteInvoiceById,
   getClientCreditBalance,
   getFirmExpenseByIdOrThrow,
