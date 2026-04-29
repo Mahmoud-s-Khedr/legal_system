@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
 import { apiFetch } from "../../lib/api";
-import { EmptyState, ErrorState, PageHeader } from "./ui";
+import { EmptyState, ErrorState, PageHeader, TablePagination } from "./ui";
 import { GlobalSearchResultCard } from "../../components/search/GlobalSearchResultCard";
 
 interface GlobalSearchResult {
@@ -16,10 +16,17 @@ interface GlobalSearchResult {
   rank: number;
 }
 
+interface GlobalSearchResponse {
+  items: GlobalSearchResult[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export function SearchPage() {
   const { t } = useTranslation("app");
   const navigate = useNavigate();
-  const { q } = useSearch({ from: "/app/search" });
+  const { q, page = 1, pageSize = 20 } = useSearch({ from: "/app/search" });
   const normalizedQuery = q.trim();
   const [draftQuery, setDraftQuery] = useState(q);
 
@@ -27,11 +34,11 @@ export function SearchPage() {
     setDraftQuery(q);
   }, [q]);
 
-  const searchQuery = useQuery<GlobalSearchResult[]>({
-    queryKey: ["global-search", normalizedQuery],
+  const searchQuery = useQuery<GlobalSearchResponse>({
+    queryKey: ["global-search", normalizedQuery, page, pageSize],
     queryFn: () =>
-      apiFetch<GlobalSearchResult[]>(
-        `/api/search/global?q=${encodeURIComponent(normalizedQuery)}`
+      apiFetch<GlobalSearchResponse>(
+        `/api/search/global?q=${encodeURIComponent(normalizedQuery)}&page=${page}&pageSize=${pageSize}`
       ),
     enabled: normalizedQuery.length > 0
   });
@@ -41,7 +48,21 @@ export function SearchPage() {
     const nextQuery = draftQuery.trim();
     void navigate({
       to: "/app/search",
-      search: { q: nextQuery }
+      search: { q: nextQuery, page: 1, pageSize }
+    });
+  }
+
+  function goToSearchPage(nextPage: number) {
+    void navigate({
+      to: "/app/search",
+      search: { q: normalizedQuery, page: nextPage, pageSize }
+    });
+  }
+
+  function changePageSize(nextPageSize: number) {
+    void navigate({
+      to: "/app/search",
+      search: { q: normalizedQuery, page: 1, pageSize: nextPageSize }
     });
   }
 
@@ -88,7 +109,7 @@ export function SearchPage() {
           retryLabel={t("errors.reload")}
           onRetry={() => void searchQuery.refetch()}
         />
-      ) : searchQuery.data?.length === 0 || !normalizedQuery ? (
+      ) : searchQuery.data?.items.length === 0 || !normalizedQuery ? (
         <EmptyState
           description={
             normalizedQuery
@@ -100,10 +121,12 @@ export function SearchPage() {
       ) : (
         <div className="space-y-6">
           <p className="text-sm text-slate-500">
-            {searchQuery.data?.length ?? 0} {t("search.rankLabel")}
+            {t("search.resultsCount", {
+              count: searchQuery.data?.total ?? 0
+            })}
           </p>
           <div className="space-y-4">
-            {groupByEntityType(searchQuery.data ?? []).map(
+            {groupByEntityType(searchQuery.data?.items ?? []).map(
               ([entityType, items]) => (
                 <div key={entityType} className="space-y-2">
                   <h3 className="text-sm font-semibold text-slate-700 capitalize">
@@ -122,6 +145,15 @@ export function SearchPage() {
               )
             )}
           </div>
+          {searchQuery.data ? (
+            <TablePagination
+              page={searchQuery.data.page}
+              pageSize={searchQuery.data.pageSize}
+              total={searchQuery.data.total}
+              onPageChange={goToSearchPage}
+              onPageSizeChange={changePageSize}
+            />
+          ) : null}
         </div>
       )}
     </div>

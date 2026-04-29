@@ -83,11 +83,21 @@ describe("registerGlobalSearchRoutes", () => {
     ];
 
     const actor = makeSessionUser({ permissions: ["documents:read", "library:read"] });
-    globalSearch.mockResolvedValueOnce([]);
+    globalSearch.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 2,
+      pageSize: 7
+    });
 
     await handler(
       {
-        query: { q: "alpha", entities: "documents,unknown,library", limit: "abc" },
+        query: {
+          q: "alpha",
+          entities: "documents,unknown,library",
+          page: "2",
+          pageSize: "7"
+        },
         sessionUser: actor
       },
       createReplyRecorder()
@@ -96,7 +106,8 @@ describe("registerGlobalSearchRoutes", () => {
     expect(globalSearch).toHaveBeenCalledWith(actor, {
       q: "alpha",
       entities: ["documents", "library"],
-      limit: 20
+      page: 2,
+      pageSize: 7
     });
   });
 
@@ -112,11 +123,16 @@ describe("registerGlobalSearchRoutes", () => {
     ];
 
     const actor = makeSessionUser({ permissions: ["cases:read"] });
-    globalSearch.mockResolvedValueOnce([]);
+    globalSearch.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20
+    });
 
     await handler(
       {
-        query: { q: "alpha", entities: ",,,", limit: "0" },
+        query: { q: "alpha", entities: ",,,", page: "0", limit: "0" },
         sessionUser: actor
       },
       createReplyRecorder()
@@ -125,7 +141,8 @@ describe("registerGlobalSearchRoutes", () => {
     expect(globalSearch).toHaveBeenCalledWith(actor, {
       q: "alpha",
       entities: ["cases"],
-      limit: 1
+      page: 1,
+      pageSize: 20
     });
   });
 
@@ -141,26 +158,33 @@ describe("registerGlobalSearchRoutes", () => {
     ];
 
     const actor = makeSessionUser({ permissions: ["documents:read"] });
-    globalSearch.mockResolvedValueOnce([]);
+    globalSearch.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 4,
+      pageSize: 7
+    });
 
     await expect(
       handler(
-        {
-          query: {
-            q: ["alpha", "beta"],
-            entities: ["documents,library", "cases"],
-            limit: ["7", "9"]
-          },
-          sessionUser: actor
+      {
+        query: {
+          q: ["alpha", "beta"],
+          entities: ["documents,library", "cases"],
+          page: ["4", "9"],
+          pageSize: ["7", "9"]
         },
-        createReplyRecorder()
+        sessionUser: actor
+      },
+      createReplyRecorder()
       )
-    ).resolves.toEqual([]);
+    ).resolves.toEqual({ items: [], total: 0, page: 4, pageSize: 7 });
 
     expect(globalSearch).toHaveBeenCalledWith(actor, {
       q: "alpha",
       entities: ["documents"],
-      limit: 7
+      page: 4,
+      pageSize: 7
     });
   });
 });

@@ -52,12 +52,19 @@ describe("globalSearch", () => {
     const results = await globalSearch(actor, {
       q: "alpha",
       entities: ["documents"],
-      limit: 10
+      page: 1,
+      pageSize: 10
     });
 
-    expect(results.map((result) => result.id)).toEqual(["doc-strong", "doc-weak"]);
-    expect(results[0]?.rank).toBeGreaterThan(results[1]?.rank ?? 0);
-    expect(results[0]?.url).toBe("/app/documents/doc-strong");
+    expect(results.items.map((result) => result.id)).toEqual([
+      "doc-strong",
+      "doc-weak"
+    ]);
+    expect(results.total).toBe(2);
+    expect(results.page).toBe(1);
+    expect(results.pageSize).toBe(10);
+    expect(results.items[0]?.rank).toBeGreaterThan(results.items[1]?.rank ?? 0);
+    expect(results.items[0]?.url).toBe("/app/documents/doc-strong");
   });
 
   it("uses deterministic title sorting when ranks are equal", async () => {
@@ -79,9 +86,45 @@ describe("globalSearch", () => {
     const results = await globalSearch(actor, {
       q: "zzz",
       entities: ["documents"],
-      limit: 10
+      page: 1,
+      pageSize: 10
     });
 
-    expect(results.map((result) => result.title)).toEqual(["Alpha", "Beta"]);
+    expect(results.items.map((result) => result.title)).toEqual(["Alpha", "Beta"]);
+  });
+
+  it("returns the requested page slice and total count", async () => {
+    mockPrisma.document.findMany.mockResolvedValue([
+      {
+        id: "doc-a",
+        title: "Alpha",
+        fileName: "alpha.pdf",
+        contentText: "alpha"
+      },
+      {
+        id: "doc-b",
+        title: "Beta",
+        fileName: "beta.pdf",
+        contentText: "alpha"
+      },
+      {
+        id: "doc-c",
+        title: "Gamma",
+        fileName: "gamma.pdf",
+        contentText: "alpha"
+      }
+    ]);
+
+    const results = await globalSearch(actor, {
+      q: "alpha",
+      entities: ["documents"],
+      page: 2,
+      pageSize: 1
+    });
+
+    expect(results.total).toBe(3);
+    expect(results.page).toBe(2);
+    expect(results.pageSize).toBe(1);
+    expect(results.items.map((result) => result.id)).toEqual(["doc-b"]);
   });
 });

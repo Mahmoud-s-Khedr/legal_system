@@ -866,6 +866,7 @@
     "title": "Search results",
     "description": "Searching across titles and extracted document content.",
     "placeholder": "Search…",
+    "resultsCount": "{{count}} result(s) found",
     "commandPlaceholder": "Search or type a command…",
     "noResults": "No results found",
     "noResultsHelp": "Try a different query or upload and index more documents.",

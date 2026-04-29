@@ -854,6 +854,7 @@
     "title": "Résultats de recherche",
     "description": "Recherche dans les titres et le contenu extrait des documents.",
     "placeholder": "Rechercher des documents en arabe, anglais ou français",
+    "resultsCount": "{{count}} résultat(s) trouvé(s)",
     "noResults": "Aucun résultat",
     "noResultsHelp": "Essayez une autre requête ou téléversez et indexez davantage de documents.",
     "rankLabel": "résultats",

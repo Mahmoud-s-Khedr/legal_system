@@ -6,6 +6,7 @@ const mockUseSearch = vi.fn();
 const mockNavigate = vi.fn();
 const mockUseNavigate = vi.fn(() => mockNavigate);
 const mockUseQuery = vi.fn();
+const mockTablePagination = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
   useSearch: mockUseSearch,
@@ -39,7 +40,8 @@ vi.mock("./ui", () => ({
   ),
   ErrorState: ({ title }: { title: string }) => (
     <div data-testid="error">{title}</div>
-  )
+  ),
+  TablePagination: (props: unknown) => mockTablePagination(props)
 }));
 
 vi.mock("../../components/search/GlobalSearchResultCard", () => ({
@@ -90,18 +92,19 @@ afterEach(() => {
 beforeEach(() => {
   vi.clearAllMocks();
   mockUseNavigate.mockReturnValue(mockNavigate);
-  mockUseSearch.mockReturnValue({ q: "" });
+  mockUseSearch.mockReturnValue({ q: "", page: 1, pageSize: 20 });
   mockUseQuery.mockReturnValue({
     isLoading: false,
     isError: false,
-    data: [],
+    data: { items: [], total: 0, page: 1, pageSize: 20 },
     refetch: vi.fn()
   });
+  mockTablePagination.mockImplementation(() => <div data-testid="pagination" />);
 });
 
 describe("SearchPage", () => {
   it("prefills the search input from URL query", () => {
-    mockUseSearch.mockReturnValue({ q: "alpha" });
+    mockUseSearch.mockReturnValue({ q: "alpha", page: 1, pageSize: 20 });
 
     const view = render();
     const input = view.querySelector(
@@ -131,12 +134,12 @@ describe("SearchPage", () => {
 
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/app/search",
-      search: { q: "lease" }
+      search: { q: "lease", page: 1, pageSize: 20 }
     });
   });
 
   it("disables query execution for empty URL query", () => {
-    mockUseSearch.mockReturnValue({ q: "   " });
+    mockUseSearch.mockReturnValue({ q: "   ", page: 1, pageSize: 20 });
 
     render();
 
@@ -145,11 +148,105 @@ describe("SearchPage", () => {
   });
 
   it("enables query execution for one-character URL query", () => {
-    mockUseSearch.mockReturnValue({ q: "a" });
+    mockUseSearch.mockReturnValue({ q: "a", page: 1, pageSize: 20 });
 
     render();
 
     const firstCall = mockUseQuery.mock.calls[0]?.[0] as { enabled?: boolean };
     expect(firstCall.enabled).toBe(true);
+  });
+
+  it("includes page and pageSize in the search query key", () => {
+    mockUseSearch.mockReturnValue({ q: "alpha", page: 3, pageSize: 50 });
+
+    render();
+
+    const firstCall = mockUseQuery.mock.calls[0]?.[0] as {
+      queryKey?: Array<string | number>;
+    };
+
+    expect(firstCall.queryKey).toEqual(["global-search", "alpha", 3, 50]);
+  });
+
+  it("passes pagination state and navigates when the pager changes", () => {
+    mockUseSearch.mockReturnValue({ q: "alpha", page: 2, pageSize: 10 });
+    mockUseQuery.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: {
+        items: [
+          {
+            entityType: "document",
+            id: "doc-1",
+            title: "Alpha",
+            snippet: null,
+            url: "/app/documents/doc-1",
+            rank: 10
+          }
+        ],
+        total: 25,
+        page: 2,
+        pageSize: 10
+      },
+      refetch: vi.fn()
+    });
+    mockTablePagination.mockImplementation((props: {
+      page: number;
+      pageSize: number;
+      total: number;
+      onPageChange: (page: number) => void;
+      onPageSizeChange: (pageSize: number) => void;
+    }) => (
+      <div data-testid="pagination">
+        <span data-testid="pagination-page">{props.page}</span>
+        <span data-testid="pagination-size">{props.pageSize}</span>
+        <span data-testid="pagination-total">{props.total}</span>
+        <button
+          type="button"
+          data-testid="pagination-next"
+          onClick={() => props.onPageChange(props.page + 1)}
+        >
+          next
+        </button>
+        <button
+          type="button"
+          data-testid="pagination-size-change"
+          onClick={() => props.onPageSizeChange(20)}
+        >
+          size
+        </button>
+      </div>
+    ));
+
+    const view = render();
+
+    expect(view.querySelector('[data-testid="pagination-page"]')?.textContent).toBe("2");
+    expect(view.querySelector('[data-testid="pagination-size"]')?.textContent).toBe("10");
+    expect(view.querySelector('[data-testid="pagination-total"]')?.textContent).toBe("25");
+
+    const nextButton = view.querySelector(
+      '[data-testid="pagination-next"]'
+    ) as HTMLButtonElement | null;
+    const sizeButton = view.querySelector(
+      '[data-testid="pagination-size-change"]'
+    ) as HTMLButtonElement | null;
+
+    act(() => {
+      nextButton?.click();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/app/search",
+      search: { q: "alpha", page: 3, pageSize: 10 }
+    });
+
+    act(() => {
+      sizeButton?.click();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/app/search",
+      search: { q: "alpha", page: 1, pageSize: 20 }
+    });
   });
 });

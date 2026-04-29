@@ -16,6 +16,8 @@ export interface GlobalSearchResult {
 interface SearchFilters {
   q: string;
   entities?: string[];
+  page?: number;
+  pageSize?: number;
   limit?: number;
 }
 
@@ -77,21 +79,25 @@ function rankScore(
 export async function globalSearch(
   actor: SessionUser,
   filters: SearchFilters
-): Promise<GlobalSearchResult[]> {
+): Promise<{
+  items: GlobalSearchResult[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   const { q } = filters;
   const entities =
     filters.entities && filters.entities.length > 0
       ? filters.entities
       : ["cases", "clients", "tasks", "documents", "library"];
-  const limit =
-    typeof filters.limit === "number" && Number.isFinite(filters.limit)
-      ? Math.min(100, Math.max(1, Math.trunc(filters.limit)))
-      : 20;
+  const page = clampInt(filters.page, 1, Number.POSITIVE_INFINITY);
+  const pageSize = clampInt(filters.pageSize ?? filters.limit, 20, 100);
   const normalizedQuery = normalizeArabic(q.trim());
-  if (!normalizedQuery) return [];
+  if (!normalizedQuery) {
+    return { items: [], total: 0, page, pageSize };
+  }
 
   const searchCandidates = buildFuzzySearchCandidates(normalizedQuery);
-  const perEntityLimit = Math.max(5, Math.ceil(limit / Math.max(entities.length, 1)));
   const results: GlobalSearchResult[] = [];
 
   if (entities.includes("cases")) {
@@ -152,8 +158,7 @@ export async function globalSearch(
           take: 1
         }
       },
-      orderBy: { updatedAt: "desc" },
-      take: perEntityLimit
+      orderBy: { updatedAt: "desc" }
     });
 
     results.push(
@@ -196,8 +201,7 @@ export async function globalSearch(
     const clients = await prisma.client.findMany({
       where: clientWhere,
       select: { id: true, name: true, phone: true, email: true },
-      orderBy: { updatedAt: "desc" },
-      take: perEntityLimit
+      orderBy: { updatedAt: "desc" }
     });
 
     results.push(
@@ -229,8 +233,7 @@ export async function globalSearch(
     const tasks = await prisma.task.findMany({
       where: taskWhere,
       select: { id: true, title: true, status: true, priority: true },
-      orderBy: { updatedAt: "desc" },
-      take: perEntityLimit
+      orderBy: { updatedAt: "desc" }
     });
 
     results.push(
@@ -264,8 +267,7 @@ export async function globalSearch(
     const docs = await prisma.document.findMany({
       where: docWhere,
       select: { id: true, title: true, fileName: true, contentText: true },
-      orderBy: { updatedAt: "desc" },
-      take: perEntityLimit
+      orderBy: { updatedAt: "desc" }
     });
 
     results.push(
@@ -303,8 +305,7 @@ export async function globalSearch(
     const libs = await prisma.libraryDocument.findMany({
       where: libWhere,
       select: { id: true, title: true, type: true, summary: true, contentText: true },
-      orderBy: { updatedAt: "desc" },
-      take: perEntityLimit
+      orderBy: { updatedAt: "desc" }
     });
 
     results.push(
@@ -329,5 +330,18 @@ export async function globalSearch(
     return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
   });
 
-  return results.slice(0, limit);
+  const total = results.length;
+  const start = (page - 1) * pageSize;
+  const items = results.slice(start, start + pageSize);
+
+  return { items, total, page, pageSize };
+}
+
+function clampInt(value: number | undefined, fallback: number, max: number) {
+  const parsed =
+    typeof value === "number" && Number.isFinite(value)
+      ? Math.trunc(value)
+      : fallback;
+
+  return Math.min(max, Math.max(1, parsed));
 }

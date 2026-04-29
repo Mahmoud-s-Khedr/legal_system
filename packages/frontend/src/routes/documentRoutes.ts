@@ -38,7 +38,9 @@ export function createDocumentRoutes(appRoute: AnyRoute) {
     getParentRoute: () => appRoute,
     path: "/search",
     validateSearch: (search: Record<string, unknown>) => ({
-      q: typeof search.q === "string" ? search.q : ""
+      q: typeof search.q === "string" ? search.q : "",
+      page: coercePositiveInt(search.page, 1),
+      pageSize: coercePositiveInt(search.pageSize, 20, 100)
     }),
     component: SearchPage
   });
@@ -84,4 +86,23 @@ export function createDocumentRoutes(appRoute: AnyRoute) {
     libraryAdminRoute,
     libraryUploadRoute
   };
+}
+
+function coercePositiveInt(
+  value: unknown,
+  fallback: number,
+  max = Number.POSITIVE_INFINITY
+) {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : Number.NaN;
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(1, Math.trunc(parsed)));
 }

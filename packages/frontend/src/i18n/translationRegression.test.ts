@@ -52,6 +52,7 @@ const criticalKeys: Array<{ ns: Namespace; key: string }> = [
   { ns: "app", key: "pagination.summary" },
   { ns: "app", key: "pagination.pageStatus" },
   { ns: "app", key: "pagination.pageSize" },
+  { ns: "app", key: "search.resultsCount" },
   { ns: "app", key: "enums.ClientType.INDIVIDUAL" },
   { ns: "app", key: "enums.ClientType.COMPANY" },
   { ns: "app", key: "enums.ClientType.GOVERNMENT" }

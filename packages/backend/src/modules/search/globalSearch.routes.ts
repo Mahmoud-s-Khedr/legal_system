@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../../middleware/requireAuth.js";
+import { parseSearchPaginationQuery } from "../../utils/pagination.js";
 import { globalSearch } from "./globalSearch.service.js";
 
 const ALLOWED_ENTITIES = ["cases", "clients", "tasks", "documents", "library"] as const;
@@ -28,14 +29,6 @@ function getSingleQueryValue(input: unknown): string | undefined {
     return firstString;
   }
   return undefined;
-}
-
-function parseLimit(raw: string | undefined): number {
-  if (!raw) return 20;
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return 20;
-  const integer = Math.trunc(parsed);
-  return Math.min(100, Math.max(1, integer));
 }
 
 function parseRequestedEntities(raw: string | undefined): AllowedEntity[] | undefined {
@@ -79,12 +72,16 @@ export async function registerGlobalSearchRoutes(app: FastifyInstance) {
       const entities = (requestedEntities ?? allowedEntities).filter((entity) =>
         allowedEntities.includes(entity)
       );
-      const limit = parseLimit(getSingleQueryValue(query.limit));
+      const { page, pageSize } = parseSearchPaginationQuery({
+        page: getSingleQueryValue(query.page),
+        pageSize: getSingleQueryValue(query.pageSize) ?? getSingleQueryValue(query.limit)
+      });
 
       return globalSearch(actor, {
         q,
         entities: entities.length > 0 ? entities : allowedEntities,
-        limit
+        page,
+        pageSize
       });
     }
   );
