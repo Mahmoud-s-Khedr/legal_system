@@ -1,5 +1,6 @@
 import {
   Outlet,
+  createHashHistory,
   createRootRoute,
   createRoute,
   createRouter,
@@ -738,7 +739,11 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export const router = createRouter({
-  routeTree
+  routeTree,
+  history:
+    import.meta.env.VITE_DESKTOP_SHELL === "true"
+      ? createHashHistory()
+      : undefined
 });
 
 declare module "@tanstack/react-router" {
