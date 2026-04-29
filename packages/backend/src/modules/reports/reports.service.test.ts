@@ -7,7 +7,7 @@ const mockTx = {
   user: { findMany: vi.fn() },
   caseAssignment: { count: vi.fn() },
   task: { count: vi.fn() },
-  caseSession: { count: vi.fn() },
+  caseSession: { count: vi.fn(), findMany: vi.fn() },
   invoice: { findMany: vi.fn() },
   expense: { findMany: vi.fn() },
   case: { findFirst: vi.fn() }
@@ -23,7 +23,7 @@ vi.mock("../../db/tenant.js", () => ({
   withTenant: vi.fn((_prisma: unknown, _firmId: string, fn: (tx: typeof mockTx) => unknown) => fn(mockTx))
 }));
 
-const { caseStatusDistribution, hearingOutcomes, revenueReport } = await import("./reports.service.js");
+const { caseStatusDistribution, hearingOutcomes, litigationSheetRows, revenueReport } = await import("./reports.service.js");
 
 const actor = makeSessionUser({ permissions: ["reports:read"] });
 
@@ -94,5 +94,54 @@ describe("revenueReport", () => {
     expect(sql).toContain('"issuedAt"');
     expect(sql).not.toContain("total_amount");
     expect(result).toEqual([{ month: "2026-03", invoiced: "1000", paid: "500" }]);
+  });
+});
+
+describe("litigationSheetRows", () => {
+  it("returns one row per session with previous/upcoming/decision/notes", async () => {
+    mockTx.caseSession.findMany.mockResolvedValue([
+      {
+        sessionDatetime: new Date("2026-01-01T10:00:00.000Z"),
+        createdAt: new Date("2026-01-01T10:00:00.000Z"),
+        outcome: "POSTPONED",
+        notes: "first-note",
+        case: {
+          id: "case-1",
+          caseNumber: "100",
+          title: "Case A",
+          client: { name: "Client A" }
+        }
+      },
+      {
+        sessionDatetime: new Date("2099-01-01T10:00:00.000Z"),
+        createdAt: new Date("2099-01-01T10:00:00.000Z"),
+        outcome: "DECIDED",
+        notes: "latest-note",
+        case: {
+          id: "case-1",
+          caseNumber: "100",
+          title: "Case A",
+          client: { name: "Client A" }
+        }
+      }
+    ]);
+
+    const rows = await litigationSheetRows(actor);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      clientName: "Client A",
+      caseNumber: "100",
+      caseSubject: "Case A",
+      previousSessionDate: "2026-01-01",
+      upcomingSessionDate: "2099-01-01",
+      decision: "POSTPONED",
+      notes: "latest-note"
+    });
+    expect(rows[1]).toMatchObject({
+      previousSessionDate: "2026-01-01",
+      upcomingSessionDate: "2099-01-01",
+      decision: "POSTPONED",
+      notes: "latest-note"
+    });
   });
 });

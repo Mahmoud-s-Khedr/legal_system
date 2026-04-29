@@ -197,7 +197,9 @@ describe("ReportsPage route behavior", () => {
       refetch
     });
     const errorView = render(<ReportsPage />);
-    const retry = errorView.querySelector("button");
+    const retry = Array.from(errorView.querySelectorAll("button")).find(
+      (button) => button.textContent === "retry"
+    );
     act(() => {
       retry?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -242,6 +244,33 @@ describe("ReportsPage route behavior", () => {
     expect(downloadReportFileMock).toHaveBeenCalledWith(
       "/api/reports/case-status/export?page=1&limit=20&format=excel",
       "report-case-status.xlsx"
+    );
+    expect(addToastMock).toHaveBeenCalledWith("messages.fileDownloadStarted", "success");
+  });
+
+  it("exports litigation sheet and sends success toast", async () => {
+    downloadReportFileMock.mockResolvedValue(undefined);
+    queryMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { items: [], total: 0 },
+      error: null,
+      refetch: vi.fn()
+    });
+
+    const view = render(<ReportsPage />);
+    const exportButton = Array.from(view.querySelectorAll("button")).find(
+      (button) => button.textContent === "reports.exportLitigationSheet"
+    );
+
+    act(() => {
+      exportButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    expect(downloadReportFileMock).toHaveBeenCalledWith(
+      "/api/reports/litigation-sheet/export",
+      "litigation-sheet.xlsx"
     );
     expect(addToastMock).toHaveBeenCalledWith("messages.fileDownloadStarted", "success");
   });

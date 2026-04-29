@@ -10,7 +10,8 @@ import {
   lawyerWorkload,
   revenueReport,
   outstandingBalances,
-  caseProfitability
+  caseProfitability,
+  litigationSheetRows
 } from "./reports.service.js";
 import {
   listCustomReports,
@@ -21,7 +22,7 @@ import {
   createCustomReportRunSession,
   listCustomReportRunRows
 } from "./custom-reports.service.js";
-import { generateReportExcel, generateReportPdf } from "./report.export.js";
+import { generateLitigationSheetExcel, generateReportExcel, generateReportPdf } from "./report.export.js";
 
 const reportTableQuerySchema = z.object({
   format: z.enum(["excel", "pdf"]).optional(),
@@ -112,6 +113,24 @@ const reportTypeParamsSchema = z.object({ reportType: z.string().min(1) });
 const runIdParamsSchema = z.object({ runId: z.string().min(1) });
 
 export async function registerReportRoutes(app: FastifyInstance) {
+  app.get(
+    "/api/reports/litigation-sheet/export",
+    { preHandler: [requireAuth, requirePermission("reports:read")] },
+    async (request, reply) => {
+      const generatedAt = new Date().toISOString().slice(0, 10);
+      const rows = await litigationSheetRows(request.sessionUser!);
+      const buf = await generateLitigationSheetExcel(
+        rows,
+        request.sessionUser?.preferredLanguage,
+        generatedAt
+      );
+      return reply
+        .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        .header("Content-Disposition", `attachment; filename="elms-litigation-sheet-${generatedAt}.xlsx"`)
+        .send(buf);
+    }
+  );
+
   app.get(
     "/api/reports/case-status",
     { preHandler: [requireAuth, requirePermission("reports:read")] },

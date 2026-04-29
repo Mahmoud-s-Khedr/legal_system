@@ -94,6 +94,13 @@ export function buildReportExportMeta(
   };
 }
 
+export function buildLitigationSheetExportMeta() {
+  return {
+    requestPath: "/api/reports/litigation-sheet/export",
+    fallbackFilename: "litigation-sheet.xlsx"
+  };
+}
+
 export function ReportsPage() {
   const { t } = useTranslation("app");
   const addToast = useToastStore((state) => state.addToast);
@@ -128,6 +135,22 @@ export function ReportsPage() {
       new URLSearchParams(table.toApiQueryString({ dateFrom, dateTo }))
     );
 
+    try {
+      const savedPath = await downloadReportFile(
+        exportMeta.requestPath,
+        exportMeta.fallbackFilename
+      );
+      addToast(formatFileSaveSuccessMessage(t, savedPath), "success");
+    } catch (error) {
+      const message = (error as Error)?.message ?? t("errors.fallback");
+      setExportError(message);
+      addToast(message, "error");
+    }
+  }
+
+  async function exportLitigationSheet() {
+    setExportError(null);
+    const exportMeta = buildLitigationSheetExportMeta();
     try {
       const savedPath = await downloadReportFile(
         exportMeta.requestPath,
@@ -188,6 +211,15 @@ export function ReportsPage() {
         title={reportOptions.find((o) => o.value === reportType)?.label ?? ""}
       >
         {exportError ? <FormAlert message={exportError} /> : null}
+        <div className="mb-4 flex gap-2 justify-end">
+          <button
+            onClick={() => void exportLitigationSheet()}
+            className="rounded border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            aria-label={t("reports.exportLitigationSheet")}
+          >
+            {t("reports.exportLitigationSheet")}
+          </button>
+        </div>
         {isLoading && (
           <p className="text-sm text-slate-500">{t("labels.loading")}</p>
         )}

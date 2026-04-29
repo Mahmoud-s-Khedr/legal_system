@@ -161,3 +161,53 @@ export async function listCaseExpenses(
     where: { firmId, caseId }
   });
 }
+
+export async function listFirmCaseSessionsForLitigationSheet(
+  tx: RepositoryTx,
+  firmId: string
+): Promise<
+  Array<{
+    caseId: string;
+    caseNumber: string;
+    caseTitle: string;
+    clientName: string;
+    sessionDatetime: Date;
+    outcome: string | null;
+    notes: string | null;
+  }>
+> {
+  const sessions = await tx.caseSession.findMany({
+    where: {
+      deletedAt: null,
+      case: {
+        firmId,
+        deletedAt: null
+      }
+    },
+    include: {
+      case: {
+        select: {
+          id: true,
+          caseNumber: true,
+          title: true,
+          client: {
+            select: {
+              name: true
+            }
+          }
+        }
+      }
+    },
+    orderBy: [{ sessionDatetime: "asc" }, { createdAt: "asc" }]
+  });
+
+  return sessions.map((session) => ({
+    caseId: session.case.id,
+    caseNumber: session.case.caseNumber,
+    caseTitle: session.case.title,
+    clientName: session.case.client.name,
+    sessionDatetime: session.sessionDatetime,
+    outcome: session.outcome,
+    notes: session.notes
+  }));
+}

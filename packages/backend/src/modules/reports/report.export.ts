@@ -9,10 +9,12 @@ import type {
   CaseStatusRow,
   CaseProfitabilityDto,
   HearingOutcomeRow,
+  Language,
   LawyerWorkloadRow,
   OutstandingBalanceRow,
   RevenueReportRow
 } from "@elms/shared";
+import type { LitigationSheetRow } from "./reports.service.js";
 
 // ── Report column definitions ─────────────────────────────────────────────────
 
@@ -193,6 +195,195 @@ export async function generateReportExcel(
   // Freeze header rows
   sheet.views = [{ state: "frozen", ySplit: 3, rightToLeft: true }];
 
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
+type ExportLanguage = "ar" | "en" | "fr";
+
+const LITIGATION_I18N: Record<
+  ExportLanguage,
+  {
+    title: string;
+    headers: {
+      clientName: string;
+      caseNumber: string;
+      caseSubject: string;
+      previousSessionDate: string;
+      upcomingSessionDate: string;
+      decision: string;
+      notes: string;
+    };
+    sessionOutcome: Record<string, string>;
+  }
+> = {
+  ar: {
+    title: "تقرير الدعاوى والجلسات",
+    headers: {
+      clientName: "اسم الموكل",
+      caseNumber: "رقم الدعوى",
+      caseSubject: "موضوع الدعوى",
+      previousSessionDate: "الجلسة السابقة",
+      upcomingSessionDate: "جلسة القادمة",
+      decision: "القرار",
+      notes: "ملاحظات"
+    },
+    sessionOutcome: {
+      POSTPONED: "تأجيل",
+      DECIDED: "حكم",
+      PARTIAL_RULING: "حكم جزئي",
+      ADJOURNED: "إرجاء",
+      EVIDENCE: "إثبات",
+      EXPERT: "خبير",
+      MEDIATION: "وساطة",
+      PLEADING: "مرافعة",
+      CANCELLED: "إلغاء"
+    }
+  },
+  en: {
+    title: "Litigation Sessions Report",
+    headers: {
+      clientName: "Client Name",
+      caseNumber: "Case Number",
+      caseSubject: "Case Subject",
+      previousSessionDate: "Previous Session",
+      upcomingSessionDate: "Upcoming Session",
+      decision: "Decision",
+      notes: "Notes"
+    },
+    sessionOutcome: {
+      POSTPONED: "Postponed",
+      DECIDED: "Decided",
+      PARTIAL_RULING: "Partial Ruling",
+      ADJOURNED: "Adjourned",
+      EVIDENCE: "Evidence",
+      EXPERT: "Expert",
+      MEDIATION: "Mediation",
+      PLEADING: "Pleading",
+      CANCELLED: "Cancelled"
+    }
+  },
+  fr: {
+    title: "Rapport des litiges et audiences",
+    headers: {
+      clientName: "Nom du client",
+      caseNumber: "Numéro d'affaire",
+      caseSubject: "Objet de l'affaire",
+      previousSessionDate: "Audience précédente",
+      upcomingSessionDate: "Prochaine audience",
+      decision: "Décision",
+      notes: "Remarques"
+    },
+    sessionOutcome: {
+      POSTPONED: "Reportée",
+      DECIDED: "Décidée",
+      PARTIAL_RULING: "Décision partielle",
+      ADJOURNED: "Ajournée",
+      EVIDENCE: "Preuve",
+      EXPERT: "Expert",
+      MEDIATION: "Médiation",
+      PLEADING: "Plaidoirie",
+      CANCELLED: "Annulée"
+    }
+  }
+};
+
+function normalizeExportLanguage(language: string | Language | undefined): ExportLanguage {
+  const normalized = String(language ?? "ar").toLowerCase();
+  if (normalized === "en" || normalized === "fr") {
+    return normalized;
+  }
+  return "ar";
+}
+
+export async function generateLitigationSheetExcel(
+  rows: LitigationSheetRow[],
+  language: string | Language | undefined,
+  generatedAt?: string
+): Promise<Buffer> {
+  const { default: ExcelJS } = await import("exceljs");
+  const lang = normalizeExportLanguage(language);
+  const i18n = LITIGATION_I18N[lang];
+  const isRtl = lang === "ar";
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "ELMS";
+  workbook.created = generatedAt ? new Date(generatedAt) : new Date();
+
+  const sheet = workbook.addWorksheet(i18n.title, {
+    views: [{ rightToLeft: isRtl }]
+  });
+
+  const columns: Array<keyof LitigationSheetRow> = [
+    "clientName",
+    "caseNumber",
+    "caseSubject",
+    "previousSessionDate",
+    "upcomingSessionDate",
+    "decision",
+    "notes"
+  ];
+
+  sheet.columns = [
+    { width: 28 },
+    { width: 18 },
+    { width: 34 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 36 }
+  ];
+
+  sheet.mergeCells(1, 1, 1, columns.length);
+  const titleCell = sheet.getCell(1, 1);
+  titleCell.value = i18n.title;
+  titleCell.font = { bold: true, size: 14, color: { argb: "FF0F172A" } };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF8CA9CC" } };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  titleCell.border = {
+    top: { style: "thin", color: { argb: "FF1F2937" } },
+    left: { style: "thin", color: { argb: "FF1F2937" } },
+    bottom: { style: "thin", color: { argb: "FF1F2937" } },
+    right: { style: "thin", color: { argb: "FF1F2937" } }
+  };
+  sheet.getRow(1).height = 30;
+
+  const headerRow = sheet.getRow(2);
+  columns.forEach((field, index) => {
+    const cell = headerRow.getCell(index + 1);
+    cell.value = i18n.headers[field];
+    cell.font = { bold: true, color: { argb: "FF111827" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF8CA9CC" } };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = {
+      top: { style: "thin", color: { argb: "FF1F2937" } },
+      left: { style: "thin", color: { argb: "FF1F2937" } },
+      bottom: { style: "thin", color: { argb: "FF1F2937" } },
+      right: { style: "thin", color: { argb: "FF1F2937" } }
+    };
+  });
+  headerRow.height = 26;
+
+  rows.forEach((row, idx) => {
+    const sheetRow = sheet.getRow(idx + 3);
+    columns.forEach((field, colIdx) => {
+      const cell = sheetRow.getCell(colIdx + 1);
+      const value = row[field];
+      cell.value = field === "decision" ? (i18n.sessionOutcome[value] ?? value) : value;
+      const horizontal = field === "caseNumber" || field.endsWith("Date") ? "center" : (isRtl ? "right" : "left");
+      cell.alignment = { horizontal, vertical: "middle" };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD0D0D0" } };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FF1F2937" } },
+        left: { style: "thin", color: { argb: "FF1F2937" } },
+        bottom: { style: "thin", color: { argb: "FF1F2937" } },
+        right: { style: "thin", color: { argb: "FF1F2937" } }
+      };
+    });
+    sheetRow.height = 22;
+  });
+
+  sheet.views = [{ state: "frozen", ySplit: 2, rightToLeft: isRtl }];
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }

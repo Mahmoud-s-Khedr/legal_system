@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildLitigationSheetExportMeta,
   buildReportExportMeta,
   buildReportOptions,
   buildReportSortOptions,
@@ -50,5 +51,11 @@ describe("ReportsPage helpers", () => {
     expect(pdfMeta.fallbackFilename).toBe("report-case-status.pdf");
     expect(excelMeta.requestPath).toContain("format=excel");
     expect(excelMeta.fallbackFilename).toBe("report-revenue.xlsx");
+  });
+
+  it("builds litigation-sheet export path", () => {
+    const meta = buildLitigationSheetExportMeta();
+    expect(meta.requestPath).toBe("/api/reports/litigation-sheet/export");
+    expect(meta.fallbackFilename).toBe("litigation-sheet.xlsx");
   });
 });

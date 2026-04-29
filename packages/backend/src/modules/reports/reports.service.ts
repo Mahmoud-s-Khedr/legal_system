@@ -14,6 +14,7 @@ import {
   countUpcomingAssignedHearings,
   findFirmCaseById,
   listActiveFirmUsers,
+  listFirmCaseSessionsForLitigationSheet,
   listCaseExpenses,
   listCaseInvoicesWithPayments,
   listOutstandingFirmInvoices,
@@ -27,6 +28,16 @@ export interface ReportFilter {
   dateTo?: string;
   caseId?: string;
   userId?: string;
+}
+
+export interface LitigationSheetRow {
+  clientName: string;
+  caseNumber: string;
+  caseSubject: string;
+  previousSessionDate: string;
+  upcomingSessionDate: string;
+  decision: string;
+  notes: string;
 }
 
 export async function caseStatusDistribution(
@@ -140,5 +151,62 @@ export async function caseProfitability(
       totalExpenses: totalExpenses.toFixed(2),
       grossProfit: grossProfit.toFixed(2)
     };
+  });
+}
+
+export async function litigationSheetRows(actor: SessionUser): Promise<LitigationSheetRow[]> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const rawRows = await listFirmCaseSessionsForLitigationSheet(tx, actor.firmId);
+    const now = new Date();
+    const rowsByCase = new Map<string, typeof rawRows>();
+
+    for (const row of rawRows) {
+      const group = rowsByCase.get(row.caseId);
+      if (group) {
+        group.push(row);
+      } else {
+        rowsByCase.set(row.caseId, [row]);
+      }
+    }
+
+    const reportRows: Array<LitigationSheetRow & { sortDate: string }> = [];
+    for (const sessions of rowsByCase.values()) {
+      sessions.sort((a, b) => a.sessionDatetime.getTime() - b.sessionDatetime.getTime());
+
+      const previous = [...sessions]
+        .reverse()
+        .find((session) => session.sessionDatetime.getTime() < now.getTime());
+      const upcoming = sessions.find((session) => session.sessionDatetime.getTime() >= now.getTime());
+      const latest = sessions[sessions.length - 1];
+
+      const previousSessionDate = previous ? previous.sessionDatetime.toISOString().slice(0, 10) : "";
+      const upcomingSessionDate = upcoming ? upcoming.sessionDatetime.toISOString().slice(0, 10) : "";
+      const decision = previous?.outcome ?? "";
+      const notes = latest?.notes ?? "";
+
+      for (const session of sessions) {
+        reportRows.push({
+          clientName: session.clientName,
+          caseNumber: session.caseNumber,
+          caseSubject: session.caseTitle,
+          previousSessionDate,
+          upcomingSessionDate,
+          decision,
+          notes,
+          sortDate: upcomingSessionDate || session.sessionDatetime.toISOString().slice(0, 10)
+        });
+      }
+    }
+
+    reportRows.sort((a, b) => {
+      if (a.sortDate === b.sortDate) {
+        return a.caseNumber.localeCompare(b.caseNumber, undefined, { sensitivity: "base", numeric: true });
+      }
+      if (!a.sortDate) return 1;
+      if (!b.sortDate) return -1;
+      return a.sortDate.localeCompare(b.sortDate);
+    });
+
+    return reportRows.map(({ sortDate: _sortDate, ...row }) => row);
   });
 }

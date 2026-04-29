@@ -1081,6 +1081,7 @@
     "daysOverdue": "أيام التأخر",
     "exportExcel": "تصدير Excel",
     "exportPdf": "تصدير PDF",
+    "exportLitigationSheet": "تصدير كشف الدعاوى",
     "exportReady": "تم تجهيز تنزيل {{format}}.",
     "noData": "لا توجد بيانات في النطاق الزمني المحدد.",
     "eyebrow": "تحليلات مخصصة",

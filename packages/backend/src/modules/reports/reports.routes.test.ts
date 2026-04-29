@@ -5,9 +5,11 @@ const parsePaginationQuery = vi.fn();
 const requirePermission = vi.fn((permission: string) => `perm:${permission}`);
 
 const caseStatusDistribution = vi.fn();
+const litigationSheetRows = vi.fn();
 const createCustomReport = vi.fn();
 const caseProfitability = vi.fn();
 const generateReportExcel = vi.fn();
+const generateLitigationSheetExcel = vi.fn();
 const generateReportPdf = vi.fn();
 
 vi.mock("../../middleware/requireAuth.js", () => ({
@@ -24,6 +26,7 @@ vi.mock("../../utils/pagination.js", () => ({
 
 vi.mock("./reports.service.js", () => ({
   caseStatusDistribution,
+  litigationSheetRows,
   hearingOutcomes: vi.fn(),
   lawyerWorkload: vi.fn(),
   revenueReport: vi.fn(),
@@ -42,6 +45,7 @@ vi.mock("./custom-reports.service.js", () => ({
 }));
 
 vi.mock("./report.export.js", () => ({
+  generateLitigationSheetExcel,
   generateReportExcel,
   generateReportPdf
 }));
@@ -67,8 +71,54 @@ describe("registerReportRoutes", () => {
     vi.clearAllMocks();
     parsePaginationQuery.mockReturnValue({ page: 1, limit: 25 });
     caseStatusDistribution.mockResolvedValue([]);
+    litigationSheetRows.mockResolvedValue([]);
     generateReportExcel.mockResolvedValue(Buffer.from("excel"));
+    generateLitigationSheetExcel.mockResolvedValue(Buffer.from("excel-litigation"));
     generateReportPdf.mockResolvedValue(Buffer.from("pdf"));
+  });
+
+  it("exports litigation sheet using session preferred language", async () => {
+    const app = createApp();
+    await registerReportRoutes(app as never);
+
+    litigationSheetRows.mockResolvedValueOnce([
+      {
+        clientName: "Client A",
+        caseNumber: "123",
+        caseSubject: "Subject",
+        previousSessionDate: "2026-01-01",
+        upcomingSessionDate: "2026-02-01",
+        decision: "DECIDED",
+        notes: "Note"
+      }
+    ]);
+
+    const handler = findRouteHandler(app.get.mock.calls, "/api/reports/litigation-sheet/export");
+    const reply = {
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+      header: vi.fn().mockReturnThis()
+    };
+
+    const actor = makeSessionUser({ permissions: ["reports:read"], preferredLanguage: "fr" });
+    const result = await handler!({ sessionUser: actor }, reply);
+
+    expect(litigationSheetRows).toHaveBeenCalledWith(actor);
+    expect(generateLitigationSheetExcel).toHaveBeenCalledWith(
+      expect.any(Array),
+      "fr",
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    );
+    expect(reply.header).toHaveBeenCalledWith(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    expect(reply.header).toHaveBeenCalledWith(
+      "Content-Disposition",
+      expect.stringContaining("elms-litigation-sheet-")
+    );
+    expect(reply.send).toHaveBeenCalledWith(Buffer.from("excel-litigation"));
+    expect(result).toBe(reply);
   });
 
   it("returns 400 for unknown report type export", async () => {
