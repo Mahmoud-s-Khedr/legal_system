@@ -5,7 +5,13 @@ import { normalizeDigits } from "@elms/shared";
 export type SortDir = "asc" | "desc";
 
 function getString(value: unknown, fallback = "") {
-  return typeof value === "string" ? value : fallback;
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return fallback;
 }
 
 export function parsePositiveIntSearchParam(value: unknown, fallback: number) {

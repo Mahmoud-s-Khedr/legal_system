@@ -91,6 +91,20 @@ describe("parsePositiveIntSearchParam", () => {
 });
 
 describe("useTableQueryState", () => {
+  it("preserves numeric-only query values when router search parses q as number", () => {
+    mockedSearch = {
+      q: 12345,
+      sortBy: "createdAt",
+      sortDir: "desc",
+      page: 1,
+      limit: 20
+    };
+    renderProbe();
+
+    expect(latestTable?.state.q).toBe("12345");
+    expect(latestTable?.toApiQueryString()).toContain("q=12345");
+  });
+
   it("keeps selected limit after setLimit when router search provides numeric values", () => {
     mockedSearch = {
       sortBy: "createdAt",
