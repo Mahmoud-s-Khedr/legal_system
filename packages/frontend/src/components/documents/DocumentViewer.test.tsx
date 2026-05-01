@@ -36,8 +36,8 @@ vi.mock("./VersionHistory", () => ({
 }));
 
 vi.mock("./PdfViewer", () => ({
-  PdfViewer: ({ url }: { url: string }) => (
-    <div data-testid="pdf-viewer">{url}</div>
+  PdfViewer: ({ blob }: { blob: Blob }) => (
+    <div data-testid="pdf-viewer">{blob.type}</div>
   )
 }));
 
@@ -142,10 +142,15 @@ describe("DocumentViewer", () => {
 
     await flushAsyncWork();
 
-    expect(apiDownload).toHaveBeenCalledWith("/api/documents/doc-1/stream");
+    expect(apiDownload).toHaveBeenCalledWith(
+      "/api/documents/doc-1/stream",
+      expect.objectContaining({
+        signal: expect.any(AbortSignal)
+      })
+    );
     expect(createObjectUrlSpy).toHaveBeenCalledWith(blob);
     expect(view.querySelector("[data-testid='pdf-viewer']")?.textContent).toBe(
-      "blob:pdf-preview"
+      "application/pdf"
     );
   });
 
@@ -270,7 +275,7 @@ describe("DocumentViewer", () => {
     expect(error).not.toBeNull();
     expect((error?.textContent ?? "").trim().length).toBeGreaterThan(0);
     const fallbackText = view.querySelector("pre");
-    expect(fallbackText?.textContent).toContain("sample indexed text");
+    expect(fallbackText).toBeNull();
   });
 
   it("shows a download started toast after saving the file", async () => {
@@ -379,6 +384,88 @@ describe("DocumentViewer", () => {
     await flushAsyncWork();
 
     expect(apiDownload).toHaveBeenCalledTimes(2);
+  });
+
+  it("switches renderer when document mime type changes across versions", async () => {
+    vi.mocked(apiDownload)
+      .mockResolvedValueOnce({
+        blob: new Blob(["pdf"], { type: "application/pdf" }),
+        filename: "v1.pdf",
+        contentType: "application/pdf"
+      })
+      .mockResolvedValueOnce({
+        blob: new Blob(["image"], { type: "image/png" }),
+        filename: "v2.png",
+        contentType: "image/png"
+      });
+    const createObjectUrlMock = vi
+      .fn(() => "blob:pdf-preview")
+      .mockImplementationOnce(() => "blob:pdf-preview")
+      .mockImplementationOnce(() => "blob:image-preview");
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: createObjectUrlMock
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn()
+    });
+
+    const view = render(
+      <DocumentViewer
+        document={makeDoc({
+          id: "doc-switch",
+          mimeType: "application/pdf",
+          updatedAt: "2026-03-01T00:00:00.000Z",
+          versions: [
+            {
+              id: "v1",
+              documentId: "doc-switch",
+              versionNumber: 1,
+              fileName: "v1.pdf",
+              storageKey: "k1",
+              createdAt: "2026-03-01T00:00:00.000Z"
+            }
+          ]
+        })}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+    await flushAsyncWork();
+
+    expect(view.querySelector("[data-testid='pdf-viewer']")).not.toBeNull();
+
+    act(() => {
+      root?.render(
+        <DocumentViewer
+          document={makeDoc({
+            id: "doc-switch",
+            mimeType: "image/png",
+            fileName: "v2.png",
+            updatedAt: "2026-03-02T00:00:00.000Z",
+            versions: [
+              {
+                id: "v2",
+                documentId: "doc-switch",
+                versionNumber: 2,
+                fileName: "v2.png",
+                storageKey: "k2",
+                createdAt: "2026-03-02T00:00:00.000Z"
+              }
+            ]
+          })}
+          onClose={() => undefined}
+          onVersionUploaded={() => undefined}
+        />
+      );
+    });
+    await flushAsyncWork();
+
+    const image = view.querySelector("img");
+    expect(image?.getAttribute("src")).toBe("blob:image-preview");
   });
 
   it("renders a large preview modal surface", async () => {

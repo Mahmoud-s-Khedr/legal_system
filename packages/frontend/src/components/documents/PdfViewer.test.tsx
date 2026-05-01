@@ -110,7 +110,9 @@ describe("PdfViewer", () => {
   it("shows page count and supports page jump", async () => {
     getDocument.mockReturnValue({ promise: Promise.resolve(createPdfMock()) });
 
-    const view = render(<PdfViewer url="blob:test" />);
+    const view = render(
+      <PdfViewer blob={new Blob(["pdf"], { type: "application/pdf" })} />
+    );
 
     await flushAsyncWork();
 

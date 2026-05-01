@@ -859,6 +859,7 @@
     "indexedTextUnavailable": "Indexed text is not available for this document.",
     "docxRenderFailed": "Failed to render Word document",
     "loadingDocx": "Loading Word document...",
+    "previewTooLarge": "Preview unavailable for large files. Download to view.",
     "previewNotSupported": "Preview is not supported for this file type."
   },
   "search": {

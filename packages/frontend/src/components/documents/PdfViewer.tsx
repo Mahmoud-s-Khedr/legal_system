@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface PdfViewerProps {
-  url: string;
+  blob: Blob;
 }
 
 type PdfDocumentHandle = {
@@ -18,13 +18,15 @@ type PdfDocumentHandle = {
   destroy?: () => void;
 };
 
-export function PdfViewer({ url }: PdfViewerProps) {
+export function PdfViewer({ blob }: PdfViewerProps) {
   const { t } = useTranslation("app");
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLElement>>(new Map());
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
   const renderTasksRef = useRef<Map<number, { cancel: () => void }>>(new Map());
 
+  const [nativeUrl, setNativeUrl] = useState<string | null>(null);
+  const [useNativeViewer, setUseNativeViewer] = useState(false);
   const [pdf, setPdf] = useState<PdfDocumentHandle | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,6 +36,20 @@ export function PdfViewer({ url }: PdfViewerProps) {
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
   const [renderedPages, setRenderedPages] = useState<Set<number>>(new Set());
   const [firstRenderedHeight, setFirstRenderedHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof URL.createObjectURL !== "function") {
+      setNativeUrl(null);
+      return () => undefined;
+    }
+    const objectUrl = URL.createObjectURL(blob);
+    setNativeUrl(objectUrl);
+    setUseNativeViewer(false);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+      setNativeUrl(null);
+    };
+  }, [blob]);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,17 +72,41 @@ export function PdfViewer({ url }: PdfViewerProps) {
     async function loadPdf() {
       try {
         const pdfjsLib = await import("pdfjs-dist");
-        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url
-        ).toString();
+        const data = new Uint8Array(await blob.arrayBuffer());
 
-        loadingTask = pdfjsLib.getDocument(url) as unknown as {
+        // Webviews may require explicit workerSrc even for in-memory documents.
+        // Keep worker enabled first for better performance; fall back to no-worker.
+        try {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+            "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+            import.meta.url
+          ).toString();
+        } catch {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+            "pdfjs-dist/build/pdf.worker.min.mjs",
+            import.meta.url
+          ).toString();
+        }
+
+        loadingTask = pdfjsLib.getDocument({ data }) as unknown as {
           promise: Promise<PdfDocumentHandle>;
           destroy?: () => void;
         };
 
-        const loadedPdf = await loadingTask.promise;
+        let loadedPdf: PdfDocumentHandle;
+        try {
+          loadedPdf = await loadingTask.promise;
+        } catch {
+          // Fallback path for desktop runtimes where workers are blocked/unstable.
+          loadingTask = pdfjsLib.getDocument({
+            data,
+            disableWorker: true
+          }) as unknown as {
+            promise: Promise<PdfDocumentHandle>;
+            destroy?: () => void;
+          };
+          loadedPdf = await loadingTask.promise;
+        }
         if (cancelled) return;
 
         const initialPages = new Set<number>();
@@ -80,6 +120,7 @@ export function PdfViewer({ url }: PdfViewerProps) {
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : t("documents.pdfRenderFailed"));
+          setUseNativeViewer(true);
         }
       } finally {
         if (!cancelled) {
@@ -96,7 +137,7 @@ export function PdfViewer({ url }: PdfViewerProps) {
       renderTasksRef.current.forEach((task) => task.cancel());
       renderTasksRef.current.clear();
     };
-  }, [t, url]);
+  }, [blob, t]);
 
   const pageNumbers = useMemo(
     () => Array.from({ length: pageCount }, (_, idx) => idx + 1),
@@ -202,8 +243,7 @@ export function PdfViewer({ url }: PdfViewerProps) {
 
           const task = page.render({
             canvasContext: context,
-            viewport,
-            canvas
+            viewport
           });
 
           renderTasksRef.current.set(pageNumber, { cancel: task.cancel });
@@ -221,6 +261,8 @@ export function PdfViewer({ url }: PdfViewerProps) {
         } catch {
           if (!cancelled) {
             setError(t("documents.pdfRenderFailed"));
+            setUseNativeViewer(true);
+            return;
           }
         }
       }
@@ -263,6 +305,22 @@ export function PdfViewer({ url }: PdfViewerProps) {
 
     const pageElement = pageRefs.current.get(targetPage);
     pageElement?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (useNativeViewer && nativeUrl) {
+    return (
+      <object
+        data={nativeUrl}
+        type="application/pdf"
+        className="h-[60vh] w-full rounded-xl border border-slate-200 bg-slate-50"
+      >
+        <iframe
+          title="PDF preview"
+          src={nativeUrl}
+          className="h-[60vh] w-full rounded-xl border border-slate-200 bg-slate-50"
+        />
+      </object>
+    );
   }
 
   if (error) {

@@ -48,7 +48,8 @@ describe("runExtraction", () => {
     const env = {
       OCR_EMBEDDED_PDF_MAX_PAGES: 25,
       OCR_EMBEDDED_DOCX_MAX_IMAGES: 30,
-      OCR_EMBEDDED_IMAGE_MAX_BYTES: 10 * 1024 * 1024
+      OCR_EMBEDDED_IMAGE_MAX_BYTES: 10 * 1024 * 1024,
+      MAX_UPLOAD_BYTES: 50 * 1024 * 1024
     } as never;
 
     prisma.document.findUnique.mockResolvedValue({
@@ -80,6 +81,41 @@ describe("runExtraction", () => {
     expect(prisma.document.update).toHaveBeenNthCalledWith(2, {
       where: { id: "doc-1" },
       data: { contentText: "merged raw text", extractionStatus: "INDEXED" }
+    });
+  });
+
+  it("marks extraction as failed when stream exceeds configured memory limit", async () => {
+    const env = {
+      OCR_EMBEDDED_PDF_MAX_PAGES: 25,
+      OCR_EMBEDDED_DOCX_MAX_IMAGES: 30,
+      OCR_EMBEDDED_IMAGE_MAX_BYTES: 1024,
+      MAX_UPLOAD_BYTES: 1024
+    } as never;
+
+    prisma.document.findUnique.mockResolvedValue({
+      id: "doc-2",
+      deletedAt: null,
+      storageKey: "firm/doc/large",
+      mimeType: "application/pdf",
+      ocrBackend: "TESSERACT",
+      uploadedById: null,
+      firmId: "firm-1"
+    });
+
+    const storage = {
+      get: vi.fn().mockResolvedValue(Readable.from(Buffer.alloc(2048, 1)))
+    };
+
+    await runExtraction("doc-2", env, storage as never);
+
+    expect(tesseractExtract).not.toHaveBeenCalled();
+    expect(prisma.document.update).toHaveBeenNthCalledWith(1, {
+      where: { id: "doc-2" },
+      data: { extractionStatus: "PROCESSING" }
+    });
+    expect(prisma.document.update).toHaveBeenNthCalledWith(2, {
+      where: { id: "doc-2" },
+      data: { extractionStatus: "FAILED" }
     });
   });
 });

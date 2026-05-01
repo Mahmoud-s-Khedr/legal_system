@@ -67,6 +67,7 @@ function createReplyRecorder() {
   const recorder = {
     statusCode: 200,
     payload: undefined as unknown,
+    headers: {} as Record<string, string>,
     status: vi.fn((code: number) => {
       recorder.statusCode = code;
       return {
@@ -79,6 +80,10 @@ function createReplyRecorder() {
     send: vi.fn((payload: unknown) => {
       recorder.payload = payload;
       return payload;
+    }),
+    header: vi.fn((name: string, value: string) => {
+      recorder.headers[name] = value;
+      return recorder;
     }),
     redirect: vi.fn()
   };
@@ -326,5 +331,37 @@ describe("library upload route authorization", () => {
 
     expect(reply.statusCode).toBe(404);
     expect(reply.payload).toEqual({ error: "File not found" });
+  });
+
+  it("sets stream headers for visible library document", async () => {
+    const app = createApp();
+    await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
+
+    const streamCall = app.get.mock.calls.find(
+      (call) => call[0] === "/api/library/documents/:documentId/stream"
+    );
+    const handler = streamCall?.[2] as (
+      request: unknown,
+      reply: unknown
+    ) => Promise<unknown>;
+
+    prisma.libraryDocument.findFirst.mockResolvedValueOnce({
+      id: "doc-1",
+      title: "Law 1.pdf",
+      mimeType: "application/pdf",
+      storageKey: "library/firm-1/doc-1/law.pdf"
+    });
+    app.storage.get.mockResolvedValue(Readable.from(Buffer.from("pdf")));
+
+    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const reply = createReplyRecorder();
+
+    await handler({ params: { documentId: "doc-1" }, sessionUser: actor }, reply);
+
+    expect(reply.header).toHaveBeenCalledWith("Content-Type", "application/pdf");
+    expect(reply.header).toHaveBeenCalledWith(
+      "Content-Disposition",
+      'attachment; filename="Law%201.pdf"'
+    );
   });
 });

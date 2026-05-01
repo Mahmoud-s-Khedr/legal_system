@@ -38,8 +38,59 @@ const ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
   img: new Set(["src", "alt", "title"]),
   td: new Set(["colspan", "rowspan"]),
   th: new Set(["colspan", "rowspan"]),
-  "*": new Set([])
+  "*": new Set(["style"])
 };
+
+const ALLOWED_STYLE_PROPERTIES = new Set([
+  "text-align",
+  "direction",
+  "unicode-bidi",
+  "line-height",
+  "font-size",
+  "font-family",
+  "letter-spacing",
+  "word-spacing",
+  "color",
+  "font-weight",
+  "font-style",
+  "text-decoration",
+  "text-indent",
+  "white-space",
+  "margin-left",
+  "margin-right",
+  "margin-top",
+  "margin-bottom",
+  "padding-top",
+  "padding-bottom",
+  "padding-left",
+  "padding-right",
+  "list-style-type",
+  "vertical-align"
+]);
+
+function sanitizeInlineStyle(style: string): string {
+  const safeDeclarations: string[] = [];
+  const declarations = style.split(";");
+  for (const declaration of declarations) {
+    const [rawName, ...rawValueParts] = declaration.split(":");
+    if (!rawName || rawValueParts.length === 0) {
+      continue;
+    }
+    const name = rawName.trim().toLowerCase();
+    if (!ALLOWED_STYLE_PROPERTIES.has(name)) {
+      continue;
+    }
+    const value = rawValueParts.join(":").trim();
+    if (!value) {
+      continue;
+    }
+    if (/url\s*\(/i.test(value)) {
+      continue;
+    }
+    safeDeclarations.push(`${name}: ${value}`);
+  }
+  return safeDeclarations.join("; ");
+}
 
 function isSafeUrl(value: string, tagName: string, attrName: string): boolean {
   const trimmed = value.trim();
@@ -53,15 +104,10 @@ function isSafeUrl(value: string, tagName: string, attrName: string): boolean {
   try {
     const parsed = new URL(trimmed, window.location.origin);
     const protocol = parsed.protocol.toLowerCase();
-    if (protocol === "http:" || protocol === "https:" || protocol === "mailto:" || protocol === "tel:") {
-      return true;
+    if (tagName === "img" && attrName === "src") {
+      return protocol === "data:" && /^data:image\//i.test(trimmed);
     }
-    if (
-      tagName === "img" &&
-      attrName === "src" &&
-      protocol === "data:" &&
-      /^data:image\//i.test(trimmed)
-    ) {
+    if (protocol === "http:" || protocol === "https:" || protocol === "mailto:" || protocol === "tel:") {
       return true;
     }
     return false;
@@ -89,7 +135,7 @@ export function sanitizeDocxHtml(input: string): string {
 
     for (const attr of Array.from(node.attributes)) {
       const attrName = attr.name.toLowerCase();
-      if (attrName.startsWith("on") || attrName === "style") {
+      if (attrName.startsWith("on")) {
         node.removeAttribute(attr.name);
         continue;
       }
@@ -102,6 +148,15 @@ export function sanitizeDocxHtml(input: string): string {
         !isSafeUrl(attr.value, tagName, attrName)
       ) {
         node.removeAttribute(attr.name);
+        continue;
+      }
+      if (attrName === "style") {
+        const sanitizedStyle = sanitizeInlineStyle(attr.value);
+        if (!sanitizedStyle) {
+          node.removeAttribute(attr.name);
+          continue;
+        }
+        node.setAttribute("style", sanitizedStyle);
       }
     }
 
@@ -167,7 +222,7 @@ export function DocxViewer({ blob }: DocxViewerProps) {
       ) : null}
       <div
         ref={containerRef}
-        className="max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 text-sm leading-relaxed prose prose-sm max-w-none"
+        className="max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 text-sm leading-relaxed prose prose-sm max-w-none text-start"
         dangerouslySetInnerHTML={
           html ? { __html: html } : undefined
         }

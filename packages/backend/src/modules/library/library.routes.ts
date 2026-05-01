@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import fsPromises from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { z } from "zod";
@@ -35,6 +36,22 @@ import { hasEditionFeature } from "../editions/editionPolicy.js";
 
 function sanitizeFilename(name: string): string {
   return path.basename(name).replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+async function tryResolveStreamContentLength(
+  stream: NodeJS.ReadableStream
+): Promise<number | null> {
+  const candidatePath = (stream as { path?: unknown }).path;
+  if (typeof candidatePath !== "string" || !candidatePath.trim()) {
+    return null;
+  }
+
+  try {
+    const stat = await fsPromises.stat(candidatePath);
+    return Number.isFinite(stat.size) ? stat.size : null;
+  } catch {
+    return null;
+  }
 }
 
 const categoryIdParamsSchema = z.object({ categoryId: z.string().min(1) });
@@ -410,6 +427,13 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
         return reply.status(404).send({ error: "File not found" });
       }
       const stream = await app.storage.get(doc.storageKey);
+      const safeFilename = encodeURIComponent(doc.title || `document-${documentId}`);
+      const contentLength = await tryResolveStreamContentLength(stream);
+      reply.header("Content-Type", doc.mimeType ?? "application/octet-stream");
+      reply.header("Content-Disposition", `attachment; filename="${safeFilename}"`);
+      if (contentLength !== null) {
+        reply.header("Content-Length", String(contentLength));
+      }
       return reply.send(stream);
     }
   );

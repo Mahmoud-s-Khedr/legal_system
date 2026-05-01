@@ -847,6 +847,7 @@
     "indexedTextUnavailable": "Le texte indexé n'est pas disponible pour ce document.",
     "docxRenderFailed": "Échec du rendu du document Word",
     "loadingDocx": "Chargement du document Word...",
+    "previewTooLarge": "Aperçu indisponible pour les fichiers volumineux. Téléchargez le fichier pour l’ouvrir.",
     "previewNotSupported": "Aperçu non pris en charge pour ce type de fichier."
   },
   "search": {

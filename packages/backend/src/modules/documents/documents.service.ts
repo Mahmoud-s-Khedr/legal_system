@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import fsPromises from "node:fs/promises";
 import path from "node:path";
 import type {
   DocumentDto,
@@ -37,6 +38,22 @@ export const ALLOWED_MIME_TYPES = [
 
 function sanitizeFilename(name: string): string {
   return path.basename(name).replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+async function tryResolveStreamContentLength(
+  stream: NodeJS.ReadableStream
+): Promise<number | null> {
+  const candidatePath = (stream as { path?: unknown }).path;
+  if (typeof candidatePath !== "string" || !candidatePath.trim()) {
+    return null;
+  }
+
+  try {
+    const stat = await fsPromises.stat(candidatePath);
+    return Number.isFinite(stat.size) ? stat.size : null;
+  } catch {
+    return null;
+  }
 }
 
 function mapVersion(v: {
@@ -365,6 +382,7 @@ export async function uploadNewVersion(
         where: { id: documentId },
         data: {
           fileName: safeFilename,
+          mimeType: payload.mimeType,
           storageKey: newStorageKey,
           extractionStatus: ExtractionStatus.PENDING,
           contentText: null
@@ -434,8 +452,12 @@ export async function streamDocument(
 
   const stream = await storage.get(doc.storageKey);
   const safeFilename = encodeURIComponent(doc.fileName);
+  const contentLength = await tryResolveStreamContentLength(stream);
   reply.header("Content-Type", doc.mimeType);
-  reply.header("Content-Disposition", `attachment; filename="${safeFilename}"`);
+  reply.header("Content-Disposition", `inline; filename="${safeFilename}"`);
+  if (contentLength !== null) {
+    reply.header("Content-Length", String(contentLength));
+  }
   await reply.send(stream);
 }
 

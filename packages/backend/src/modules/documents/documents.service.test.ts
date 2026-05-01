@@ -43,7 +43,9 @@ const {
   listDocuments,
   getDocument,
   createDocument,
+  uploadNewVersion,
   updateDocument,
+  streamDocument,
   ALLOWED_MIME_TYPES
 } = await import("./documents.service.js");
 
@@ -278,6 +280,72 @@ describe("createDocument", () => {
     // storageKey should not contain path traversal
     const storageKey: string = mockDocument.create.mock.calls[0][0].data.storageKey;
     expect(storageKey).not.toContain("..");
+  });
+});
+
+describe("streamDocument", () => {
+  it("sets content type and disposition headers before streaming", async () => {
+    mockDocument.findFirstOrThrow.mockResolvedValue(
+      makeDocumentRecord({
+        fileName: "Contract A.pdf",
+        mimeType: "application/pdf"
+      })
+    );
+    mockStorage.get.mockResolvedValue(Readable.from(["pdf-bytes"]));
+
+    const reply = {
+      header: vi.fn(),
+      send: vi.fn().mockResolvedValue(undefined)
+    };
+
+    await streamDocument(actor, "doc-1", mockStorage as never, reply as never);
+
+    expect(reply.header).toHaveBeenCalledWith("Content-Type", "application/pdf");
+    expect(reply.header).toHaveBeenCalledWith(
+      "Content-Disposition",
+      'inline; filename="Contract%20A.pdf"'
+    );
+    expect(reply.send).toHaveBeenCalled();
+  });
+});
+
+describe("uploadNewVersion", () => {
+  it("updates the document mimeType to match the detected new version", async () => {
+    mockDocument.findFirstOrThrow.mockResolvedValue(
+      makeDocumentRecord({
+        versions: [{ versionNumber: 1 }]
+      })
+    );
+    mockDocumentVersion.create.mockResolvedValue({});
+    mockDocument.update.mockResolvedValue(
+      makeDocumentRecord({
+        fileName: "scan.png",
+        mimeType: "image/png",
+        storageKey: "firm-1/doc-1/v2-scan.png"
+      })
+    );
+
+    await uploadNewVersion(
+      actor,
+      "doc-1",
+      {
+        fileName: "scan.png",
+        mimeType: "image/png",
+        stream: Readable.from(["image-bytes"])
+      },
+      mockEnv,
+      mockStorage,
+      audit
+    );
+
+    expect(mockDocument.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          mimeType: "image/png",
+          extractionStatus: "PENDING"
+        })
+      })
+    );
   });
 });
 

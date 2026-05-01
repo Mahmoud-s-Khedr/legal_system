@@ -872,6 +872,7 @@
     "indexedTextUnavailable": "النص المفهرس غير متاح لهذا المستند.",
     "docxRenderFailed": "تعذر عرض ملف Word",
     "loadingDocx": "جارٍ تحميل ملف Word...",
+    "previewTooLarge": "المعاينة غير متاحة للملفات الكبيرة. نزّل الملف لعرضه.",
     "previewNotSupported": "المعاينة غير مدعومة لهذا النوع من الملفات."
   },
   "search": {

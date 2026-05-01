@@ -24,11 +24,31 @@ describe("sanitizeDocxHtml", () => {
     expect(html).toContain('rel="noopener noreferrer"');
   });
 
+  it("removes remote image sources and keeps embedded data images", () => {
+    const html = sanitizeDocxHtml(
+      '<img src="https://example.com/remote.png" alt="remote" /><img src="data:image/png;base64,AAAA" alt="embedded" />'
+    );
+
+    expect(html).not.toContain('src="https://example.com/remote.png"');
+    expect(html).toContain('src="data:image/png;base64,AAAA"');
+  });
+
   it("unwraps disallowed tags while keeping child text", () => {
     const html = sanitizeDocxHtml("<div><custom-tag>text</custom-tag></div>");
 
     expect(html).toContain("text");
     expect(html).not.toContain("custom-tag");
     expect(html).not.toContain("<div");
+  });
+
+  it("keeps safe inline style properties and strips unsafe ones", () => {
+    const html = sanitizeDocxHtml(
+      '<p style="text-align: center; color: red; background-image:url(javascript:1); margin-left: 10px">x</p>'
+    );
+
+    expect(html).toContain(
+      'style="text-align: center; color: red; margin-left: 10px"'
+    );
+    expect(html).not.toContain("background-image");
   });
 });

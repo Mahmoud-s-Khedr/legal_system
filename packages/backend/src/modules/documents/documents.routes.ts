@@ -1,14 +1,12 @@
-import { Readable } from "node:stream";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
-import { fileTypeFromBuffer } from "file-type";
 import { DocumentType } from "@elms/shared";
 import { documentDtoSchema, listResponseSchema, successSchema } from "../../schemas/index.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { getAuditContext } from "../../utils/auditContext.js";
 import { parsePaginationQuery } from "../../utils/pagination.js";
-import { readUploadBuffer } from "../../utils/upload.js";
+import { sniffMimeAndReplayStream } from "../../utils/upload.js";
 import type { AppEnv } from "../../config/env.js";
 import {
   ALLOWED_MIME_TYPES,
@@ -44,6 +42,31 @@ const listDocumentsQuerySchema = z.object({
 });
 
 const idParamsSchema = z.object({ id: z.string().min(1) });
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+function hasZipHeader(buffer: Buffer): boolean {
+  return buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b;
+}
+
+function resolveDetectedMime(
+  detectedMime: string | null,
+  filename: string,
+  multipartMime: string,
+  sniffBytes: Buffer
+): string | null {
+  if (detectedMime) {
+    return detectedMime;
+  }
+
+  // Some valid DOCX files are not classified by magic bytes alone.
+  // Accept only when extension + multipart mime + ZIP signature all match DOCX expectations.
+  const isDocxName = filename.toLowerCase().endsWith(".docx");
+  if (isDocxName && multipartMime === DOCX_MIME && hasZipHeader(sniffBytes)) {
+    return DOCX_MIME;
+  }
+
+  return null;
+}
 
 export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) {
   // List documents (with optional filters)
@@ -85,9 +108,14 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
       }
 
       // Validate MIME type using file byte inspection (not the spoofable Content-Type header)
-      const fileBuffer = await readUploadBuffer(data.file);
-      const detectedMime = (await fileTypeFromBuffer(fileBuffer))?.mime ?? null;
-      if (!detectedMime || !ALLOWED_MIME_TYPES.includes(detectedMime as (typeof ALLOWED_MIME_TYPES)[number])) {
+      const sniffed = await sniffMimeAndReplayStream(data.file);
+      const resolvedMime = resolveDetectedMime(
+        sniffed.mimeType,
+        data.filename,
+        data.mimetype,
+        sniffed.sniffBytes
+      );
+      if (!resolvedMime || !ALLOWED_MIME_TYPES.includes(resolvedMime as (typeof ALLOWED_MIME_TYPES)[number])) {
         return reply.status(422).send({ message: `Unsupported or undetectable file type` });
       }
 
@@ -112,8 +140,8 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
           clientId,
           taskId,
           fileName: data.filename,
-          mimeType: detectedMime,
-          stream: Readable.from(fileBuffer)
+          mimeType: resolvedMime,
+          stream: sniffed.stream
         },
         env,
         app.storage,
@@ -183,9 +211,14 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
       }
 
       // Validate MIME type using file byte inspection (not the spoofable Content-Type header)
-      const fileBuffer = await readUploadBuffer(data.file);
-      const detectedMime = (await fileTypeFromBuffer(fileBuffer))?.mime ?? null;
-      if (!detectedMime || !ALLOWED_MIME_TYPES.includes(detectedMime as (typeof ALLOWED_MIME_TYPES)[number])) {
+      const sniffed = await sniffMimeAndReplayStream(data.file);
+      const resolvedMime = resolveDetectedMime(
+        sniffed.mimeType,
+        data.filename,
+        data.mimetype,
+        sniffed.sniffBytes
+      );
+      if (!resolvedMime || !ALLOWED_MIME_TYPES.includes(resolvedMime as (typeof ALLOWED_MIME_TYPES)[number])) {
         return reply.status(422).send({ message: `Unsupported or undetectable file type` });
       }
 
@@ -194,8 +227,8 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
         idParamsSchema.parse(request.params).id,
         {
           fileName: data.filename,
-          mimeType: detectedMime,
-          stream: Readable.from(fileBuffer)
+          mimeType: resolvedMime,
+          stream: sniffed.stream
         },
         env,
         app.storage,

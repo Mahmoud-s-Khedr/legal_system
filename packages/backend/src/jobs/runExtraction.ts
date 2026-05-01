@@ -8,12 +8,37 @@ import { dispatchNotification } from "../modules/notifications/notification.serv
 import { NotificationType } from "@elms/shared";
 import { captureBackendException } from "../monitoring/sentry.js";
 
-async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const PDF_MIME = "application/pdf";
+const DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+async function streamToBufferWithLimit(
+  stream: NodeJS.ReadableStream,
+  maxBytes: number
+): Promise<Buffer> {
   const chunks: Buffer[] = [];
+  let totalBytes = 0;
   for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as unknown as Uint8Array));
+    const chunkBuffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as unknown as Uint8Array);
+    totalBytes += chunkBuffer.length;
+    if (totalBytes > maxBytes) {
+      throw new Error(`Document exceeds extraction memory limit (${maxBytes} bytes)`);
+    }
+    chunks.push(chunkBuffer);
   }
   return Buffer.concat(chunks);
+}
+
+function resolveExtractionBufferLimitBytes(env: AppEnv, mimeType: string): number {
+  const maxUploadBytes = Number.isFinite(env.MAX_UPLOAD_BYTES)
+    ? env.MAX_UPLOAD_BYTES
+    : DEFAULT_MAX_UPLOAD_BYTES;
+
+  if (mimeType === PDF_MIME || mimeType === DOCX_MIME) {
+    return maxUploadBytes;
+  }
+
+  return Math.min(maxUploadBytes, env.OCR_EMBEDDED_IMAGE_MAX_BYTES);
 }
 
 export async function runExtraction(
@@ -31,7 +56,8 @@ export async function runExtraction(
 
   try {
     const stream = await storage.get(doc.storageKey);
-    const buffer = await streamToBuffer(stream);
+    const maxBufferBytes = resolveExtractionBufferLimitBytes(env, doc.mimeType);
+    const buffer = await streamToBufferWithLimit(stream, maxBufferBytes);
 
     const adapter =
       doc.ocrBackend === "GOOGLE_VISION"

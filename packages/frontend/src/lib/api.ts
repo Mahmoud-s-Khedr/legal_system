@@ -67,6 +67,7 @@ export interface ApiDownloadResult {
   blob: Blob;
   filename?: string;
   contentType: string | null;
+  contentLength?: number | null;
 }
 
 async function parseErrorPayload(response: Response) {
@@ -715,17 +716,34 @@ export async function apiDownload(
   await ensureDesktopBackendConnectionLoaded();
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
+  const requestInit: RequestInit = {
+    credentials: "include",
+    headers,
+    signal,
+    ...restInit
+  };
 
   let response: Response;
   try {
-    response = await fetch(resolveRequestUrl(input), {
-      credentials: "include",
-      headers,
-      signal,
-      ...restInit
-    });
+    response = await fetch(resolveRequestUrl(input), requestInit);
   } catch (error) {
-    throw mapTransportError(error, input);
+    const canRetryViaRelativeApi =
+      isDesktopShell &&
+      isNetworkFailure(error) &&
+      typeof input === "string" &&
+      input.startsWith("/api/");
+
+    if (canRetryViaRelativeApi) {
+      try {
+        // Dev/desktop fallback: if explicit runtime base URL is temporarily
+        // unreachable, retry against current origin (e.g. Vite proxy).
+        response = await fetch(input, requestInit);
+      } catch {
+        throw mapTransportError(error, input);
+      }
+    } else {
+      throw mapTransportError(error, input);
+    }
   }
 
   if (!response.ok) {
@@ -738,6 +756,7 @@ export async function apiDownload(
   return {
     blob: await response.blob(),
     filename,
-    contentType: response.headers.get("Content-Type")
+    contentType: response.headers.get("Content-Type"),
+    contentLength: Number(response.headers.get("Content-Length") ?? "") || null
   };
 }
