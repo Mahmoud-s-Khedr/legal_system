@@ -19,6 +19,7 @@ export type FilePreviewState =
 interface FilePreviewProps {
   mimeType: string;
   title: string;
+  fileName?: string;
   streamUrl: string;
   cacheKey: string;
   fallbackText?: string;
@@ -29,6 +30,7 @@ interface FilePreviewProps {
 export function FilePreview({
   mimeType,
   title,
+  fileName,
   streamUrl,
   cacheKey,
   fallbackText,
@@ -42,7 +44,7 @@ export function FilePreview({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const kind = resolvePreviewKind(mimeType);
+    const kind = resolvePreviewKind(mimeType, fileName ?? title);
 
     function revokePreviewUrl() {
       if (previewObjectUrlRef.current) {
@@ -81,9 +83,24 @@ export function FilePreview({
           return;
         }
 
-        const objectUrl = URL.createObjectURL(blob);
+        let previewBlob = blob;
+        if (kind === "pdf" && blob.type !== "application/pdf") {
+          previewBlob = new Blob([blob], { type: "application/pdf" });
+        } else if (
+          kind === "docx" &&
+          blob.type !==
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) {
+          previewBlob = new Blob([blob], {
+            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          });
+        } else if (kind === "image" && !blob.type.startsWith("image/")) {
+          previewBlob = new Blob([blob], { type: "image/*" });
+        }
+
+        const objectUrl = URL.createObjectURL(previewBlob);
         previewObjectUrlRef.current = objectUrl;
-        previewBlobRef.current = blob;
+        previewBlobRef.current = previewBlob;
         setPreviewUrl(objectUrl);
         setState("ready");
       } catch {
@@ -103,9 +120,9 @@ export function FilePreview({
       window.clearTimeout(timeout);
       revokePreviewUrl();
     };
-  }, [cacheKey, mimeType, streamUrl]);
+  }, [cacheKey, fileName, mimeType, streamUrl, title]);
 
-  const kind = resolvePreviewKind(mimeType);
+  const kind = resolvePreviewKind(mimeType, fileName ?? title);
 
   if (state === "loading") {
     return <p className="text-sm text-slate-500">{t("documents.previewLoading")}</p>;

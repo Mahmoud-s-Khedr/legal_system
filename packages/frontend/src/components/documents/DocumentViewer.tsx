@@ -87,6 +87,7 @@ export function DocumentViewer({
           <FilePreview
             cacheKey={`${doc.id}:${doc.updatedAt}:${versionsKey}`}
             fallbackText={doc.contentText ?? undefined}
+            fileName={doc.fileName}
             mimeType={doc.mimeType}
             streamUrl={`/api/documents/${doc.id}/stream`}
             title={doc.title}

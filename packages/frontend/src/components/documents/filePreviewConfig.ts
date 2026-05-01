@@ -16,17 +16,51 @@ export const FILE_PREVIEW_LIMITS_BYTES = {
 // Keep this generous to avoid false preview failures.
 export const FILE_PREVIEW_TIMEOUT_MS = 90_000;
 
-export function resolvePreviewKind(mimeType: string): "pdf" | "image" | "docx" | "unsupported" {
-  if (mimeType === FILE_PREVIEW_SUPPORTED_MIME.pdf) {
-    return "pdf";
-  }
-  if (mimeType === FILE_PREVIEW_SUPPORTED_MIME.docx) {
-    return "docx";
-  }
-  if (mimeType.startsWith("image/")) {
+function normalizeMimeType(mimeType: string | null | undefined): string {
+  return (mimeType ?? "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+}
+
+function resolveKindFromFileName(fileName?: string): "pdf" | "image" | "docx" | "unsupported" {
+  const normalized = (fileName ?? "").trim().toLowerCase();
+  if (!normalized) return "unsupported";
+  if (normalized.endsWith(".pdf")) return "pdf";
+  if (normalized.endsWith(".docx")) return "docx";
+  if (
+    normalized.endsWith(".png") ||
+    normalized.endsWith(".jpg") ||
+    normalized.endsWith(".jpeg") ||
+    normalized.endsWith(".gif") ||
+    normalized.endsWith(".bmp") ||
+    normalized.endsWith(".webp") ||
+    normalized.endsWith(".svg") ||
+    normalized.endsWith(".tif") ||
+    normalized.endsWith(".tiff")
+  ) {
     return "image";
   }
   return "unsupported";
+}
+
+export function resolvePreviewKind(
+  mimeType: string,
+  fileName?: string
+): "pdf" | "image" | "docx" | "unsupported" {
+  const normalizedMime = normalizeMimeType(mimeType);
+
+  if (normalizedMime === FILE_PREVIEW_SUPPORTED_MIME.pdf) {
+    return "pdf";
+  }
+  if (normalizedMime === FILE_PREVIEW_SUPPORTED_MIME.docx) {
+    return "docx";
+  }
+  if (normalizedMime.startsWith("image/")) {
+    return "image";
+  }
+
+  return resolveKindFromFileName(fileName);
 }
 
 export function resolvePreviewLimitBytes(kind: "pdf" | "image" | "docx" | "unsupported") {

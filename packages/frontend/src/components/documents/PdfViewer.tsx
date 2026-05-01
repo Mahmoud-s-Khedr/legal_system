@@ -12,7 +12,7 @@ type PdfDocumentHandle = {
     render: (options: {
       canvasContext: CanvasRenderingContext2D;
       viewport: { width: number; height: number };
-      canvas: HTMLCanvasElement;
+      canvas?: HTMLCanvasElement;
     }) => { promise: Promise<unknown>; cancel: () => void };
   }>;
   destroy?: () => void;
@@ -98,13 +98,12 @@ export function PdfViewer({ blob }: PdfViewerProps) {
           loadedPdf = await loadingTask.promise;
         } catch {
           // Fallback path for desktop runtimes where workers are blocked/unstable.
-          loadingTask = pdfjsLib.getDocument({
-            data,
-            disableWorker: true
-          }) as unknown as {
-            promise: Promise<PdfDocumentHandle>;
-            destroy?: () => void;
-          };
+        loadingTask = pdfjsLib.getDocument({
+          data
+        } as unknown as object) as unknown as {
+          promise: Promise<PdfDocumentHandle>;
+          destroy?: () => void;
+        };
           loadedPdf = await loadingTask.promise;
         }
         if (cancelled) return;

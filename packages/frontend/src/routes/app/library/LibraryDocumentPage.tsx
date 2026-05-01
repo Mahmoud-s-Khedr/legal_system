@@ -310,6 +310,7 @@ export function LibraryDocumentPage() {
           <div className="space-y-3">
             <FilePreview
               cacheKey={`${doc.id}:${doc.storageKey ?? ""}:${doc.mimeType ?? ""}`}
+              fileName={doc.title}
               mimeType={doc.mimeType ?? "application/octet-stream"}
               streamUrl={`/api/library/documents/${documentId}/stream`}
               title={doc.title}
