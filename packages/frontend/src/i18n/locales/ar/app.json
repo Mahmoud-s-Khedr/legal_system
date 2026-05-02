@@ -413,7 +413,8 @@
       "table": {
         "count": "العدد",
         "label": "التصنيف",
-        "value": "القيمة"
+        "value": "القيمة",
+        "secondaryValue": "القيمة الثانوية"
       },
       "states": {
         "noAnalytics": {
@@ -471,17 +472,29 @@
           "title": "الجلسات المجدولة",
           "description": "نتائج الجلسات والجلسات المجدولة خلال الفترة المحددة"
         },
-        "pipeline": {
-          "title": "مسار القضايا",
-          "description": "مسار القضايا حسب الحالة الحالية"
-        },
         "riskBuckets": {
           "title": "شرائح المخاطر",
           "description": "عبء عمل عالي المخاطر يحتاج متابعة فورية"
         },
         "financeTrend": {
-          "title": "اتجاه التحصيل",
+          "title": "مزيج حالات الفواتير",
           "description": "توزيع حالات الفواتير خلال الفترة المحددة"
+        },
+        "caseAgingBuckets": {
+          "title": "شرائح عمر القضايا",
+          "description": "توزيع القضايا المفتوحة حسب عمر القضية"
+        },
+        "overdueTrajectory": {
+          "title": "مسار التأخير",
+          "description": "اتجاه المهام المتأخرة حسب تاريخ الاستحقاق"
+        },
+        "dsoCollectionLag": {
+          "title": "زمن التحصيل (DSO)",
+          "description": "متوسط أيام تحصيل الفواتير المدفوعة بالكامل"
+        },
+        "invoiceVoidTrend": {
+          "title": "اتجاه إلغاء الفواتير",
+          "description": "عدد وقيمة الفواتير الملغاة شهريًا"
         }
       },
       "enums": {
@@ -522,6 +535,12 @@
         "riskBucket": {
           "OVERDUE_HIGH_PRIORITY_TASKS": "مهام عالية الأولوية متأخرة",
           "HEARINGS_IN_72H": "جلسات خلال 72 ساعة"
+        },
+        "caseAging": {
+          "0_30": "0-30 يوم",
+          "31_60": "31-60 يوم",
+          "61_90": "61-90 يوم",
+          "90_PLUS": "أكثر من 90 يوم"
         }
       }
     }
@@ -1210,11 +1229,26 @@
     "lawyerWorkload": "أعباء عمل المحامين",
     "revenue": "الإيرادات شهريًا",
     "outstandingBalances": "الأرصدة المستحقة",
+    "earningsLosses": "الأرباح والخسائر",
+    "dsoCollectionLag": "زمن التحصيل (DSO)",
+    "invoiceVoidTrend": "اتجاه إلغاء الفواتير",
+    "cashflowMonthly": "التدفق النقدي الشهري",
+    "arAging": "تقادم الذمم المدينة",
     "count": "العدد",
     "openCases": "القضايا المفتوحة",
     "openTasks": "المهام المفتوحة",
     "upcomingHearings": "الجلسات القادمة",
     "month": "الشهر",
+    "paidInvoices": "الفواتير المدفوعة",
+    "avgCollectionDays": "متوسط أيام التحصيل",
+    "voidCount": "عدد الفواتير الملغاة",
+    "voidAmount": "قيمة الإلغاء",
+    "cashIn": "التدفق الداخل",
+    "cashOut": "التدفق الخارج",
+    "netCash": "صافي التدفق",
+    "balanceDue": "الرصيد المستحق",
+    "agingBucket": "شريحة التقادم",
+    "caseTitle": "القضية",
     "daysOverdue": "أيام التأخر",
     "exportExcel": "تصدير Excel",
     "exportPdf": "تصدير PDF",
@@ -1238,8 +1272,25 @@
       "hearing-outcomes": "نتائج الجلسات",
       "lawyer-workload": "عبء عمل المحامين",
       "revenue": "الإيرادات",
-      "outstanding-balances": "الأرصدة المستحقة"
-    }
+      "outstanding-balances": "الأرصدة المستحقة",
+      "earnings-losses": "الأرباح والخسائر",
+      "dso-collection-lag": "زمن التحصيل (DSO)",
+      "invoice-void-trend": "اتجاه إلغاء الفواتير",
+      "cashflow-monthly": "التدفق النقدي الشهري",
+      "ar-aging": "تقادم الذمم المدينة"
+    },
+    "cashEarnings": "الإيراد النقدي",
+    "accrualEarnings": "الإيراد الاستحقاقي",
+    "operatingExpenses": "المصروفات التشغيلية",
+    "invoiceLosses": "خسائر الفواتير",
+    "totalLosses": "إجمالي الخسائر",
+    "netProfitCash": "صافي الربح (نقدي)",
+    "netProfitAccrual": "صافي الربح (استحقاقي)",
+    "tableView": "جدول",
+    "graphView": "رسم بياني",
+    "exportGraphPng": "تصدير الرسم PNG",
+    "exportGraphPdf": "تصدير الرسم PDF",
+    "graphUnavailable": "لا يتوفر رسم بياني لهذا العرض."
   },
   "templates": {
     "title": "نماذج المستندات",

@@ -5,10 +5,15 @@ import { requirePermission } from "../../middleware/requirePermission.js";
 import { parsePaginationQuery } from "../../utils/pagination.js";
 import { applyArrayTableQuery, normalizeSort } from "../../utils/tableQuery.js";
 import {
+  arAgingReport,
+  cashflowMonthlyReport,
   caseStatusDistribution,
+  dsoCollectionLagReport,
   hearingOutcomes,
+  invoiceVoidTrendReport,
   lawyerWorkload,
   revenueReport,
+  earningsLossesReport,
   outstandingBalances,
   caseProfitability,
   litigationSheetRows
@@ -102,6 +107,45 @@ const REPORT_CONFIG = {
   "outstanding-balances": {
     searchable: ["invoiceNumber", "clientName"],
     sortable: ["invoiceNumber", "clientName", "totalAmount", "dueDate", "daysOverdue"],
+    defaultSortBy: "daysOverdue",
+    defaultSortDir: "desc" as const
+  },
+  "earnings-losses": {
+    searchable: ["month"],
+    sortable: [
+      "month",
+      "cashEarnings",
+      "accrualEarnings",
+      "operatingExpenses",
+      "invoiceLosses",
+      "totalLosses",
+      "netProfitCash",
+      "netProfitAccrual"
+    ],
+    defaultSortBy: "month",
+    defaultSortDir: "asc" as const
+  },
+  "dso-collection-lag": {
+    searchable: ["month"],
+    sortable: ["month", "paidInvoices", "avgCollectionDays"],
+    defaultSortBy: "month",
+    defaultSortDir: "asc" as const
+  },
+  "invoice-void-trend": {
+    searchable: ["month"],
+    sortable: ["month", "voidCount", "voidAmount"],
+    defaultSortBy: "month",
+    defaultSortDir: "asc" as const
+  },
+  "cashflow-monthly": {
+    searchable: ["month"],
+    sortable: ["month", "cashIn", "cashOut", "netCash"],
+    defaultSortBy: "month",
+    defaultSortDir: "asc" as const
+  },
+  "ar-aging": {
+    searchable: ["invoiceNumber", "clientName", "caseTitle", "agingBucket"],
+    sortable: ["invoiceNumber", "clientName", "caseTitle", "balanceDue", "daysOverdue", "agingBucket"],
     defaultSortBy: "daysOverdue",
     defaultSortDir: "desc" as const
   }
@@ -201,6 +245,93 @@ export async function registerReportRoutes(app: FastifyInstance) {
   );
 
   app.get(
+    "/api/reports/earnings-losses",
+    { preHandler: [requireAuth, requirePermission("reports:read"), requirePermission("invoices:read"), requirePermission("expenses:read")] },
+    async (request) => {
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await earningsLossesReport(request.sessionUser!, {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo
+      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["earnings-losses"]
+      );
+    }
+  );
+
+  app.get(
+    "/api/reports/dso-collection-lag",
+    { preHandler: [requireAuth, requirePermission("reports:read"), requirePermission("invoices:read")] },
+    async (request) => {
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await dsoCollectionLagReport(request.sessionUser!, {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo
+      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["dso-collection-lag"]
+      );
+    }
+  );
+
+  app.get(
+    "/api/reports/invoice-void-trend",
+    { preHandler: [requireAuth, requirePermission("reports:read"), requirePermission("invoices:read")] },
+    async (request) => {
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await invoiceVoidTrendReport(request.sessionUser!, {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo
+      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["invoice-void-trend"]
+      );
+    }
+  );
+
+  app.get(
+    "/api/reports/cashflow-monthly",
+    { preHandler: [requireAuth, requirePermission("reports:read"), requirePermission("invoices:read"), requirePermission("expenses:read")] },
+    async (request) => {
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await cashflowMonthlyReport(request.sessionUser!, {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo
+      });
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["cashflow-monthly"]
+      );
+    }
+  );
+
+  app.get(
+    "/api/reports/ar-aging",
+    { preHandler: [requireAuth, requirePermission("reports:read"), requirePermission("invoices:read")] },
+    async (request) => {
+      const query = reportTableQuerySchema.parse(request.query as Record<string, string>);
+      const { page, limit } = parsePaginationQuery(query);
+      const rows = await arAgingReport(request.sessionUser!);
+      return toTableResponse(
+        toRowRecords(rows),
+        { q: query.q, sortBy: query.sortBy, sortDir: query.sortDir, page, limit },
+        REPORT_CONFIG["ar-aging"]
+      );
+    }
+  );
+
+  app.get(
     "/api/reports/outstanding-balances",
     { preHandler: [requireAuth, requirePermission("reports:read")] },
     async (request) => {
@@ -242,6 +373,19 @@ export async function registerReportRoutes(app: FastifyInstance) {
       const filter = { dateFrom: query.dateFrom, dateTo: query.dateTo };
       const { page, limit } = parsePaginationQuery(query);
       const generatedAt = new Date().toISOString().slice(0, 10);
+      const perms = new Set(request.sessionUser!.permissions);
+      if (
+        (reportType === "earnings-losses" || reportType === "cashflow-monthly") &&
+        (!perms.has("invoices:read") || !perms.has("expenses:read"))
+      ) {
+        return reply.status(403).send({ error: "Insufficient permissions" });
+      }
+      if (
+        (reportType === "dso-collection-lag" || reportType === "invoice-void-trend" || reportType === "ar-aging") &&
+        !perms.has("invoices:read")
+      ) {
+        return reply.status(403).send({ error: "Insufficient permissions" });
+      }
 
       let rows: unknown;
       let tableConfig: (typeof REPORT_CONFIG)[keyof typeof REPORT_CONFIG];
@@ -265,6 +409,26 @@ export async function registerReportRoutes(app: FastifyInstance) {
         case "outstanding-balances":
           rows = await outstandingBalances(request.sessionUser!);
           tableConfig = REPORT_CONFIG["outstanding-balances"];
+          break;
+        case "earnings-losses":
+          rows = await earningsLossesReport(request.sessionUser!, filter);
+          tableConfig = REPORT_CONFIG["earnings-losses"];
+          break;
+        case "dso-collection-lag":
+          rows = await dsoCollectionLagReport(request.sessionUser!, filter);
+          tableConfig = REPORT_CONFIG["dso-collection-lag"];
+          break;
+        case "invoice-void-trend":
+          rows = await invoiceVoidTrendReport(request.sessionUser!, filter);
+          tableConfig = REPORT_CONFIG["invoice-void-trend"];
+          break;
+        case "cashflow-monthly":
+          rows = await cashflowMonthlyReport(request.sessionUser!, filter);
+          tableConfig = REPORT_CONFIG["cashflow-monthly"];
+          break;
+        case "ar-aging":
+          rows = await arAgingReport(request.sessionUser!);
+          tableConfig = REPORT_CONFIG["ar-aging"];
           break;
         default:
           return reply.status(400).send({ error: "Unknown report type" });

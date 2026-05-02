@@ -24,7 +24,12 @@ type ReportType =
   | "hearing-outcomes"
   | "lawyer-workload"
   | "revenue"
-  | "outstanding-balances";
+  | "outstanding-balances"
+  | "earnings-losses"
+  | "dso-collection-lag"
+  | "invoice-void-trend"
+  | "cashflow-monthly"
+  | "ar-aging";
 
 interface CustomReportDto {
   id: string;
@@ -55,7 +60,12 @@ const REPORT_TYPES: ReportType[] = [
   "hearing-outcomes",
   "lawyer-workload",
   "revenue",
-  "outstanding-balances"
+  "outstanding-balances",
+  "earnings-losses",
+  "dso-collection-lag",
+  "invoice-void-trend",
+  "cashflow-monthly",
+  "ar-aging"
 ];
 
 const EMPTY_FORM = {

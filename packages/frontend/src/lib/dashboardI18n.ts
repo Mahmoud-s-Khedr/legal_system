@@ -40,15 +40,22 @@ export function localizeDashboardChartLabel(
   chartKey: DashboardChartKind,
   rawLabel: string
 ) {
+  if (/^\d{4}-\d{2}$/.test(rawLabel.trim())) {
+    return rawLabel.trim();
+  }
+
   const token = normalizeToken(rawLabel);
 
   const mapByChart: Record<DashboardChartKind, string> = {
     casesTrend: `dashboard.analytics.enums.caseStatus.${token}`,
     tasksTrend: `dashboard.analytics.enums.taskStatus.${token}`,
     hearingsTrend: `dashboard.analytics.enums.hearingOutcome.${token}`,
-    pipeline: `dashboard.analytics.enums.caseStatus.${token}`,
     riskBuckets: `dashboard.analytics.enums.riskBucket.${token}`,
-    financeTrend: `dashboard.analytics.enums.invoiceStatus.${token}`
+    financeTrend: `dashboard.analytics.enums.invoiceStatus.${token}`,
+    caseAgingBuckets: `dashboard.analytics.enums.caseAging.${token}`,
+    overdueTrajectory: `dashboard.analytics.enums.month.${token}`,
+    dsoCollectionLag: `dashboard.analytics.enums.month.${token}`,
+    invoiceVoidTrend: `dashboard.analytics.enums.month.${token}`
   };
 
   const key = mapByChart[chartKey];

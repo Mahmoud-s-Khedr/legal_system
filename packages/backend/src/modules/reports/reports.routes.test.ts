@@ -30,6 +30,11 @@ vi.mock("./reports.service.js", () => ({
   hearingOutcomes: vi.fn(),
   lawyerWorkload: vi.fn(),
   revenueReport: vi.fn(),
+  dsoCollectionLagReport: vi.fn(),
+  invoiceVoidTrendReport: vi.fn(),
+  cashflowMonthlyReport: vi.fn(),
+  arAgingReport: vi.fn(),
+  earningsLossesReport: vi.fn(),
   outstandingBalances: vi.fn(),
   caseProfitability
 }));

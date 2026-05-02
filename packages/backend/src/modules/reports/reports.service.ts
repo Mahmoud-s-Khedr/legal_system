@@ -1,7 +1,12 @@
 import type {
+  ArAgingRow,
+  CashflowMonthlyRow,
   CaseProfitabilityDto,
   CaseStatusRow,
+  DsoCollectionLagRow,
+  EarningsLossesRow,
   HearingOutcomeRow,
+  InvoiceVoidTrendRow,
   LawyerWorkloadRow,
   OutstandingBalanceRow,
   RevenueReportRow,
@@ -18,8 +23,12 @@ import {
   listCaseExpenses,
   listCaseInvoicesWithPayments,
   listOutstandingFirmInvoices,
+  queryCashflowMonthlyReport,
   queryCaseStatusDistribution,
+  queryDsoCollectionLagReport,
+  queryEarningsLossesReport,
   queryHearingOutcomes,
+  queryInvoiceVoidTrendReport,
   queryRevenueReport
 } from "../../repositories/reports/reports.repository.js";
 
@@ -116,6 +125,88 @@ export async function outstandingBalances(actor: SessionUser): Promise<Outstandi
         daysOverdue
       };
     });
+  });
+}
+
+export async function earningsLossesReport(
+  actor: SessionUser,
+  filter: ReportFilter
+): Promise<EarningsLossesRow[]> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    return queryEarningsLossesReport(tx, actor.firmId, filter);
+  });
+}
+
+export async function dsoCollectionLagReport(
+  actor: SessionUser,
+  filter: ReportFilter
+): Promise<DsoCollectionLagRow[]> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    return queryDsoCollectionLagReport(tx, actor.firmId, filter);
+  });
+}
+
+export async function invoiceVoidTrendReport(
+  actor: SessionUser,
+  filter: ReportFilter
+): Promise<InvoiceVoidTrendRow[]> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    return queryInvoiceVoidTrendReport(tx, actor.firmId, filter);
+  });
+}
+
+export async function cashflowMonthlyReport(
+  actor: SessionUser,
+  filter: ReportFilter
+): Promise<CashflowMonthlyRow[]> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    return queryCashflowMonthlyReport(tx, actor.firmId, filter);
+  });
+}
+
+function resolveAgingBucket(daysOverdue: number): ArAgingRow["agingBucket"] {
+  if (daysOverdue <= 0) return "CURRENT";
+  if (daysOverdue <= 30) return "1_30";
+  if (daysOverdue <= 60) return "31_60";
+  if (daysOverdue <= 90) return "61_90";
+  return "90_PLUS";
+}
+
+export async function arAgingReport(actor: SessionUser): Promise<ArAgingRow[]> {
+  return inTenantTransaction(actor.firmId, async (tx) => {
+    const now = new Date();
+    const invoices = await tx.invoice.findMany({
+      where: {
+        firmId: actor.firmId,
+        status: { in: ["ISSUED", "PARTIALLY_PAID"] }
+      },
+      include: {
+        client: { select: { name: true } },
+        case: { select: { title: true } },
+        payments: { select: { amount: true } }
+      },
+      orderBy: { dueDate: "asc" }
+    });
+
+    return invoices
+      .map((inv) => {
+        const totalPaid = inv.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+        const balanceDue = Math.max(Number(inv.totalAmount) - totalPaid, 0);
+        const daysOverdue = inv.dueDate
+          ? Math.floor((now.getTime() - inv.dueDate.getTime()) / 86_400_000)
+          : 0;
+        return {
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          clientName: inv.client?.name ?? null,
+          caseTitle: inv.case?.title ?? null,
+          balanceDue: balanceDue.toFixed(2),
+          dueDate: inv.dueDate?.toISOString() ?? null,
+          daysOverdue,
+          agingBucket: resolveAgingBucket(daysOverdue)
+        };
+      })
+      .filter((row) => Number(row.balanceDue) > 0);
   });
 }
 

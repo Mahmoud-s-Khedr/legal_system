@@ -101,12 +101,6 @@ export const DASHBOARD_CHART_RULES: DashboardChartRule[] = [
     requiredAnyPermissions: ["hearings:read"]
   },
   {
-    key: "pipeline",
-    title: "Case pipeline",
-    allowedScopes: ["my", "team", "office"],
-    requiredAnyPermissions: ["cases:read"]
-  },
-  {
     key: "riskBuckets",
     title: "Risk buckets",
     allowedScopes: ["my", "team", "office"],
@@ -114,7 +108,31 @@ export const DASHBOARD_CHART_RULES: DashboardChartRule[] = [
   },
   {
     key: "financeTrend",
-    title: "Collections trend",
+    title: "Invoice status mix",
+    allowedScopes: ["team", "office"],
+    requiredAnyPermissions: ["invoices:read"]
+  },
+  {
+    key: "caseAgingBuckets",
+    title: "Case aging buckets",
+    allowedScopes: ["my", "team", "office"],
+    requiredAnyPermissions: ["cases:read"]
+  },
+  {
+    key: "overdueTrajectory",
+    title: "Overdue trajectory",
+    allowedScopes: ["my", "team", "office"],
+    requiredAnyPermissions: ["tasks:read"]
+  },
+  {
+    key: "dsoCollectionLag",
+    title: "DSO collection lag",
+    allowedScopes: ["team", "office"],
+    requiredAnyPermissions: ["invoices:read"]
+  },
+  {
+    key: "invoiceVoidTrend",
+    title: "Invoice void trend",
     allowedScopes: ["team", "office"],
     requiredAnyPermissions: ["invoices:read"]
   }

@@ -50,7 +50,12 @@ function getGreetingKey(): "night" | "morning" | "afternoon" | "evening" {
 }
 
 function chartIsLine(chart: DashboardChartDto) {
-  return chart.key === "casesTrend" || chart.key === "hearingsTrend" || chart.key === "financeTrend";
+  return (
+    chart.key === "tasksTrend" ||
+    chart.key === "overdueTrajectory" ||
+    chart.key === "dsoCollectionLag" ||
+    chart.key === "invoiceVoidTrend"
+  );
 }
 
 export function DashboardPage() {
@@ -190,6 +195,15 @@ export function DashboardPage() {
                             />
                             <Legend />
                             <Line type="monotone" dataKey="value" name={t("dashboard.analytics.table.count")} stroke="#0f766e" strokeWidth={2} />
+                            {chart.points.some((point) => typeof point.secondaryValue === "number") ? (
+                              <Line
+                                type="monotone"
+                                dataKey="secondaryValue"
+                                name={t("dashboard.analytics.table.secondaryValue")}
+                                stroke="#dc2626"
+                                strokeWidth={2}
+                              />
+                            ) : null}
                           </LineChart>
                         ) : (
                           <BarChart data={chart.points} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>

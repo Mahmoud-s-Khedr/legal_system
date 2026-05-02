@@ -413,7 +413,8 @@
       "table": {
         "count": "Count",
         "label": "Label",
-        "value": "Value"
+        "value": "Value",
+        "secondaryValue": "Secondary"
       },
       "states": {
         "noAnalytics": {
@@ -471,17 +472,29 @@
           "title": "Hearings scheduled",
           "description": "Hearing outcomes and scheduled sessions in selected range"
         },
-        "pipeline": {
-          "title": "Pipeline",
-          "description": "Case pipeline by current status"
-        },
         "riskBuckets": {
           "title": "Risk buckets",
           "description": "High-risk workload requiring immediate follow-up"
         },
         "financeTrend": {
-          "title": "Collections trend",
+          "title": "Invoice status mix",
           "description": "Invoice status distribution in selected range"
+        },
+        "caseAgingBuckets": {
+          "title": "Case aging buckets",
+          "description": "Open cases by age bucket"
+        },
+        "overdueTrajectory": {
+          "title": "Overdue trajectory",
+          "description": "Overdue open tasks by due date"
+        },
+        "dsoCollectionLag": {
+          "title": "DSO collection lag",
+          "description": "Average days to collect fully paid invoices"
+        },
+        "invoiceVoidTrend": {
+          "title": "Invoice void trend",
+          "description": "Voided invoice count and value by month"
         }
       },
       "enums": {
@@ -522,6 +535,12 @@
         "riskBucket": {
           "OVERDUE_HIGH_PRIORITY_TASKS": "Overdue high-priority tasks",
           "HEARINGS_IN_72H": "Hearings in 72h"
+        },
+        "caseAging": {
+          "0_30": "0-30 days",
+          "31_60": "31-60 days",
+          "61_90": "61-90 days",
+          "90_PLUS": "90+ days"
         }
       }
     }
@@ -1197,11 +1216,33 @@
     "lawyerWorkload": "Lawyer workload",
     "revenue": "Revenue by month",
     "outstandingBalances": "Outstanding balances",
+    "earningsLosses": "Earnings and losses",
+    "dsoCollectionLag": "DSO collection lag",
+    "invoiceVoidTrend": "Invoice void trend",
+    "cashflowMonthly": "Monthly cashflow",
+    "arAging": "AR aging",
     "count": "Count",
     "openCases": "Open cases",
     "openTasks": "Open tasks",
     "upcomingHearings": "Upcoming hearings",
     "month": "Month",
+    "paidInvoices": "Paid invoices",
+    "avgCollectionDays": "Avg collection days",
+    "voidCount": "Void count",
+    "voidAmount": "Void amount",
+    "cashIn": "Cash in",
+    "cashOut": "Cash out",
+    "netCash": "Net cash",
+    "balanceDue": "Balance due",
+    "agingBucket": "Aging bucket",
+    "caseTitle": "Case",
+    "cashEarnings": "Cash earnings",
+    "accrualEarnings": "Accrual earnings",
+    "operatingExpenses": "Operating expenses",
+    "invoiceLosses": "Invoice losses",
+    "totalLosses": "Total losses",
+    "netProfitCash": "Net profit (cash)",
+    "netProfitAccrual": "Net profit (accrual)",
     "daysOverdue": "Days overdue",
     "exportExcel": "Export Excel",
     "exportPdf": "Export PDF",
@@ -1225,8 +1266,18 @@
       "hearing-outcomes": "Hearing outcomes",
       "lawyer-workload": "Lawyer workload",
       "revenue": "Revenue",
-      "outstanding-balances": "Outstanding balances"
-    }
+      "outstanding-balances": "Outstanding balances",
+      "earnings-losses": "Earnings and losses",
+      "dso-collection-lag": "DSO collection lag",
+      "invoice-void-trend": "Invoice void trend",
+      "cashflow-monthly": "Monthly cashflow",
+      "ar-aging": "AR aging"
+    },
+    "tableView": "Table",
+    "graphView": "Graph",
+    "exportGraphPng": "Export Graph PNG",
+    "exportGraphPdf": "Export Graph PDF",
+    "graphUnavailable": "Graph is not available for this report view."
   },
   "templates": {
     "title": "Document Templates",

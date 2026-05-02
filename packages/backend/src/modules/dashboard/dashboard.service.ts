@@ -10,9 +10,13 @@ import type {
   DashboardWorkItemDto,
   SessionUser
 } from "@elms/shared";
-import { CaseStatus, Prisma, TaskPriority, TaskStatus } from "@prisma/client";
+import { Prisma, TaskPriority, TaskStatus } from "@prisma/client";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
 import { listRecentAuditActivity } from "../../repositories/dashboard/dashboard.repository.js";
+import {
+  queryDsoCollectionLagReport,
+  queryInvoiceVoidTrendReport
+} from "../../repositories/reports/reports.repository.js";
 import { resolveDashboardChartRules, resolveDashboardWidgets } from "./dashboard.registry.js";
 
 const K_ANONYMITY_MIN = 3;
@@ -29,6 +33,21 @@ function titleCaseRole(roleKey: string) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function isoDay(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function buildDaySeries(startDate: Date, endDate: Date): string[] {
+  const days: string[] = [];
+  const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  while (cursor.getTime() <= end.getTime()) {
+    days.push(isoDay(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
 }
 
 function formatAction(action: string) {
@@ -191,12 +210,12 @@ export async function getDashboard(actor: SessionUser, scope: DashboardScope): P
       })
     ]);
 
-    const priorityCards = [
+    const priorityCards: DashboardResponseDto["priorityCards"] = [
       { key: "dueToday", label: "Due today", value: dueToday, href: "/app/tasks" },
       { key: "overdue", label: "Overdue", value: overdue, href: "/app/tasks?overdue=true" },
       { key: "hearings7d", label: "Hearings in 7 days", value: hearings7d, href: "/app/hearings" },
       { key: "unassigned", label: "Unassigned", value: unassigned, href: "/app/tasks" }
-    ] as DashboardResponseDto["priorityCards"];
+    ];
 
     const taskItems: DashboardWorkItemDto[] = myTasks.map((task) => ({
       id: task.id,
@@ -311,20 +330,45 @@ export async function getDashboardAnalytics(
     }
 
     if (rules.some((r) => r.key === "tasksTrend")) {
-      const taskRows = await tx.task.groupBy({
-        by: ["status"],
+      const now = new Date();
+      const days = buildDaySeries(startDate, now);
+      const doneRows = await tx.task.findMany({
         where: {
           ...taskWhere,
-          createdAt: { gte: startDate }
+          status: TaskStatus.DONE,
+          updatedAt: { gte: startDate, lte: now }
         },
-        _count: { _all: true }
+        select: { updatedAt: true }
       });
-      const points = taskRows.map((row) => ({ label: row.status, value: row._count._all }));
-      const redaction = redactSmallGroups(points);
+      const overdueRows = await tx.task.findMany({
+        where: {
+          ...taskWhere,
+          dueAt: { gte: startDate, lt: now },
+          status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }
+        },
+        select: { dueAt: true }
+      });
+      const doneByDay = new Map<string, number>();
+      for (const row of doneRows) {
+        const key = isoDay(row.updatedAt);
+        doneByDay.set(key, (doneByDay.get(key) ?? 0) + 1);
+      }
+      const overdueByDay = new Map<string, number>();
+      for (const row of overdueRows) {
+        if (!row.dueAt) continue;
+        const key = isoDay(row.dueAt);
+        overdueByDay.set(key, (overdueByDay.get(key) ?? 0) + 1);
+      }
+      const points = days.map((day) => ({
+        label: day,
+        value: doneByDay.get(day) ?? 0,
+        secondaryValue: overdueByDay.get(day) ?? 0
+      }));
+      const redaction = redactSmallGroups(points.map((point) => ({ label: point.label, value: point.value })));
       chartByKey.set("tasksTrend", finalizeChart({
         key: "tasksTrend",
         title: "Tasks completed vs overdue",
-        points: redaction.points,
+        points: points.filter((point) => redaction.points.some((allowed) => allowed.label === point.label)),
         redacted: redaction.redacted
       }));
     }
@@ -343,33 +387,6 @@ export async function getDashboardAnalytics(
       chartByKey.set("hearingsTrend", finalizeChart({
         key: "hearingsTrend",
         title: "Hearings scheduled",
-        points: redaction.points,
-        redacted: redaction.redacted
-      }));
-    }
-
-    if (rules.some((r) => r.key === "pipeline")) {
-      const pipelineRows = await tx.case.groupBy({
-        by: ["status"],
-        where: {
-          firmId: actor.firmId,
-          deletedAt: null,
-          ...(scope !== "office" && scopeContext.caseIds ? { id: { in: scopeContext.caseIds } } : {})
-        },
-        _count: { _all: true }
-      });
-      const points = pipelineRows
-        .filter(
-          (row) =>
-            row.status === CaseStatus.ACTIVE ||
-            row.status === CaseStatus.SUSPENDED ||
-            row.status === CaseStatus.CLOSED
-        )
-        .map((row) => ({ label: row.status, value: row._count._all }));
-      const redaction = redactSmallGroups(points);
-      chartByKey.set("pipeline", finalizeChart({
-        key: "pipeline",
-        title: "Pipeline",
         points: redaction.points,
         redacted: redaction.redacted
       }));
@@ -422,9 +439,110 @@ export async function getDashboardAnalytics(
       const redaction = redactSmallGroups(points);
       chartByKey.set("financeTrend", finalizeChart({
         key: "financeTrend",
-        title: "Collections trend",
+        title: "Invoice status mix",
         points: redaction.points,
         redacted: redaction.redacted
+      }));
+    }
+
+    if (rules.some((r) => r.key === "caseAgingBuckets")) {
+      const now = new Date();
+      const rows = await tx.case.findMany({
+        where: {
+          firmId: actor.firmId,
+          deletedAt: null,
+          status: { not: "CLOSED" },
+          ...(scope !== "office" && scopeContext.caseIds ? { id: { in: scopeContext.caseIds } } : {})
+        },
+        select: { createdAt: true }
+      });
+      const buckets = { "0_30": 0, "31_60": 0, "61_90": 0, "90_PLUS": 0 };
+      for (const row of rows) {
+        const age = Math.floor((now.getTime() - row.createdAt.getTime()) / 86_400_000);
+        if (age <= 30) buckets["0_30"] += 1;
+        else if (age <= 60) buckets["31_60"] += 1;
+        else if (age <= 90) buckets["61_90"] += 1;
+        else buckets["90_PLUS"] += 1;
+      }
+      const points = [
+        { label: "0_30", value: buckets["0_30"] },
+        { label: "31_60", value: buckets["31_60"] },
+        { label: "61_90", value: buckets["61_90"] },
+        { label: "90_PLUS", value: buckets["90_PLUS"] }
+      ];
+      const redaction = redactSmallGroups(points);
+      chartByKey.set("caseAgingBuckets", finalizeChart({
+        key: "caseAgingBuckets",
+        title: "Case aging buckets",
+        points: redaction.points,
+        redacted: redaction.redacted
+      }));
+    }
+
+    if (rules.some((r) => r.key === "overdueTrajectory")) {
+      const now = new Date();
+      const days = buildDaySeries(startDate, now);
+      const overdueRows = await tx.task.findMany({
+        where: {
+          ...taskWhere,
+          dueAt: { gte: startDate, lt: now },
+          status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }
+        },
+        select: { dueAt: true }
+      });
+      const dueByDay = new Map<string, number>();
+      for (const row of overdueRows) {
+        if (!row.dueAt) continue;
+        const key = isoDay(row.dueAt);
+        dueByDay.set(key, (dueByDay.get(key) ?? 0) + 1);
+      }
+      const points = days.map((day) => ({ label: day, value: dueByDay.get(day) ?? 0 }));
+      const redaction = redactSmallGroups(points);
+      chartByKey.set("overdueTrajectory", finalizeChart({
+        key: "overdueTrajectory",
+        title: "Overdue trajectory",
+        points: redaction.points,
+        redacted: redaction.redacted
+      }));
+    }
+
+    if (rules.some((r) => r.key === "dsoCollectionLag")) {
+      const rows = await queryDsoCollectionLagReport(
+        tx,
+        actor.firmId,
+        { dateFrom: startDate.toISOString() },
+        { caseIds: scope === "office" ? null : scopeContext.caseIds }
+      );
+      const points = rows.map((row) => ({
+        label: row.month,
+        value: Math.round(Number(row.avgCollectionDays)),
+        secondaryValue: Number(row.paidInvoices)
+      }));
+      chartByKey.set("dsoCollectionLag", finalizeChart({
+        key: "dsoCollectionLag",
+        title: "DSO collection lag",
+        points,
+        redacted: false
+      }));
+    }
+
+    if (rules.some((r) => r.key === "invoiceVoidTrend")) {
+      const rows = await queryInvoiceVoidTrendReport(
+        tx,
+        actor.firmId,
+        { dateFrom: startDate.toISOString() },
+        { caseIds: scope === "office" ? null : scopeContext.caseIds }
+      );
+      const points = rows.map((row) => ({
+        label: row.month,
+        value: Number(row.voidCount),
+        secondaryValue: Math.round(Number(row.voidAmount))
+      }));
+      chartByKey.set("invoiceVoidTrend", finalizeChart({
+        key: "invoiceVoidTrend",
+        title: "Invoice void trend",
+        points,
+        redacted: false
       }));
     }
 

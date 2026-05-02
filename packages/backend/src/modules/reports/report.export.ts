@@ -6,9 +6,14 @@
  */
 
 import type {
+  ArAgingRow,
+  CashflowMonthlyRow,
   CaseStatusRow,
   CaseProfitabilityDto,
+  DsoCollectionLagRow,
+  EarningsLossesRow,
   HearingOutcomeRow,
+  InvoiceVoidTrendRow,
   Language,
   LawyerWorkloadRow,
   OutstandingBalanceRow,
@@ -106,6 +111,96 @@ function buildSpec(
           totalAmount: r.totalAmount,
           dueDate: r.dueDate ? r.dueDate.slice(0, 10) : "—",
           daysOverdue: r.daysOverdue
+        }))
+      };
+    }
+    case "earnings-losses": {
+      const rows = data as EarningsLossesRow[];
+      return {
+        titleAr: "الأرباح والخسائر",
+        titleEn: "Earnings and Losses",
+        columns: [
+          { keyAr: "الشهر", keyEn: "Month", field: "month", width: 14 },
+          { keyAr: "إيراد نقدي", keyEn: "Cash Earnings", field: "cashEarnings", width: 18 },
+          { keyAr: "إيراد استحقاقي", keyEn: "Accrual Earnings", field: "accrualEarnings", width: 18 },
+          { keyAr: "مصروفات تشغيلية", keyEn: "Operating Expenses", field: "operatingExpenses", width: 20 },
+          { keyAr: "خسائر فواتير", keyEn: "Invoice Losses", field: "invoiceLosses", width: 18 },
+          { keyAr: "إجمالي الخسائر", keyEn: "Total Losses", field: "totalLosses", width: 18 },
+          { keyAr: "صافي الربح النقدي", keyEn: "Net Profit (Cash)", field: "netProfitCash", width: 18 },
+          { keyAr: "صافي الربح الاستحقاقي", keyEn: "Net Profit (Accrual)", field: "netProfitAccrual", width: 20 }
+        ],
+        rows: rows.map((r) => ({
+          month: r.month,
+          cashEarnings: r.cashEarnings,
+          accrualEarnings: r.accrualEarnings,
+          operatingExpenses: r.operatingExpenses,
+          invoiceLosses: r.invoiceLosses,
+          totalLosses: r.totalLosses,
+          netProfitCash: r.netProfitCash,
+          netProfitAccrual: r.netProfitAccrual
+        }))
+      };
+    }
+    case "dso-collection-lag": {
+      const rows = data as DsoCollectionLagRow[];
+      return {
+        titleAr: "زمن التحصيل (DSO)",
+        titleEn: "DSO Collection Lag",
+        columns: [
+          { keyAr: "الشهر", keyEn: "Month", field: "month", width: 14 },
+          { keyAr: "فواتير مدفوعة", keyEn: "Paid Invoices", field: "paidInvoices", width: 16 },
+          { keyAr: "متوسط أيام التحصيل", keyEn: "Avg Collection Days", field: "avgCollectionDays", width: 20 }
+        ],
+        rows: rows.map((r) => ({ ...r }))
+      };
+    }
+    case "invoice-void-trend": {
+      const rows = data as InvoiceVoidTrendRow[];
+      return {
+        titleAr: "اتجاه إلغاء الفواتير",
+        titleEn: "Invoice Void Trend",
+        columns: [
+          { keyAr: "الشهر", keyEn: "Month", field: "month", width: 14 },
+          { keyAr: "عدد الفواتير الملغاة", keyEn: "Void Count", field: "voidCount", width: 18 },
+          { keyAr: "قيمة الإلغاء", keyEn: "Void Amount", field: "voidAmount", width: 18 }
+        ],
+        rows: rows.map((r) => ({ ...r }))
+      };
+    }
+    case "cashflow-monthly": {
+      const rows = data as CashflowMonthlyRow[];
+      return {
+        titleAr: "التدفق النقدي الشهري",
+        titleEn: "Monthly Cashflow",
+        columns: [
+          { keyAr: "الشهر", keyEn: "Month", field: "month", width: 14 },
+          { keyAr: "تدفق داخل", keyEn: "Cash In", field: "cashIn", width: 16 },
+          { keyAr: "تدفق خارج", keyEn: "Cash Out", field: "cashOut", width: 16 },
+          { keyAr: "صافي التدفق", keyEn: "Net Cash", field: "netCash", width: 16 }
+        ],
+        rows: rows.map((r) => ({ ...r }))
+      };
+    }
+    case "ar-aging": {
+      const rows = data as ArAgingRow[];
+      return {
+        titleAr: "تقادم الذمم المدينة",
+        titleEn: "AR Aging",
+        columns: [
+          { keyAr: "رقم الفاتورة", keyEn: "Invoice #", field: "invoiceNumber", width: 18 },
+          { keyAr: "العميل", keyEn: "Client", field: "clientName", width: 24 },
+          { keyAr: "القضية", keyEn: "Case", field: "caseTitle", width: 24 },
+          { keyAr: "الرصيد المستحق", keyEn: "Balance Due", field: "balanceDue", width: 16 },
+          { keyAr: "أيام التأخير", keyEn: "Days Overdue", field: "daysOverdue", width: 14 },
+          { keyAr: "شريحة التقادم", keyEn: "Aging Bucket", field: "agingBucket", width: 16 }
+        ],
+        rows: rows.map((r) => ({
+          invoiceNumber: r.invoiceNumber,
+          clientName: r.clientName ?? "—",
+          caseTitle: r.caseTitle ?? "—",
+          balanceDue: r.balanceDue,
+          daysOverdue: r.daysOverdue,
+          agingBucket: r.agingBucket
         }))
       };
     }

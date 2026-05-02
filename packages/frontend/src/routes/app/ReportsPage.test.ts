@@ -18,7 +18,12 @@ describe("ReportsPage helpers", () => {
       "hearing-outcomes",
       "lawyer-workload",
       "revenue",
-      "outstanding-balances"
+      "outstanding-balances",
+      "earnings-losses",
+      "dso-collection-lag",
+      "invoice-void-trend",
+      "cashflow-monthly",
+      "ar-aging"
     ]);
     expect(options[0]?.label).toBe("reports.caseStatus");
   });
@@ -31,6 +36,12 @@ describe("ReportsPage helpers", () => {
     );
     expect(sortOptions.revenue.map((item) => item.value)).toContain(
       "invoiced:desc"
+    );
+    expect(sortOptions["earnings-losses"].map((item) => item.value)).toContain(
+      "netProfitCash:desc"
+    );
+    expect(sortOptions["cashflow-monthly"].map((item) => item.value)).toContain(
+      "netCash:desc"
     );
   });
 

@@ -3,7 +3,12 @@ export type ReportType =
   | "hearing-outcomes"
   | "lawyer-workload"
   | "revenue"
-  | "outstanding-balances";
+  | "outstanding-balances"
+  | "earnings-losses"
+  | "dso-collection-lag"
+  | "invoice-void-trend"
+  | "cashflow-monthly"
+  | "ar-aging";
 
 export interface CaseStatusRow {
   status: string;
@@ -38,6 +43,47 @@ export interface OutstandingBalanceRow {
   daysOverdue: number;
 }
 
+export interface EarningsLossesRow {
+  month: string;
+  cashEarnings: string;
+  accrualEarnings: string;
+  operatingExpenses: string;
+  invoiceLosses: string;
+  totalLosses: string;
+  netProfitCash: string;
+  netProfitAccrual: string;
+}
+
+export interface DsoCollectionLagRow {
+  month: string;
+  paidInvoices: string;
+  avgCollectionDays: string;
+}
+
+export interface InvoiceVoidTrendRow {
+  month: string;
+  voidCount: string;
+  voidAmount: string;
+}
+
+export interface CashflowMonthlyRow {
+  month: string;
+  cashIn: string;
+  cashOut: string;
+  netCash: string;
+}
+
+export interface ArAgingRow {
+  invoiceId: string;
+  invoiceNumber: string;
+  clientName: string | null;
+  caseTitle: string | null;
+  balanceDue: string;
+  dueDate: string | null;
+  daysOverdue: number;
+  agingBucket: "CURRENT" | "1_30" | "31_60" | "61_90" | "90_PLUS";
+}
+
 export interface CaseProfitabilityDto {
   caseId: string;
   caseTitle: string;
@@ -53,6 +99,11 @@ export interface ReportRowByTypeMap {
   "lawyer-workload": LawyerWorkloadRow;
   revenue: RevenueReportRow;
   "outstanding-balances": OutstandingBalanceRow;
+  "earnings-losses": EarningsLossesRow;
+  "dso-collection-lag": DsoCollectionLagRow;
+  "invoice-void-trend": InvoiceVoidTrendRow;
+  "cashflow-monthly": CashflowMonthlyRow;
+  "ar-aging": ArAgingRow;
 }
 
 export type ReportRowForType<T extends ReportType> = ReportRowByTypeMap[T];

@@ -73,9 +73,12 @@ export type DashboardChartKind =
   | "casesTrend"
   | "tasksTrend"
   | "hearingsTrend"
-  | "pipeline"
   | "riskBuckets"
-  | "financeTrend";
+  | "financeTrend"
+  | "caseAgingBuckets"
+  | "overdueTrajectory"
+  | "dsoCollectionLag"
+  | "invoiceVoidTrend";
 
 export interface DashboardChartPointDto {
   label: string;

@@ -5,10 +5,15 @@
  */
 import type { SessionUser } from "@elms/shared";
 import {
+  arAgingReport,
+  cashflowMonthlyReport,
   caseStatusDistribution,
+  dsoCollectionLagReport,
   hearingOutcomes,
+  invoiceVoidTrendReport,
   lawyerWorkload,
   revenueReport,
+  earningsLossesReport,
   outstandingBalances
 } from "./reports.service.js";
 import { applyArrayTableQuery, normalizeSort, type SortDir } from "../../utils/tableQuery.js";
@@ -62,7 +67,12 @@ export const SUPPORTED_REPORT_TYPES = [
   "hearing-outcomes",
   "lawyer-workload",
   "revenue",
-  "outstanding-balances"
+  "outstanding-balances",
+  "earnings-losses",
+  "dso-collection-lag",
+  "invoice-void-trend",
+  "cashflow-monthly",
+  "ar-aging"
 ] as const;
 
 // ─── Allowed groupBy values ────────────────────────────────────────────────────
@@ -181,6 +191,7 @@ export async function runCustomReport(
 
   const config = report.config as CustomReportConfig;
   const filter = { dateFrom: config.dateFrom, dateTo: config.dateTo };
+  const perms = new Set(actor.permissions);
 
   let rows: unknown[];
   switch (report.reportType) {
@@ -198,6 +209,36 @@ export async function runCustomReport(
       break;
     case "outstanding-balances":
       rows = await outstandingBalances(actor);
+      break;
+    case "earnings-losses":
+      if (!perms.has("invoices:read") || !perms.has("expenses:read")) {
+        throw Object.assign(new Error("Insufficient permissions"), { statusCode: 403 });
+      }
+      rows = await earningsLossesReport(actor, filter);
+      break;
+    case "dso-collection-lag":
+      if (!perms.has("invoices:read")) {
+        throw Object.assign(new Error("Insufficient permissions"), { statusCode: 403 });
+      }
+      rows = await dsoCollectionLagReport(actor, filter);
+      break;
+    case "invoice-void-trend":
+      if (!perms.has("invoices:read")) {
+        throw Object.assign(new Error("Insufficient permissions"), { statusCode: 403 });
+      }
+      rows = await invoiceVoidTrendReport(actor, filter);
+      break;
+    case "cashflow-monthly":
+      if (!perms.has("invoices:read") || !perms.has("expenses:read")) {
+        throw Object.assign(new Error("Insufficient permissions"), { statusCode: 403 });
+      }
+      rows = await cashflowMonthlyReport(actor, filter);
+      break;
+    case "ar-aging":
+      if (!perms.has("invoices:read")) {
+        throw Object.assign(new Error("Insufficient permissions"), { statusCode: 403 });
+      }
+      rows = await arAgingReport(actor);
       break;
     default:
       rows = [];

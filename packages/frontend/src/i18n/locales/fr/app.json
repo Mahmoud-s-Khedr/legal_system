@@ -413,7 +413,8 @@
       "table": {
         "count": "Nombre",
         "label": "Libellé",
-        "value": "Valeur"
+        "value": "Valeur",
+        "secondaryValue": "Valeur secondaire"
       },
       "states": {
         "noAnalytics": {
@@ -471,17 +472,29 @@
           "title": "Audiences planifiées",
           "description": "Résultats d’audience et audiences planifiées sur la période sélectionnée"
         },
-        "pipeline": {
-          "title": "Pipeline",
-          "description": "Pipeline des dossiers par statut actuel"
-        },
         "riskBuckets": {
           "title": "Niveaux de risque",
           "description": "Charge de travail à risque nécessitant un suivi immédiat"
         },
         "financeTrend": {
-          "title": "Tendance des encaissements",
+          "title": "Répartition des statuts de factures",
           "description": "Répartition des statuts de factures sur la période sélectionnée"
+        },
+        "caseAgingBuckets": {
+          "title": "Répartition d'ancienneté des dossiers",
+          "description": "Dossiers ouverts par tranche d'ancienneté"
+        },
+        "overdueTrajectory": {
+          "title": "Trajectoire des retards",
+          "description": "Tâches en retard selon la date d'échéance"
+        },
+        "dsoCollectionLag": {
+          "title": "Délai moyen de recouvrement (DSO)",
+          "description": "Nombre moyen de jours pour recouvrer les factures payées"
+        },
+        "invoiceVoidTrend": {
+          "title": "Tendance des annulations de factures",
+          "description": "Nombre et valeur des factures annulées par mois"
         }
       },
       "enums": {
@@ -522,6 +535,12 @@
         "riskBucket": {
           "OVERDUE_HIGH_PRIORITY_TASKS": "Tâches prioritaires en retard",
           "HEARINGS_IN_72H": "Audiences dans 72h"
+        },
+        "caseAging": {
+          "0_30": "0-30 jours",
+          "31_60": "31-60 jours",
+          "61_90": "61-90 jours",
+          "90_PLUS": "90+ jours"
         }
       }
     }
@@ -1185,11 +1204,26 @@
     "lawyerWorkload": "Charge de travail des juristes",
     "revenue": "Revenus par mois",
     "outstandingBalances": "Soldes impayés",
+    "earningsLosses": "Résultat (profits et pertes)",
+    "dsoCollectionLag": "Délai moyen de recouvrement (DSO)",
+    "invoiceVoidTrend": "Tendance des annulations de factures",
+    "cashflowMonthly": "Flux de trésorerie mensuel",
+    "arAging": "Ancienneté des créances clients",
     "count": "Nombre",
     "openCases": "Dossiers ouverts",
     "openTasks": "Tâches ouvertes",
     "upcomingHearings": "Audiences à venir",
     "month": "Mois",
+    "paidInvoices": "Factures payées",
+    "avgCollectionDays": "Délai moyen (jours)",
+    "voidCount": "Nombre d'annulations",
+    "voidAmount": "Montant annulé",
+    "cashIn": "Entrées de trésorerie",
+    "cashOut": "Sorties de trésorerie",
+    "netCash": "Trésorerie nette",
+    "balanceDue": "Solde dû",
+    "agingBucket": "Tranche d'ancienneté",
+    "caseTitle": "Dossier",
     "daysOverdue": "Jours de retard",
     "exportExcel": "Exporter Excel",
     "exportPdf": "Exporter PDF",
@@ -1213,8 +1247,25 @@
       "hearing-outcomes": "Résultats des audiences",
       "lawyer-workload": "Charge de travail des juristes",
       "revenue": "Revenus",
-      "outstanding-balances": "Soldes impayés"
-    }
+      "outstanding-balances": "Soldes impayés",
+      "earnings-losses": "Résultat (profits et pertes)",
+      "dso-collection-lag": "Délai moyen de recouvrement (DSO)",
+      "invoice-void-trend": "Tendance des annulations de factures",
+      "cashflow-monthly": "Flux de trésorerie mensuel",
+      "ar-aging": "Ancienneté des créances clients"
+    },
+    "cashEarnings": "Revenus de caisse",
+    "accrualEarnings": "Revenus comptabilisés",
+    "operatingExpenses": "Charges d'exploitation",
+    "invoiceLosses": "Pertes sur factures",
+    "totalLosses": "Pertes totales",
+    "netProfitCash": "Résultat net (caisse)",
+    "netProfitAccrual": "Résultat net (comptabilité d'engagement)",
+    "tableView": "Tableau",
+    "graphView": "Graphique",
+    "exportGraphPng": "Exporter le graphique PNG",
+    "exportGraphPdf": "Exporter le graphique PDF",
+    "graphUnavailable": "Le graphique n'est pas disponible pour cette vue de rapport."
   },
   "templates": {
     "title": "Modèles de documents",
