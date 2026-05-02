@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DocumentDto } from "@elms/shared";
-import { apiDownload } from "../../lib/api";
+import { apiDownload, apiFetch } from "../../lib/api";
 import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
+import {
+  getDesktopDocumentIoDefaults,
+  listDesktopPrinters,
+  printBlob,
+  setDesktopDocumentIoDefaults
+} from "../../lib/desktopDocumentIo";
 import { showErrorDialog } from "../../lib/dialog";
 import { useToastStore } from "../../store/toastStore";
+import { useHasPermission } from "../../store/authStore";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { VersionHistory } from "./VersionHistory";
 import { EnumBadge } from "../shared/EnumBadge";
@@ -24,6 +31,11 @@ export function DocumentViewer({
 }: DocumentViewerProps) {
   const { t } = useTranslation("app");
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printers, setPrinters] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedPrinterId, setSelectedPrinterId] = useState("");
+  const canPrint = useHasPermission("documents:print");
+  const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
   const addToast = useToastStore((state) => state.addToast);
   const versionsKey = doc.versions.map((version) => version.id).join("|");
   const isDocx =
@@ -32,6 +44,39 @@ export function DocumentViewer({
   const isPreviewProcessing =
     doc.previewStatus === "PENDING" || doc.previewStatus === "PROCESSING";
   const isPreviewFailed = doc.previewStatus === "FAILED";
+  const selectedPrinterName = useMemo(
+    () => printers.find((item) => item.id === selectedPrinterId)?.name,
+    [printers, selectedPrinterId]
+  );
+
+  useEffect(() => {
+    if (!canPrint || !isDesktopShell) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [availablePrinters, defaults] = await Promise.all([
+          listDesktopPrinters(),
+          getDesktopDocumentIoDefaults()
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setPrinters(availablePrinters.map((item) => ({ id: item.id, name: item.name })));
+        const initialId =
+          defaults.defaultPrinterId ||
+          availablePrinters.find((item) => item.isDefault)?.id ||
+          "";
+        setSelectedPrinterId(initialId);
+      } catch {
+        // Printer listing is best-effort; printing can still use system default.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [canPrint, isDesktopShell]);
 
   async function handleDownload() {
     try {
@@ -45,6 +90,47 @@ export function DocumentViewer({
       showErrorDialog(t("errors.fallback"));
     } finally {
       setIsDownloading(false);
+    }
+  }
+
+  async function handlePrint() {
+    try {
+      setIsPrinting(true);
+      const { blob, filename, contentType } = await apiDownload(
+        `/api/documents/${doc.id}/stream`
+      );
+
+      await printBlob({
+        blob,
+        fileName: filename ?? doc.fileName,
+        mimeType: contentType ?? doc.mimeType,
+        printerId: selectedPrinterId || undefined
+      });
+
+      await apiFetch(`/api/documents/${doc.id}/print-audit`, {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: filename ?? doc.fileName,
+          printerId: selectedPrinterId || undefined,
+          printerName: selectedPrinterName,
+          status: "SUCCESS"
+        })
+      });
+      addToast(t("messages.printStarted"), "success");
+    } catch (error) {
+      void apiFetch(`/api/documents/${doc.id}/print-audit`, {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: doc.fileName,
+          printerId: selectedPrinterId || undefined,
+          printerName: selectedPrinterName,
+          status: "FAILED",
+          errorCode: "PRINT_FAILED"
+        })
+      }).catch(() => undefined);
+      showErrorDialog((error as Error).message || t("errors.fallback"));
+    } finally {
+      setIsPrinting(false);
     }
   }
 
@@ -68,6 +154,18 @@ export function DocumentViewer({
             </div>
           </div>
           <div className="ms-4 flex shrink-0 gap-2">
+            {canPrint ? (
+              <button
+                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                disabled={isPrinting}
+                onClick={() => {
+                  void handlePrint();
+                }}
+                type="button"
+              >
+                {t("actions.printDocument")}
+              </button>
+            ) : null}
             <button
               className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
               disabled={isDownloading}
@@ -90,6 +188,32 @@ export function DocumentViewer({
 
         {/* Content */}
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
+          {canPrint && isDesktopShell ? (
+            <div className="max-w-sm">
+              <label className="mb-1 block text-xs font-medium text-slate-600" htmlFor="printer-select">
+                {t("documents.printer")}
+              </label>
+              <select
+                id="printer-select"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                value={selectedPrinterId}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSelectedPrinterId(value);
+                  void setDesktopDocumentIoDefaults({
+                    defaultPrinterId: value || null
+                  }).catch(() => undefined);
+                }}
+              >
+                <option value="">{t("documents.defaultPrinter")}</option>
+                {printers.map((printer) => (
+                  <option key={printer.id} value={printer.id}>
+                    {printer.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           {isDocx && !previewReady ? (
             <p
               className={`text-sm ${isPreviewFailed ? "text-red-600" : "text-slate-500"}`}

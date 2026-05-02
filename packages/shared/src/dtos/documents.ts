@@ -79,3 +79,46 @@ export interface DocumentDownloadDto {
   url: string;
   expiresAt: string | null;
 }
+
+export interface DesktopPrinter {
+  id: string;
+  name: string;
+  isDefault?: boolean;
+}
+
+export interface DesktopScanner {
+  id: string;
+  name: string;
+  isDefault?: boolean;
+}
+
+export interface DesktopScanProfile {
+  format: "pdf" | "tiff" | "png";
+  source?: "device" | "file-picker";
+  dpi?: number;
+  colorMode?: "color" | "grayscale" | "bw";
+}
+
+export interface DesktopScanJobResult {
+  scannerId: string;
+  scannerName: string;
+  fileName: string;
+  mimeType: string;
+  bytes: number[];
+  source: "device" | "file-picker";
+  actualFormat: "pdf" | "tiff" | "png";
+  pageCount: number;
+  provider: string;
+}
+
+export interface DocumentIoCapabilityItem {
+  available: boolean;
+  provider: string;
+  reason?: string | null;
+}
+
+export interface DocumentIoCapability {
+  isDesktop: boolean;
+  print: DocumentIoCapabilityItem;
+  scan: DocumentIoCapabilityItem;
+}

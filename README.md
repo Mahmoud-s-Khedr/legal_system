@@ -95,3 +95,7 @@ Use the following as canonical references when updating docs:
 - `packages/backend/src/config/env.ts`
 - `package.json` + workspace `package.json` files
 - `.github/workflows/*`
+
+---
+
+git stash push --quiet --keep-index --include-untracked --message "pre-commit-$(date +%s)"

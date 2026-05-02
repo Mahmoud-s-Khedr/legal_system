@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const streamDocumentPreview = vi.fn();
+const recordDocumentPrintAudit = vi.fn();
+const recordDocumentScanAudit = vi.fn();
 const requirePermission = vi.fn((permission: string) => `perm:${permission}`);
 
 vi.mock("../../middleware/requireAuth.js", () => ({
@@ -25,7 +27,9 @@ vi.mock("./documents.service.js", () => ({
   streamDocument: vi.fn(),
   streamDocumentPreview,
   updateDocument: vi.fn(),
-  uploadNewVersion: vi.fn()
+  uploadNewVersion: vi.fn(),
+  recordDocumentPrintAudit,
+  recordDocumentScanAudit
 }));
 
 const { registerDocumentRoutes } = await import("./documents.routes.js");
@@ -72,5 +76,22 @@ describe("document preview route", () => {
       app.storage,
       reply
     );
+  });
+
+  it("registers print/scan audit routes with explicit permission guards", async () => {
+    const app = createApp();
+    await registerDocumentRoutes(app as never, {} as never);
+
+    const printAuditCall = app.post.mock.calls.find(
+      (call) => call[0] === "/api/documents/:id/print-audit"
+    );
+    const scanAuditCall = app.post.mock.calls.find(
+      (call) => call[0] === "/api/documents/scan-audit"
+    );
+
+    expect(printAuditCall).toBeDefined();
+    expect(scanAuditCall).toBeDefined();
+    expect(requirePermission).toHaveBeenCalledWith("documents:print");
+    expect(requirePermission).toHaveBeenCalledWith("documents:scan");
   });
 });

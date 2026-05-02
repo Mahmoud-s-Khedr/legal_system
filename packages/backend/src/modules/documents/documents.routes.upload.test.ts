@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeSessionUser } from "../../test-utils/session-user.js";
 
 const createDocument = vi.fn();
+const recordDocumentPrintAudit = vi.fn();
+const recordDocumentScanAudit = vi.fn();
 const sniffMimeAndReplayStream = vi.fn();
 const requirePermission = vi.fn((permission: string) => `perm:${permission}`);
 
@@ -35,7 +37,9 @@ vi.mock("./documents.service.js", () => ({
   streamDocument: vi.fn(),
   streamDocumentPreview: vi.fn(),
   updateDocument: vi.fn(),
-  uploadNewVersion: vi.fn()
+  uploadNewVersion: vi.fn(),
+  recordDocumentPrintAudit,
+  recordDocumentScanAudit
 }));
 
 const { registerDocumentRoutes } = await import("./documents.routes.js");

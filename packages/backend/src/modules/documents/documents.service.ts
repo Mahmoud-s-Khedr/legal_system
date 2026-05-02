@@ -560,3 +560,73 @@ export async function softDeleteDocument(
     return { success: true as const };
   });
 }
+
+export async function recordDocumentPrintAudit(
+  actor: SessionUser,
+  documentId: string,
+  payload: {
+    printerId?: string;
+    printerName?: string;
+    fileName?: string;
+    status: "SUCCESS" | "FAILED";
+    errorCode?: string;
+  },
+  audit: AuditContext
+): Promise<{ success: true }> {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.document.findFirstOrThrow({
+      where: { id: documentId, firmId: actor.firmId, deletedAt: null }
+    });
+
+    await writeAuditLog(tx, audit, {
+      action: "documents.print",
+      entityType: "Document",
+      entityId: documentId,
+      newData: {
+        documentId,
+        fileName: payload.fileName ?? existing.fileName,
+        printerId: payload.printerId ?? null,
+        printerName: payload.printerName ?? null,
+        status: payload.status,
+        errorCode: payload.errorCode ?? null
+      }
+    });
+
+    return { success: true as const };
+  });
+}
+
+export async function recordDocumentScanAudit(
+  actor: SessionUser,
+  payload: {
+    documentId: string;
+    scannerId?: string;
+    scannerName?: string;
+    fileName?: string;
+    status: "SUCCESS" | "FAILED";
+    errorCode?: string;
+  },
+  audit: AuditContext
+): Promise<{ success: true }> {
+  return withTenant(prisma, actor.firmId, async (tx) => {
+    const existing = await tx.document.findFirstOrThrow({
+      where: { id: payload.documentId, firmId: actor.firmId, deletedAt: null }
+    });
+
+    await writeAuditLog(tx, audit, {
+      action: "documents.scan",
+      entityType: "Document",
+      entityId: payload.documentId,
+      newData: {
+        documentId: payload.documentId,
+        fileName: payload.fileName ?? existing.fileName,
+        scannerId: payload.scannerId ?? null,
+        scannerName: payload.scannerName ?? null,
+        status: payload.status,
+        errorCode: payload.errorCode ?? null
+      }
+    });
+
+    return { success: true as const };
+  });
+}

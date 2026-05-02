@@ -2,6 +2,7 @@
 
 mod backend_connection;
 mod desktop_backup;
+mod desktop_document_io;
 mod desktop_downloads;
 mod external_links;
 mod ppo_portal;
@@ -65,6 +66,13 @@ fn main() {
             desktop_downloads::desktop_choose_download_directory,
             desktop_downloads::desktop_reset_download_directory,
             desktop_downloads::desktop_save_download_file,
+            desktop_document_io::desktop_list_printers,
+            desktop_document_io::desktop_list_scanners,
+            desktop_document_io::desktop_get_document_io_defaults,
+            desktop_document_io::desktop_get_document_io_capability,
+            desktop_document_io::desktop_set_document_io_defaults,
+            desktop_document_io::desktop_print_document,
+            desktop_document_io::desktop_scan_document,
             external_links::desktop_open_external_url,
             ppo_portal::open_ppo_portal_window,
             ppo_portal::ppo_portal_navigate

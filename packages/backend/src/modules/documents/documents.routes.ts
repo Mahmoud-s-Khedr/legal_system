@@ -14,6 +14,8 @@ import {
   getDocument,
   getDownloadUrl,
   listDocuments,
+  recordDocumentPrintAudit,
+  recordDocumentScanAudit,
   softDeleteDocument,
   streamDocument,
   streamDocumentPreview,
@@ -43,6 +45,21 @@ const listDocumentsQuerySchema = z.object({
 });
 
 const idParamsSchema = z.object({ id: z.string().min(1) });
+const printAuditSchema = z.object({
+  printerId: z.string().min(1).optional(),
+  printerName: z.string().min(1).optional(),
+  fileName: z.string().min(1).optional(),
+  status: z.enum(["SUCCESS", "FAILED"]),
+  errorCode: z.string().min(1).optional()
+});
+const scanAuditSchema = z.object({
+  documentId: z.string().min(1),
+  scannerId: z.string().min(1).optional(),
+  scannerName: z.string().min(1).optional(),
+  fileName: z.string().min(1).optional(),
+  status: z.enum(["SUCCESS", "FAILED"]),
+  errorCode: z.string().min(1).optional()
+});
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 function hasZipHeader(buffer: Buffer): boolean {
@@ -245,5 +262,30 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
 
       return reply.status(201).send(doc);
     }
+  );
+
+  // Record print audit event
+  app.post(
+    "/api/documents/:id/print-audit",
+    { schema: { response: { 200: successSchema } }, preHandler: [requireAuth, requirePermission("documents:print")] },
+    async (request) =>
+      recordDocumentPrintAudit(
+        request.sessionUser!,
+        idParamsSchema.parse(request.params).id,
+        printAuditSchema.parse(request.body),
+        getAuditContext(request)
+      )
+  );
+
+  // Record scan audit event after scanned document upload completes
+  app.post(
+    "/api/documents/scan-audit",
+    { schema: { response: { 200: successSchema } }, preHandler: [requireAuth, requirePermission("documents:scan")] },
+    async (request) =>
+      recordDocumentScanAudit(
+        request.sessionUser!,
+        scanAuditSchema.parse(request.body),
+        getAuditContext(request)
+      )
   );
 }

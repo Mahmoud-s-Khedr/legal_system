@@ -15,8 +15,18 @@ const { addToastMock } = vi.hoisted(() => ({
   addToastMock: vi.fn()
 }));
 
+const hasPermissionMock = vi.hoisted(() => vi.fn((_: string) => true));
+
 vi.mock("../../lib/api", () => ({
-  apiDownload: vi.fn()
+  apiDownload: vi.fn(),
+  apiFetch: vi.fn().mockResolvedValue({ success: true })
+}));
+
+vi.mock("../../lib/desktopDocumentIo", () => ({
+  printBlob: vi.fn(),
+  listDesktopPrinters: vi.fn().mockResolvedValue([]),
+  getDesktopDocumentIoDefaults: vi.fn().mockResolvedValue({ defaultPrinterId: null }),
+  setDesktopDocumentIoDefaults: vi.fn().mockResolvedValue({})
 }));
 
 vi.mock("../../lib/desktopDownloads", () => ({
@@ -30,6 +40,10 @@ vi.mock("../../lib/dialog", () => ({
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (state: { addToast: typeof addToastMock }) => unknown) =>
     selector({ addToast: addToastMock })
+}));
+
+vi.mock("../../store/authStore", () => ({
+  useHasPermission: (permission: string) => hasPermissionMock(permission)
 }));
 
 vi.mock("./VersionHistory", () => ({
@@ -113,9 +127,27 @@ afterEach(() => {
   });
   vi.restoreAllMocks();
   addToastMock.mockReset();
+  hasPermissionMock.mockReset();
+  hasPermissionMock.mockImplementation(() => true);
 });
 
 describe("DocumentViewer", () => {
+  it("hides print action when user lacks print permission", async () => {
+    hasPermissionMock.mockImplementation(() => false);
+    render(
+      <DocumentViewer
+        document={makeDoc({})}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+    await flushAsyncWork();
+    const printButton = Array.from(container?.querySelectorAll("button") ?? []).find(
+      (button) => button.textContent?.includes("Print") || button.textContent?.includes("طباعة")
+    );
+    expect(printButton).toBeUndefined();
+  });
+
   it("loads PDF preview via authenticated stream and renders object URL", async () => {
     const blob = new Blob(["pdf"], { type: "application/pdf" });
     vi.mocked(apiDownload).mockResolvedValue({
@@ -407,7 +439,12 @@ describe("DocumentViewer", () => {
 
     await flushAsyncWork();
 
-    const downloadButton = container?.querySelectorAll("button")[0];
+    const downloadButton = Array.from(container?.querySelectorAll("button") ?? []).find(
+      (button) =>
+        button.textContent?.includes("Download") ||
+        button.textContent?.includes("تنزيل") ||
+        button.textContent?.includes("Télécharger")
+    );
     expect(downloadButton).toBeDefined();
 
     act(() => {

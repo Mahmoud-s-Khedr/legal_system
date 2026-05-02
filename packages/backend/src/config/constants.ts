@@ -46,6 +46,8 @@ export const DEFAULT_PERMISSIONS = [
   "documents:read",
   "documents:update",
   "documents:delete",
+  "documents:print",
+  "documents:scan",
   "reports:read",
   "research:use",
   "lookups:read",

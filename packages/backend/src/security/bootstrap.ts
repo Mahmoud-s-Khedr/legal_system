@@ -26,6 +26,8 @@ const ROLE_PERMISSION_MAP: Record<string, string[]> = {
     "documents:read",
     "documents:update",
     "documents:delete",
+    "documents:print",
+    "documents:scan",
     "reports:read",
     "research:use",
     "lookups:read",
@@ -48,6 +50,8 @@ const ROLE_PERMISSION_MAP: Record<string, string[]> = {
     "dashboard:read",
     "documents:create",
     "documents:read",
+    "documents:print",
+    "documents:scan",
     "research:use",
     "lookups:read",
     "invoices:read",
@@ -64,6 +68,8 @@ const ROLE_PERMISSION_MAP: Record<string, string[]> = {
     "dashboard:read",
     "documents:create",
     "documents:read",
+    "documents:print",
+    "documents:scan",
     "research:use",
     "lookups:read"
   ],
@@ -76,6 +82,7 @@ const ROLE_PERMISSION_MAP: Record<string, string[]> = {
     "tasks:read",
     "dashboard:read",
     "documents:read",
+    "documents:print",
     "lookups:read"
   ]
 };

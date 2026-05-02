@@ -1,2 +1,20 @@
 #!/usr/bin/env sh
+set -e
+
+STASH_NAME="pre-commit-$(date +%s)"
+STASH_CREATED=false
+
+git stash push --quiet --keep-index --include-untracked --message "$STASH_NAME"
+if git stash list | grep -q "$STASH_NAME"; then
+  STASH_CREATED=true
+fi
+
+cleanup() {
+  if [ "$STASH_CREATED" = true ]; then
+    git stash pop --quiet
+  fi
+}
+
+trap cleanup EXIT INT TERM
+
 pnpm validate
