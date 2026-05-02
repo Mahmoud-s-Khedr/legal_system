@@ -327,6 +327,11 @@ fn list_scanners() -> (Vec<DesktopScanner>, String, Option<String>) {
                     let Some((id, after_id)) = rest.split_once("'") else {
                         continue;
                     };
+                    // Ignore webcam/virtual capture devices that SANE may expose via V4L.
+                    // These are not real document scanners for our workflow.
+                    if id.starts_with("v4l:") {
+                        continue;
+                    }
                     let label = after_id.trim().trim_start_matches("is").trim();
                     let name = if label.is_empty() { id } else { label };
                     scanners.push(DesktopScanner {
@@ -581,10 +586,27 @@ pub async fn desktop_get_document_io_capability(
     _app: AppHandle,
 ) -> Result<DesktopDocumentIoCapability, String> {
     let print_probe = list_printers();
-    let print_available = print_probe.is_ok();
-    let print_reason = print_probe.err();
+    let (print_available, print_reason) = match print_probe {
+        Ok(printers) => {
+            if printers.is_empty() {
+                (
+                    false,
+                    Some("No printer detected on this machine.".to_string()),
+                )
+            } else {
+                (true, None)
+            }
+        }
+        Err(error) => (false, Some(error)),
+    };
 
-    let (_scanners, scan_provider, scan_reason) = list_scanners();
+    let (scanners, scan_provider, scan_reason) = list_scanners();
+    let scan_available = !scanners.is_empty();
+    let scan_reason = if scan_available {
+        None
+    } else {
+        Some(scan_reason.unwrap_or_else(|| "No scanner detected on this machine.".to_string()))
+    };
 
     Ok(DesktopDocumentIoCapability {
         is_desktop: true,
@@ -598,7 +620,7 @@ pub async fn desktop_get_document_io_capability(
             reason: print_reason,
         },
         scan: DesktopCapabilityDetail {
-            available: true,
+            available: scan_available,
             provider: scan_provider,
             reason: scan_reason,
         },

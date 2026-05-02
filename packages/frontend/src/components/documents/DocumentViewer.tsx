@@ -48,6 +48,7 @@ export function DocumentViewer({
     () => printers.find((item) => item.id === selectedPrinterId)?.name,
     [printers, selectedPrinterId]
   );
+  const printerDetected = !isDesktopShell || printers.length > 0;
 
   useEffect(() => {
     if (!canPrint || !isDesktopShell) {
@@ -94,6 +95,10 @@ export function DocumentViewer({
   }
 
   async function handlePrint() {
+    if (!printerDetected) {
+      showErrorDialog("No printer detected on this machine.");
+      return;
+    }
     try {
       setIsPrinting(true);
       const { blob, filename, contentType } = await apiDownload(
@@ -155,16 +160,18 @@ export function DocumentViewer({
           </div>
           <div className="ms-4 flex shrink-0 gap-2">
             {canPrint ? (
-              <button
-                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                disabled={isPrinting}
-                onClick={() => {
-                  void handlePrint();
-                }}
-                type="button"
-              >
-                {t("actions.printDocument")}
-              </button>
+              <span title={!printerDetected ? "No printer detected on this machine." : undefined}>
+                <button
+                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isPrinting || !printerDetected}
+                  onClick={() => {
+                    void handlePrint();
+                  }}
+                  type="button"
+                >
+                  {t("actions.printDocument")}
+                </button>
+              </span>
             ) : null}
             <button
               className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
@@ -196,6 +203,7 @@ export function DocumentViewer({
               <select
                 id="printer-select"
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                disabled={!printerDetected}
                 value={selectedPrinterId}
                 onChange={(event) => {
                   const value = event.target.value;

@@ -146,17 +146,22 @@ export function DocumentsPage() {
       <PageHeader
         actions={
           <>
-            {canUseScan && canDesktopScan ? (
-              <button
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700"
-                onClick={() => {
-                  setScanOpen(true);
-                  setScanStatus("queued");
-                }}
-                type="button"
+            {canUseScan ? (
+              <span
+                title={!canDesktopScan ? (io?.scan.reason ?? t("documents.scanDesktopOnly")) : undefined}
               >
-                {t("actions.scanToElms")}
-              </button>
+                <button
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!canDesktopScan}
+                  onClick={() => {
+                    setScanOpen(true);
+                    setScanStatus("queued");
+                  }}
+                  type="button"
+                >
+                  {t("actions.scanToElms")}
+                </button>
+              </span>
             ) : null}
             <Link
               className="rounded-2xl bg-accent px-4 py-3 font-semibold text-white"
