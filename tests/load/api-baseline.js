@@ -101,7 +101,7 @@ export default function (data) {
   };
 
   // ── Dashboard summary
-  const dashRes = http.get(`${BASE_URL}/api/dashboard/summary`, params);
+  const dashRes = http.get(`${BASE_URL}/api/dashboard?scope=my`, params);
   dashboardLatency.add(dashRes.timings.duration);
   const dashOk = check(dashRes, {
     "dashboard 200": (r) => r.status === 200

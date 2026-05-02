@@ -53,6 +53,11 @@ pnpm seed:dev:cloud
 pnpm dev:desktop
 ```
 
+Seed options:
+- `ELMS_SEED_PROFILE=minimal|full` (default `full`)
+- `ELMS_SEED_VALUE=<seed-string>` for deterministic generation
+- `ELMS_SEED_INCLUDE_INTEGRATIONS=true|false` (default `true`)
+
 Useful alternatives:
 
 - `pnpm dev:desktop` (backend local mode + frontend desktop host)

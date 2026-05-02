@@ -272,6 +272,15 @@ All scripts are in `tests/load/`.
 | `api-baseline.js` | Core read paths under concurrent load (dashboard, cases, hearings) | Ramp 0→10→50 VU over 5 min |
 | `auth.js` | Login / `GET /me` / logout cycle to benchmark session management and bcrypt cost | Ramp 0→5→20 VU over ~1.5 min |
 | `document-upload.js` | Concurrent PDF uploads to measure storage + OCR dispatch throughput | Ramp 0→2→10 VU over ~1.5 min |
+| `cases-write-update.js` | Case create/update write-path throughput | Profile-driven (`PERF_PROFILE`) |
+| `hearings-events.js` | Hearings list and conflict-query latency | Profile-driven (`PERF_PROFILE`) |
+| `billing-credit.js` | Invoice list and client-credit lookups | Profile-driven (`PERF_PROFILE`) |
+| `notifications.js` | Notification list + unread-count latency | Profile-driven (`PERF_PROFILE`) |
+| `library-search.js` | Library document list + search latency | Profile-driven (`PERF_PROFILE`) |
+| `research.js` | Research sessions + usage endpoints | Profile-driven (`PERF_PROFILE`) |
+| `search-global.js` | Global search endpoint latency | Profile-driven (`PERF_PROFILE`) |
+| `portal-auth-read.js` | Portal login + portal cases read path | Profile-driven (`PERF_PROFILE`) |
+| `import-preview.js` | Client import preview upload/parse path | Profile-driven (`PERF_PROFILE`) |
 
 Each script authenticates via `POST /api/auth/login` in the `setup()` function and reuses the session cookie across virtual users.
 
@@ -300,6 +309,16 @@ pnpm test:load:upload
 
 # Direct k6 invocation with custom target
 BASE_URL=https://staging.elms.example.com k6 run tests/load/api-baseline.js
+```
+
+Suite/profile controls:
+
+```bash
+# profile: smoke|baseline|stress|spike|soak
+PERF_PROFILE=stress k6 run tests/load/cases-write-update.js
+
+# run selected suites via baseline runner
+PERF_SUITES=api-baseline,cases-write-update,billing-credit pnpm perf:baseline
 ```
 
 ### Thresholds

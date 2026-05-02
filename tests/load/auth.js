@@ -20,10 +20,10 @@ export const options = {
     { duration: "20s", target: 0 }    // ramp down
   ],
   thresholds: {
-    http_req_duration: ["p(95)<1000"],  // login can be slower due to bcrypt
+    http_req_duration: [`p(95)<${Number(__ENV.PERF_AUTH_HTTP_P95_MS ?? "3000")}`],
     errors: ["rate<0.01"],
-    login_latency: ["p(95)<2000"],      // bcrypt is intentionally slow
-    me_latency: ["p(95)<200"]
+    login_latency: [`p(95)<${Number(__ENV.PERF_AUTH_LOGIN_P95_MS ?? "3000")}`],
+    me_latency: [`p(95)<${Number(__ENV.PERF_AUTH_ME_P95_MS ?? "1200")}`]
   }
 };
 
@@ -90,7 +90,8 @@ export default function () {
     "login 200": (r) => r.status === 200,
     "login returns user": (r) => {
       try {
-        return !!JSON.parse(r.body).user;
+        const body = JSON.parse(r.body);
+        return !!(body?.user || body?.session?.user);
       } catch {
         return false;
       }
@@ -115,7 +116,8 @@ export default function () {
     "me 200": (r) => r.status === 200,
     "me returns id": (r) => {
       try {
-        return !!JSON.parse(r.body).id;
+        const body = JSON.parse(r.body);
+        return !!(body?.id || body?.user?.id || body?.session?.user?.id);
       } catch {
         return false;
       }

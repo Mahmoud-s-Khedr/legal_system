@@ -21,10 +21,11 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "prisma": "prisma",
-    "seed": "tsx prisma/seed.ts",
-    "seed:dev": "node --env-file ../../apps/desktop/.env.desktop --import tsx/esm prisma/seed.ts",
-    "seed:analytics": "ELMS_SEED_ANALYTICS_REFRESH=true NODE_ENV=development node --env-file ../../apps/desktop/.env.desktop --import tsx/esm prisma/seed.ts",
-    "seed:dev:cloud": "node --import tsx/esm prisma/seed.ts",
+    "seed:audit": "tsx scripts/seed-coverage-audit.ts",
+    "seed": "tsx prisma/seed.ts && pnpm seed:audit",
+    "seed:dev": "node --env-file ../../apps/desktop/.env.desktop --import tsx/esm prisma/seed.ts && pnpm seed:audit",
+    "seed:analytics": "ELMS_SEED_ANALYTICS_REFRESH=true NODE_ENV=development node --env-file ../../apps/desktop/.env.desktop --import tsx/esm prisma/seed.ts && pnpm seed:audit",
+    "seed:dev:cloud": "node --import tsx/esm prisma/seed.ts && pnpm seed:audit",
     "deploy": "pnpm deploy"
   },
   "dependencies": {

@@ -10,13 +10,24 @@ async function main() {
   const shouldRefreshAnalytics =
     process.env.ELMS_SEED_ANALYTICS_REFRESH === "true" ||
     process.env.ELMS_SEED_ANALYTICS_REFRESH === "1";
+  const profile = process.env.ELMS_SEED_PROFILE === "minimal" ? "minimal" : "full";
+  const includeIntegrations = process.env.ELMS_SEED_INCLUDE_INTEGRATIONS !== "false";
+  const seedValue = process.env.ELMS_SEED_VALUE ?? "elms-dev-seed";
+
+  console.log(`[seed] profile=${profile} includeIntegrations=${includeIntegrations} seed=${seedValue}`);
+  console.log("[seed] phase=system");
 
   await ensureSystemSecurityModel(prisma);
+  console.log("[seed] phase=reference");
   await ensureSystemLookupOptions(prisma);
   await ensureSystemLibraryCategories(prisma);
 
   if (process.env.NODE_ENV === "development") {
+    console.log("[seed] phase=tenant-core/tenant-edge/integration-fixtures");
     await seedDevEnvironment(prisma, { analyticsRefresh: shouldRefreshAnalytics });
+    if (shouldRefreshAnalytics) {
+      console.log("[seed] phase=analytics");
+    }
   }
 }
 

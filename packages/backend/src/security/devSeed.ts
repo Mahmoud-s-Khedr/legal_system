@@ -3,8 +3,27 @@ import * as fs from "fs";
 import * as path from "path";
 import bcrypt from "bcryptjs";
 import { faker } from "@faker-js/faker";
-import type { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { refreshDeterministicAnalyticsSeed } from "./analyticsSeed.js";
+
+let seededRandom = Math.random;
+
+function setSeed(seedValue: string) {
+  let h = 1779033703 ^ seedValue.length;
+  for (let i = 0; i < seedValue.length; i++) {
+    h = Math.imul(h ^ seedValue.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  seededRandom = (() => {
+    let t = h += 0x6D2B79F5;
+    return () => {
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  })();
+}
 
 // ---------------------------------------------------------------------------
 // Static data pools
@@ -136,23 +155,23 @@ const TASK_PRIORITIES = ["LOW", "MEDIUM", "MEDIUM", "HIGH", "URGENT"];
 // ---------------------------------------------------------------------------
 
 function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(seededRandom() * arr.length)];
 }
 
 function pickN<T>(arr: T[], n: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  const shuffled = [...arr].sort(() => seededRandom() - 0.5);
   return shuffled.slice(0, n);
 }
 
 function randInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(seededRandom() * (max - min + 1)) + min;
 }
 
 function randDate(daysAgo: number, daysAhead = 0): Date {
   const now = Date.now();
   const from = now - daysAgo * 86400000;
   const to = now + daysAhead * 86400000;
-  return new Date(from + Math.random() * (to - from));
+  return new Date(from + seededRandom() * (to - from));
 }
 
 function egyptianPhone(): string {
@@ -245,13 +264,18 @@ async function ensureDevUsers(prisma: PrismaClient, firmId: string) {
     // Email is globally unique — find by email regardless of firm
     const existing = await prisma.user.findFirst({ where: { email: u.email } });
     const user = existing
-      ? // If found under a different firm, reassign to the dev firm
-        existing.firmId !== firmId
-        ? await prisma.user.update({
-            where: { id: existing.id },
-            data: { firmId, roleId, passwordHash, status: "ACTIVE", deletedAt: null },
-          })
-        : existing
+      ? await prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            firmId,
+            roleId,
+            fullName: u.fullName,
+            passwordHash,
+            preferredLanguage: "AR",
+            status: "ACTIVE",
+            deletedAt: null,
+          },
+        })
       : await prisma.user.create({
           data: {
             firmId,
@@ -346,8 +370,8 @@ async function seedDevClients(prisma: PrismaClient, firmId: string) {
         clientId,
         name: nameAr,
         phone: egyptianPhone(),
-        email: Math.random() > 0.4 ? faker.internet.email().toLowerCase() : null,
-        role: Math.random() > 0.5 ? pick(CONTACT_ROLES_AR) : null,
+        email: seededRandom() > 0.4 ? faker.internet.email().toLowerCase() : null,
+        role: seededRandom() > 0.5 ? pick(CONTACT_ROLES_AR) : null,
       });
     }
   }
@@ -502,16 +526,16 @@ async function seedDevSessions(
   for (const { caseId, courtIds } of caseResults) {
     const numSessions = randInt(2, 3);
     for (let i = 0; i < numSessions; i++) {
-      const isFuture = i === numSessions - 1 && Math.random() > 0.3;
+      const isFuture = i === numSessions - 1 && seededRandom() > 0.3;
       const sessionDate = isFuture ? randDate(0, 90) : randDate(180);
       sessionData.push({
         id: randomUUID(),
         caseId,
         caseCourtId: courtIds.length > 0 ? pick(courtIds) : null,
-        assignedLawyerId: Math.random() > 0.3 ? pick(userIds) : null,
+        assignedLawyerId: seededRandom() > 0.3 ? pick(userIds) : null,
         sessionDatetime: sessionDate,
         outcome: isFuture ? null : (pick(SESSION_OUTCOMES) as never),
-        notes: Math.random() > 0.5
+        notes: seededRandom() > 0.5
           ? `جلسة رقم ${i + 1} — ${pick(["تم التأجيل لجلسة قادمة", "صدر حكم جزئي", "قرر الحضور والمرافعة", "أحيل لخبير"])}`
           : null,
       });
@@ -552,9 +576,9 @@ async function seedDevTasks(
         title: pick(TASK_TITLES_AR),
         status: status as never,
         priority: pick(TASK_PRIORITIES) as never,
-        assignedToId: Math.random() > 0.3 ? pick(userIds) : null,
+        assignedToId: seededRandom() > 0.3 ? pick(userIds) : null,
         createdById: pick(userIds),
-        dueAt: Math.random() > 0.4 ? randDate(30, 60) : null,
+        dueAt: seededRandom() > 0.4 ? randDate(30, 60) : null,
         createdAt: randDate(200),
       });
     }
@@ -569,9 +593,9 @@ async function seedDevTasks(
       title: pick(TASK_TITLES_AR),
       status: pick(TASK_STATUSES) as never,
       priority: pick(TASK_PRIORITIES) as never,
-      assignedToId: Math.random() > 0.3 ? pick(userIds) : null,
+      assignedToId: seededRandom() > 0.3 ? pick(userIds) : null,
       createdById: pick(userIds),
-      dueAt: Math.random() > 0.5 ? randDate(20, 45) : null,
+      dueAt: seededRandom() > 0.5 ? randDate(20, 45) : null,
       createdAt: randDate(100),
     });
   }
@@ -840,6 +864,311 @@ async function seedDevExpenses(
   console.log(`  ✓ ${expenseData.length} expenses seeded`);
 }
 
+async function seedExtendedCoverage(
+  prisma: PrismaClient,
+  firmId: string,
+  userIds: string[],
+  clientIds: string[],
+  caseResults: CaseResult[],
+  includeIntegrations: boolean
+) {
+  const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, roleId: true, email: true } });
+  const firstUser = users[0];
+  if (!firstUser || caseResults.length === 0 || clientIds.length === 0) return;
+
+  await prisma.user.update({
+    where: { id: firstUser.id },
+    data: { status: "SUSPENDED" }
+  }).catch(() => null);
+
+  const roleId = firstUser.roleId;
+  const inviteEmail = "invitee@elms.local";
+  await prisma.invitation.upsert({
+    where: { token: "seed-invite-token" },
+    update: { status: "PENDING" },
+    create: {
+      firmId,
+      roleId,
+      invitedById: firstUser.id,
+      email: inviteEmail,
+      token: "seed-invite-token",
+      expiresAt: randDate(0, 30),
+      status: "PENDING"
+    }
+  });
+
+  const docs = await prisma.document.findMany({ where: { firmId, deletedAt: null }, take: 10, select: { id: true } });
+  const invoices = await prisma.invoice.findMany({ where: { firmId }, take: 10, select: { id: true, clientId: true, totalAmount: true, status: true } });
+  const tasks = await prisma.task.findMany({ where: { firmId, deletedAt: null }, take: 10, select: { id: true } });
+
+  for (let i = 0; i < Math.min(caseResults.length, 12); i++) {
+    const c = caseResults[i];
+    await prisma.powerOfAttorney.upsert({
+      where: { id: `00000000-0000-0000-0000-${String(900000000000 + i).slice(-12)}` },
+      update: {},
+      create: {
+        id: `00000000-0000-0000-0000-${String(900000000000 + i).slice(-12)}`,
+        firmId,
+        clientId: c.clientId,
+        caseId: c.caseId,
+        number: `POA-${2026}-${i + 1}`,
+        type: i % 2 === 0 ? "GENERAL" : "LITIGATION",
+        status: i % 3 === 0 ? "EXPIRED" : i % 3 === 1 ? "REVOKED" : "ACTIVE",
+        issuedAt: randDate(700),
+        expiresAt: randDate(0, 90),
+        revokedAt: i % 3 === 1 ? randDate(120) : null,
+        revocationReason: i % 3 === 1 ? "Seed revocation state" : null,
+        scopeTextAr: "نطاق تجريبي للتوكيل"
+      }
+    });
+
+    await prisma.event.upsert({
+      where: { id: `10000000-0000-0000-0000-${String(900000000000 + i).slice(-12)}` },
+      update: {},
+      create: {
+        id: `10000000-0000-0000-0000-${String(900000000000 + i).slice(-12)}`,
+        firmId,
+        caseId: c.caseId,
+        title: `Event ${i + 1}`,
+        startsAt: randDate(30, 30),
+        endsAt: randDate(0, 40)
+      }
+    });
+  }
+
+  const prefs = [
+    { type: "HEARING_TODAY", channel: "IN_APP" },
+    { type: "TASK_OVERDUE", channel: "EMAIL" },
+    { type: "INVOICE_OVERDUE", channel: "SMS" }
+  ] as const;
+  for (const u of users.slice(0, 3)) {
+    for (const pref of prefs) {
+      await prisma.notificationPreference.upsert({
+        where: { userId_type_channel: { userId: u.id, type: pref.type, channel: pref.channel } },
+        update: { enabled: seededRandom() > 0.3 },
+        create: { userId: u.id, type: pref.type, channel: pref.channel, enabled: true }
+      });
+    }
+  }
+
+  for (let i = 0; i < users.length; i++) {
+    const userId = users[i].id;
+    await prisma.notification.create({
+      data: {
+        firmId,
+        userId,
+        type: i % 2 === 0 ? "TASK_OVERDUE" : "HEARING_TOMORROW",
+        title: i % 2 === 0 ? "Task overdue" : "Hearing reminder",
+        body: "Seed notification",
+        isRead: i % 3 === 0,
+        entityType: "case",
+        entityId: caseResults[i % caseResults.length]?.caseId
+      }
+    });
+  }
+
+  for (let i = 0; i < 12; i++) {
+    await prisma.auditLog.create({
+      data: {
+        firmId,
+        userId: users[i % users.length]?.id ?? null,
+        action: `seed.audit.${i}`,
+        entityType: i % 2 === 0 ? "invoice" : "case",
+        entityId: i % 2 === 0 ? invoices[i % Math.max(1, invoices.length)]?.id ?? null : caseResults[i % caseResults.length]?.caseId,
+        newData: { ok: true, i }
+      }
+    });
+  }
+
+  const templateNames = ["Default Contract", "Default Notice", "Default Motion"];
+  for (const [idx, name] of templateNames.entries()) {
+    await prisma.documentTemplate.upsert({
+      where: { id: `20000000-0000-0000-0000-${String(900000000100 + idx).slice(-12)}` },
+      update: { body: `Updated template: ${name}` },
+      create: { id: `20000000-0000-0000-0000-${String(900000000100 + idx).slice(-12)}`, firmId, name, language: "AR", body: `Template body: ${name}` }
+    });
+  }
+
+  const category = await prisma.legalCategory.findFirst({ where: { firmId: null } });
+  const libDoc = await prisma.libraryDocument.create({
+    data: {
+      firmId,
+      categoryId: category?.id ?? null,
+      type: "LEGISLATION",
+      scope: "FIRM",
+      legislationStatus: "ACTIVE",
+      title: "Seed Legislation 1",
+      contentText: "Article text seed",
+      extractionStatus: "INDEXED"
+    }
+  });
+  const article = await prisma.legislationArticle.create({
+    data: {
+      documentId: libDoc.id,
+      articleNumber: "1",
+      title: "General",
+      body: "Seed article body"
+    }
+  });
+  const tag = await prisma.libraryTag.upsert({
+    where: { name: "seed-tag" },
+    update: {},
+    create: { name: "seed-tag" }
+  });
+  await prisma.libraryDocumentTag.upsert({
+    where: { documentId_tagId: { documentId: libDoc.id, tagId: tag.id } },
+    update: {},
+    create: { documentId: libDoc.id, tagId: tag.id }
+  });
+  await prisma.libraryAnnotation.create({
+    data: {
+      firmId,
+      documentId: libDoc.id,
+      userId: users[0].id,
+      body: "Seed annotation"
+    }
+  });
+  await prisma.caseLegalReference.upsert({
+    where: { caseId_documentId_articleId: { caseId: caseResults[0].caseId, documentId: libDoc.id, articleId: article.id } },
+    update: {},
+    create: {
+      caseId: caseResults[0].caseId,
+      documentId: libDoc.id,
+      articleId: article.id,
+      notes: "Seed reference"
+    }
+  });
+
+  const research = await prisma.researchSession.create({
+    data: {
+      firmId,
+      caseId: caseResults[0].caseId,
+      userId: users[0].id,
+      title: "Seed research session"
+    }
+  });
+  const rMsg = await prisma.researchMessage.create({
+    data: {
+      sessionId: research.id,
+      role: "USER",
+      content: "Find precedent for this case"
+    }
+  });
+  await prisma.researchSessionSource.create({
+    data: {
+      sessionId: research.id,
+      messageId: rMsg.id,
+      documentId: libDoc.id,
+      articleId: article.id,
+      excerpt: "Seed source excerpt"
+    }
+  });
+
+  await prisma.customReport.create({
+    data: {
+      firmId,
+      name: "Seed Aging Report",
+      reportType: "BILLING_AGING",
+      description: "Seed custom report",
+      config: { groups: ["status", "client"], metrics: ["total"] },
+      createdById: users[0].id
+    }
+  }).catch(() => null);
+
+  const portalClientId = clientIds[0];
+  await prisma.client.update({
+    where: { id: portalClientId },
+    data: { portalEmail: "portal.client@elms.local", portalPasswordHash: await bcrypt.hash("password123", 10) }
+  });
+  await prisma.clientPortalInvite.create({
+    data: {
+      clientId: portalClientId,
+      firmId,
+      email: "portal.client@elms.local",
+      tokenHash: `seed-token-${Date.now()}`,
+      expiresAt: randDate(0, 7)
+    }
+  });
+
+  if (includeIntegrations) {
+    await prisma.googleCalendarToken.upsert({
+      where: { userId: users[0].id },
+      update: {
+        encryptedAccessToken: "enc.seed.access.updated",
+        encryptedRefreshToken: "enc.seed.refresh.updated",
+        expiresAt: randDate(0, 30)
+      },
+      create: {
+        userId: users[0].id,
+        firmId,
+        encryptedAccessToken: "enc.seed.access",
+        encryptedRefreshToken: "enc.seed.refresh",
+        expiresAt: randDate(0, 30),
+        scope: "https://www.googleapis.com/auth/calendar"
+      }
+    });
+  }
+
+  if (invoices.length > 0) {
+    const invoice = invoices[0];
+    const clientId = invoice.clientId ?? clientIds[0];
+    const existingBalance = await prisma.clientCreditBalance.findFirst({
+      where: { clientId, firmId },
+      select: { id: true }
+    });
+    if (existingBalance) {
+      await prisma.clientCreditBalance.update({
+        where: { id: existingBalance.id },
+        data: { availableAmount: new Prisma.Decimal("1500.00") }
+      });
+    } else {
+      await prisma.clientCreditBalance.create({
+        data: { firmId, clientId, availableAmount: new Prisma.Decimal("1500.00") }
+      });
+    }
+    const entry = await prisma.clientCreditEntry.create({
+      data: {
+        firmId,
+        clientId,
+        invoiceId: invoice.id,
+        type: "PAYMENT_OVERAGE",
+        amount: new Prisma.Decimal("1500.00"),
+        note: "Seed credit entry"
+      }
+    });
+    const payment = await prisma.payment.findFirst({ where: { invoiceId: invoice.id } });
+    await prisma.invoiceCreditApplication.create({
+      data: {
+        firmId,
+        invoiceId: invoice.id,
+        clientId,
+        paymentId: payment?.id ?? null,
+        amount: new Prisma.Decimal("250.00")
+      }
+    }).catch(async () => {
+      await prisma.clientCreditEntry.update({ where: { id: entry.id }, data: { amount: new Prisma.Decimal("1000.00") } });
+    });
+  }
+
+  for (const [i, d] of docs.entries()) {
+    await prisma.document.update({
+      where: { id: d.id },
+      data: {
+        previewStatus: i % 4 === 0 ? "FAILED" : i % 4 === 1 ? "READY" : i % 4 === 2 ? "PROCESSING" : "PENDING",
+        extractionStatus: i % 3 === 0 ? "FAILED" : i % 3 === 1 ? "INDEXED" : "PROCESSING",
+        deletedAt: i === docs.length - 1 ? randDate(2) : null
+      }
+    });
+  }
+
+  if (tasks.length > 0) {
+    await prisma.task.update({
+      where: { id: tasks[0].id },
+      data: { deletedAt: randDate(1) }
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -848,7 +1177,14 @@ export async function seedDevEnvironment(
   prisma: PrismaClient,
   options: { analyticsRefresh?: boolean } = {}
 ) {
+  const seedValue = process.env.ELMS_SEED_VALUE ?? "elms-dev-seed";
+  setSeed(seedValue);
+  faker.seed(Array.from(seedValue).reduce((sum, ch) => sum + ch.charCodeAt(0), 0));
+  const profile = process.env.ELMS_SEED_PROFILE === "minimal" ? "minimal" : "full";
+  const includeIntegrations = process.env.ELMS_SEED_INCLUDE_INTEGRATIONS !== "false";
+
   console.log("\n🌱 Seeding dev environment...");
+  console.log(`  • profile=${profile} seed=${seedValue} integrations=${includeIntegrations}`);
 
   const firm = await ensureDevFirm(prisma);
   const userIds = await ensureDevUsers(prisma, firm.id);
@@ -867,6 +1203,9 @@ export async function seedDevEnvironment(
   await seedDevDocuments(prisma, firm.id, caseResults, clientIds, adminUserId);
   await seedDevInvoices(prisma, firm.id, caseResults);
   await seedDevExpenses(prisma, firm.id, caseResults);
+  if (profile === "full") {
+    await seedExtendedCoverage(prisma, firm.id, userIds, clientIds, caseResults, includeIntegrations);
+  }
 
   if (options.analyticsRefresh) {
     await refreshDeterministicAnalyticsSeed(prisma);
