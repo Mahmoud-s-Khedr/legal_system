@@ -1,4 +1,4 @@
-import type { DocumentType, ExtractionStatus, OcrBackend } from "../enums/index.js";
+import type { DocumentType, ExtractionStatus, OcrBackend, PreviewStatus } from "../enums/index.js";
 
 export interface DocumentVersionDto {
   id: string;
@@ -20,6 +20,8 @@ export interface DocumentDto {
   fileName: string;
   mimeType: string;
   storageKey: string;
+  previewPdfKey?: string | null;
+  previewStatus: PreviewStatus;
   type: DocumentType;
   extractionStatus: ExtractionStatus;
   ocrBackend: OcrBackend;

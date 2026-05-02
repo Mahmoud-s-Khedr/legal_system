@@ -43,6 +43,9 @@ const baseSchema = z.object({
   // Documents / Storage
   MAX_UPLOAD_BYTES: z.coerce.number().default(50 * 1024 * 1024),
   LOCAL_STORAGE_PATH: z.string().default("./uploads"),
+  DOCX_PREVIEW_ENABLED: booleanish.default(true),
+  DOCX_PREVIEW_BIN: z.string().default("libreoffice"),
+  DOCX_PREVIEW_TIMEOUT_MS: z.coerce.number().default(60000),
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),

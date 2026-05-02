@@ -429,7 +429,8 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
       const stream = await app.storage.get(doc.storageKey);
       const safeFilename = encodeURIComponent(doc.title || `document-${documentId}`);
       const contentLength = await tryResolveStreamContentLength(stream);
-      reply.header("Content-Type", doc.mimeType ?? "application/octet-stream");
+      const mimeType = (doc as { mimeType?: string }).mimeType ?? "application/octet-stream";
+      reply.header("Content-Type", mimeType);
       reply.header("Content-Disposition", `attachment; filename="${safeFilename}"`);
       if (contentLength !== null) {
         reply.header("Content-Length", String(contentLength));

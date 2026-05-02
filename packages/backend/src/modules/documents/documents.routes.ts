@@ -16,6 +16,7 @@ import {
   listDocuments,
   softDeleteDocument,
   streamDocument,
+  streamDocumentPreview,
   updateDocument,
   uploadNewVersion
 } from "./documents.service.js";
@@ -193,6 +194,13 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
     "/api/documents/:id/stream",
     { preHandler: [requireAuth, requirePermission("documents:read")] },
     async (request, reply) => streamDocument(request.sessionUser!, idParamsSchema.parse(request.params).id, app.storage, reply)
+  );
+
+  // Stream document preview PDF (DOCX only)
+  app.get(
+    "/api/documents/:id/preview",
+    { preHandler: [requireAuth, requirePermission("documents:read")] },
+    async (request, reply) => streamDocumentPreview(request.sessionUser!, idParamsSchema.parse(request.params).id, app.storage, reply)
   );
 
   // Upload a new version of an existing document (multipart)

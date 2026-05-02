@@ -1191,7 +1191,8 @@
     "fileDownloadStarted": "Téléchargement démarré.",
     "fileSavedTo": "Enregistré dans {{path}}.",
     "fileSaveFailed": "Échec du téléchargement.",
-    "backupCompleted": "Sauvegarde terminée."
+    "backupCompleted": "Sauvegarde terminée.",
+    "saved": "Enregistré avec succès."
   },
   "calendar": {
     "title": "Calendrier unifié",

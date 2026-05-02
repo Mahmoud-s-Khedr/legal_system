@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DocumentType, ExtractionStatus, OcrBackend, type DocumentDto } from "@elms/shared";
+import {
+  DocumentType,
+  ExtractionStatus,
+  OcrBackend,
+  PreviewStatus,
+  type DocumentDto
+} from "@elms/shared";
 import { canShowIndexedText } from "./DocumentList";
 
 function makeDoc(overrides: Partial<DocumentDto>): DocumentDto {
@@ -14,6 +20,7 @@ function makeDoc(overrides: Partial<DocumentDto>): DocumentDto {
     fileName: "test.pdf",
     mimeType: "application/pdf",
     storageKey: "firm-1/doc-1/test.pdf",
+    previewStatus: PreviewStatus.NONE,
     type: DocumentType.GENERAL,
     extractionStatus: ExtractionStatus.INDEXED,
     ocrBackend: OcrBackend.TESSERACT,

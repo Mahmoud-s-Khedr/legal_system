@@ -26,6 +26,12 @@ export function DocumentViewer({
   const [isDownloading, setIsDownloading] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
   const versionsKey = doc.versions.map((version) => version.id).join("|");
+  const isDocx =
+    doc.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const previewReady = doc.previewStatus === "READY";
+  const isPreviewProcessing =
+    doc.previewStatus === "PENDING" || doc.previewStatus === "PROCESSING";
+  const isPreviewFailed = doc.previewStatus === "FAILED";
 
   async function handleDownload() {
     try {
@@ -84,18 +90,36 @@ export function DocumentViewer({
 
         {/* Content */}
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
-          <FilePreview
-            cacheKey={`${doc.id}:${doc.updatedAt}:${versionsKey}`}
-            fallbackText={doc.contentText ?? undefined}
-            fileName={doc.fileName}
-            mimeType={doc.mimeType}
-            streamUrl={`/api/documents/${doc.id}/stream`}
-            title={doc.title}
-            onDownload={() => {
-              void handleDownload();
-            }}
-            downloadLabel={t("actions.downloadDocument")}
-          />
+          {isDocx && !previewReady ? (
+            <p
+              className={`text-sm ${isPreviewFailed ? "text-red-600" : "text-slate-500"}`}
+            >
+              {isPreviewFailed
+                ? t("documents.previewFailed")
+                : isPreviewProcessing
+                  ? t("documents.previewLoading")
+                  : t("documents.previewNotSupported")}
+            </p>
+          ) : (
+            <FilePreview
+              cacheKey={`${doc.id}:${doc.updatedAt}:${versionsKey}`}
+              fallbackText={doc.contentText ?? undefined}
+              fileName={
+                isDocx ? doc.fileName.replace(/\.docx$/i, ".pdf") : doc.fileName
+              }
+              mimeType={isDocx ? "application/pdf" : doc.mimeType}
+              streamUrl={
+                isDocx
+                  ? `/api/documents/${doc.id}/preview`
+                  : `/api/documents/${doc.id}/stream`
+              }
+              title={doc.title}
+              onDownload={() => {
+                void handleDownload();
+              }}
+              downloadLabel={t("actions.downloadDocument")}
+            />
+          )}
 
           <VersionHistory
             document={doc}

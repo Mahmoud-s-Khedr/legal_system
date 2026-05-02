@@ -33,6 +33,7 @@ vi.mock("./documents.service.js", () => ({
   listDocuments: vi.fn(),
   softDeleteDocument: vi.fn(),
   streamDocument: vi.fn(),
+  streamDocumentPreview: vi.fn(),
   updateDocument: vi.fn(),
   uploadNewVersion: vi.fn()
 }));

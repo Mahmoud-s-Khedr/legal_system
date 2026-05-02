@@ -33,7 +33,15 @@ export default defineConfig(() => {
   const outDir = isDesktop ? "dist/desktop" : "dist/cloud";
 
   return {
-    entry: isDesktop ? ["src/server.ts"] : ["src/index.ts", "src/server.ts"],
+    entry: isDesktop
+      ? ["src/server.ts"]
+      : [
+          "src/index.ts",
+          "src/server.ts",
+          "src/jobs/extractionWorker.ts",
+          "src/jobs/libraryExtractionWorker.ts",
+          "src/jobs/docxPreviewWorker.ts"
+        ],
     format: "esm",
     target: "node22",
     outDir,

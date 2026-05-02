@@ -32,7 +32,7 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     return withLocalSessionToken(authService, response);
   });
 
-  app.post("/api/auth/register", { schema: { response: authOrDisabledResponses }, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
+  app.post("/api/auth/register", { schema: { response: authOrDisabledResponses }, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (_request, reply) => {
     return sendLocalOnlyCompatibilityError(reply, "Registration endpoint is unavailable in local-only deployments");
   });
 
@@ -52,11 +52,11 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     return withLocalSessionToken(authService, response);
   });
 
-  app.post("/api/auth/accept-invite", { schema: { response: authOrDisabledResponses } }, async (request, reply) => {
+  app.post("/api/auth/accept-invite", { schema: { response: authOrDisabledResponses } }, async (_request, reply) => {
     return sendLocalOnlyCompatibilityError(reply, "Invite acceptance endpoint is unavailable in local-only deployments");
   });
 
-  app.post("/api/auth/refresh", { schema: { response: authOrDisabledResponses } }, async (request, reply) => {
+  app.post("/api/auth/refresh", { schema: { response: authOrDisabledResponses } }, async (_request, reply) => {
     return sendLocalOnlyCompatibilityError(reply, "Refresh endpoint is unavailable in local-only deployments");
   });
 

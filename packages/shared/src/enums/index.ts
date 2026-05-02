@@ -118,6 +118,14 @@ export enum ExtractionStatus {
   FAILED = "FAILED"
 }
 
+export enum PreviewStatus {
+  NONE = "NONE",
+  PENDING = "PENDING",
+  PROCESSING = "PROCESSING",
+  READY = "READY",
+  FAILED = "FAILED"
+}
+
 export enum OcrBackend {
   TESSERACT = "TESSERACT",
   GOOGLE_VISION = "GOOGLE_VISION"

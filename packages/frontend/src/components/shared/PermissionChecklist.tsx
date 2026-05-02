@@ -92,7 +92,7 @@ export function PermissionChecklist({
     }
   }
 
-  function toggleGroup(resource: string, perms: string[]) {
+  function toggleGroup(perms: string[]) {
     const allSelected = perms.every((p) => selectedSet.has(p));
     if (allSelected) {
       onChange(selected.filter((p) => !perms.includes(p)));
@@ -122,7 +122,7 @@ export function PermissionChecklist({
                 }
                 className="rounded"
                 id={`group-${resource}`}
-                onChange={() => toggleGroup(resource, perms)}
+                onChange={() => toggleGroup(perms)}
                 type="checkbox"
               />
               <label

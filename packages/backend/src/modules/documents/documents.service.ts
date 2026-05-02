@@ -9,6 +9,7 @@ import type {
   SessionUser,
   UpdateDocumentDto,
   DocumentType as SharedDocumentType,
+  PreviewStatus,
   ExtractionStatus as SharedExtractionStatus,
   OcrBackend as SharedOcrBackend
 } from "@elms/shared";
@@ -17,6 +18,7 @@ import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { dispatchExtraction } from "../../jobs/extractionDispatcher.js";
+import { dispatchDocxPreview } from "../../jobs/docxPreviewDispatcher.js";
 import type { IStorageAdapter } from "../../storage/IStorageAdapter.js";
 import type { AppEnv } from "../../config/env.js";
 import type { FastifyReply } from "fastify";
@@ -85,6 +87,8 @@ function mapDocument(doc: {
   fileName: string;
   mimeType: string;
   storageKey: string;
+  previewPdfKey: string | null;
+  previewStatus: string;
   type: string;
   extractionStatus: string;
   ocrBackend: string;
@@ -111,6 +115,8 @@ function mapDocument(doc: {
     fileName: doc.fileName,
     mimeType: doc.mimeType,
     storageKey: doc.storageKey,
+    previewPdfKey: doc.previewPdfKey,
+    previewStatus: doc.previewStatus as PreviewStatus,
     type: doc.type as SharedDocumentType,
     extractionStatus: doc.extractionStatus as SharedExtractionStatus,
     ocrBackend: doc.ocrBackend as SharedOcrBackend,
@@ -224,6 +230,9 @@ export async function createDocument(
   const safeFilename = sanitizeFilename(payload.fileName);
   const docId = randomUUID();
   const storageKey = `${actor.firmId}/${docId}/${safeFilename}`;
+  const shouldGeneratePreview =
+    payload.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+    env.DOCX_PREVIEW_ENABLED;
 
   // Write to storage first — if the DB transaction fails, we clean up the file
   await storage.put(storageKey, payload.stream, payload.mimeType);
@@ -247,6 +256,8 @@ export async function createDocument(
           fileName: safeFilename,
           mimeType: payload.mimeType,
           storageKey,
+          previewPdfKey: null,
+          previewStatus: shouldGeneratePreview ? "PENDING" : "NONE",
           type: payload.type,
           extractionStatus: ExtractionStatus.PENDING,
           ocrBackend: useGoogleVision ? "GOOGLE_VISION" : "TESSERACT"
@@ -287,6 +298,9 @@ export async function createDocument(
   }
 
   await dispatchExtraction(docId, actor.firmId, env, storage);
+  if (shouldGeneratePreview) {
+    await dispatchDocxPreview(docId, actor.firmId, env, storage);
+  }
 
   return mapDocument({ ...doc, versions: [{ id: randomUUID(), documentId: docId, versionNumber: 1, fileName: safeFilename, storageKey, createdAt: doc.createdAt }] });
 }
@@ -360,6 +374,10 @@ export async function uploadNewVersion(
     })
   );
 
+  const shouldGeneratePreview =
+    payload.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+    env.DOCX_PREVIEW_ENABLED;
+
   const nextVersion = (existing.versions[0]?.versionNumber ?? 0) + 1;
   const newStorageKey = `${actor.firmId}/${documentId}/v${nextVersion}-${safeFilename}`;
 
@@ -384,6 +402,8 @@ export async function uploadNewVersion(
           fileName: safeFilename,
           mimeType: payload.mimeType,
           storageKey: newStorageKey,
+          previewPdfKey: null,
+          previewStatus: shouldGeneratePreview ? "PENDING" : "NONE",
           extractionStatus: ExtractionStatus.PENDING,
           contentText: null
         },
@@ -413,7 +433,23 @@ export async function uploadNewVersion(
     throw err;
   }
 
+  if (existing.previewPdfKey) {
+    try {
+      await storage.delete(existing.previewPdfKey);
+    } catch (cleanupError) {
+      const message = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+      console.warn("[documents] Failed to clean up preview after uploadNewVersion", {
+        documentId,
+        previewPdfKey: existing.previewPdfKey,
+        errorMessage: message
+      });
+    }
+  }
+
   await dispatchExtraction(documentId, actor.firmId, env, storage);
+  if (shouldGeneratePreview) {
+    await dispatchDocxPreview(documentId, actor.firmId, env, storage);
+  }
 
   return mapDocument(updatedDoc);
 }
@@ -454,6 +490,44 @@ export async function streamDocument(
   const safeFilename = encodeURIComponent(doc.fileName);
   const contentLength = await tryResolveStreamContentLength(stream);
   reply.header("Content-Type", doc.mimeType);
+  reply.header("Content-Disposition", `inline; filename="${safeFilename}"`);
+  if (contentLength !== null) {
+    reply.header("Content-Length", String(contentLength));
+  }
+  await reply.send(stream);
+}
+
+export async function streamDocumentPreview(
+  actor: SessionUser,
+  documentId: string,
+  storage: IStorageAdapter,
+  reply: FastifyReply
+): Promise<void> {
+  const doc = await withTenant(prisma, actor.firmId, async (tx) =>
+    tx.document.findFirstOrThrow({
+      where: { id: documentId, firmId: actor.firmId, deletedAt: null }
+    })
+  );
+
+  if (doc.previewStatus === "NONE" || !doc.previewPdfKey) {
+    reply.status(404).send({ message: "Preview not available", previewStatus: doc.previewStatus });
+    return;
+  }
+
+  if (doc.previewStatus === "PENDING" || doc.previewStatus === "PROCESSING") {
+    reply.status(409).send({ message: "Preview is processing", previewStatus: doc.previewStatus });
+    return;
+  }
+
+  if (doc.previewStatus === "FAILED") {
+    reply.status(422).send({ message: "Preview conversion failed", previewStatus: doc.previewStatus });
+    return;
+  }
+
+  const stream = await storage.get(doc.previewPdfKey);
+  const safeFilename = encodeURIComponent(doc.fileName.replace(/\.docx$/i, ".pdf"));
+  const contentLength = await tryResolveStreamContentLength(stream);
+  reply.header("Content-Type", "application/pdf");
   reply.header("Content-Disposition", `inline; filename="${safeFilename}"`);
   if (contentLength !== null) {
     reply.header("Content-Length", String(contentLength));

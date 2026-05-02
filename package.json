@@ -10,9 +10,10 @@
     "dev:tauri:dummy": "pnpm --filter @elms/desktop tauri:dev:dummy",
     "build": "pnpm compile",
     "compile": "turbo run compile",
-    "validate": "pnpm check:lockfile && pnpm prisma:generate && pnpm lint && pnpm i18n:check && pnpm typecheck && pnpm test && pnpm test:coverage && pnpm coverage:diff && pnpm docs:verify",
+    "validate": "pnpm check:lockfile && pnpm prisma:generate && pnpm lint && pnpm lint:unused && pnpm i18n:check && pnpm typecheck && pnpm test && pnpm test:coverage && pnpm coverage:diff && pnpm docs:verify",
     "check:lockfile": "bash ./scripts/check-lockfile.sh",
     "lint": "turbo run lint",
+    "lint:unused": "knip --dependencies --exclude binaries",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
@@ -40,22 +41,34 @@
     "schema:usage:audit": "pnpm tsx scripts/schema-runtime-usage-audit.ts",
     "docs:verify": "node ./scripts/docs/verify-docs-truth.mjs && pnpm structure:check",
     "structure:audit": "node ./scripts/docs/structure-audit.mjs",
-    "structure:check": "node ./scripts/docs/structure-check.mjs"
+    "structure:check": "node ./scripts/docs/structure-check.mjs",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "7zip-bin": "^5.2.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.8.1",
     "@vitest/coverage-v8": "^3.2.4",
-    "7zip-bin": "^5.2.0",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.0.1",
+    "knip": "^5.63.1",
     "prettier": "^3.6.2",
+    "tsx": "^4.21.0",
     "turbo": "^2.5.8",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vitest": "^3.2.4"
+  },
+  "knip": {
+    "ignoreDependencies": [
+      "7zip-bin",
+      "@types/exceljs",
+      "@types/jsonwebtoken",
+      "@types/pdf-parse"
+    ]
   }
 }

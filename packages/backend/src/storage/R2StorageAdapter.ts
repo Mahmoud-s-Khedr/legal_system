@@ -13,7 +13,7 @@ export class R2StorageAdapter implements IStorageAdapter {
   private readonly client: S3Client;
   private readonly bucket: string;
 
-  constructor(private readonly env: AppEnv) {
+  constructor(env: AppEnv) {
     if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.R2_BUCKET) {
       throw new Error("R2 storage requires R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_BUCKET");
     }

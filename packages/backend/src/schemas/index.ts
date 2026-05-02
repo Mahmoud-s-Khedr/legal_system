@@ -311,6 +311,8 @@ export const documentDtoSchema = {
     fileName: { type: "string" },
     mimeType: { type: "string" },
     storageKey: { type: "string" },
+    previewPdfKey: { type: ["string", "null"] },
+    previewStatus: { type: "string" },
     type: { type: "string" },
     extractionStatus: { type: "string" },
     ocrBackend: { type: "string" },
@@ -319,7 +321,7 @@ export const documentDtoSchema = {
     createdAt: { type: "string" },
     updatedAt: { type: "string" }
   },
-  required: ["id", "firmId", "title", "fileName", "mimeType", "storageKey", "type", "extractionStatus", "ocrBackend", "versions", "createdAt", "updatedAt"],
+  required: ["id", "firmId", "title", "fileName", "mimeType", "storageKey", "previewStatus", "type", "extractionStatus", "ocrBackend", "versions", "createdAt", "updatedAt"],
   additionalProperties: false
 } as const;
 

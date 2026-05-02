@@ -119,6 +119,14 @@ enum ExtractionStatus {
   FAILED
 }
 
+enum PreviewStatus {
+  NONE
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
 enum OcrBackend {
   TESSERACT
   GOOGLE_VISION
@@ -561,6 +569,8 @@ model Document {
   fileName         String
   mimeType         String
   storageKey       String
+  previewPdfKey    String?
+  previewStatus    PreviewStatus    @default(NONE)
   type             String           @default("GENERAL")
   extractionStatus ExtractionStatus @default(PENDING)
   ocrBackend       OcrBackend       @default(TESSERACT)

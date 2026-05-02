@@ -28,6 +28,14 @@ export default tseslint.config(
       }
     },
     rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_"
+        }
+      ],
       "no-restricted-globals": [
         "error",
         {

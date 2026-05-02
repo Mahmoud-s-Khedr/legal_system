@@ -5,6 +5,7 @@ import {
   DocumentType,
   ExtractionStatus,
   OcrBackend,
+  PreviewStatus,
   type DocumentDto
 } from "@elms/shared";
 import { DocumentViewer } from "./DocumentViewer";
@@ -62,6 +63,8 @@ function makeDoc(overrides: Partial<DocumentDto>): DocumentDto {
     fileName: "test.pdf",
     mimeType: "application/pdf",
     storageKey: "firm-1/doc-1/test.pdf",
+    previewPdfKey: null,
+    previewStatus: PreviewStatus.NONE,
     type: DocumentType.GENERAL,
     extractionStatus: ExtractionStatus.INDEXED,
     ocrBackend: OcrBackend.TESSERACT,
@@ -188,6 +191,108 @@ describe("DocumentViewer", () => {
 
     const image = view.querySelector("img");
     expect(image?.getAttribute("src")).toBe("blob:image-preview");
+  });
+
+  it("uses preview endpoint when DOCX preview is READY", async () => {
+    const blob = new Blob(["pdf"], { type: "application/pdf" });
+    vi.mocked(apiDownload).mockResolvedValue({
+      blob,
+      filename: "brief.pdf",
+      contentType: "application/pdf"
+    });
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => "blob:docx-preview")
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn()
+    });
+
+    render(
+      <DocumentViewer
+        document={makeDoc({
+          mimeType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          fileName: "brief.docx",
+          previewStatus: PreviewStatus.READY
+        })}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+
+    await flushAsyncWork();
+
+    expect(apiDownload).toHaveBeenCalledWith(
+      "/api/documents/doc-1/preview",
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
+  it("shows processing state for DOCX while preview is pending", async () => {
+    const view = render(
+      <DocumentViewer
+        document={makeDoc({
+          mimeType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          fileName: "brief.docx",
+          previewStatus: PreviewStatus.PENDING
+        })}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+
+    await flushAsyncWork();
+
+    const message = view.querySelector("p.text-slate-500");
+    expect(message).not.toBeNull();
+    expect(apiDownload).not.toHaveBeenCalled();
+  });
+
+  it("shows failure state for DOCX when preview conversion failed", async () => {
+    const view = render(
+      <DocumentViewer
+        document={makeDoc({
+          mimeType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          fileName: "brief.docx",
+          previewStatus: PreviewStatus.FAILED
+        })}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+
+    await flushAsyncWork();
+
+    const message = view.querySelector("p.text-red-600");
+    expect(message).not.toBeNull();
+    expect(apiDownload).not.toHaveBeenCalled();
+  });
+
+  it("shows not-supported state for DOCX when preview is missing", async () => {
+    const view = render(
+      <DocumentViewer
+        document={makeDoc({
+          mimeType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          fileName: "brief.docx",
+          previewStatus: PreviewStatus.NONE
+        })}
+        onClose={() => undefined}
+        onVersionUploaded={() => undefined}
+      />
+    );
+
+    await flushAsyncWork();
+
+    const message = view.querySelector("p.text-slate-500");
+    expect(message).not.toBeNull();
+    expect(apiDownload).not.toHaveBeenCalled();
   });
 
   it("revokes previous object URL on document change and unmount", async () => {

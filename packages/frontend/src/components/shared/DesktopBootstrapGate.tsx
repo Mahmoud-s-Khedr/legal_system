@@ -1,4 +1,4 @@
-import { PropsWithChildren, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { useTranslation } from "react-i18next";
 import { isDummyDesktopRuntime } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Readable } from "node:stream";
-import { DocumentType } from "@elms/shared";
+import { DocumentType, PreviewStatus } from "@elms/shared";
 import { makeSessionUser } from "../../test-utils/session-user.js";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -35,6 +35,9 @@ vi.mock("../../services/audit.service.js", () => ({
 vi.mock("../../jobs/extractionDispatcher.js", () => ({
   dispatchExtraction: vi.fn().mockResolvedValue(undefined)
 }));
+vi.mock("../../jobs/docxPreviewDispatcher.js", () => ({
+  dispatchDocxPreview: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock("../editions/editionPolicy.js", () => ({
   hasEditionFeature: vi.fn().mockReturnValue(false)
 }));
@@ -46,8 +49,10 @@ const {
   uploadNewVersion,
   updateDocument,
   streamDocument,
+  streamDocumentPreview,
   ALLOWED_MIME_TYPES
 } = await import("./documents.service.js");
+const { dispatchDocxPreview } = await import("../../jobs/docxPreviewDispatcher.js");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -62,7 +67,8 @@ const now = new Date("2026-03-21T00:00:00.000Z");
 
 const mockEnv = {
   OCR_BACKEND: "tesseract",
-  AUTH_MODE: "LOCAL"
+  AUTH_MODE: "LOCAL",
+  DOCX_PREVIEW_ENABLED: true
 } as never;
 
 const mockStorage = {
@@ -84,6 +90,8 @@ function makeDocumentRecord(overrides: Partial<Record<string, unknown>> = {}) {
     fileName: "Contract.pdf",
     mimeType: "application/pdf",
     storageKey: "firm-1/doc-1/Contract.pdf",
+    previewPdfKey: null,
+    previewStatus: PreviewStatus.NONE,
     type: "CONTRACT",
     extractionStatus: "PENDING",
     ocrBackend: "TESSERACT",
@@ -309,6 +317,59 @@ describe("streamDocument", () => {
   });
 });
 
+describe("streamDocumentPreview", () => {
+  it("streams PDF preview when status is READY", async () => {
+    mockDocument.findFirstOrThrow.mockResolvedValue(
+      makeDocumentRecord({
+        fileName: "Brief.docx",
+        previewStatus: PreviewStatus.READY,
+        previewPdfKey: "firm-1/doc-1/preview.pdf"
+      })
+    );
+    mockStorage.get.mockResolvedValue(Readable.from(["pdf-bytes"]));
+
+    const reply = {
+      header: vi.fn(),
+      status: vi.fn(() => ({ send: vi.fn() })),
+      send: vi.fn().mockResolvedValue(undefined)
+    };
+
+    await streamDocumentPreview(actor, "doc-1", mockStorage as never, reply as never);
+
+    expect(mockStorage.get).toHaveBeenCalledWith("firm-1/doc-1/preview.pdf");
+    expect(reply.header).toHaveBeenCalledWith("Content-Type", "application/pdf");
+    expect(reply.send).toHaveBeenCalled();
+  });
+
+  it.each([
+    [PreviewStatus.NONE, 404],
+    [PreviewStatus.PENDING, 409],
+    [PreviewStatus.PROCESSING, 409],
+    [PreviewStatus.FAILED, 422]
+  ])("returns %s with mapped status code", async (previewStatus, statusCode) => {
+    const send = vi.fn();
+    mockDocument.findFirstOrThrow.mockResolvedValue(
+      makeDocumentRecord({
+        fileName: "Brief.docx",
+        previewStatus,
+        previewPdfKey: previewStatus === PreviewStatus.NONE ? null : "firm-1/doc-1/preview.pdf"
+      })
+    );
+
+    const reply = {
+      header: vi.fn(),
+      status: vi.fn(() => ({ send })),
+      send: vi.fn()
+    };
+
+    await streamDocumentPreview(actor, "doc-1", mockStorage as never, reply as never);
+
+    expect(reply.status).toHaveBeenCalledWith(statusCode);
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ previewStatus }));
+    expect(mockStorage.get).not.toHaveBeenCalled();
+  });
+});
+
 describe("uploadNewVersion", () => {
   it("updates the document mimeType to match the detected new version", async () => {
     mockDocument.findFirstOrThrow.mockResolvedValue(
@@ -346,6 +407,34 @@ describe("uploadNewVersion", () => {
         })
       })
     );
+  });
+
+  it("deletes previous preview key before dispatching jobs", async () => {
+    mockDocument.findFirstOrThrow.mockResolvedValue(
+      makeDocumentRecord({
+        previewPdfKey: "firm-1/doc-1/preview.pdf",
+        versions: [{ versionNumber: 1 }]
+      })
+    );
+    mockDocumentVersion.create.mockResolvedValue({});
+    mockDocument.update.mockResolvedValue(makeDocumentRecord());
+
+    await uploadNewVersion(
+      actor,
+      "doc-1",
+      {
+        fileName: "next.docx",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        stream: Readable.from(["docx-bytes"])
+      },
+      mockEnv,
+      mockStorage,
+      audit
+    );
+
+    const deleteOrder = mockStorage.delete.mock.invocationCallOrder[0];
+    const dispatchOrder = vi.mocked(dispatchDocxPreview).mock.invocationCallOrder[0];
+    expect(deleteOrder).toBeLessThan(dispatchOrder);
   });
 });
 
