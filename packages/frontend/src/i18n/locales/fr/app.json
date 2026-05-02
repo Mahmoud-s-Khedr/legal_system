@@ -388,6 +388,142 @@
       "overdueTasksHelp": "Les tâches qui demandent une action immédiate.",
       "activity": "Activité récente",
       "activityHelp": "Le journal d'audit des créations, mises à jour et changements de statut."
+    },
+    "analytics": {
+      "pageDescription": "Tableau de bord orienté action avec charge de travail et analyses selon les permissions.",
+      "title": "Analytique",
+      "description": "Tendances sécurisées selon votre périmètre et votre période.",
+      "badges": {
+        "scope": "Périmètre",
+        "window": "Période"
+      },
+      "aria": {
+        "scope": "Périmètre du tableau de bord",
+        "range": "Période du tableau de bord"
+      },
+      "scope": {
+        "my": "Moi",
+        "team": "Équipe",
+        "office": "Cabinet"
+      },
+      "range": {
+        "30d": "30 jours",
+        "90d": "90 jours"
+      },
+      "table": {
+        "count": "Nombre",
+        "label": "Libellé",
+        "value": "Valeur"
+      },
+      "states": {
+        "noAnalytics": {
+          "title": "Aucune analytique disponible",
+          "description": "Aucune donnée de graphique n’est autorisée pour ce périmètre."
+        },
+        "suppressed": {
+          "title": "Seuil de confidentialité appliqué",
+          "description": "Essayez le périmètre Cabinet ou 90 jours pour augmenter l’échantillon.",
+          "insufficientVolume": "Volume insuffisant après le seuil de confidentialité (k>=3).",
+          "partial": "Certaines catégories de faible volume ont été masquées pour la confidentialité."
+        },
+        "noData": {
+          "title": "Aucune donnée pour ce graphique",
+          "description": "Aucun enregistrement disponible pour les filtres sélectionnés."
+        }
+      },
+      "priority": {
+        "dueToday": "Échéance aujourd’hui",
+        "overdue": "En retard",
+        "hearings7d": "Audiences sous 7 jours",
+        "unassigned": "Non attribué"
+      },
+      "sections": {
+        "workQueue": {
+          "title": "Ma file de travail",
+          "description": "Tâches et audiences nécessitant un suivi immédiat.",
+          "emptyTitle": "Aucun travail urgent",
+          "emptyDescription": "Aucun élément urgent pour le moment."
+        },
+        "activity": {
+          "title": "Activité récente sécurisée",
+          "description": "Événements selon votre visibilité autorisée.",
+          "emptyTitle": "Aucune activité",
+          "emptyDescription": "Aucune mise à jour récente dans ce périmètre."
+        },
+        "widgets": {
+          "title": "Widgets activés",
+          "description": "Widgets autorisés par le serveur selon votre rôle.",
+          "emptyTitle": "Aucun widget",
+          "emptyDescription": "Aucun widget actuellement autorisé pour ce périmètre.",
+          "keyPrefix": "Clé"
+        }
+      },
+      "charts": {
+        "casesTrend": {
+          "title": "Dossiers ouverts vs clos",
+          "description": "Répartition des statuts sur la période sélectionnée"
+        },
+        "tasksTrend": {
+          "title": "Tâches terminées vs en retard",
+          "description": "Répartition des statuts des tâches sur la période sélectionnée"
+        },
+        "hearingsTrend": {
+          "title": "Audiences planifiées",
+          "description": "Résultats d’audience et audiences planifiées sur la période sélectionnée"
+        },
+        "pipeline": {
+          "title": "Pipeline",
+          "description": "Pipeline des dossiers par statut actuel"
+        },
+        "riskBuckets": {
+          "title": "Niveaux de risque",
+          "description": "Charge de travail à risque nécessitant un suivi immédiat"
+        },
+        "financeTrend": {
+          "title": "Tendance des encaissements",
+          "description": "Répartition des statuts de factures sur la période sélectionnée"
+        }
+      },
+      "enums": {
+        "caseStatus": {
+          "ACTIVE": "Actif",
+          "SUSPENDED": "Suspendu",
+          "CLOSED": "Clôturé",
+          "SETTLED": "Réglé",
+          "WON": "Gagné",
+          "LOST": "Perdu",
+          "ARCHIVED": "Archivé"
+        },
+        "taskStatus": {
+          "PENDING": "En attente",
+          "IN_PROGRESS": "En cours",
+          "DONE": "Terminé",
+          "CANCELLED": "Annulé",
+          "REVIEW": "En révision"
+        },
+        "hearingOutcome": {
+          "SCHEDULED": "Planifié",
+          "PLEADING": "Plaidoirie",
+          "POSTPONED": "Reporté",
+          "ADJOURNED": "Ajourné",
+          "PARTIAL_RULING": "Décision partielle",
+          "DECIDED": "Décidé",
+          "EVIDENCE": "Preuves",
+          "MEDIATION": "Médiation",
+          "CANCELLED": "Annulé"
+        },
+        "invoiceStatus": {
+          "DRAFT": "Brouillon",
+          "ISSUED": "Émise",
+          "PARTIALLY_PAID": "Partiellement payée",
+          "PAID": "Payée",
+          "VOID": "Annulée"
+        },
+        "riskBucket": {
+          "OVERDUE_HIGH_PRIORITY_TASKS": "Tâches prioritaires en retard",
+          "HEARINGS_IN_72H": "Audiences dans 72h"
+        }
+      }
     }
   },
   "clients": {

@@ -23,6 +23,14 @@ import {
 } from "recharts";
 import { apiFetch } from "../../lib/api";
 import {
+  localizeChartDescription,
+  localizeChartTitle,
+  localizeDashboardChartLabel,
+  localizePriorityCardLabel,
+  localizeRangeLabel,
+  localizeScopeLabel
+} from "../../lib/dashboardI18n";
+import {
   EmptyState,
   ErrorState,
   PageHeader,
@@ -43,13 +51,6 @@ function getGreetingKey(): "night" | "morning" | "afternoon" | "evening" {
 
 function chartIsLine(chart: DashboardChartDto) {
   return chart.key === "casesTrend" || chart.key === "hearingsTrend" || chart.key === "financeTrend";
-}
-
-function normalizeChartLabel(input: string) {
-  return input
-    .toLowerCase()
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export function DashboardPage() {
@@ -81,7 +82,7 @@ export function DashboardPage() {
       <PageHeader
         eyebrow={t("dashboard.eyebrow")}
         title={user?.fullName ? `${greeting}، ${user.fullName}` : greeting}
-        description="Action-first dashboard with permission-scoped workload and analytics."
+        description={t("dashboard.analytics.pageDescription")}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
@@ -98,34 +99,34 @@ export function DashboardPage() {
       />
 
       <SectionCard
-        title="Analytics"
-        description="Permission-safe trends based on your current scope and timeframe."
+        title={t("dashboard.analytics.title")}
+        description={t("dashboard.analytics.description")}
       >
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3">
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-            Scope: {scope.toUpperCase()}
+            {t("dashboard.analytics.badges.scope")}: {localizeScopeLabel(t, scope)}
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-            Window: {range}
+            {t("dashboard.analytics.badges.window")}: {localizeRangeLabel(t, range)}
           </span>
           <select
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-            aria-label="Dashboard scope"
+            aria-label={t("dashboard.analytics.aria.scope")}
             value={scope}
             onChange={(event) => setScope(event.target.value as DashboardScope)}
           >
-            <option value="my">My</option>
-            <option value="team">Team</option>
-            <option value="office">Office</option>
+            <option value="my">{localizeScopeLabel(t, "my")}</option>
+            <option value="team">{localizeScopeLabel(t, "team")}</option>
+            <option value="office">{localizeScopeLabel(t, "office")}</option>
           </select>
           <select
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-            aria-label="Dashboard timeframe"
+            aria-label={t("dashboard.analytics.aria.range")}
             value={range}
             onChange={(event) => setRange(event.target.value as DashboardRange)}
           >
-            <option value="30d">30 days</option>
-            <option value="90d">90 days</option>
+            <option value="30d">{localizeRangeLabel(t, "30d")}</option>
+            <option value="90d">{localizeRangeLabel(t, "90d")}</option>
           </select>
         </div>
 
@@ -142,29 +143,36 @@ export function DashboardPage() {
             <SectionCardSkeleton />
           </div>
         ) : charts.length === 0 ? (
-          <EmptyState title="No analytics available" description="No chart data is permitted in this scope." />
+          <EmptyState
+            title={t("dashboard.analytics.states.noAnalytics.title")}
+            description={t("dashboard.analytics.states.noAnalytics.description")}
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {charts.map((chart) => (
               <section className="rounded-2xl border border-slate-200 bg-white p-4" key={chart.key}>
-                <h3 className="font-heading text-base">{chart.title}</h3>
-                {chart.description ? <p className="text-sm text-slate-600">{chart.description}</p> : null}
+                <h3 className="font-heading text-base">{localizeChartTitle(t, chart.key)}</h3>
+                <p className="text-sm text-slate-600">
+                  {localizeChartDescription(t, chart.key)}
+                </p>
 
                 {chart.redacted ? (
                   <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-700">
                     {chart.points.length === 0
-                      ? "Insufficient volume after privacy threshold (k>=3)."
-                      : "Some low-volume buckets were suppressed for privacy."}
+                      ? t("dashboard.analytics.states.suppressed.insufficientVolume")
+                      : t("dashboard.analytics.states.suppressed.partial")}
                   </p>
                 ) : null}
 
                 {chart.points.length === 0 ? (
                   <div className="mt-3">
                     <EmptyState
-                      title={chart.emptyReason === "suppressed" ? "Privacy threshold applied" : "No data for this chart"}
+                      title={chart.emptyReason === "suppressed"
+                        ? t("dashboard.analytics.states.suppressed.title")
+                        : t("dashboard.analytics.states.noData.title")}
                       description={chart.emptyReason === "suppressed"
-                        ? "Try Office scope or 90-day range to increase sample size."
-                        : "No records available for the selected filters."}
+                        ? t("dashboard.analytics.states.suppressed.description")
+                        : t("dashboard.analytics.states.noData.description")}
                     />
                   </div>
                 ) : (
@@ -174,26 +182,26 @@ export function DashboardPage() {
                         {chartIsLine(chart) ? (
                           <LineChart data={chart.points} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="label" tickFormatter={normalizeChartLabel} />
+                            <XAxis dataKey="label" tickFormatter={(label) => localizeDashboardChartLabel(t, chart.key, String(label))} />
                             <YAxis allowDecimals={false} />
                             <Tooltip
-                              formatter={(value) => [value, "Count"]}
-                              labelFormatter={(label) => normalizeChartLabel(String(label))}
+                              formatter={(value) => [value, t("dashboard.analytics.table.count")]}
+                              labelFormatter={(label) => localizeDashboardChartLabel(t, chart.key, String(label))}
                             />
                             <Legend />
-                            <Line type="monotone" dataKey="value" name="Count" stroke="#0f766e" strokeWidth={2} />
+                            <Line type="monotone" dataKey="value" name={t("dashboard.analytics.table.count")} stroke="#0f766e" strokeWidth={2} />
                           </LineChart>
                         ) : (
                           <BarChart data={chart.points} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="label" tickFormatter={normalizeChartLabel} />
+                            <XAxis dataKey="label" tickFormatter={(label) => localizeDashboardChartLabel(t, chart.key, String(label))} />
                             <YAxis allowDecimals={false} />
                             <Tooltip
-                              formatter={(value) => [value, "Count"]}
-                              labelFormatter={(label) => normalizeChartLabel(String(label))}
+                              formatter={(value) => [value, t("dashboard.analytics.table.count")]}
+                              labelFormatter={(label) => localizeDashboardChartLabel(t, chart.key, String(label))}
                             />
                             <Legend />
-                            <Bar dataKey="value" name="Count" fill="#0f766e" />
+                            <Bar dataKey="value" name={t("dashboard.analytics.table.count")} fill="#0f766e" />
                           </BarChart>
                         )}
                       </ResponsiveContainer>
@@ -203,14 +211,14 @@ export function DashboardPage() {
                       <table className="min-w-full text-xs">
                         <thead>
                           <tr className="text-slate-500">
-                            <th className="py-1 text-start">Label</th>
-                            <th className="py-1 text-end">Value</th>
+                            <th className="py-1 text-start">{t("dashboard.analytics.table.label")}</th>
+                            <th className="py-1 text-end">{t("dashboard.analytics.table.value")}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {chart.points.map((point) => (
                             <tr key={`${chart.key}-${point.label}`}>
-                              <td className="py-1 text-slate-700">{normalizeChartLabel(point.label)}</td>
+                              <td className="py-1 text-slate-700">{localizeDashboardChartLabel(t, chart.key, point.label)}</td>
                               <td className="py-1 text-end font-semibold text-slate-900">{point.value}</td>
                             </tr>
                           ))}
@@ -236,7 +244,7 @@ export function DashboardPage() {
         ) : (
           (summary?.priorityCards ?? []).map((card) => (
             <a key={card.key} href={card.href ?? "/app/dashboard"}>
-              <StatCard label={card.label} value={card.value} />
+              <StatCard label={localizePriorityCardLabel(t, card.key)} value={card.value} />
             </a>
           ))
         )}
@@ -257,9 +265,9 @@ export function DashboardPage() {
         </div>
       ) : (
         <div className="grid gap-4 xl:grid-cols-3">
-          <SectionCard title="My work queue" description="Tasks and hearings that need immediate follow-up.">
+          <SectionCard title={t("dashboard.analytics.sections.workQueue.title")} description={t("dashboard.analytics.sections.workQueue.description")}>
             {!summary?.myWork.length ? (
-              <EmptyState title="No urgent work" description="You're clear for now." />
+              <EmptyState title={t("dashboard.analytics.sections.workQueue.emptyTitle")} description={t("dashboard.analytics.sections.workQueue.emptyDescription")} />
             ) : (
               <div className="space-y-3">
                 {summary.myWork.map((item) => (
@@ -282,9 +290,9 @@ export function DashboardPage() {
             )}
           </SectionCard>
 
-          <SectionCard title="Recent safe activity" description="Events scoped to your current visibility.">
+          <SectionCard title={t("dashboard.analytics.sections.activity.title")} description={t("dashboard.analytics.sections.activity.description")}>
             {!summary?.recentActivity.length ? (
-              <EmptyState title="No activity" description="No recent updates in this scope." />
+              <EmptyState title={t("dashboard.analytics.sections.activity.emptyTitle")} description={t("dashboard.analytics.sections.activity.emptyDescription")} />
             ) : (
               <div className="space-y-3">
                 {summary.recentActivity.map((item) => (
@@ -298,16 +306,16 @@ export function DashboardPage() {
             )}
           </SectionCard>
 
-          <SectionCard title="Enabled widgets" description="Server-authorized widgets for your role.">
+          <SectionCard title={t("dashboard.analytics.sections.widgets.title")} description={t("dashboard.analytics.sections.widgets.description")}>
             {!summary?.widgets.length ? (
-              <EmptyState title="No widgets" description="No widgets are currently allowed for this scope." />
+              <EmptyState title={t("dashboard.analytics.sections.widgets.emptyTitle")} description={t("dashboard.analytics.sections.widgets.emptyDescription")} />
             ) : (
               <div className="space-y-3">
                 {summary.widgets.map((widget) => (
                   <article className="rounded-2xl border border-slate-200 p-4" key={widget.key}>
                     <p className="font-semibold">{widget.title}</p>
                     {widget.description ? <p className="mt-1 text-sm text-slate-600">{widget.description}</p> : null}
-                    <p className="mt-1 text-xs text-slate-500">Key: {widget.key}</p>
+                    <p className="mt-1 text-xs text-slate-500">{t("dashboard.analytics.sections.widgets.keyPrefix")}: {widget.key}</p>
                   </article>
                 ))}
               </div>

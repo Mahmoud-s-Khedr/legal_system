@@ -388,6 +388,142 @@
       "overdueTasksHelp": "Tasks that need immediate follow-up.",
       "activity": "Recent activity",
       "activityHelp": "Audit activity from recent create, update, and status changes."
+    },
+    "analytics": {
+      "pageDescription": "Action-first dashboard with permission-scoped workload and analytics.",
+      "title": "Analytics",
+      "description": "Permission-safe trends based on your current scope and timeframe.",
+      "badges": {
+        "scope": "Scope",
+        "window": "Window"
+      },
+      "aria": {
+        "scope": "Dashboard scope",
+        "range": "Dashboard timeframe"
+      },
+      "scope": {
+        "my": "My",
+        "team": "Team",
+        "office": "Office"
+      },
+      "range": {
+        "30d": "30 days",
+        "90d": "90 days"
+      },
+      "table": {
+        "count": "Count",
+        "label": "Label",
+        "value": "Value"
+      },
+      "states": {
+        "noAnalytics": {
+          "title": "No analytics available",
+          "description": "No chart data is permitted in this scope."
+        },
+        "suppressed": {
+          "title": "Privacy threshold applied",
+          "description": "Try Office scope or 90-day range to increase sample size.",
+          "insufficientVolume": "Insufficient volume after privacy threshold (k>=3).",
+          "partial": "Some low-volume buckets were suppressed for privacy."
+        },
+        "noData": {
+          "title": "No data for this chart",
+          "description": "No records available for the selected filters."
+        }
+      },
+      "priority": {
+        "dueToday": "Due today",
+        "overdue": "Overdue",
+        "hearings7d": "Hearings in 7 days",
+        "unassigned": "Unassigned"
+      },
+      "sections": {
+        "workQueue": {
+          "title": "My work queue",
+          "description": "Tasks and hearings that need immediate follow-up.",
+          "emptyTitle": "No urgent work",
+          "emptyDescription": "You are clear for now."
+        },
+        "activity": {
+          "title": "Recent safe activity",
+          "description": "Events scoped to your current visibility.",
+          "emptyTitle": "No activity",
+          "emptyDescription": "No recent updates in this scope."
+        },
+        "widgets": {
+          "title": "Enabled widgets",
+          "description": "Server-authorized widgets for your role.",
+          "emptyTitle": "No widgets",
+          "emptyDescription": "No widgets are currently allowed for this scope.",
+          "keyPrefix": "Key"
+        }
+      },
+      "charts": {
+        "casesTrend": {
+          "title": "Cases opened vs closed",
+          "description": "Status distribution in selected range"
+        },
+        "tasksTrend": {
+          "title": "Tasks completed vs overdue",
+          "description": "Task status distribution in selected range"
+        },
+        "hearingsTrend": {
+          "title": "Hearings scheduled",
+          "description": "Hearing outcomes and scheduled sessions in selected range"
+        },
+        "pipeline": {
+          "title": "Pipeline",
+          "description": "Case pipeline by current status"
+        },
+        "riskBuckets": {
+          "title": "Risk buckets",
+          "description": "High-risk workload requiring immediate follow-up"
+        },
+        "financeTrend": {
+          "title": "Collections trend",
+          "description": "Invoice status distribution in selected range"
+        }
+      },
+      "enums": {
+        "caseStatus": {
+          "ACTIVE": "Active",
+          "SUSPENDED": "Suspended",
+          "CLOSED": "Closed",
+          "SETTLED": "Settled",
+          "WON": "Won",
+          "LOST": "Lost",
+          "ARCHIVED": "Archived"
+        },
+        "taskStatus": {
+          "PENDING": "Pending",
+          "IN_PROGRESS": "In Progress",
+          "DONE": "Done",
+          "CANCELLED": "Cancelled",
+          "REVIEW": "Review"
+        },
+        "hearingOutcome": {
+          "SCHEDULED": "Scheduled",
+          "PLEADING": "Pleading",
+          "POSTPONED": "Postponed",
+          "ADJOURNED": "Adjourned",
+          "PARTIAL_RULING": "Partial Ruling",
+          "DECIDED": "Decided",
+          "EVIDENCE": "Evidence",
+          "MEDIATION": "Mediation",
+          "CANCELLED": "Cancelled"
+        },
+        "invoiceStatus": {
+          "DRAFT": "Draft",
+          "ISSUED": "Issued",
+          "PARTIALLY_PAID": "Partially Paid",
+          "PAID": "Paid",
+          "VOID": "Void"
+        },
+        "riskBucket": {
+          "OVERDUE_HIGH_PRIORITY_TASKS": "Overdue high-priority tasks",
+          "HEARINGS_IN_72H": "Hearings in 72h"
+        }
+      }
     }
   },
   "clients": {
