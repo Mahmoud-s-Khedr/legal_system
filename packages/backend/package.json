@@ -23,6 +23,7 @@
     "prisma": "prisma",
     "seed": "tsx prisma/seed.ts",
     "seed:dev": "node --env-file ../../apps/desktop/.env.desktop --import tsx/esm prisma/seed.ts",
+    "seed:analytics": "ELMS_SEED_ANALYTICS_REFRESH=true NODE_ENV=development node --env-file ../../apps/desktop/.env.desktop --import tsx/esm prisma/seed.ts",
     "seed:dev:cloud": "node --import tsx/esm prisma/seed.ts",
     "deploy": "pnpm deploy"
   },

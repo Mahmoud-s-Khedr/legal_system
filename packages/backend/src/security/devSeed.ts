@@ -4,6 +4,7 @@ import * as path from "path";
 import bcrypt from "bcryptjs";
 import { faker } from "@faker-js/faker";
 import type { PrismaClient, Prisma } from "@prisma/client";
+import { refreshDeterministicAnalyticsSeed } from "./analyticsSeed.js";
 
 // ---------------------------------------------------------------------------
 // Static data pools
@@ -843,7 +844,10 @@ async function seedDevExpenses(
 // Entry point
 // ---------------------------------------------------------------------------
 
-export async function seedDevEnvironment(prisma: PrismaClient) {
+export async function seedDevEnvironment(
+  prisma: PrismaClient,
+  options: { analyticsRefresh?: boolean } = {}
+) {
   console.log("\n🌱 Seeding dev environment...");
 
   const firm = await ensureDevFirm(prisma);
@@ -863,6 +867,10 @@ export async function seedDevEnvironment(prisma: PrismaClient) {
   await seedDevDocuments(prisma, firm.id, caseResults, clientIds, adminUserId);
   await seedDevInvoices(prisma, firm.id, caseResults);
   await seedDevExpenses(prisma, firm.id, caseResults);
+
+  if (options.analyticsRefresh) {
+    await refreshDeterministicAnalyticsSeed(prisma);
+  }
 
   console.log("\n✅ Dev environment seeded successfully!");
   console.log(`   Login: admin@elms.local / password123`);
