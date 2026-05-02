@@ -1379,7 +1379,8 @@
     "fileSavedTo": "Enregistré dans {{path}}.",
     "fileSaveFailed": "Échec du téléchargement.",
     "backupCompleted": "Sauvegarde terminée.",
-    "saved": "Enregistré avec succès."
+    "saved": "Enregistré avec succès.",
+    "editionChangedSuccessfully": "Édition modifiée avec succès."
   },
   "calendar": {
     "title": "Calendrier unifié",

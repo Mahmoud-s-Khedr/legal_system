@@ -142,10 +142,40 @@ export function useAccessibleOverlay({
       }
     };
 
+    const onPointerDownOutside = (event: MouseEvent | TouchEvent) => {
+      if (mode !== "popover") {
+        return;
+      }
+
+      const currentContent = contentRef.current;
+      if (!currentContent) {
+        return;
+      }
+
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+
+      if (currentContent.contains(target)) {
+        return;
+      }
+
+      if (triggerRef?.current?.contains(target)) {
+        return;
+      }
+
+      onCloseRef.current();
+    };
+
     document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onPointerDownOutside, true);
+    document.addEventListener("touchstart", onPointerDownOutside, true);
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onPointerDownOutside, true);
+      document.removeEventListener("touchstart", onPointerDownOutside, true);
       document.body.style.overflow = previousOverflow;
       triggerRef?.current?.focus();
       for (const cleanupFn of cleanupFns) {

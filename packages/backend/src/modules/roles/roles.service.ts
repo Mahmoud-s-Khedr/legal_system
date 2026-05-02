@@ -85,6 +85,10 @@ export async function createRole(
   audit: AuditContext
 ): Promise<RoleDto> {
   return inTenantTransaction(actor.firmId, async (tx) => {
+    if (!payload.permissionKeys?.length) {
+      throw appError("At least one permission is required", 400);
+    }
+
     const existing = await findFirmRoleByKey(tx, actor.firmId, payload.key);
     if (existing) {
       throw appError(`A role with key "${payload.key}" already exists for this firm`, 409);
@@ -92,10 +96,8 @@ export async function createRole(
 
     const role = await createFirmRole(tx, actor.firmId, payload);
 
-    if (payload.permissionKeys) {
-      const resolved = await resolvePermissionIds(tx, payload.permissionKeys);
-      await createRolePermissions(tx, role.id, resolved.ids);
-    }
+    const resolved = await resolvePermissionIds(tx, payload.permissionKeys);
+    await createRolePermissions(tx, role.id, resolved.ids);
 
     const roleWithPermissions = await findRoleWithPermissionsByIdOrThrow(tx, role.id);
 
@@ -106,7 +108,7 @@ export async function createRole(
       newData: {
         key: payload.key,
         name: payload.name,
-        permissionKeys: payload.permissionKeys ?? []
+        permissionKeys: payload.permissionKeys
       }
     });
 

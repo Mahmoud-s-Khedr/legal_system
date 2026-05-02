@@ -12,7 +12,7 @@ export interface RoleDto {
 export interface CreateRoleDto {
   key: string;
   name: string;
-  permissionKeys?: string[];
+  permissionKeys: string[];
 }
 
 export interface UpdateRoleDto {

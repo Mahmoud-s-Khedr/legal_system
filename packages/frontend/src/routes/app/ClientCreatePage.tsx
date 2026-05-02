@@ -589,9 +589,6 @@ export function ClientCreatePage() {
             </div>
           ) : null}
           {validationMessage ? <FormAlert message={validationMessage} /> : null}
-          {createMutation.error ? (
-            <FormAlert message={(createMutation.error as Error).message} />
-          ) : null}
           {submitSummary ? (
             <div className="space-y-2">
               <FormAlert message={submitSummary} variant="info" />

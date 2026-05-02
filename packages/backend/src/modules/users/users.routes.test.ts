@@ -5,6 +5,7 @@ import { makeSessionUser } from "../../test-utils/session-user.js";
 const parsePaginationQuery = vi.fn();
 const requirePermission = vi.fn((permission: string) => `perm:${permission}`);
 const listUsers = vi.fn();
+const getUser = vi.fn();
 
 vi.mock("../../middleware/requireAuth.js", () => ({
   requireAuth: "auth-guard"
@@ -26,7 +27,7 @@ vi.mock("./users.service.js", () => ({
   adminSetPassword: vi.fn(),
   changeOwnPassword: vi.fn(),
   createLocalUser: vi.fn(),
-  getUser: vi.fn(),
+  getUser,
   listUsers,
   removeUser: vi.fn(),
   updateUser: vi.fn(),
@@ -72,5 +73,27 @@ describe("registerUserRoutes", () => {
       actor,
       expect.objectContaining({ q: "ا" })
     );
+  });
+
+  it("GET /api/users/:id is auth-only and forwards to service", async () => {
+    const app = {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      patch: vi.fn(),
+      delete: vi.fn()
+    };
+    const actor = makeSessionUser({ permissions: [] });
+    getUser.mockResolvedValueOnce({ id: "u-1" });
+
+    await registerUserRoutes(app as never, { AUTH_MODE: AuthMode.LOCAL } as never);
+
+    const call = app.get.mock.calls.find((entry) => entry[0] === "/api/users/:id");
+    expect(call?.[1]?.preHandler).toEqual(["auth-guard"]);
+
+    const handler = call?.[2] as ((request: unknown) => Promise<unknown>) | undefined;
+    const result = await handler!({ params: { id: "u-1" }, sessionUser: actor } as never);
+    expect(getUser).toHaveBeenCalledWith(actor, "u-1");
+    expect(result).toEqual({ id: "u-1" });
   });
 });

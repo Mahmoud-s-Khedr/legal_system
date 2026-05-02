@@ -11,6 +11,8 @@ interface BootstrapStatus {
 }
 
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
+const BOOTSTRAP_STUCK_TIMEOUT_MS = 30_000;
+const STARTUP_DIAGNOSTICS_KEY = "elms.startupDiagnostics";
 
 let tauriCorePromise: Promise<typeof import("@tauri-apps/api/core")> | null =
   null;
@@ -40,6 +42,7 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
   });
   const pollRef = useRef<number | null>(null);
   const phaseRef = useRef<BootstrapStatus["phase"]>(status.phase);
+  const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     phaseRef.current = status.phase;
@@ -82,14 +85,50 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
     };
 
     void poll();
+    timeoutRef.current = window.setTimeout(() => {
+      if (cancelled || phaseRef.current === "ready") {
+        return;
+      }
+
+      setStatus({
+        phase: "failed",
+        message: t("desktopBootstrap.unreachable"),
+        failureCode: "BOOTSTRAP_TIMEOUT"
+      });
+    }, BOOTSTRAP_STUCK_TIMEOUT_MS);
 
     return () => {
       cancelled = true;
       if (pollRef.current !== null) {
         window.clearTimeout(pollRef.current);
       }
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
     };
   }, [t]);
+
+  useEffect(() => {
+    if (status.phase === "ready") {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        STARTUP_DIAGNOSTICS_KEY,
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          phase: status.phase,
+          message: status.message ?? null,
+          failureCode: status.failureCode ?? null,
+          failureDetail: status.failureDetail ?? null,
+          pathname: window.location.pathname
+        })
+      );
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [status.failureCode, status.failureDetail, status.message, status.phase]);
 
   const failureMessage = status.message ?? "";
   const isPostgresVersionMismatch =

@@ -12,7 +12,7 @@ export function RoleCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [form, setForm] = useState<CreateRoleDto>({ key: "", name: "" });
+  const [form, setForm] = useState({ key: "", name: "" });
   const [permissions, setPermissions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +20,7 @@ export function RoleCreatePage() {
     mutationFn: async (payload: CreateRoleDto) => {
       return apiFetch<{ id: string }>("/api/roles", {
         method: "POST",
-        body: JSON.stringify({ ...payload, permissionKeys: permissions })
+        body: JSON.stringify(payload)
       });
     },
     onSuccess: async () => {
@@ -41,7 +41,15 @@ export function RoleCreatePage() {
         className="space-y-6"
         onSubmit={(e) => {
           e.preventDefault();
-          void createMutation.mutateAsync(form);
+          if (permissions.length === 0) {
+            setError("Select at least one permission.");
+            return;
+          }
+          setError(null);
+          void createMutation.mutateAsync({
+            ...form,
+            permissionKeys: permissions
+          });
         }}
       >
         <SectionCard

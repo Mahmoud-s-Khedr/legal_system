@@ -86,7 +86,7 @@ export async function registerUserRoutes(app: FastifyInstance, env: AppEnv) {
     "/api/users/:id",
     {
       schema: { response: { 200: userDtoSchema } },
-      preHandler: [requireAuth, requirePermission("users:read")]
+      preHandler: [requireAuth]
     },
     async (request) => getUser(request.sessionUser!, idParamsSchema.parse(request.params).id)
   );

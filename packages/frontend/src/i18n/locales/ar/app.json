@@ -1433,7 +1433,8 @@
     "fileDownloadStarted": "بدأ التنزيل.",
     "fileSavedTo": "تم الحفظ في {{path}}.",
     "fileSaveFailed": "فشل التنزيل.",
-    "backupCompleted": "اكتمل النسخ الاحتياطي."
+    "backupCompleted": "اكتمل النسخ الاحتياطي.",
+    "editionChangedSuccessfully": "تم تغيير النسخة بنجاح."
   },
   "import": {
     "eyebrow": "استيراد جماعي",

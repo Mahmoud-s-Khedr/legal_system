@@ -47,7 +47,15 @@ export const navConfig: NavConfigItem[] = [
   { id: "cases", labelKey: "nav.cases", to: "/app/cases", icon: Briefcase, group: "core", order: 30 },
   { id: "calendar", labelKey: "nav.calendar", to: "/app/calendar", icon: CalendarDays, group: "core", order: 40 },
   { id: "hearings", labelKey: "nav.hearings", to: "/app/hearings", icon: Scale, group: "core", order: 50 },
-  { id: "tasks", labelKey: "nav.tasks", to: "/app/tasks", icon: CheckSquare, group: "core", order: 60 },
+  {
+    id: "tasks",
+    labelKey: "nav.tasks",
+    to: "/app/tasks",
+    icon: CheckSquare,
+    group: "core",
+    order: 60,
+    requiredPermission: "tasks:read"
+  },
   { id: "documents", labelKey: "nav.documents", to: "/app/documents", icon: FileText, group: "core", order: 70 },
   {
     id: "invoices",

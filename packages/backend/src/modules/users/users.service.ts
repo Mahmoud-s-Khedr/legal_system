@@ -78,6 +78,11 @@ export async function listUsers(
 
 export async function getUser(actor: SessionUser, userId: string): Promise<UserDto> {
   return inTenantTransaction(actor.firmId, async (tx) => {
+    const canReadUsers = actor.permissions.includes("users:read");
+    if (actor.id !== userId && !canReadUsers) {
+      throw httpError("You do not have permission to view this user", 403);
+    }
+
     const user = await getFirmActiveUserByIdOrThrow(tx, actor.firmId, userId);
 
     return mapUser(user);

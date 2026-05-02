@@ -22,6 +22,22 @@ export function ErrorFallback({ error }: { error: Error }) {
       ? "rtl"
       : "ltr";
 
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "elms.startupDiagnostics",
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          source: "ErrorFallback",
+          message: error?.message ?? "Unknown frontend startup error",
+          pathname
+        })
+      );
+    }
+  } catch {
+    // Ignore storage failures.
+  }
+
   return (
     <div
       className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center animate-fade-in bg-sand text-ink"

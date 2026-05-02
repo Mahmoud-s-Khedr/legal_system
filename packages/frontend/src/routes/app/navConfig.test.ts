@@ -16,7 +16,6 @@ describe("buildSidebarNavSections", () => {
       "cases",
       "calendar",
       "hearings",
-      "tasks",
       "documents"
     ]);
     expect(sections[1]?.id).toBe("tools");
@@ -26,10 +25,11 @@ describe("buildSidebarNavSections", () => {
   it("filters and orders permission-gated sections", () => {
     const sections = buildSidebarNavSections({
       t: (key) => key,
-      permissions: ["invoices:read", "expenses:read", "reports:read", "users:read"]
+      permissions: ["tasks:read", "invoices:read", "expenses:read", "reports:read", "users:read"]
     });
 
     expect(sections.map((section) => section.id)).toEqual(["core", "finance", "tools", "administration"]);
+    expect(sections.find((section) => section.id === "core")?.items.map((item) => item.id)).toContain("tasks");
     expect(sections.find((section) => section.id === "finance")?.items.map((item) => item.id)).toEqual([
       "invoices",
       "expenses"

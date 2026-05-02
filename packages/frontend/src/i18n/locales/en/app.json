@@ -1391,7 +1391,8 @@
     "fileDownloadStarted": "Download started.",
     "fileSavedTo": "Saved to {{path}}.",
     "fileSaveFailed": "Download failed.",
-    "backupCompleted": "Backup completed."
+    "backupCompleted": "Backup completed.",
+    "editionChangedSuccessfully": "Edition changed successfully."
   },
   "import": {
     "eyebrow": "Bulk import",

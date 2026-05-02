@@ -36,6 +36,7 @@ import { formatDesktopBackupSuccessMessage } from "../../lib/fileSaveFeedback";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
 import { useToastStore } from "../../store/toastStore";
+import { useMutationFeedback } from "../../lib/feedback";
 import {
   Badge,
   EmptyState,
@@ -109,6 +110,7 @@ export function SettingsPage() {
   const canUpdateSettings =
     user?.permissions.includes("settings:update") ?? false;
   const addToast = useToastStore((state) => state.addToast);
+  const feedback = useMutationFeedback();
   const queryClient = useQueryClient();
   const firmQuery = useQuery({
     queryKey: ["firm-me"],
@@ -333,6 +335,7 @@ export function SettingsPage() {
         body: JSON.stringify(payload)
       }),
     onSuccess: async () => {
+      feedback.success("messages.editionChangedSuccessfully");
       await queryClient.invalidateQueries({ queryKey: ["firm-me"] });
       await refreshSession();
     }

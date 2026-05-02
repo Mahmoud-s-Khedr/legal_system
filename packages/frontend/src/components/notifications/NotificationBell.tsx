@@ -27,8 +27,9 @@ export function resolveNotificationPath(n: NotificationDto): string | null {
     case NotificationType.CHEQUE_MATURITY_DUE:
       return `/app/invoices/${id}`;
     case NotificationType.DOCUMENT_INDEXED:
+      return `/app/documents/${id}`;
     case NotificationType.RESEARCH_COMPLETE:
-      return `/app/library/documents/${id}`;
+      return `/app/research/${id}`;
     default:
       return null;
   }
@@ -65,17 +66,6 @@ export function NotificationBell() {
     enabled: open
   });
 
-  const markRead = useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<{ success: boolean }>(`/api/notifications/${id}/read`, {
-        method: "PATCH"
-      }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["notifications-count"] });
-      void qc.invalidateQueries({ queryKey: ["notifications-list"] });
-    }
-  });
-
   const markAllRead = useMutation({
     mutationFn: () =>
       apiFetch<{ success: boolean }>("/api/notifications/read-all", {
@@ -86,6 +76,20 @@ export function NotificationBell() {
       void qc.invalidateQueries({ queryKey: ["notifications-list"] });
     }
   });
+
+  async function markReadSilently(id: string) {
+    try {
+      await apiFetch<{ success: boolean }>(`/api/notifications/${id}/read`, {
+        method: "PATCH"
+      });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["notifications-count"] }),
+        qc.invalidateQueries({ queryKey: ["notifications-list"] })
+      ]);
+    } catch {
+      // Notification navigation should not fail due to mark-read side effects.
+    }
+  }
 
   const unreadCount = countQuery.data?.count ?? 0;
 
@@ -116,7 +120,9 @@ export function NotificationBell() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 pointer-events-auto"
+            data-testid="notifications-backdrop"
+            onMouseDown={() => setOpen(false)}
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
@@ -175,8 +181,8 @@ export function NotificationBell() {
               {listQuery.data?.items.map((n) => (
                 <button
                   key={n.id}
-                  onClick={() => {
-                    void markRead.mutateAsync(n.id);
+                  onClick={async () => {
+                    await markReadSilently(n.id);
                     const path = resolveNotificationPath(n);
                     if (path) {
                       setOpen(false);

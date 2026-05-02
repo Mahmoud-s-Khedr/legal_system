@@ -17,12 +17,12 @@ function makeNotification(type: NotificationType, entityId = "abc"): Notificatio
 }
 
 describe("resolveNotificationPath", () => {
-  it("routes document and research notifications to library document detail", () => {
+  it("routes document and research notifications to their correct detail pages", () => {
     expect(resolveNotificationPath(makeNotification(NotificationType.DOCUMENT_INDEXED))).toBe(
-      "/app/library/documents/abc"
+      "/app/documents/abc"
     );
     expect(resolveNotificationPath(makeNotification(NotificationType.RESEARCH_COMPLETE))).toBe(
-      "/app/library/documents/abc"
+      "/app/research/abc"
     );
   });
 });

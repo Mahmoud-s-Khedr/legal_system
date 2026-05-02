@@ -94,16 +94,26 @@ describe("registerRoleRoutes", () => {
     const handler = findHandler(app.post.mock.calls, "/api/roles");
 
     await expect(
-      handler!({ body: { key: "INVALID KEY", name: "Ops" }, sessionUser: { id: "u1" } } as never)
+      handler!({
+        body: { key: "INVALID KEY", name: "Ops", permissionKeys: ["cases:read"] },
+        sessionUser: { id: "u1" }
+      } as never)
+    ).rejects.toThrow();
+
+    await expect(
+      handler!({ body: { key: "ops_admin", name: "Ops" }, sessionUser: { id: "u1" } } as never)
     ).rejects.toThrow();
 
     const result = await handler!(
-      { body: { key: "ops_admin", name: "Ops" }, sessionUser: { id: "u1" } } as never
+      {
+        body: { key: "ops_admin", name: "Ops", permissionKeys: ["users:read"] },
+        sessionUser: { id: "u1" }
+      } as never
     );
 
     expect(createRole).toHaveBeenCalledWith(
       { id: "u1" },
-      { key: "ops_admin", name: "Ops" },
+      { key: "ops_admin", name: "Ops", permissionKeys: ["users:read"] },
       { ipAddress: "127.0.0.1", userAgent: "vitest" }
     );
     expect(result).toEqual({ id: "role-2" });

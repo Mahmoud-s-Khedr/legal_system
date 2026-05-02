@@ -6,7 +6,7 @@ import {
   createRouter,
   useNavigate
 } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoginPage } from "./routes/auth/LoginPage";
 import { BackendConnectionPage } from "./routes/auth/BackendConnectionPage";
@@ -72,6 +72,8 @@ import { useAuthBootstrap } from "./store/authStore";
 import { ErrorFallback } from "./components/ErrorFallback";
 import { PermissionGate } from "./components/PermissionGate";
 
+const BOOTSTRAP_UI_TIMEOUT_MS = 30_000;
+
 function RootComponent() {
   return (
     <>
@@ -101,6 +103,20 @@ function ProtectedRoute() {
   const { t } = useTranslation("app");
   const { user, isBootstrapped } = useAuthBootstrap();
   const navigate = useNavigate();
+  const [bootTimeoutReached, setBootTimeoutReached] = useState(false);
+
+  useEffect(() => {
+    if (isBootstrapped) {
+      setBootTimeoutReached(false);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setBootTimeoutReached(true);
+    }, BOOTSTRAP_UI_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isBootstrapped]);
 
   useEffect(() => {
     if (isBootstrapped && !user) {
@@ -109,6 +125,28 @@ function ProtectedRoute() {
   }, [isBootstrapped, navigate, user]);
 
   if (!isBootstrapped) {
+    if (bootTimeoutReached) {
+      return (
+        <div className="min-h-screen bg-sand px-6 py-10 text-ink">
+          <div className="mx-auto w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-xl font-semibold">{t("errors.title")}</h1>
+            <p className="mt-3 text-sm text-slate-600">
+              Startup is taking longer than expected. Reload to retry bootstrap.
+            </p>
+            <div className="mt-6">
+              <button
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white"
+                onClick={() => window.location.reload()}
+                type="button"
+              >
+                {t("errors.reload")}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="p-8 text-center text-ink">{t("labels.loading")}</div>
     );
@@ -125,6 +163,20 @@ function LandingRedirect() {
   const { t } = useTranslation("app");
   const { user, needsSetup, isBootstrapped } = useAuthBootstrap();
   const navigate = useNavigate();
+  const [bootTimeoutReached, setBootTimeoutReached] = useState(false);
+
+  useEffect(() => {
+    if (isBootstrapped) {
+      setBootTimeoutReached(false);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setBootTimeoutReached(true);
+    }, BOOTSTRAP_UI_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isBootstrapped]);
 
   useEffect(() => {
     if (isBootstrapped) {
@@ -139,6 +191,21 @@ function LandingRedirect() {
   }, [isBootstrapped, navigate, needsSetup, user]);
 
   if (!isBootstrapped) {
+    if (bootTimeoutReached) {
+      return (
+        <div className="p-8 text-center text-ink">
+          <p className="mb-3">{t("errors.fallback")}</p>
+          <button
+            className="rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-white"
+            onClick={() => window.location.reload()}
+            type="button"
+          >
+            {t("errors.reload")}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="p-8 text-center text-ink">{t("labels.loading")}</div>
     );
@@ -273,19 +340,31 @@ const hearingEditRoute = createRoute({
 const tasksRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/tasks",
-  component: TasksPage
+  component: () => (
+    <PermissionGate permission="tasks:read">
+      <TasksPage />
+    </PermissionGate>
+  )
 });
 
 const taskCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/tasks/new",
-  component: TaskCreatePage
+  component: () => (
+    <PermissionGate permission="tasks:read">
+      <TaskCreatePage />
+    </PermissionGate>
+  )
 });
 
 const taskDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/tasks/$taskId",
-  component: TaskDetailPage
+  component: () => (
+    <PermissionGate permission="tasks:read">
+      <TaskDetailPage />
+    </PermissionGate>
+  )
 });
 
 // Users — requires users:read permission

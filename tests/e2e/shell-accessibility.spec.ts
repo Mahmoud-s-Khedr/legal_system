@@ -39,4 +39,29 @@ test.describe("shell accessibility", () => {
     await expect(page.locator("#notifications-panel")).toBeHidden();
     await expect(bellTrigger).toBeFocused();
   });
+
+  test("notification panel closes when clicking outside", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel(/email|البريد الإلكتروني/i).fill(adminEmail!);
+    await page.getByLabel(/password|كلمة المرور/i).fill(adminPassword!);
+    await page.getByRole("button", { name: /login|تسجيل الدخول/i }).click();
+    await expect(page).toHaveURL(/\/app\/dashboard$/);
+
+    await page.getByRole("button", { name: /notifications|الإشعارات|notifications/i }).click();
+    await expect(page.locator("#notifications-panel")).toBeVisible();
+
+    await page.getByTestId("notifications-backdrop").click();
+    await expect(page.locator("#notifications-panel")).toBeHidden();
+  });
+
+  test("full reload from app route does not leave a blank screen", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel(/email|البريد الإلكتروني/i).fill(adminEmail!);
+    await page.getByLabel(/password|كلمة المرور/i).fill(adminPassword!);
+    await page.getByRole("button", { name: /login|تسجيل الدخول/i }).click();
+    await expect(page).toHaveURL(/\/app\/dashboard$/);
+
+    await page.reload();
+    await expect(page.locator("body")).toContainText(/dashboard|لوحة|desktop|startup|reload/i);
+  });
 });

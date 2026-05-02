@@ -81,7 +81,7 @@ describe("roles.service", () => {
     expect(created.id).toBe("r-1");
 
     await expect(
-      createRole(actor, { key: "lawyer", name: "Lawyer" }, audit as never)
+      createRole(actor, { key: "lawyer", name: "Lawyer", permissionKeys: ["cases:read"] }, audit as never)
     ).rejects.toMatchObject({ statusCode: 409 });
   });
 
