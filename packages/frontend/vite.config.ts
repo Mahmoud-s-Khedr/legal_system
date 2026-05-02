@@ -49,7 +49,8 @@ export default defineConfig(() => {
                 ]
               },
               workbox: {
-                maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+                // CI currently emits a main app chunk slightly above 3 MiB.
+                maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                 runtimeCaching: [
                   {
                     urlPattern: /^\/api\//,
