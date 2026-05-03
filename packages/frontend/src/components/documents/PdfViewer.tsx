@@ -20,6 +20,10 @@ type PdfDocumentHandle = {
 
 export function PdfViewer({ blob }: PdfViewerProps) {
   const { t } = useTranslation("app");
+  const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
+  const isWindowsRuntime =
+    typeof navigator !== "undefined" && /windows/i.test(navigator.userAgent);
+  const canUseNativeViewerFallback = !isDesktopShell || !isWindowsRuntime;
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLElement>>(new Map());
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -71,8 +75,19 @@ export function PdfViewer({ blob }: PdfViewerProps) {
 
     async function loadPdf() {
       try {
-        const pdfjsLib = await import("pdfjs-dist");
+        const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
         const data = new Uint8Array(await blob.arrayBuffer());
+        const baseLoadingOptions = {
+          data,
+          // Packaged desktop webviews can block eval/wasm/worker fetch paths.
+          ...(isDesktopShell
+            ? {
+                isEvalSupported: false,
+                useWasm: false,
+                useWorkerFetch: false
+              }
+            : {})
+        };
 
         // Webviews may require explicit workerSrc even for in-memory documents.
         // Keep worker enabled first for better performance; fall back to no-worker.
@@ -88,7 +103,7 @@ export function PdfViewer({ blob }: PdfViewerProps) {
           ).toString();
         }
 
-        loadingTask = pdfjsLib.getDocument({ data }) as unknown as {
+        loadingTask = pdfjsLib.getDocument(baseLoadingOptions as unknown as object) as unknown as {
           promise: Promise<PdfDocumentHandle>;
           destroy?: () => void;
         };
@@ -98,15 +113,17 @@ export function PdfViewer({ blob }: PdfViewerProps) {
           loadedPdf = await loadingTask.promise;
         } catch {
           // Fallback path for desktop runtimes where workers are blocked/unstable.
-        loadingTask = pdfjsLib.getDocument({
-          data
-        } as unknown as object) as unknown as {
-          promise: Promise<PdfDocumentHandle>;
-          destroy?: () => void;
-        };
+          pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+          loadingTask = pdfjsLib.getDocument(baseLoadingOptions as unknown as object) as unknown as {
+            promise: Promise<PdfDocumentHandle>;
+            destroy?: () => void;
+          };
           loadedPdf = await loadingTask.promise;
         }
         if (cancelled) return;
+        if (!loadedPdf.numPages || loadedPdf.numPages < 1) {
+          throw new Error("PDF has no pages");
+        }
 
         const initialPages = new Set<number>();
         for (let i = 1; i <= Math.min(4, loadedPdf.numPages); i += 1) {
@@ -119,7 +136,9 @@ export function PdfViewer({ blob }: PdfViewerProps) {
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : t("documents.pdfRenderFailed"));
-          setUseNativeViewer(true);
+          if (canUseNativeViewerFallback) {
+            setUseNativeViewer(true);
+          }
         }
       } finally {
         if (!cancelled) {
@@ -136,7 +155,7 @@ export function PdfViewer({ blob }: PdfViewerProps) {
       renderTasksRef.current.forEach((task) => task.cancel());
       renderTasksRef.current.clear();
     };
-  }, [blob, t]);
+  }, [blob, canUseNativeViewerFallback, isDesktopShell, t]);
 
   const pageNumbers = useMemo(
     () => Array.from({ length: pageCount }, (_, idx) => idx + 1),
@@ -260,7 +279,9 @@ export function PdfViewer({ blob }: PdfViewerProps) {
         } catch {
           if (!cancelled) {
             setError(t("documents.pdfRenderFailed"));
-            setUseNativeViewer(true);
+            if (canUseNativeViewerFallback) {
+              setUseNativeViewer(true);
+            }
             return;
           }
         }
@@ -272,7 +293,7 @@ export function PdfViewer({ blob }: PdfViewerProps) {
     return () => {
       cancelled = true;
     };
-  }, [pdf, renderedPages, t, visiblePages]);
+  }, [pdf, renderedPages, t, visiblePages, canUseNativeViewerFallback]);
 
   const estimatedHeight = firstRenderedHeight ?? 1100;
 

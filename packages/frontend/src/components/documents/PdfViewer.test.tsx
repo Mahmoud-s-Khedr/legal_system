@@ -5,7 +5,7 @@ import { PdfViewer } from "./PdfViewer";
 
 const getDocument = vi.fn();
 
-vi.mock("pdfjs-dist", () => ({
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
   GlobalWorkerOptions: { workerSrc: "" },
   getDocument
 }));
@@ -15,6 +15,9 @@ let container: HTMLDivElement | null = null;
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 const originalGetContext = HTMLCanvasElement.prototype.getContext;
 const originalIntersectionObserver = globalThis.IntersectionObserver;
+const originalCreateObjectUrl = URL.createObjectURL;
+const originalRevokeObjectUrl = URL.revokeObjectURL;
+const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(window, "navigator");
 
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -84,6 +87,12 @@ async function flushAsyncWork() {
 
 beforeEach(() => {
   getDocument.mockReset();
+  Object.defineProperty(window, "navigator", {
+    value: { ...window.navigator, userAgent: "Mozilla/5.0 (X11; Linux x86_64)" },
+    configurable: true
+  });
+  URL.createObjectURL = vi.fn(() => "blob:test-pdf-preview");
+  URL.revokeObjectURL = vi.fn();
   HTMLElement.prototype.scrollIntoView = vi.fn();
   HTMLCanvasElement.prototype.getContext = vi.fn(
     () => ({} as unknown as CanvasRenderingContext2D)
@@ -103,10 +112,76 @@ afterEach(() => {
   HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   HTMLCanvasElement.prototype.getContext = originalGetContext;
   globalThis.IntersectionObserver = originalIntersectionObserver;
+  URL.createObjectURL = originalCreateObjectUrl;
+  URL.revokeObjectURL = originalRevokeObjectUrl;
+  if (originalNavigatorDescriptor) {
+    Object.defineProperty(window, "navigator", originalNavigatorDescriptor);
+  }
   vi.restoreAllMocks();
 });
 
 describe("PdfViewer", () => {
+  it("uses native viewer fallback on non-desktop when PDF.js fails", async () => {
+    vi.stubEnv("VITE_DESKTOP_SHELL", "false");
+    getDocument.mockReturnValue({
+      promise: Promise.reject(new Error("pdf load failed"))
+    });
+
+    const view = render(
+      <PdfViewer blob={new Blob(["pdf"], { type: "application/pdf" })} />
+    );
+
+    await flushAsyncWork();
+
+    expect(view.querySelector("object")).not.toBeNull();
+    expect(view.querySelector("iframe")).not.toBeNull();
+  });
+
+  it("shows controlled error and does not use native fallback in desktop runtime", async () => {
+    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
+    Object.defineProperty(window, "navigator", {
+      value: { ...window.navigator, userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      configurable: true
+    });
+    getDocument.mockReturnValue({
+      promise: Promise.reject(new Error("pdf load failed"))
+    });
+
+    const view = render(
+      <PdfViewer blob={new Blob(["pdf"], { type: "application/pdf" })} />
+    );
+
+    await flushAsyncWork();
+
+    expect(view.querySelector("object")).toBeNull();
+    expect(view.querySelector("iframe")).toBeNull();
+    expect(view.textContent).toContain("pdf load failed");
+  });
+
+  it("shows error when loaded PDF reports zero pages", async () => {
+    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
+    Object.defineProperty(window, "navigator", {
+      value: { ...window.navigator, userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      configurable: true
+    });
+    getDocument.mockReturnValue({
+      promise: Promise.resolve({
+        numPages: 0,
+        getPage: vi.fn()
+      })
+    });
+
+    const view = render(
+      <PdfViewer blob={new Blob(["pdf"], { type: "application/pdf" })} />
+    );
+
+    await flushAsyncWork();
+
+    expect(view.textContent).toContain("PDF has no pages");
+    expect(view.querySelector("object")).toBeNull();
+    expect(view.querySelector("iframe")).toBeNull();
+  });
+
   it("shows page count and supports page jump", async () => {
     getDocument.mockReturnValue({ promise: Promise.resolve(createPdfMock()) });
 
