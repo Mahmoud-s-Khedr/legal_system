@@ -1154,6 +1154,7 @@
     "feeTypeFixed": "Forfait",
     "feeTypeHourly": "Horaire",
     "feeTypeContingency": "Conditionnel",
+    "issueDate": "Date d'émission",
     "dueDate": "Date d'échéance",
     "tax": "Taxe",
     "discount": "Remise",

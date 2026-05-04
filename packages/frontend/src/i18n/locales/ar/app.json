@@ -1180,6 +1180,7 @@
     "feeTypeFixed": "ثابتة",
     "feeTypeHourly": "بالساعة",
     "feeTypeContingency": "مشروطة",
+    "issueDate": "تاريخ الإصدار",
     "dueDate": "تاريخ الاستحقاق",
     "tax": "الضريبة",
     "discount": "الخصم",

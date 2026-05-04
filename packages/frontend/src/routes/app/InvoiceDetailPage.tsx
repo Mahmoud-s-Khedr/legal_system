@@ -7,6 +7,7 @@ import {
   useIssueInvoice,
   useVoidInvoice,
   useAddPayment,
+  useUpdateInvoice,
   useApplyInvoiceCredit,
   useClientCreditBalance
 } from "../../lib/billing";
@@ -27,6 +28,27 @@ import {
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useToastStore } from "../../store/toastStore";
 
+interface EditableItemRow {
+  id: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+}
+
+function normalizeMoneyInput(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return "0";
+  const amount = Number(trimmed);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  return amount.toFixed(2);
+}
+
+function parsePositiveInteger(value: string): number | null {
+  const quantity = Number(value);
+  if (!Number.isInteger(quantity) || quantity < 1) return null;
+  return quantity;
+}
+
 export function InvoiceDetailPage() {
   const { invoiceId } = useParams({ from: "/app/invoices/$invoiceId" });
   const navigate = useNavigate();
@@ -42,6 +64,7 @@ export function InvoiceDetailPage() {
   const issueInvoice = useIssueInvoice(invoiceId);
   const voidInvoice = useVoidInvoice(invoiceId);
   const addPayment = useAddPayment(invoiceId);
+  const updateInvoice = useUpdateInvoice(invoiceId);
   const applyCredit = useApplyInvoiceCredit(invoiceId);
 
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -52,7 +75,15 @@ export function InvoiceDetailPage() {
   const [actionError, setActionError] = useState("");
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showCreditForm, setShowCreditForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [editFeeType, setEditFeeType] = useState("");
+  const [editTaxAmount, setEditTaxAmount] = useState("0");
+  const [editDiscountAmount, setEditDiscountAmount] = useState("0");
+  const [editIssuedAt, setEditIssuedAt] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editItems, setEditItems] = useState<EditableItemRow[]>([]);
+  const [editError, setEditError] = useState("");
   const addToast = useToastStore((state) => state.addToast);
   const creditBalance = useClientCreditBalance(invoice?.clientId);
   const paymentMethods = useLookupOptions("PaymentMethod");
@@ -111,6 +142,7 @@ export function InvoiceDetailPage() {
   }
 
   const canIssue = invoice.status === InvoiceStatus.DRAFT;
+  const canEdit = invoice.status === InvoiceStatus.DRAFT;
   const canDelete = invoice.status === InvoiceStatus.DRAFT;
   const canVoid = invoice.status !== InvoiceStatus.VOID;
   const canPay =
@@ -158,6 +190,104 @@ export function InvoiceDetailPage() {
     }
   }
 
+  function toDateInputValue(value: string | null) {
+    if (!value) return "";
+    return value.slice(0, 10);
+  }
+
+  function openEditForm() {
+    setEditFeeType(currentInvoice.feeType);
+    setEditTaxAmount(currentInvoice.taxAmount);
+    setEditDiscountAmount(currentInvoice.discountAmount);
+    setEditIssuedAt(toDateInputValue(currentInvoice.issuedAt));
+    setEditDueDate(toDateInputValue(currentInvoice.dueDate));
+    setEditItems(
+      currentInvoice.items.map((item) => ({
+        id: item.id,
+        description: item.description,
+        quantity: String(item.quantity),
+        unitPrice: item.unitPrice
+      }))
+    );
+    setEditError("");
+    setShowEditForm(true);
+  }
+
+  function addEditItem() {
+    setEditItems((prev) => [
+      ...prev,
+      {
+        id: `new-${Date.now()}-${prev.length}`,
+        description: "",
+        quantity: "1",
+        unitPrice: "0"
+      }
+    ]);
+  }
+
+  function removeEditItem(index: number) {
+    setEditItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateEditItem(
+    index: number,
+    field: keyof EditableItemRow,
+    value: string
+  ) {
+    setEditItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
+  }
+
+  async function handleEditInvoice(e: React.FormEvent) {
+    e.preventDefault();
+    setEditError("");
+    const normalizedTaxAmount = normalizeMoneyInput(editTaxAmount);
+    if (normalizedTaxAmount === null) {
+      setEditError(
+        t("billing.invalidTaxAmount", "Tax amount must be a valid non-negative number.")
+      );
+      return;
+    }
+    const normalizedDiscountAmount = normalizeMoneyInput(editDiscountAmount);
+    if (normalizedDiscountAmount === null) {
+      setEditError(
+        t("billing.invalidDiscountAmount", "Discount amount must be a valid non-negative number.")
+      );
+      return;
+    }
+    const normalizedItems = [];
+    for (const item of editItems) {
+      const description = item.description.trim();
+      const quantity = parsePositiveInteger(item.quantity);
+      const unitPrice = normalizeMoneyInput(item.unitPrice);
+      if (!description || quantity === null || unitPrice === null) {
+        setEditError(
+          t(
+            "billing.invalidLineItem",
+            "Each line item must have a description, valid quantity, and valid unit price."
+          )
+        );
+        return;
+      }
+      normalizedItems.push({ description, quantity, unitPrice });
+    }
+    try {
+      await updateInvoice.mutateAsync({
+        feeType: editFeeType,
+        taxAmount: normalizedTaxAmount,
+        discountAmount: normalizedDiscountAmount,
+        issuedAt: editIssuedAt ? new Date(editIssuedAt).toISOString() : null,
+        dueDate: editDueDate ? new Date(editDueDate).toISOString() : null,
+        items: normalizedItems
+      });
+      addToast(t("messages.saved"), "success");
+      setShowEditForm(false);
+    } catch (error) {
+      setEditError((error as Error)?.message ?? t("errors.fallback"));
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -180,6 +310,15 @@ export function InvoiceDetailPage() {
             >
               {t("billing.downloadPdf")}
             </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => openEditForm()}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold"
+              >
+                {t("actions.edit", "Edit")}
+              </button>
+            )}
             {canIssue && (
               <button
                 onClick={async () => {
@@ -251,6 +390,163 @@ export function InvoiceDetailPage() {
 
       {/* Totals */}
       {actionError ? <FormAlert message={actionError} /> : null}
+      {showEditForm ? (
+        <SectionCard title={t("actions.edit", "Edit")}>
+          <form onSubmit={(e) => void handleEditInvoice(e)} className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium">
+                  {t("billing.feeType")}
+                </label>
+                <input
+                  required
+                  value={editFeeType}
+                  onChange={(e) => setEditFeeType(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">
+                  {t("billing.tax")}
+                </label>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editTaxAmount}
+                  onChange={(e) => setEditTaxAmount(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">
+                  {t("billing.discount")}
+                </label>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editDiscountAmount}
+                  onChange={(e) => setEditDiscountAmount(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">
+                  {t("billing.issueDate", "Issue date")}
+                </label>
+                <input
+                  type="date"
+                  value={editIssuedAt}
+                  onChange={(e) => setEditIssuedAt(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">
+                  {t("billing.dueDate")}
+                </label>
+                <input
+                  type="date"
+                  value={editDueDate}
+                  onChange={(e) => setEditDueDate(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <div className="mb-2 hidden sm:grid sm:grid-cols-[1fr_80px_100px_36px] gap-2 text-xs font-medium text-slate-500">
+                <span>{t("billing.itemDescription")}</span>
+                <span>{t("billing.qty")}</span>
+                <span>{t("billing.unitPrice")}</span>
+                <span></span>
+              </div>
+              <div className="space-y-2">
+                {editItems.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="grid gap-2 sm:grid-cols-[1fr_80px_100px_36px]"
+                  >
+                    <input
+                      required
+                      aria-label={`${t("billing.itemDescription")} ${index + 1}`}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                      placeholder={t("billing.itemDescription")}
+                      value={item.description}
+                      onChange={(e) =>
+                        updateEditItem(index, "description", e.target.value)
+                      }
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      aria-label={`${t("billing.qty")} ${index + 1}`}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                      placeholder={t("billing.qty")}
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateEditItem(index, "quantity", e.target.value)
+                      }
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      aria-label={`${t("billing.unitPrice")} ${index + 1}`}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                      placeholder={t("billing.unitPrice")}
+                      value={item.unitPrice}
+                      onChange={(e) =>
+                        updateEditItem(index, "unitPrice", e.target.value)
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeEditItem(index)}
+                      disabled={editItems.length === 1}
+                      aria-label={t("actions.remove", "Remove")}
+                      className="rounded-xl border border-red-200 px-2 text-red-500 hover:bg-red-50 disabled:opacity-30"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addEditItem}
+                className="mt-3 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-500 hover:border-accent hover:text-accent"
+              >
+                + {t("billing.addItem")}
+              </button>
+            </div>
+            {editError ? <FormAlert message={editError} /> : null}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={updateInvoice.isPending}
+                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {t("billing.save")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditForm(false);
+                  setEditError("");
+                }}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
+              >
+                {t("actions.cancel")}
+              </button>
+            </div>
+          </form>
+        </SectionCard>
+      ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {[
           {

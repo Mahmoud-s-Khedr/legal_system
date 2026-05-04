@@ -1167,6 +1167,7 @@
     "feeTypeFixed": "Fixed",
     "feeTypeHourly": "Hourly",
     "feeTypeContingency": "Contingency",
+    "issueDate": "Issue Date",
     "dueDate": "Due Date",
     "tax": "Tax",
     "discount": "Discount",
