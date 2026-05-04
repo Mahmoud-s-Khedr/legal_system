@@ -509,7 +509,7 @@ function Invoke-FeatureSmoke {
     $summary.draftDeleteSucceeded = $true
 
     $paidInvoice = Invoke-JsonApi -Method "POST" -Path "/api/invoices" -Headers $authHeaders -Body $invoicePayload
-    Invoke-JsonApi -Method "POST" -Path "/api/invoices/$($paidInvoice.id)/issue" -Headers $authHeaders | Out-Null
+    Invoke-JsonApi -Method "POST" -Path "/api/invoices/$($paidInvoice.id)/issue" -Headers $authHeaders -Body @{} | Out-Null
     $paidInvoice = Invoke-JsonApi -Method "POST" -Path "/api/invoices/$($paidInvoice.id)/payments" -Headers $authHeaders -Body @{
         amount = "10.00"
         method = "CASH"

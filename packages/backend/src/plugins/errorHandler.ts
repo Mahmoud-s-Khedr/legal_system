@@ -116,6 +116,19 @@ export function registerErrorHandler(app: FastifyInstance) {
       return reply.status(error.statusCode).send({ message: error.message });
     }
 
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "statusCode" in error &&
+      typeof (error as { statusCode?: unknown }).statusCode === "number"
+    ) {
+      const statusCode = (error as { statusCode: number }).statusCode;
+      if (statusCode >= 400 && statusCode < 500) {
+        const message = getErrorMessage(error) || "Bad request";
+        return reply.status(statusCode).send({ message });
+      }
+    }
+
     request.log.error(error);
     captureBackendException(error);
 

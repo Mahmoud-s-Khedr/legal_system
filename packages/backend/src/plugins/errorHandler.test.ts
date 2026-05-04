@@ -124,6 +124,27 @@ describe("registerErrorHandler", () => {
     expect(captureBackendException).toHaveBeenCalled();
   });
 
+  it("preserves framework 4xx errors such as unsupported media type", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+    const priorCapturedCalls = captureBackendException.mock.calls.length;
+
+    invokeHandler(
+      {
+        statusCode: 415,
+        code: "FST_ERR_CTP_INVALID_MEDIA_TYPE",
+        message: "Unsupported Media Type"
+      },
+      request,
+      reply
+    );
+
+    expect(replyState.statusCode).toBe(415);
+    expect(replyState.payload).toEqual({ message: "Unsupported Media Type" });
+    expect(request.log.error).not.toHaveBeenCalled();
+    expect(captureBackendException.mock.calls.length).toBe(priorCapturedCalls);
+  });
+
   it("sanitizes unknown server errors", () => {
     const { handler, request, reply, replyState } = setup();
     const invokeHandler = handler as RegisteredErrorHandler;
