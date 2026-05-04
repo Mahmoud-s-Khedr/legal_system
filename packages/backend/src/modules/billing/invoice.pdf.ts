@@ -8,6 +8,7 @@
 import type { InvoiceDto } from "@elms/shared";
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
 import { resolvePdfFontConfig } from "../../utils/pdfFonts.js";
+import { loadPdfPrinter } from "../../utils/pdfPrinter.js";
 
 function formatPdfText(value: string | null | undefined, fallback = "—"): string {
   const text = value?.trim();
@@ -21,7 +22,7 @@ function formatPdfDate(value: string | null | undefined): string {
 }
 
 export async function generateInvoicePdf(invoice: InvoiceDto, firmName: string): Promise<Buffer> {
-  const PdfPrinter = (await import("pdfmake")).default;
+  const PdfPrinter = await loadPdfPrinter();
   const fontConfig = resolvePdfFontConfig();
   const printer = new PdfPrinter(fontConfig.fonts);
 

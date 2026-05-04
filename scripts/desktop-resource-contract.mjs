@@ -34,6 +34,26 @@ const TESSERACT_BUNDLED_CODE_MARKERS = [
   "tesseract.js/src/worker-script/node/index.js",
 ];
 
+const PDF_RUNTIME_PACKAGE_FILES = [
+  "packages/backend/dist/desktop/node_modules/pdfmake/package.json",
+  "packages/backend/dist/desktop/node_modules/@foliojs-fork/pdfkit/package.json",
+  "packages/backend/dist/desktop/node_modules/@foliojs-fork/fontkit/package.json",
+  "packages/backend/dist/desktop/node_modules/@foliojs-fork/fontkit/data.trie",
+];
+
+const PDF_FONT_FILES = [
+  "packages/backend/dist/desktop/assets/fonts/Cairo-Regular.ttf",
+  "packages/backend/dist/desktop/assets/fonts/Cairo-Bold.ttf",
+];
+
+const PDF_BUNDLED_CODE_MARKERS = [
+  '__dirname + "/data.trie"',
+  "__dirname + '/data.trie'",
+  "src/opentype/shapers/data.trie",
+  "new UnicodeTrie(require(\"fs\").readFileSync",
+  "new UnicodeTrie(__require(\"fs\").readFileSync",
+];
+
 function fail(message) {
   throw new Error(message);
 }
@@ -259,6 +279,16 @@ function ensureServerDoesNotInlineTesseract(serverFilePath, label) {
   }
 }
 
+function ensureServerDoesNotInlinePdfRuntime(serverFilePath, label) {
+  ensureFileExists(serverFilePath, label);
+
+  const contents = readFileSync(serverFilePath, "utf8");
+  const matchedMarker = PDF_BUNDLED_CODE_MARKERS.find((marker) => contents.includes(marker));
+  if (matchedMarker) {
+    fail(`${label} appears to inline pdfmake/fontkit runtime code (marker: ${matchedMarker})`);
+  }
+}
+
 function verifyDesktopBackendOcrRuntime(bundleRoot) {
   ensureFileExists(
     join(bundleRoot, TESSERACT_WORKER_SCRIPT_RELATIVE_PATH),
@@ -266,6 +296,21 @@ function verifyDesktopBackendOcrRuntime(bundleRoot) {
   );
 
   ensureServerDoesNotInlineTesseract(
+    join(bundleRoot, "packages/backend/dist/desktop/server.js"),
+    "Desktop backend server bundle"
+  );
+}
+
+function verifyDesktopBackendPdfRuntime(bundleRoot) {
+  for (const relativePath of PDF_RUNTIME_PACKAGE_FILES) {
+    ensureFileExists(join(bundleRoot, relativePath), `PDF runtime resource ${relativePath}`);
+  }
+
+  for (const relativePath of PDF_FONT_FILES) {
+    ensureFileExists(join(bundleRoot, relativePath), `PDF font resource ${relativePath}`);
+  }
+
+  ensureServerDoesNotInlinePdfRuntime(
     join(bundleRoot, "packages/backend/dist/desktop/server.js"),
     "Desktop backend server bundle"
   );
@@ -311,6 +356,7 @@ function verifyPackagedDesktopTree(bundleRoot) {
   }
 
   verifyDesktopBackendOcrRuntime(bundleRoot);
+  verifyDesktopBackendPdfRuntime(bundleRoot);
 }
 
 function findPackagedDesktopTreeRoot(searchRoot) {
@@ -373,6 +419,7 @@ function verifySourceDesktopResources(repoRoot) {
   const desktopServerBundlePath = join(repoRoot, "packages/backend/dist/desktop/server.js");
   if (pathExists(desktopServerBundlePath, "file")) {
     verifyDesktopBackendOcrRuntime(repoRoot);
+    verifyDesktopBackendPdfRuntime(repoRoot);
   }
 }
 

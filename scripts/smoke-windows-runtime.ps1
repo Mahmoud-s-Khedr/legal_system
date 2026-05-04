@@ -41,6 +41,9 @@ $corsProbePassed = $false
 $corsProbeStatusCode = 0
 $corsProbeAllowOrigin = ""
 $corsProbeError = ""
+$featureSmokePassed = $false
+$featureSmokeError = ""
+$featureSmokeSummary = [ordered]@{}
 $fatalPatterns = @(
     "(?i)pg_ctl failed:.*system cannot find the path specified",
     "(?i)initdb failed:.*system cannot find the path specified",
@@ -279,6 +282,262 @@ function Write-ProbeSnapshot {
     )
 }
 
+function Invoke-JsonApi {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("GET", "POST", "PUT", "DELETE")]
+        [string]$Method,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Headers = @{},
+
+        [Parameter(Mandatory = $false)]
+        $Body = $null
+    )
+
+    $uri = "http://127.0.0.1:7854$Path"
+    $parameters = @{
+        Method = $Method
+        Uri = $uri
+        Headers = $Headers
+        UseBasicParsing = $true
+        TimeoutSec = 20
+    }
+
+    if ($null -ne $Body) {
+        $parameters["ContentType"] = "application/json"
+        $parameters["Body"] = ($Body | ConvertTo-Json -Depth 8)
+    }
+
+    return Invoke-RestMethod @parameters
+}
+
+function Assert-PdfDownload {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Headers,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Label
+    )
+
+    $pdfPath = Join-Path $resolvedDiagnosticsDir ("{0}.pdf" -f $Label)
+    $response = Invoke-WebRequest `
+        -Uri "http://127.0.0.1:7854$Path" `
+        -Headers $Headers `
+        -UseBasicParsing `
+        -TimeoutSec 30 `
+        -OutFile $pdfPath `
+        -PassThru
+
+    $contentType = [string]$response.Headers["Content-Type"]
+    if ($response.StatusCode -ne 200 -or $contentType -notmatch "application/pdf") {
+        throw ("{0} PDF smoke failed: status={1}, content-type={2}" -f $Label, $response.StatusCode, $contentType)
+    }
+
+    $bytes = [System.IO.File]::ReadAllBytes($pdfPath)
+    if ($bytes.Length -lt 4) {
+        throw ("{0} PDF smoke produced an empty file at {1}" -f $Label, $pdfPath)
+    }
+
+    $signature = [System.Text.Encoding]::ASCII.GetString($bytes, 0, 4)
+    if ($signature -ne "%PDF") {
+        throw ("{0} PDF smoke produced a non-PDF payload at {1}; signature={2}" -f $Label, $pdfPath, $signature)
+    }
+
+    return @{
+        path = $pdfPath
+        bytes = $bytes.Length
+        contentType = $contentType
+    }
+}
+
+function Assert-DeleteRejected {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InvoiceId,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Headers
+    )
+
+    try {
+        Invoke-JsonApi -Method "DELETE" -Path "/api/invoices/$InvoiceId" -Headers $Headers | Out-Null
+        throw "Paid invoice deletion unexpectedly succeeded"
+    } catch {
+        $response = $_.Exception.Response
+        if (-not $response) {
+            throw
+        }
+
+        $statusCode = [int]$response.StatusCode
+        if ($statusCode -ne 422) {
+            throw ("Paid invoice deletion returned unexpected status {0}; expected 422" -f $statusCode)
+        }
+    }
+}
+
+function Assert-EndpointStatus {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Headers,
+
+        [Parameter(Mandatory = $true)]
+        [int]$ExpectedStatusCode,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Label
+    )
+
+    try {
+        $response = Invoke-WebRequest `
+            -Uri "http://127.0.0.1:7854$Path" `
+            -Headers $Headers `
+            -UseBasicParsing `
+            -TimeoutSec 20
+
+        $statusCode = [int]$response.StatusCode
+    } catch {
+        $response = $_.Exception.Response
+        if (-not $response) {
+            throw
+        }
+        $statusCode = [int]$response.StatusCode
+    }
+
+    if ($statusCode -ne $ExpectedStatusCode) {
+        throw ("{0} returned status {1}; expected {2}" -f $Label, $statusCode, $ExpectedStatusCode)
+    }
+}
+
+function Invoke-FeatureSmoke {
+    $summary = [ordered]@{
+        setupMode = ""
+        userEmail = ""
+        roleKey = ""
+        editionKey = ""
+        lifecycleStatus = ""
+        permissionCount = 0
+        hasInvoiceDeletePermission = $false
+        draftInvoiceId = ""
+        draftInvoiceStatus = ""
+        draftDeleteSucceeded = $false
+        paidInvoiceId = ""
+        paidInvoiceStatus = ""
+        paidDeleteRejected = $false
+        invoicePdfBytes = 0
+        reportPdfBytes = 0
+        documentListEndpointPassed = $false
+        documentPreviewMissingDocumentStatus = 0
+    }
+
+    $setupInfo = Invoke-JsonApi -Method "GET" -Path "/api/auth/setup"
+    $email = "admin@elms.local"
+    $password = "WindowsSmoke!12345"
+    $authResponse = $null
+
+    if ($setupInfo.needsSetup) {
+        $summary.setupMode = "setup"
+        $authResponse = Invoke-JsonApi -Method "POST" -Path "/api/auth/setup" -Body @{
+            firmName = "ELMS Windows Smoke Firm"
+            fullName = "Windows Smoke Admin"
+            email = $email
+            password = $password
+            editionKey = "local_firm_online"
+        }
+    } else {
+        $summary.setupMode = "login"
+        $authResponse = Invoke-JsonApi -Method "POST" -Path "/api/auth/login" -Body @{
+            email = $email
+            password = $password
+        }
+    }
+
+    if (-not $authResponse.localSessionToken) {
+        throw "Feature smoke did not receive a local session token from auth response"
+    }
+
+    $authHeaders = @{ "x-elms-session" = [string]$authResponse.localSessionToken }
+    $me = Invoke-JsonApi -Method "GET" -Path "/api/auth/me" -Headers $authHeaders
+    $user = $me.session.user
+    $summary.userEmail = [string]$user.email
+    $summary.roleKey = [string]$user.roleKey
+    $summary.editionKey = [string]$user.editionKey
+    $summary.lifecycleStatus = [string]$user.lifecycleStatus
+    $summary.permissionCount = @($user.permissions).Count
+    $summary.hasInvoiceDeletePermission = @($user.permissions) -contains "invoices:delete"
+
+    foreach ($requiredPermission in @("invoices:create", "invoices:read", "invoices:update", "invoices:delete", "reports:read", "documents:read")) {
+        if (-not (@($user.permissions) -contains $requiredPermission)) {
+            throw ("Feature smoke user is missing required permission: {0}" -f $requiredPermission)
+        }
+    }
+
+    $invoicePayload = @{
+        feeType = "FIXED"
+        taxAmount = "0.00"
+        discountAmount = "0.00"
+        items = @(
+            @{
+                description = "Windows packaged runtime smoke"
+                quantity = 1
+                unitPrice = "10.00"
+            }
+        )
+    }
+
+    $draftInvoice = Invoke-JsonApi -Method "POST" -Path "/api/invoices" -Headers $authHeaders -Body $invoicePayload
+    $summary.draftInvoiceId = [string]$draftInvoice.id
+    $summary.draftInvoiceStatus = [string]$draftInvoice.status
+    if ($draftInvoice.status -ne "DRAFT") {
+        throw ("New invoice expected DRAFT status, got {0}" -f $draftInvoice.status)
+    }
+
+    $invoicePdf = Assert-PdfDownload -Path "/api/invoices/$($draftInvoice.id)/pdf" -Headers $authHeaders -Label "invoice-smoke"
+    $summary.invoicePdfBytes = [int]$invoicePdf.bytes
+
+    Invoke-JsonApi -Method "DELETE" -Path "/api/invoices/$($draftInvoice.id)" -Headers $authHeaders | Out-Null
+    $summary.draftDeleteSucceeded = $true
+
+    $paidInvoice = Invoke-JsonApi -Method "POST" -Path "/api/invoices" -Headers $authHeaders -Body $invoicePayload
+    Invoke-JsonApi -Method "POST" -Path "/api/invoices/$($paidInvoice.id)/issue" -Headers $authHeaders | Out-Null
+    $paidInvoice = Invoke-JsonApi -Method "POST" -Path "/api/invoices/$($paidInvoice.id)/payments" -Headers $authHeaders -Body @{
+        amount = "10.00"
+        method = "CASH"
+    }
+    $summary.paidInvoiceId = [string]$paidInvoice.id
+    $summary.paidInvoiceStatus = [string]$paidInvoice.status
+    if ($paidInvoice.status -ne "PAID") {
+        throw ("Paid invoice expected PAID status, got {0}" -f $paidInvoice.status)
+    }
+
+    Assert-DeleteRejected -InvoiceId $paidInvoice.id -Headers $authHeaders
+    $summary.paidDeleteRejected = $true
+
+    $reportPdf = Assert-PdfDownload -Path "/api/reports/case-status/export?format=pdf" -Headers $authHeaders -Label "report-smoke"
+    $summary.reportPdfBytes = [int]$reportPdf.bytes
+
+    Invoke-JsonApi -Method "GET" -Path "/api/documents?page=1&limit=1" -Headers $authHeaders | Out-Null
+    $summary.documentListEndpointPassed = $true
+    Assert-EndpointStatus `
+        -Path "/api/documents/00000000-0000-0000-0000-000000000000/preview" `
+        -Headers $authHeaders `
+        -ExpectedStatusCode 404 `
+        -Label "Document preview missing-document probe"
+    $summary.documentPreviewMissingDocumentStatus = 404
+
+    return $summary
+}
+
 function Export-Diagnostics {
     param(
         [Parameter(Mandatory = $false)]
@@ -324,6 +583,9 @@ function Export-Diagnostics {
         ("cors_probe_status_code={0}" -f $corsProbeStatusCode),
         ("cors_probe_allow_origin={0}" -f $corsProbeAllowOrigin),
         ("cors_probe_error={0}" -f $corsProbeError),
+        ("feature_smoke_passed={0}" -f $featureSmokePassed),
+        ("feature_smoke_error={0}" -f $featureSmokeError),
+        ("feature_smoke_json={0}" -f ($featureSmokeSummary | ConvertTo-Json -Depth 8 -Compress)),
         ("backend_connection_file={0}" -f $backendConnectionFile),
         ("backend_connection_json={0}" -f $backendConnectionContent),
         ("runner_appdata={0}" -f $env:APPDATA),
@@ -351,6 +613,9 @@ function Export-Diagnostics {
         corsProbeStatusCode = $corsProbeStatusCode
         corsProbeAllowOrigin = $corsProbeAllowOrigin
         corsProbeError = $corsProbeError
+        featureSmokePassed = $featureSmokePassed
+        featureSmokeError = $featureSmokeError
+        featureSmoke = $featureSmokeSummary
         backendConnectionFile = $backendConnectionFile
         backendConnectionJson = $backendConnectionContent
         runnerAppData = $env:APPDATA
@@ -460,6 +725,14 @@ try {
                 }
 
                 Write-Host ("Desktop runtime smoke check passed at {0}" -f $healthUri)
+                try {
+                    $featureSmokeSummary = Invoke-FeatureSmoke
+                    $featureSmokePassed = $true
+                    Write-Host "Desktop packaged feature smoke passed."
+                } catch {
+                    $featureSmokeError = $_.Exception.Message
+                    throw ("Desktop packaged feature smoke failed: {0}" -f $featureSmokeError)
+                }
                 $healthy = $true
                 break
             }

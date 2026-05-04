@@ -20,6 +20,7 @@ import type {
   RevenueReportRow
 } from "@elms/shared";
 import type { LitigationSheetRow } from "./reports.service.js";
+import { loadPdfPrinter } from "../../utils/pdfPrinter.js";
 
 // ── Report column definitions ─────────────────────────────────────────────────
 
@@ -490,7 +491,7 @@ export async function generateReportPdf(
   data: unknown,
   generatedAt?: string
 ): Promise<Buffer> {
-  const PdfPrinter = (await import("pdfmake")).default;
+  const PdfPrinter = await loadPdfPrinter();
   const fontConfig = (await import("../../utils/pdfFonts.js")).resolvePdfFontConfig();
   if (fontConfig.usingFallback) {
     const detail = fontConfig.reason ? ` (${fontConfig.reason})` : "";

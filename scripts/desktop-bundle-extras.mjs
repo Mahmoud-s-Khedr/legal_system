@@ -49,6 +49,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const backendDir = join(root, "packages", "backend");
 const desktopDistDir = join(backendDir, "dist", "desktop");
+const backendAssetsDir = join(backendDir, "assets");
+const desktopAssetsDir = join(desktopDistDir, "assets");
 const workspacePnpmStore = join(root, "node_modules", ".pnpm");
 const deployDir = join(root, ".desktop-deploy-tmp", `${Date.now()}-${process.pid}`);
 const destNodeModules = join(desktopDistDir, "node_modules");
@@ -63,6 +65,9 @@ if (existsSync(deployDir)) {
 }
 if (existsSync(destNodeModules)) {
   rmSync(destNodeModules, { recursive: true, force: true });
+}
+if (existsSync(desktopAssetsDir)) {
+  rmSync(desktopAssetsDir, { recursive: true, force: true });
 }
 
 // ── Run pnpm deploy to resolve all symlinks and get real files ────────────────
@@ -132,6 +137,14 @@ if (existsSync(swaggerUiStaticSource)) {
     dereference: true
   });
   console.log("  ✓ swagger-ui static assets copied");
+}
+
+if (existsSync(backendAssetsDir)) {
+  cpSync(backendAssetsDir, desktopAssetsDir, {
+    recursive: true,
+    dereference: true
+  });
+  console.log("  ✓ backend assets copied");
 }
 
 // ── Validate critical Prisma runtime artifacts ───────────────────────────────

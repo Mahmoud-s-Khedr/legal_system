@@ -11,6 +11,7 @@ function findCairoFontDir() {
     // If cwd is packages/backend
     resolve(process.cwd(), "assets/fonts"),
     // Compiled dist layouts
+    join(__dirname, "assets/fonts"),
     join(__dirname, "../../assets/fonts"),
     join(__dirname, "../../../assets/fonts"),
     join(__dirname, "../../../../assets/fonts")

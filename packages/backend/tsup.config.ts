@@ -13,6 +13,12 @@ const DESKTOP_EXTERNALS = [
   ".prisma/client",
   "tesseract.js",
   "tesseract.js-core",
+  "pdfmake",
+  "@foliojs-fork/pdfkit",
+  "@foliojs-fork/fontkit",
+  "@foliojs-fork/linebreak",
+  "unicode-trie",
+  "brotli",
 
   // ── Mark external but do NOT ship (optional, fail gracefully) ─────
   "@napi-rs/canvas",
@@ -26,7 +32,7 @@ const DESKTOP_EXTERNALS = [
 ];
 
 const DESKTOP_NO_EXTERNAL_PATTERN =
-  /^(?!(@prisma\/client(?:\/.*)?|\.prisma\/client(?:\/.*)?|tesseract\.js(?:\/.*)?|tesseract\.js-core(?:\/.*)?|@napi-rs\/canvas(?:\/.*)?|@napi-rs\/canvas-linux-x64-gnu(?:\/.*)?|@napi-rs\/canvas-linux-x64-musl(?:\/.*)?|msgpackr(?:\/.*)?|msgpackr-extract(?:\/.*)?|@msgpackr-extract\/msgpackr-extract-linux-x64(?:\/.*)?|@fastify\/swagger(?:\/.*)?|@fastify\/swagger-ui(?:\/.*)?)).+/;
+  /^(?!(@prisma\/client(?:\/.*)?|\.prisma\/client(?:\/.*)?|tesseract\.js(?:\/.*)?|tesseract\.js-core(?:\/.*)?|pdfmake(?:\/.*)?|@foliojs-fork\/pdfkit(?:\/.*)?|@foliojs-fork\/fontkit(?:\/.*)?|@foliojs-fork\/linebreak(?:\/.*)?|unicode-trie(?:\/.*)?|brotli(?:\/.*)?|@napi-rs\/canvas(?:\/.*)?|@napi-rs\/canvas-linux-x64-gnu(?:\/.*)?|@napi-rs\/canvas-linux-x64-musl(?:\/.*)?|msgpackr(?:\/.*)?|msgpackr-extract(?:\/.*)?|@msgpackr-extract\/msgpackr-extract-linux-x64(?:\/.*)?|@fastify\/swagger(?:\/.*)?|@fastify\/swagger-ui(?:\/.*)?)).+/;
 
 export default defineConfig(() => {
   const isDesktop = process.env.ELMS_BUILD_TARGET === "desktop";

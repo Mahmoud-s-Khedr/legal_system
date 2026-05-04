@@ -183,6 +183,9 @@ jobs:
             Write-Host "backendSpawnAttemptedSeen=$($summary.backendSpawnAttemptedSeen)"
             Write-Host "backendHealthSeen=$($summary.backendHealthSeen)"
             Write-Host "postgresCommandStallDetected=$($summary.postgresCommandStallDetected)"
+            Write-Host "featureSmokePassed=$($summary.featureSmokePassed)"
+            Write-Host "featureSmokeError=$($summary.featureSmokeError)"
+            Write-Host "featureSmoke=$($summary.featureSmoke | ConvertTo-Json -Depth 8 -Compress)"
             Write-Host "failureMessage=$($summary.failureMessage)"
             Write-Host "----- End Smoke Summary (parsed) -----"
           } else {
