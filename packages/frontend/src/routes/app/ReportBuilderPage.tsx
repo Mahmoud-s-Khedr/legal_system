@@ -6,6 +6,7 @@ import { useToastStore } from "../../store/toastStore";
 import { apiFetch } from "../../lib/api";
 import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { useTableQueryState } from "../../lib/tableQueryState";
+import { confirmAction } from "../../lib/dialog";
 import {
   FormAlert,
   PageHeader,
@@ -87,6 +88,7 @@ export function ReportBuilderPage() {
     data: RunSessionResult;
   } | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const table = useTableQueryState({
@@ -125,12 +127,62 @@ export function ReportBuilderPage() {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<CustomReportDto>(`/api/reports/custom/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description || undefined,
+          reportType: form.reportType,
+          config: {
+            dateFrom: form.dateFrom || undefined,
+            dateTo: form.dateTo || undefined
+          }
+        })
+      }),
+    onSuccess: () => {
+      setActionError(null);
+      setForm(EMPTY_FORM);
+      setEditingId(null);
+      setShowForm(false);
+      void queryClient.invalidateQueries({ queryKey: ["custom-reports"] });
+    },
+    onError: (error: Error) => {
+      setActionError(error.message || t("errors.fallback"));
+    }
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
       apiFetch(`/api/reports/custom/${id}`, { method: "DELETE" }),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["custom-reports"] })
   });
+
+  function startEdit(report: CustomReportDto) {
+    setForm({
+      name: report.name,
+      description: report.description ?? "",
+      reportType: report.reportType,
+      dateFrom: report.config.dateFrom ?? "",
+      dateTo: report.config.dateTo ?? ""
+    });
+    setEditingId(report.id);
+    setShowForm(true);
+  }
+
+  async function handleDelete(id: string) {
+    const approved = await confirmAction({
+      title: t("actions.confirmDelete"),
+      content: t("actions.deleteConfirmMessage"),
+      okButtonProps: { danger: true }
+    });
+    if (!approved) {
+      return;
+    }
+    deleteMutation.mutate(id);
+  }
 
   async function handleRun(id: string) {
     setRunningId(id);
@@ -188,9 +240,9 @@ export function ReportBuilderPage() {
         }
       />
 
-      {/* Create form */}
+      {/* Create / edit form */}
       {showForm && (
-        <SectionCard title={t("reports.newReport")}>
+        <SectionCard title={editingId ? t("actions.edit") : t("reports.newReport")}>
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field
@@ -233,17 +285,27 @@ export function ReportBuilderPage() {
             </div>
             <div className="flex gap-2">
               <PrimaryButton
-                disabled={!form.name.trim() || createMutation.isPending}
-                onClick={() => createMutation.mutate()}
+                disabled={!form.name.trim() || createMutation.isPending || updateMutation.isPending}
+                onClick={() => {
+                  if (editingId) {
+                    updateMutation.mutate(editingId);
+                    return;
+                  }
+                  createMutation.mutate();
+                }}
               >
-                {createMutation.isPending ? (
+                {createMutation.isPending || updateMutation.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : null}
                 {t("actions.save")}
               </PrimaryButton>
               <button
                 className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingId(null);
+                  setForm(EMPTY_FORM);
+                }}
               >
                 {t("actions.cancel")}
               </button>
@@ -301,8 +363,16 @@ export function ReportBuilderPage() {
                   {t("reports.exportExcel")}
                 </button>
                 <button
+                  className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:text-accent"
+                  onClick={() => startEdit(r)}
+                >
+                  {t("actions.edit")}
+                </button>
+                <button
                   className="rounded-lg p-1.5 text-slate-400 hover:text-red-500"
-                  onClick={() => deleteMutation.mutate(r.id)}
+                  onClick={() => {
+                    void handleDelete(r.id);
+                  }}
                 >
                   <Trash2 className="size-4" />
                 </button>

@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { DocumentDto, DocumentListResponseDto } from "@elms/shared";
+import { DocumentType, type DocumentDto, type DocumentListResponseDto } from "@elms/shared";
 import { Modal } from "antd";
 import { apiDownload, apiFetch } from "../../lib/api";
 import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { confirmAction, showErrorDialog } from "../../lib/dialog";
+import { getEnumLabel } from "../../lib/enumLabel";
 import {
   DataTable,
   EmptyState,
   ErrorState,
+  Field,
   ResponsiveDataList,
+  SelectField,
   TableBody,
   TableCell,
   TableHead,
@@ -21,6 +24,7 @@ import {
   TableWrapper
 } from "../../routes/app/ui";
 import { useToastStore } from "../../store/toastStore";
+import { useAuthBootstrap } from "../../store/authStore";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { DocumentViewer } from "./DocumentViewer";
@@ -57,9 +61,16 @@ export function DocumentList({
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
   const addToast = useToastStore((state) => state.addToast);
+  const permissions = useAuthBootstrap((state) => state.user?.permissions ?? []);
+  const canUpdateDocuments = permissions.includes("documents:update");
+  const canDeleteDocuments = permissions.includes("documents:delete");
   const [viewingDoc, setViewingDoc] = useState<DocumentDto | null>(null);
   const [showingIndexedDoc, setShowingIndexedDoc] =
     useState<DocumentDto | null>(null);
+  const [editingDoc, setEditingDoc] = useState<DocumentDto | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editType, setEditType] = useState<DocumentType>(DocumentType.GENERAL);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const params = new URLSearchParams();
   if (caseId) params.set("caseId", caseId);
@@ -96,7 +107,36 @@ export function DocumentList({
     }
   });
 
+  const editMutation = useMutation({
+    mutationFn: (doc: DocumentDto) =>
+      apiFetch<DocumentDto>(`/api/documents/${doc.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          type: editType
+        })
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+      setEditingDoc(null);
+      setEditError(null);
+    },
+    onError: (error: Error) => {
+      setEditError(error.message || t("errors.fallback"));
+    }
+  });
+
+  function startEdit(doc: DocumentDto) {
+    setEditingDoc(doc);
+    setEditTitle(doc.title);
+    setEditType(doc.type);
+    setEditError(null);
+  }
+
   const handleDelete = async (doc: DocumentDto) => {
+    if (!canDeleteDocuments) {
+      return;
+    }
     const approved = await confirmAction({
       title: t("actions.confirmDelete"),
       content: t("actions.deleteConfirmMessage"),
@@ -224,16 +264,27 @@ export function DocumentList({
                 {t("actions.showIndexedText")}
               </button>
             ) : null}
-            <button
-              className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-              onClick={() => {
-                void handleDelete(doc);
-              }}
-              type="button"
-              disabled={deleteMutation.isPending}
-            >
-              {t("actions.delete")}
-            </button>
+            {canUpdateDocuments ? (
+              <button
+                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                onClick={() => startEdit(doc)}
+                type="button"
+              >
+                {t("actions.edit")}
+              </button>
+            ) : null}
+            {canDeleteDocuments ? (
+              <button
+                className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  void handleDelete(doc);
+                }}
+                type="button"
+                disabled={deleteMutation.isPending}
+              >
+                {t("actions.delete")}
+              </button>
+            ) : null}
           </>
         )}
       />
@@ -286,18 +337,30 @@ export function DocumentList({
                         {t("actions.showIndexedText")}
                       </button>
                     ) : null}
-                    <button
-                      className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                      onClick={() => {
-                        void handleDelete(doc);
-                      }}
-                      type="button"
-                      aria-label={`${t("actions.delete")} ${doc.title}`}
-                      title={t("actions.delete")}
-                      disabled={deleteMutation.isPending}
-                    >
-                      ×
-                    </button>
+                    {canUpdateDocuments ? (
+                      <button
+                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                        onClick={() => startEdit(doc)}
+                        type="button"
+                        aria-label={`${t("actions.edit")} ${doc.title}`}
+                      >
+                        {t("actions.edit")}
+                      </button>
+                    ) : null}
+                    {canDeleteDocuments ? (
+                      <button
+                        className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                        onClick={() => {
+                          void handleDelete(doc);
+                        }}
+                        type="button"
+                        aria-label={`${t("actions.delete")} ${doc.title}`}
+                        title={t("actions.delete")}
+                        disabled={deleteMutation.isPending}
+                      >
+                        ×
+                      </button>
+                    ) : null}
                   </div>
                 </TableCell>
               </TableRow>
@@ -325,6 +388,62 @@ export function DocumentList({
           }}
         />
       ) : null}
+      <Modal
+        title={t("actions.edit")}
+        open={Boolean(editingDoc)}
+        onCancel={() => {
+          setEditingDoc(null);
+          setEditError(null);
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        {editingDoc ? (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!editTitle.trim()) {
+                setEditError(t("errors.fallback"));
+                return;
+              }
+              editMutation.mutate(editingDoc);
+            }}
+          >
+            {editError ? <ErrorState title={t("errors.title")} description={editError} /> : null}
+            <Field
+              label={t("labels.documentTitle")}
+              value={editTitle}
+              onChange={setEditTitle}
+            />
+            <SelectField
+              label={t("documents.fileType")}
+              value={editType}
+              onChange={(value) => setEditType(value as DocumentType)}
+              options={Object.values(DocumentType).map((type) => ({
+                value: type,
+                label: getEnumLabel(t, "DocumentType", type)
+              }))}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                type="button"
+                onClick={() => setEditingDoc(null)}
+              >
+                {t("actions.cancel")}
+              </button>
+              <button
+                className="rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                type="submit"
+                disabled={editMutation.isPending || !editTitle.trim()}
+              >
+                {t("actions.save")}
+              </button>
+            </div>
+          </form>
+        ) : null}
+      </Modal>
       <Modal
         title={
           showingIndexedDoc

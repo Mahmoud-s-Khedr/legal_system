@@ -12,9 +12,9 @@ MOUNT_ROOT="$(mktemp -d -t elms-dmg-verify-XXXXXX)"
 MOUNT_POINT="$MOUNT_ROOT/mount"
 
 cleanup() {
-  if mount | grep -Fq "on $MOUNT_POINT "; then
-    hdiutil detach "$MOUNT_POINT" >/dev/null 2>&1 || true
-  fi
+  # Unconditionally attempt to detach. 
+  # -force ensures it drops even if the Node script left a lingering file handle.
+  hdiutil detach "$MOUNT_POINT" -quiet -force >/dev/null 2>&1 || true
 
   rm -rf "$MOUNT_ROOT"
 }

@@ -180,7 +180,7 @@ jobs:
           NODE_VERSION: ${{ github.event.inputs.node_version || '22.14.0' }}
           VITE_DESKTOP_SHELL: "true"
           VITE_API_BASE_URL: "http://127.0.0.1:7854"
-          NO_STRIP: "1"
+          NO_STRIP: "true"
           APPIMAGE_EXTRACT_AND_RUN: "1" # <-- The fix for Ubuntu 24.04 AppArmor restrictions
           DESKTOP_BUNDLES: "appimage"
           DESKTOP_PACKAGE_LOG_FILE: "${{ github.workspace }}/.logs/desktop-linux-package-appimage.log"

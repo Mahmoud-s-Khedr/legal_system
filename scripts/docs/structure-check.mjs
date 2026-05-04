@@ -5,6 +5,7 @@ import { join, relative } from "node:path";
 const repoRoot = process.cwd();
 
 const ALLOWED_ROOT_FILES = new Set([
+  "AGENTS.md",
   ".dockerignore",
   ".editorconfig",
   ".env.example",
