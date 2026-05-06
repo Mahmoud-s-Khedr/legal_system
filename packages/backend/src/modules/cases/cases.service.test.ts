@@ -35,6 +35,7 @@ const mockCourt = {
 };
 const mockAuditLog = { create: vi.fn() };
 const mockClient = { findFirstOrThrow: vi.fn(), findMany: vi.fn() };
+const mockLookupOption = { findFirst: vi.fn() };
 
 const mockPrisma = {
   case: mockCaseDb,
@@ -43,7 +44,8 @@ const mockPrisma = {
   caseAssignment: mockAssignment,
   caseCourt: mockCourt,
   auditLog: mockAuditLog,
-  client: mockClient
+  client: mockClient,
+  lookupOption: mockLookupOption
 };
 
 vi.mock("../../db/prisma.js", () => ({ prisma: mockPrisma }));
@@ -116,6 +118,7 @@ beforeEach(() => {
   mockClient.findFirstOrThrow.mockResolvedValue({ id: "client-1" });
   mockClient.findMany.mockResolvedValue([]);
   mockParty.findMany.mockResolvedValue([]);
+  mockLookupOption.findFirst.mockResolvedValue({ id: "role-1" });
   mockCaseDb.findFirstOrThrow.mockResolvedValue(makeCaseRecord());
 });
 
@@ -313,6 +316,19 @@ describe("addCaseParty", () => {
 
     expect(result.conflictWarnings).toHaveLength(2);
     expect(result.conflictWarnings[0]?.conflictingCaseId).toBe("case-2");
+  });
+
+  it("rejects unknown party roles", async () => {
+    mockLookupOption.findFirst.mockResolvedValueOnce(null);
+
+    await expect(
+      addCaseParty(
+        actor,
+        "case-1",
+        { name: "Jane Smith", role: "UNKNOWN_ROLE" as never, partyType: "OPPONENT" as never },
+        audit
+      )
+    ).rejects.toThrow(/Invalid party role/);
   });
 });
 

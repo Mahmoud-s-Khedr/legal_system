@@ -93,7 +93,7 @@ export function CaseDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [partyForm, setPartyForm] = useState<CreateCasePartyDto>({
     name: "",
-    role: "PLAINTIFF",
+    role: "",
     partyType: "OPPONENT"
   });
   const [editingParty, setEditingParty] = useState<CasePartyDto | null>(null);
@@ -141,10 +141,17 @@ export function CaseDetailPage() {
   const courtLevelsQuery = useLookupOptions("CourtLevel");
   const caseTypesQuery = useLookupOptions("CaseType");
   const [editingCourt, setEditingCourt] = useState<CaseCourtDto | null>(null);
+  const defaultPartyRole = partyRolesQuery.data?.items?.[0]?.key ?? "";
 
   useEffect(() => {
     setHearingsPage(1);
   }, [caseId]);
+
+  useEffect(() => {
+    if (!partyForm.role && defaultPartyRole) {
+      setPartyForm((prev) => ({ ...prev, role: defaultPartyRole }));
+    }
+  }, [defaultPartyRole, partyForm.role]);
 
   const addPartyMutation = useMutation({
     mutationFn: (payload: CreateCasePartyDto) =>
@@ -153,7 +160,7 @@ export function CaseDetailPage() {
         body: JSON.stringify(payload)
       }),
     onSuccess: async () => {
-      setPartyForm({ name: "", role: "PLAINTIFF", partyType: "OPPONENT" });
+      setPartyForm({ name: "", role: defaultPartyRole, partyType: "OPPONENT" });
       setEditingParty(null);
       feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
@@ -739,14 +746,7 @@ export function CaseDetailPage() {
                     onChange={(value) =>
                       setEditPartyForm({ ...editPartyForm, role: value })
                     }
-                    options={
-                      partyRoleOptions.length
-                        ? partyRoleOptions
-                        : [
-                            { value: "PLAINTIFF", label: t("partyRoles.PLAINTIFF", "Plaintiff") },
-                            { value: "DEFENDANT", label: t("partyRoles.DEFENDANT", "Defendant") }
-                          ]
-                    }
+                    options={partyRoleOptions}
                     value={editPartyForm.role}
                   />
                   {updatePartyMutation.isError ? (
@@ -831,14 +831,7 @@ export function CaseDetailPage() {
                     onChange={(value) =>
                       setPartyForm({ ...partyForm, role: value })
                     }
-                    options={
-                      partyRoleOptions.length
-                        ? partyRoleOptions
-                        : [
-                            { value: "PLAINTIFF", label: t("partyRoles.PLAINTIFF", "Plaintiff") },
-                            { value: "DEFENDANT", label: t("partyRoles.DEFENDANT", "Defendant") }
-                          ]
-                    }
+                    options={partyRoleOptions}
                     value={partyForm.role}
                   />
                   {addPartyMutation.isError ? (

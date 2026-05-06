@@ -1385,11 +1385,7 @@ export function CaseQuickIntakePage() {
                     onChange={(value) =>
                       updatePartyRow(row.id, { role: value })
                     }
-                    options={
-                      partyRoleOptions.length
-                        ? partyRoleOptions
-                        : [{ value: "PLAINTIFF", label: "Plaintiff" }]
-                    }
+                    options={partyRoleOptions}
                   />
                   <SelectField
                     label={t("labels.partyType")}

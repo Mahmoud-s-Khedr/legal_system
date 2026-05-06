@@ -229,6 +229,26 @@ async function getCaseRecord(
   });
 }
 
+async function assertActivePartyRole(
+  tx: Prisma.TransactionClient,
+  firmId: string,
+  role: string
+): Promise<void> {
+  const existingRole = await tx.lookupOption.findFirst({
+    where: {
+      entity: "PartyRole",
+      key: role,
+      isActive: true,
+      OR: [{ firmId: null }, { firmId }]
+    },
+    select: { id: true }
+  });
+
+  if (!existingRole) {
+    throw appError(`Invalid party role "${role}"`, 422);
+  }
+}
+
 export async function listCases(
   actor: SessionUser,
   query: {
@@ -618,6 +638,7 @@ export async function addCaseParty(
       where: { id: caseId, firmId: actor.firmId, deletedAt: null },
       select: { id: true }
     });
+    await assertActivePartyRole(tx, actor.firmId, payload.role);
 
     // If adding a CLIENT party, validate the linked clientId
     let clientName = payload.name;
@@ -666,6 +687,7 @@ export async function updateCaseParty(
     const existing = await tx.caseParty.findFirstOrThrow({
       where: { id: partyId, caseId, case: { firmId: actor.firmId, deletedAt: null } }
     });
+    await assertActivePartyRole(tx, actor.firmId, payload.role);
 
     // If changing away from CLIENT, ensure at least one CLIENT party remains
     if (existing.partyType === "CLIENT" && payload.partyType !== "CLIENT") {

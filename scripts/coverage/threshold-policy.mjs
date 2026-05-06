@@ -2,9 +2,9 @@ const PHASES = ["week1", "week2", "week3", "week4"];
 
 const DATE_WINDOWS = [
   { phase: "week1", start: "2026-04-22", end: "2026-04-28" },
-  { phase: "week2", start: "2026-04-29", end: "2026-05-05" },
-  { phase: "week3", start: "2026-05-06", end: "2026-05-12" },
-  { phase: "week4", start: "2026-05-13", end: null }
+  { phase: "week2", start: "2026-04-29", end: "2026-05-12" },
+  { phase: "week3", start: "2026-05-13", end: "2026-05-19" },
+  { phase: "week4", start: "2026-05-20", end: null }
 ];
 
 const PHASE_THRESHOLDS = {
