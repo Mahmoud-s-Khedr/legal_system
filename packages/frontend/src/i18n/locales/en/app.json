@@ -134,6 +134,7 @@
     "judicialYear": "Judicial year",
     "caseType": "Case type",
     "courtLevel": "Court level",
+    "courtType": "Court type",
     "courtName": "Court name",
     "circuit": "Circuit",
     "hearings": "Hearings",
@@ -939,6 +940,7 @@
     "entities": {
       "CaseType": "Case types",
       "CourtLevel": "Court levels",
+      "CourtType": "Court types",
       "PartyRole": "Party roles",
       "DocumentType": "Document types",
       "PaymentMethod": "Payment methods",
@@ -948,6 +950,7 @@
       "HearingOutcome": "Hearing outcomes"
     },
     "descriptions": {
+      "CourtType": "Court categories used when adding court stages (civil, family, criminal, etc.).",
       "HearingOutcome": "Session decisions and outcome labels used in hearing scheduling and tracking."
     }
   },

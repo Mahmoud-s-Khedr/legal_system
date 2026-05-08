@@ -128,6 +128,7 @@
     "judicialYear": "Année judiciaire",
     "caseType": "Type de dossier",
     "courtLevel": "Niveau du tribunal",
+    "courtType": "Type de juridiction",
     "courtName": "Nom du tribunal",
     "circuit": "Circuit",
     "hearings": "Audiences",
@@ -689,6 +690,7 @@
     "entities": {
       "CaseType": "Types de dossier",
       "CourtLevel": "Degrés de juridiction",
+      "CourtType": "Types de juridiction",
       "PartyRole": "Rôles des parties",
       "DocumentType": "Types de document",
       "PaymentMethod": "Modes de paiement",
@@ -698,6 +700,7 @@
       "HearingOutcome": "Résultats d'audience"
     },
     "descriptions": {
+      "CourtType": "Catégories de juridiction utilisées lors de l’ajout des étapes judiciaires.",
       "HearingOutcome": "Décisions d'audience utilisées pour la planification et le suivi des sessions."
     }
   },

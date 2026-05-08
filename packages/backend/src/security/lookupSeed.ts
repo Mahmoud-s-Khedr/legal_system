@@ -9,6 +9,69 @@ interface LookupRow {
   sortOrder: number;
 }
 
+const CANONICAL_COURT_TYPE_KEYS = [
+  "CIVIL_COURT",
+  "FAMILY_COURT",
+  "MISDEMEANOR_COURT",
+  "CRIMINAL_COURT",
+  "ECONOMIC_COURT",
+  "STATE_COUNCIL_ADMINISTRATIVE_COURT",
+  "STATE_COUNCIL_DISCIPLINARY_COURT",
+  "STATE_COUNCIL_SUPREME_ADMINISTRATIVE_COURT",
+  "SUPREME_CONSTITUTIONAL_COURT",
+  "COURT_OF_URGENT_MATTERS",
+  "LABOR_COURT",
+  "COURT_OF_CASSATION",
+  "JUVENILE_CHILD_COURT",
+  "TRAFFIC_COURT",
+  "STATE_SECURITY_COURT"
+] as const;
+
+const CANONICAL_COURT_LEVEL_KEYS = [
+  "PARTIAL",
+  "PRIMARY",
+  "APPEAL",
+  "CASSATION"
+] as const;
+
+async function dedupeSystemLookupEntityKeys(
+  prisma: PrismaClient,
+  entity: string,
+  keys: readonly string[]
+) {
+  const rows = await prisma.lookupOption.findMany({
+    where: {
+      firmId: null,
+      entity,
+      key: { in: [...keys] }
+    },
+    orderBy: [
+      { isActive: "desc" },
+      { isSystem: "desc" },
+      { sortOrder: "asc" },
+      { createdAt: "asc" },
+      { id: "asc" }
+    ],
+    select: { id: true, key: true }
+  });
+
+  const seen = new Set<string>();
+  const duplicateIds: string[] = [];
+  for (const row of rows) {
+    if (seen.has(row.key)) {
+      duplicateIds.push(row.id);
+      continue;
+    }
+    seen.add(row.key);
+  }
+
+  if (duplicateIds.length) {
+    await prisma.lookupOption.deleteMany({
+      where: { id: { in: duplicateIds } }
+    });
+  }
+}
+
 const SYSTEM_LOOKUP_OPTIONS: LookupRow[] = [
   // CaseType
   { entity: "CaseType", key: "CIVIL",                          labelAr: "مدني",                             labelEn: "Civil",                               labelFr: "Civil",                                   sortOrder: 0 },
@@ -30,14 +93,26 @@ const SYSTEM_LOOKUP_OPTIONS: LookupRow[] = [
   { entity: "CaseType", key: "TRAFFIC_OFFENSES",               labelAr: "مخالفات وجنح المرور",               labelEn: "Traffic Offenses",                    labelFr: "Infractions routières",                   sortOrder: 16 },
   { entity: "CaseType", key: "BANKRUPTCY",                     labelAr: "إفلاس",                            labelEn: "Bankruptcy",                          labelFr: "Faillite",                                sortOrder: 17 },
   // CourtLevel
-  { entity: "CourtLevel", key: "PRIMARY",            labelAr: "ابتدائي",            labelEn: "Primary",              labelFr: "Premier degré",        sortOrder: 0 },
-  { entity: "CourtLevel", key: "APPEAL",             labelAr: "استئناف",            labelEn: "Appeal",               labelFr: "Appel",                sortOrder: 1 },
-  { entity: "CourtLevel", key: "CASSATION",          labelAr: "نقض",                labelEn: "Cassation",            labelFr: "Cassation",            sortOrder: 2 },
-  { entity: "CourtLevel", key: "ADMINISTRATIVE",     labelAr: "إداري",              labelEn: "Administrative",       labelFr: "Administratif",        sortOrder: 3 },
-  { entity: "CourtLevel", key: "CONSTITUTIONAL_HIGH",labelAr: "دستورية عليا",       labelEn: "Constitutional High",  labelFr: "Constitutionnel Haut", sortOrder: 4 },
-  { entity: "CourtLevel", key: "PARTIAL",            labelAr: "جزئي",               labelEn: "Partial",              labelFr: "Partiel",              sortOrder: 5 },
-  { entity: "CourtLevel", key: "MISDEMEANOR",        labelAr: "جنح",                labelEn: "Misdemeanor",          labelFr: "Correctionnel",        sortOrder: 6 },
-  { entity: "CourtLevel", key: "FELONY",             labelAr: "جنايات",             labelEn: "Felony",               labelFr: "Criminel",             sortOrder: 7 },
+  { entity: "CourtLevel", key: "PARTIAL",            labelAr: "جزئي",               labelEn: "Partial / Summary",    labelFr: "Partiel / sommaire",   sortOrder: 0 },
+  { entity: "CourtLevel", key: "PRIMARY",            labelAr: "ابتدائي",            labelEn: "Primary",              labelFr: "Premier degré",        sortOrder: 1 },
+  { entity: "CourtLevel", key: "APPEAL",             labelAr: "استئناف",            labelEn: "Appeal",               labelFr: "Appel",                sortOrder: 2 },
+  { entity: "CourtLevel", key: "CASSATION",          labelAr: "نقض / عليا",         labelEn: "Cassation / Supreme",  labelFr: "Cassation / suprême",  sortOrder: 3 },
+  // CourtType
+  { entity: "CourtType", key: "CIVIL_COURT",                               labelAr: "محكمة مدنية",                               labelEn: "Civil Court",                                   labelFr: "Tribunal civil",                                         sortOrder: 0 },
+  { entity: "CourtType", key: "FAMILY_COURT",                              labelAr: "محكمة الأسرة",                               labelEn: "Family Court",                                  labelFr: "Tribunal de la famille",                                sortOrder: 1 },
+  { entity: "CourtType", key: "MISDEMEANOR_COURT",                         labelAr: "محكمة الجنح",                                 labelEn: "Misdemeanor Court",                             labelFr: "Tribunal correctionnel",                                sortOrder: 2 },
+  { entity: "CourtType", key: "CRIMINAL_COURT",                            labelAr: "محكمة الجنايات",                              labelEn: "Criminal Court",                                labelFr: "Cour criminelle",                                       sortOrder: 3 },
+  { entity: "CourtType", key: "ECONOMIC_COURT",                            labelAr: "المحكمة الاقتصادية",                          labelEn: "Economic Court",                                labelFr: "Tribunal économique",                                    sortOrder: 4 },
+  { entity: "CourtType", key: "STATE_COUNCIL_ADMINISTRATIVE_COURT",        labelAr: "مجلس الدولة - محكمة القضاء الإداري",          labelEn: "State Council - Administrative Court",          labelFr: "Conseil d'État - Tribunal administratif",               sortOrder: 5 },
+  { entity: "CourtType", key: "STATE_COUNCIL_DISCIPLINARY_COURT",          labelAr: "مجلس الدولة - المحكمة التأديبية",             labelEn: "State Council - Disciplinary Court",            labelFr: "Conseil d'État - Tribunal disciplinaire",               sortOrder: 6 },
+  { entity: "CourtType", key: "STATE_COUNCIL_SUPREME_ADMINISTRATIVE_COURT",labelAr: "مجلس الدولة - المحكمة الإدارية العليا",        labelEn: "State Council - Supreme Administrative Court",  labelFr: "Conseil d'État - Haute Cour administrative",            sortOrder: 7 },
+  { entity: "CourtType", key: "SUPREME_CONSTITUTIONAL_COURT",              labelAr: "المحكمة الدستورية العليا",                    labelEn: "Supreme Constitutional Court",                  labelFr: "Haute Cour constitutionnelle",                           sortOrder: 8 },
+  { entity: "CourtType", key: "COURT_OF_URGENT_MATTERS",                   labelAr: "محكمة الأمور المستعجلة",                      labelEn: "Court of Urgent Matters",                       labelFr: "Tribunal des référés",                                   sortOrder: 9 },
+  { entity: "CourtType", key: "LABOR_COURT",                               labelAr: "المحكمة العمالية",                            labelEn: "Labor Court",                                   labelFr: "Tribunal du travail",                                    sortOrder: 10 },
+  { entity: "CourtType", key: "COURT_OF_CASSATION",                        labelAr: "محكمة النقض",                                 labelEn: "Court of Cassation",                            labelFr: "Cour de cassation",                                      sortOrder: 11 },
+  { entity: "CourtType", key: "JUVENILE_CHILD_COURT",                      labelAr: "محكمة الأحداث / الطفل",                       labelEn: "Juvenile / Child Court",                        labelFr: "Tribunal pour mineurs / enfants",                       sortOrder: 12 },
+  { entity: "CourtType", key: "TRAFFIC_COURT",                             labelAr: "محكمة المرور",                                 labelEn: "Traffic Court",                                 labelFr: "Tribunal de la circulation",                             sortOrder: 13 },
+  { entity: "CourtType", key: "STATE_SECURITY_COURT",                      labelAr: "محكمة أمن الدولة",                             labelEn: "State Security Court",                          labelFr: "Tribunal de sûreté de l'État",                           sortOrder: 14 },
   // PartyRole
   { entity: "PartyRole", key: "PLAINTIFF",                          labelAr: "مدعي",                                      labelEn: "Plaintiff",                            labelFr: "Demandeur",                        sortOrder: 0 },
   { entity: "PartyRole", key: "DEFENDANT",                          labelAr: "مدعى عليه",                                 labelEn: "Defendant",                            labelFr: "Défendeur",                        sortOrder: 1 },
@@ -135,6 +210,9 @@ const SYSTEM_LOOKUP_OPTIONS: LookupRow[] = [
 ];
 
 export async function ensureSystemLookupOptions(prisma: PrismaClient) {
+  await dedupeSystemLookupEntityKeys(prisma, "CourtLevel", CANONICAL_COURT_LEVEL_KEYS);
+  await dedupeSystemLookupEntityKeys(prisma, "CourtType", CANONICAL_COURT_TYPE_KEYS);
+
   for (const row of SYSTEM_LOOKUP_OPTIONS) {
     const existing = await prisma.lookupOption.findFirst({
       where: { firmId: null, entity: row.entity, key: row.key }
@@ -167,5 +245,26 @@ export async function ensureSystemLookupOptions(prisma: PrismaClient) {
         }
       });
     }
+  }
+
+  // Keep CourtLevel strictly procedural and deactivate legacy type-like values.
+  if (typeof prisma.lookupOption.updateMany === "function") {
+    await prisma.lookupOption.updateMany({
+      where: {
+        firmId: null,
+        entity: "CourtLevel",
+        key: { notIn: [...CANONICAL_COURT_LEVEL_KEYS] }
+      },
+      data: { isActive: false, isSystem: true }
+    });
+
+    await prisma.lookupOption.updateMany({
+      where: {
+        firmId: null,
+        entity: "CourtType",
+        key: { notIn: [...CANONICAL_COURT_TYPE_KEYS] }
+      },
+      data: { isActive: false, isSystem: true }
+    });
   }
 }

@@ -23,7 +23,6 @@ interface PortalCaseDetail {
     id: string;
     courtName: string;
     courtLevel: string;
-    caseNumber?: string;
   }>;
   hearings: Array<{
     id: string;
@@ -141,7 +140,6 @@ export function PortalCasePage() {
                 <p className="font-medium">{court.courtName}</p>
                 <p className="text-sm text-slate-500">
                   {court.courtLevel}
-                  {court.caseNumber && ` · ${court.caseNumber}`}
                 </p>
               </div>
             ))}

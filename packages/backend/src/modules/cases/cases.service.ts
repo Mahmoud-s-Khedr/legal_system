@@ -33,8 +33,10 @@ function mapCourt(court: {
   caseId: string;
   courtName: string;
   courtLevel: string;
+  courtType: string | null;
+  governorateValue: string | null;
+  cityValue: string | null;
   circuit: string | null;
-  caseNumber: string | null;
   stageOrder: number;
   startedAt: Date | null;
   endedAt: Date | null;
@@ -48,8 +50,10 @@ function mapCourt(court: {
     caseId: court.caseId,
     courtName: court.courtName,
     courtLevel: court.courtLevel,
+    courtType: court.courtType,
+    governorateValue: court.governorateValue,
+    cityValue: court.cityValue,
     circuit: court.circuit,
-    caseNumber: court.caseNumber,
     stageOrder: court.stageOrder,
     startedAt: court.startedAt?.toISOString() ?? null,
     endedAt: court.endedAt?.toISOString() ?? null,
@@ -110,8 +114,10 @@ function mapCase(caseRecord: {
     caseId: string;
     courtName: string;
     courtLevel: string;
+    courtType: string | null;
+    governorateValue: string | null;
+    cityValue: string | null;
     circuit: string | null;
-    caseNumber: string | null;
     stageOrder: number;
     startedAt: Date | null;
     endedAt: Date | null;
@@ -267,6 +273,69 @@ async function assertActiveCaseType(
   if (!existingType) {
     throw appError(`Invalid case type "${type}"`, 422);
   }
+}
+
+async function assertActiveLookupOption(
+  tx: Prisma.TransactionClient,
+  firmId: string,
+  entity: string,
+  value: string,
+  errorPrefix: string
+): Promise<void> {
+  const existing = await tx.lookupOption.findFirst({
+    where: {
+      entity,
+      key: value,
+      isActive: true,
+      OR: [{ firmId: null }, { firmId }]
+    },
+    select: { id: true }
+  });
+
+  if (!existing) {
+    throw appError(`${errorPrefix} "${value}"`, 422);
+  }
+}
+
+async function resolveCityCourtName(
+  tx: Prisma.TransactionClient,
+  governorateValue: string | null | undefined,
+  cityValue: string | null | undefined
+): Promise<string | null> {
+  const city = cityValue?.trim();
+  if (!city) return null;
+  const governorate = governorateValue?.trim();
+  if (!governorate) {
+    throw appError("Governorate is required when city is provided", 422);
+  }
+
+  const governorateRow = await tx.governorateLookup.findFirst({
+    where: {
+      isActive: true,
+      OR: [
+        { key: { equals: governorate, mode: "insensitive" } },
+        { labelAr: governorate }
+      ]
+    },
+    select: { id: true }
+  });
+  if (!governorateRow) {
+    throw appError(`Invalid governorate "${governorate}"`, 422);
+  }
+
+  const cityRow = await tx.cityLookup.findFirst({
+    where: {
+      governorateId: governorateRow.id,
+      isActive: true,
+      OR: [{ key: { equals: city, mode: "insensitive" } }, { labelAr: city }]
+    },
+    select: { labelAr: true }
+  });
+  if (!cityRow) {
+    throw appError(`Invalid city "${city}" for governorate "${governorate}"`, 422);
+  }
+
+  return cityRow.labelAr;
 }
 
 export async function listCases(
@@ -1041,12 +1110,6 @@ export async function listCaseCourts(
                 }
               },
               {
-                caseNumber: {
-                  contains: candidate,
-                  mode: "insensitive" as const
-                }
-              },
-              {
                 circuit: {
                   contains: candidate,
                   mode: "insensitive" as const
@@ -1100,13 +1163,43 @@ export async function addCaseCourt(
       stageOrder = (maxRow._max.stageOrder ?? -1) + 1;
     }
 
+    await assertActiveLookupOption(
+      tx,
+      actor.firmId,
+      "CourtLevel",
+      payload.courtLevel,
+      "Invalid court level"
+    );
+    if (payload.courtType?.trim()) {
+      await assertActiveLookupOption(
+        tx,
+        actor.firmId,
+        "CourtType",
+        payload.courtType,
+        "Invalid court type"
+      );
+    }
+
+    const resolvedCourtNameFromCity = await resolveCityCourtName(
+      tx,
+      payload.governorateValue,
+      payload.cityValue
+    );
+    const fallbackCourtName = payload.courtName?.trim() ?? "";
+    const courtName = resolvedCourtNameFromCity ?? fallbackCourtName;
+    if (!courtName) {
+      throw appError("Court city or court name is required", 422);
+    }
+
     const court = await tx.caseCourt.create({
       data: {
         caseId,
-        courtName: payload.courtName,
+        courtName,
         courtLevel: payload.courtLevel,
+        courtType: payload.courtType?.trim() || null,
+        governorateValue: payload.governorateValue?.trim() || null,
+        cityValue: payload.cityValue?.trim() || null,
         circuit: payload.circuit ?? null,
-        caseNumber: payload.caseNumber ?? null,
         stageOrder,
         startedAt: payload.startedAt ? new Date(payload.startedAt) : null,
         notes: payload.notes ?? null,
@@ -1138,13 +1231,43 @@ export async function updateCaseCourt(
       where: { id: courtId, caseId, case: { firmId: actor.firmId } }
     });
 
+    await assertActiveLookupOption(
+      tx,
+      actor.firmId,
+      "CourtLevel",
+      payload.courtLevel,
+      "Invalid court level"
+    );
+    if (payload.courtType?.trim()) {
+      await assertActiveLookupOption(
+        tx,
+        actor.firmId,
+        "CourtType",
+        payload.courtType,
+        "Invalid court type"
+      );
+    }
+
+    const resolvedCourtNameFromCity = await resolveCityCourtName(
+      tx,
+      payload.governorateValue,
+      payload.cityValue
+    );
+    const fallbackCourtName = payload.courtName?.trim() ?? "";
+    const courtName = resolvedCourtNameFromCity ?? fallbackCourtName;
+    if (!courtName) {
+      throw appError("Court city or court name is required", 422);
+    }
+
     const court = await tx.caseCourt.update({
       where: { id: courtId },
       data: {
-        courtName: payload.courtName,
+        courtName,
         courtLevel: payload.courtLevel,
+        courtType: payload.courtType?.trim() || null,
+        governorateValue: payload.governorateValue?.trim() || null,
+        cityValue: payload.cityValue?.trim() || null,
         circuit: payload.circuit ?? null,
-        caseNumber: payload.caseNumber ?? null,
         startedAt: payload.startedAt ? new Date(payload.startedAt) : null,
         endedAt: payload.endedAt ? new Date(payload.endedAt) : null,
         isActive: payload.isActive,

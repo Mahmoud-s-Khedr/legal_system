@@ -1,6 +1,7 @@
 export const LOOKUP_ENTITIES = [
   "CaseType",
   "CourtLevel",
+  "CourtType",
   "PartyRole",
   "DocumentType",
   "HearingOutcome",

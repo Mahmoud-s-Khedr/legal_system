@@ -27,6 +27,12 @@ import { apiFetch } from "../../lib/api";
 import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
+import {
+  toLocalizedLocationOptions,
+  useCityLookups,
+  useGovernorateLookups,
+  withLegacyLocationOption
+} from "../../lib/locationLookups";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { EnumBadge } from "../../components/shared/EnumBadge";
 import {
@@ -69,8 +75,10 @@ type CaseTab = (typeof caseTabs)[number];
 export const EMPTY_COURT: CreateCaseCourtDto = {
   courtName: "",
   courtLevel: "",
+  courtType: "",
+  governorateValue: "",
+  cityValue: "",
   circuit: "",
-  caseNumber: "",
   startedAt: "",
   notes: ""
 };
@@ -139,6 +147,7 @@ export function CaseDetailPage() {
   });
   const partyRolesQuery = useLookupOptions("PartyRole");
   const courtLevelsQuery = useLookupOptions("CourtLevel");
+  const courtTypesQuery = useLookupOptions("CourtType");
   const caseTypesQuery = useLookupOptions("CaseType");
   const [editingCourt, setEditingCourt] = useState<CaseCourtDto | null>(null);
   const defaultPartyRole = partyRolesQuery.data?.items?.[0]?.key ?? "";
@@ -307,8 +316,15 @@ export function CaseDetailPage() {
   const courtLevelMap = new Map(
     (courtLevelsQuery.data?.items ?? []).map((o) => [o.key, o.labelAr])
   );
+  const courtTypeMap = new Map(
+    (courtTypesQuery.data?.items ?? []).map((o) => [o.key, o.labelAr])
+  );
 
   const courtLevelOptions = (courtLevelsQuery.data?.items ?? []).map((o) => ({
+    value: o.key,
+    label: o.labelAr
+  }));
+  const courtTypeOptions = (courtTypesQuery.data?.items ?? []).map((o) => ({
     value: o.key,
     label: o.labelAr
   }));
@@ -479,7 +495,6 @@ export function CaseDetailPage() {
                     <tr>
                       <TableHeadCell>{t("labels.courtName")}</TableHeadCell>
                       <TableHeadCell>{t("labels.courtLevel")}</TableHeadCell>
-                      <TableHeadCell>{t("labels.caseNumber")}</TableHeadCell>
                       <TableHeadCell>{t("labels.status")}</TableHeadCell>
                       <TableHeadCell align="end">
                         {t("actions.more")}
@@ -492,14 +507,16 @@ export function CaseDetailPage() {
                         <TableCell>
                           <p className="font-medium">{court.courtName}</p>
                           <p className="text-xs text-slate-500">
-                            {court.circuit ?? "—"}
+                            {courtTypeMap.get(court.courtType ?? "") ??
+                              court.courtType ??
+                              court.circuit ??
+                              "—"}
                           </p>
                         </TableCell>
                         <TableCell>
                           {courtLevelMap.get(court.courtLevel) ??
                             court.courtLevel}
                         </TableCell>
-                        <TableCell>{court.caseNumber ?? "—"}</TableCell>
                         <TableCell>
                           {court.isActive
                             ? t("labels.active")
@@ -550,6 +567,7 @@ export function CaseDetailPage() {
               >
                 <CourtEditForm
                   courtLevelOptions={courtLevelOptions}
+                  courtTypeOptions={courtTypeOptions}
                   court={editingCourt}
                   isPending={updateCourtMutation.isPending}
                   onCancel={() => setEditingCourt(null)}
@@ -579,6 +597,7 @@ export function CaseDetailPage() {
               >
                 <CourtAddForm
                   courtLevelOptions={courtLevelOptions}
+                  courtTypeOptions={courtTypeOptions}
                   isPending={addCourtMutation.isPending}
                   resetToken={courtFormResetToken}
                   onSubmit={(payload) => addCourtMutation.mutate(payload)}
@@ -1122,18 +1141,29 @@ function Detail({ label, value }: { label: string; value: string | null }) {
 
 function CourtAddForm({
   courtLevelOptions,
+  courtTypeOptions,
   isPending,
   resetToken,
   onSubmit,
   t
 }: {
   courtLevelOptions: { value: string; label: string }[];
+  courtTypeOptions: { value: string; label: string }[];
   isPending: boolean;
   resetToken: number;
   onSubmit: (payload: CreateCaseCourtDto) => void;
   t: (key: string) => string;
 }) {
   const [form, setForm] = useState<CreateCaseCourtDto>(EMPTY_COURT);
+  const { i18n } = useTranslation("app");
+  const governorateQuery = useGovernorateLookups();
+  const cityQuery = useCityLookups(form.governorateValue);
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const governorateOptions = toLocalizedLocationOptions(
+    governorateQuery.data?.items,
+    language
+  );
+  const cityOptions = toLocalizedLocationOptions(cityQuery.data?.items, language);
   useEffect(() => {
     if (resetToken > 0) {
       setForm(EMPTY_COURT);
@@ -1148,10 +1178,23 @@ function CourtAddForm({
         onSubmit(form);
       }}
     >
-      <Field
-        label={t("labels.courtName")}
-        onChange={(v) => setForm({ ...form, courtName: v })}
-        value={form.courtName}
+      <SelectField
+        label={t("labels.governorate")}
+        onChange={(v) => setForm({ ...form, governorateValue: v, cityValue: "" })}
+        options={[{ value: "", label: t("labels.none") }, ...governorateOptions]}
+        value={form.governorateValue ?? ""}
+      />
+      <SelectField
+        label={t("labels.city")}
+        onChange={(v) => setForm({ ...form, cityValue: v })}
+        options={[{ value: "", label: t("labels.none") }, ...cityOptions]}
+        value={form.cityValue ?? ""}
+      />
+      <SelectField
+        label={t("labels.courtType")}
+        onChange={(v) => setForm({ ...form, courtType: v })}
+        options={[{ value: "", label: t("labels.none") }, ...courtTypeOptions]}
+        value={form.courtType ?? ""}
       />
       <SelectField
         label={t("labels.courtLevel")}
@@ -1159,7 +1202,7 @@ function CourtAddForm({
         options={
           courtLevelOptions.length
             ? courtLevelOptions
-            : [{ value: "FIRST_INSTANCE", label: "First Instance" }]
+            : [{ value: "PRIMARY", label: "Primary" }]
         }
         value={form.courtLevel}
       />
@@ -1167,11 +1210,6 @@ function CourtAddForm({
         label={t("labels.circuit")}
         onChange={(v) => setForm({ ...form, circuit: v })}
         value={form.circuit ?? ""}
-      />
-      <Field
-        label={t("labels.caseNumber")}
-        onChange={(v) => setForm({ ...form, caseNumber: v })}
-        value={form.caseNumber ?? ""}
       />
       <Field
         label={t("labels.startDate")}
@@ -1190,6 +1228,7 @@ function CourtAddForm({
 function CourtEditForm({
   court,
   courtLevelOptions,
+  courtTypeOptions,
   isPending,
   onCancel,
   onSubmit,
@@ -1197,6 +1236,7 @@ function CourtEditForm({
 }: {
   court: CaseCourtDto;
   courtLevelOptions: { value: string; label: string }[];
+  courtTypeOptions: { value: string; label: string }[];
   isPending: boolean;
   onCancel: () => void;
   onSubmit: (payload: UpdateCaseCourtDto) => void;
@@ -1205,13 +1245,27 @@ function CourtEditForm({
   const [form, setForm] = useState<UpdateCaseCourtDto>({
     courtName: court.courtName,
     courtLevel: court.courtLevel,
+    courtType: court.courtType,
+    governorateValue: court.governorateValue,
+    cityValue: court.cityValue,
     circuit: court.circuit ?? "",
-    caseNumber: court.caseNumber ?? "",
     startedAt: court.startedAt ?? "",
     endedAt: court.endedAt ?? "",
     isActive: court.isActive,
     notes: court.notes ?? ""
   });
+  const { i18n } = useTranslation("app");
+  const governorateQuery = useGovernorateLookups();
+  const cityQuery = useCityLookups(form.governorateValue);
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const governorateOptions = withLegacyLocationOption(
+    toLocalizedLocationOptions(governorateQuery.data?.items, language),
+    form.governorateValue
+  );
+  const cityOptions = withLegacyLocationOption(
+    toLocalizedLocationOptions(cityQuery.data?.items, language),
+    form.cityValue
+  );
 
   return (
     <form
@@ -1220,18 +1274,33 @@ function CourtEditForm({
         e.preventDefault();
         onSubmit({
           ...form,
+          courtType: form.courtType || null,
+          governorateValue: form.governorateValue || null,
+          cityValue: form.cityValue || null,
           circuit: form.circuit || null,
-          caseNumber: form.caseNumber || null,
           startedAt: form.startedAt || null,
           endedAt: form.endedAt || null,
           notes: form.notes || null
         });
       }}
     >
-      <Field
-        label={t("labels.courtName")}
-        onChange={(v) => setForm({ ...form, courtName: v })}
-        value={form.courtName}
+      <SelectField
+        label={t("labels.governorate")}
+        onChange={(v) => setForm({ ...form, governorateValue: v, cityValue: "" })}
+        options={[{ value: "", label: t("labels.none") }, ...governorateOptions]}
+        value={form.governorateValue ?? ""}
+      />
+      <SelectField
+        label={t("labels.city")}
+        onChange={(v) => setForm({ ...form, cityValue: v })}
+        options={[{ value: "", label: t("labels.none") }, ...cityOptions]}
+        value={form.cityValue ?? ""}
+      />
+      <SelectField
+        label={t("labels.courtType")}
+        onChange={(v) => setForm({ ...form, courtType: v })}
+        options={[{ value: "", label: t("labels.none") }, ...courtTypeOptions]}
+        value={form.courtType ?? ""}
       />
       <SelectField
         label={t("labels.courtLevel")}
@@ -1239,7 +1308,7 @@ function CourtEditForm({
         options={
           courtLevelOptions.length
             ? courtLevelOptions
-            : [{ value: "FIRST_INSTANCE", label: "First Instance" }]
+            : [{ value: "PRIMARY", label: "Primary" }]
         }
         value={form.courtLevel}
       />
@@ -1247,11 +1316,6 @@ function CourtEditForm({
         label={t("labels.circuit")}
         onChange={(v) => setForm({ ...form, circuit: v ?? "" })}
         value={form.circuit ?? ""}
-      />
-      <Field
-        label={t("labels.caseNumber")}
-        onChange={(v) => setForm({ ...form, caseNumber: v })}
-        value={form.caseNumber ?? ""}
       />
       <Field
         label={t("labels.startDate")}

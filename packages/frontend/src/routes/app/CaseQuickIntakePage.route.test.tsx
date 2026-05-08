@@ -77,7 +77,10 @@ vi.mock("../../lib/lookups", () => ({
       return { data: { items: [{ key: "CIVIL", labelAr: "Civil" }] } };
     }
     if (key === "CourtLevel") {
-      return { data: { items: [{ key: "FIRST", labelAr: "First" }] } };
+      return { data: { items: [{ key: "PRIMARY", labelAr: "Primary" }] } };
+    }
+    if (key === "CourtType") {
+      return { data: { items: [{ key: "CIVIL", labelAr: "Civil Court" }] } };
     }
     if (key === "PartyRole") {
       return { data: { items: [{ key: "PLAINTIFF", labelAr: "Plaintiff" }] } };
@@ -99,9 +102,14 @@ vi.mock("../../lib/api", () => ({
 }));
 
 vi.mock("../../lib/locationLookups", () => ({
-  useGovernorateLookups: () => ({ data: { items: [] } }),
-  useCityLookups: () => ({ data: { items: [] } }),
-  toLocalizedLocationOptions: () => []
+  useGovernorateLookups: () => ({
+    data: { items: [{ value: "Cairo", labelAr: "Cairo", labelEn: "Cairo", labelFr: "Caire" }] }
+  }),
+  useCityLookups: () => ({
+    data: { items: [{ value: "Nasr City", labelAr: "Nasr City", labelEn: "Nasr City", labelFr: "Nasr City" }] }
+  }),
+  toLocalizedLocationOptions: (items: Array<{ value: string; labelEn: string }> = []) =>
+    items.map((item) => ({ value: item.value, label: item.labelEn }))
 }));
 
 vi.mock("../../lib/enumLabel", () => ({
@@ -323,10 +331,10 @@ describe("CaseQuickIntakePage route behavior", () => {
 
   it("keeps optional sections hidden until the toggle is used", () => {
     const view = render(<CaseQuickIntakePage />);
-    expect(view.querySelector('input[aria-label="labels.courtName"]')).toBeNull();
+    expect(view.querySelector('select[aria-label="labels.governorate"]')).toBeNull();
 
     expandAdditionalDetails(view);
-    expect(view.querySelector('input[aria-label="labels.courtName"]')).not.toBeNull();
+    expect(view.querySelector('select[aria-label="labels.governorate"]')).not.toBeNull();
   });
 
   it("submits quick intake successfully with existing client", async () => {
@@ -394,9 +402,12 @@ describe("CaseQuickIntakePage route behavior", () => {
     const caseNumberInput = view.querySelector(
       'input[aria-label="labels.caseNumber"]'
     ) as HTMLInputElement | null;
-    const courtNameInput = view.querySelector(
-      'input[aria-label="labels.courtName"]'
-    ) as HTMLInputElement | null;
+    const governorateSelect = (view.querySelectorAll(
+      'select[aria-label="labels.governorate"]'
+    )[1] ?? null) as HTMLSelectElement | null;
+    const citySelect = (view.querySelectorAll(
+      'select[aria-label="labels.city"]'
+    )[1] ?? null) as HTMLSelectElement | null;
     const courtLevelSelect = view.querySelector(
       'select[aria-label="labels.courtLevel"]'
     ) as HTMLSelectElement | null;
@@ -407,8 +418,9 @@ describe("CaseQuickIntakePage route behavior", () => {
       if (typeSelect) setSelectValue(typeSelect, ClientType.INDIVIDUAL);
       if (titleInput) setInputValue(titleInput, "Case B");
       if (caseNumberInput) setInputValue(caseNumberInput, "2026/002");
-      if (courtNameInput) setInputValue(courtNameInput, "Court X");
-      if (courtLevelSelect) setSelectValue(courtLevelSelect, "FIRST");
+      if (governorateSelect) setSelectValue(governorateSelect, "Cairo");
+      if (citySelect) setSelectValue(citySelect, "Nasr City");
+      if (courtLevelSelect) setSelectValue(courtLevelSelect, "PRIMARY");
     });
 
     await act(async () => {
@@ -453,9 +465,12 @@ describe("CaseQuickIntakePage route behavior", () => {
     const caseNumberInput = view.querySelector(
       'input[aria-label="labels.caseNumber"]'
     ) as HTMLInputElement | null;
-    const courtNameInput = view.querySelector(
-      'input[aria-label="labels.courtName"]'
-    ) as HTMLInputElement | null;
+    const governorateSelect = view.querySelector(
+      'select[aria-label="labels.governorate"]'
+    ) as HTMLSelectElement | null;
+    const citySelect = view.querySelector(
+      'select[aria-label="labels.city"]'
+    ) as HTMLSelectElement | null;
     const courtLevelSelect = view.querySelector(
       'select[aria-label="labels.courtLevel"]'
     ) as HTMLSelectElement | null;
@@ -464,8 +479,9 @@ describe("CaseQuickIntakePage route behavior", () => {
     act(() => {
       if (titleInput) setInputValue(titleInput, "Case Retry");
       if (caseNumberInput) setInputValue(caseNumberInput, "2026/003");
-      if (courtNameInput) setInputValue(courtNameInput, "Retry Court");
-      if (courtLevelSelect) setSelectValue(courtLevelSelect, "FIRST");
+      if (governorateSelect) setSelectValue(governorateSelect, "Cairo");
+      if (citySelect) setSelectValue(citySelect, "Nasr City");
+      if (courtLevelSelect) setSelectValue(courtLevelSelect, "PRIMARY");
     });
 
     await act(async () => {
@@ -505,9 +521,12 @@ describe("CaseQuickIntakePage route behavior", () => {
     const caseNumberInput = view.querySelector(
       'input[aria-label="labels.caseNumber"]'
     ) as HTMLInputElement | null;
-    const courtNameInput = view.querySelector(
-      'input[aria-label="labels.courtName"]'
-    ) as HTMLInputElement | null;
+    const governorateSelect = view.querySelector(
+      'select[aria-label="labels.governorate"]'
+    ) as HTMLSelectElement | null;
+    const citySelect = view.querySelector(
+      'select[aria-label="labels.city"]'
+    ) as HTMLSelectElement | null;
     const courtLevelSelect = view.querySelector(
       'select[aria-label="labels.courtLevel"]'
     ) as HTMLSelectElement | null;
@@ -516,8 +535,9 @@ describe("CaseQuickIntakePage route behavior", () => {
     act(() => {
       if (titleInput) setInputValue(titleInput, "Case Partial");
       if (caseNumberInput) setInputValue(caseNumberInput, "2026/004");
-      if (courtNameInput) setInputValue(courtNameInput, "Court X");
-      if (courtLevelSelect) setSelectValue(courtLevelSelect, "FIRST");
+      if (governorateSelect) setSelectValue(governorateSelect, "Cairo");
+      if (citySelect) setSelectValue(citySelect, "Nasr City");
+      if (courtLevelSelect) setSelectValue(courtLevelSelect, "PRIMARY");
     });
 
     await act(async () => {

@@ -5,6 +5,7 @@ import { PageHeader } from "./ui";
 const LOOKUP_ENTITIES = [
   "CaseType",
   "CourtLevel",
+  "CourtType",
   "PartyRole",
   "DocumentType",
   "HearingOutcome",

@@ -64,20 +64,24 @@ const caseAssignmentSchema = z.object({
 });
 
 const caseCourtSchema = z.object({
-  courtName: z.string().min(1),
+  courtName: z.string().min(1).optional(),
   courtLevel: z.string().min(1),
+  courtType: z.string().nullable().optional(),
+  governorateValue: z.string().nullable().optional(),
+  cityValue: z.string().nullable().optional(),
   circuit: z.string().nullable().optional(),
-  caseNumber: z.string().nullable().optional(),
   stageOrder: z.number().int().min(0).optional(),
   startedAt: z.string().nullable().optional(),
   notes: z.string().nullable().optional()
 });
 
 const caseCourtUpdateSchema = z.object({
-  courtName: z.string().min(1),
+  courtName: z.string().min(1).optional(),
   courtLevel: z.string().min(1),
+  courtType: z.string().nullable().optional(),
+  governorateValue: z.string().nullable().optional(),
+  cityValue: z.string().nullable().optional(),
   circuit: z.string().nullable().optional(),
-  caseNumber: z.string().nullable().optional(),
   startedAt: z.string().nullable().optional(),
   endedAt: z.string().nullable().optional(),
   isActive: z.boolean(),
@@ -130,8 +134,10 @@ const caseCourtDtoSchema = {
     caseId: { type: "string" },
     courtName: { type: "string" },
     courtLevel: { type: "string" },
+    courtType: { type: ["string", "null"] },
+    governorateValue: { type: ["string", "null"] },
+    cityValue: { type: ["string", "null"] },
     circuit: { type: ["string", "null"] },
-    caseNumber: { type: ["string", "null"] },
     stageOrder: { type: "number" },
     startedAt: { type: ["string", "null"] },
     endedAt: { type: ["string", "null"] },

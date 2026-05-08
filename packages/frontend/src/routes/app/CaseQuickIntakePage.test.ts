@@ -26,10 +26,11 @@ function baseState(): Parameters<typeof isQuickIntakeDirty>[0] {
     courts: [
       {
         id: "court-1",
-        courtName: "",
         courtLevel: "",
+        courtType: "",
+        governorateValue: "",
+        cityValue: "",
         circuit: "",
-        caseNumber: "",
         startedAt: "",
         notes: ""
       }

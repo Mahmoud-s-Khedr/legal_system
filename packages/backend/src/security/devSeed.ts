@@ -88,7 +88,7 @@ const COURT_NAMES_AR = [
   "محكمة أسيوط الابتدائية", "محكمة المنصورة الابتدائية",
 ];
 
-const COURT_LEVELS = ["PRIMARY", "APPEAL", "CASSATION", "ADMINISTRATIVE", "PARTIAL", "MISDEMEANOR"];
+const COURT_LEVELS = ["PARTIAL", "PRIMARY", "APPEAL", "CASSATION"];
 
 const CASE_TYPES = ["CIVIL", "CRIMINAL", "COMMERCIAL", "FAMILY", "LABOR", "REAL_ESTATE", "ADMINISTRATIVE"];
 
@@ -450,7 +450,6 @@ async function seedDevCases(
           courtName: pick(COURT_NAMES_AR),
           courtLevel: pick(COURT_LEVELS),
           circuit: `الدائرة ${randInt(1, 20)}`,
-          caseNumber: j === 0 ? `${randInt(100, 9999)}/${year}` : null,
           stageOrder: j,
           isActive: j === numCourts - 1,
           startedAt: randDate(400),

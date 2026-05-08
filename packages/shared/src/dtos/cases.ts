@@ -33,8 +33,10 @@ export interface CaseCourtDto {
   caseId: string;
   courtName: string;
   courtLevel: string;
+  courtType?: string | null;
+  governorateValue?: string | null;
+  cityValue?: string | null;
   circuit: string | null;
-  caseNumber: string | null;
   stageOrder: number;
   startedAt: string | null;
   endedAt: string | null;
@@ -94,20 +96,24 @@ export interface CreateCaseAssignmentDto {
 }
 
 export interface CreateCaseCourtDto {
-  courtName: string;
+  courtName?: string;
   courtLevel: string;
+  courtType?: string | null;
+  governorateValue?: string | null;
+  cityValue?: string | null;
   circuit?: string | null;
-  caseNumber?: string | null;
   stageOrder?: number;
   startedAt?: string | null;
   notes?: string | null;
 }
 
 export interface UpdateCaseCourtDto {
-  courtName: string;
+  courtName?: string;
   courtLevel: string;
+  courtType?: string | null;
+  governorateValue?: string | null;
+  cityValue?: string | null;
   circuit?: string | null;
-  caseNumber?: string | null;
   startedAt?: string | null;
   endedAt?: string | null;
   isActive: boolean;
@@ -129,4 +135,3 @@ export interface ConflictWarningDto {
   /** Title of that case */
   conflictingCaseTitle: string;
 }
-

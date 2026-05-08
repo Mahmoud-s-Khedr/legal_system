@@ -451,8 +451,10 @@ model CaseCourt {
   caseId     String      @db.Uuid
   courtName  String
   courtLevel String
+  courtType  String?
+  governorateValue String?
+  cityValue  String?
   circuit    String?
-  caseNumber String?
   stageOrder Int         @default(0)
   startedAt  DateTime?
   endedAt    DateTime?
@@ -464,6 +466,8 @@ model CaseCourt {
   sessions   CaseSession[]
 
   @@index([caseId, stageOrder])
+  @@index([governorateValue])
+  @@index([cityValue])
 }
 
 model CaseAssignment {

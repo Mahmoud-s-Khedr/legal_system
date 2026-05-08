@@ -62,10 +62,11 @@ type ClientFormState = Omit<CreateClientDto, "type"> & {
 
 type DraftCourt = {
   id: string;
-  courtName: string;
   courtLevel: string;
+  courtType: string;
+  governorateValue: string;
+  cityValue: string;
   circuit: string;
-  caseNumber: string;
   startedAt: string;
   notes: string;
 };
@@ -168,10 +169,11 @@ function validatePhone(value: string) {
 function emptyCourt(): DraftCourt {
   return {
     id: makeId("court"),
-    courtName: "",
     courtLevel: "",
+    courtType: "",
+    governorateValue: "",
+    cityValue: "",
     circuit: "",
-    caseNumber: "",
     startedAt: "",
     notes: ""
   };
@@ -257,9 +259,10 @@ export function isQuickIntakeDirty(state: {
     hasText(state.clientForm.internalRef) ||
     state.courts.some(
       (court) =>
-        hasText(court.courtName) ||
         hasText(court.courtLevel) ||
-        hasText(court.caseNumber) ||
+        hasText(court.courtType) ||
+        hasText(court.governorateValue) ||
+        hasText(court.cityValue) ||
         hasText(court.startedAt) ||
         hasText(court.circuit) ||
         hasText(court.notes)
@@ -400,6 +403,7 @@ export function CaseQuickIntakePage() {
 
   const caseTypesQuery = useLookupOptions("CaseType");
   const courtLevelsQuery = useLookupOptions("CourtLevel");
+  const courtTypesQuery = useLookupOptions("CourtType");
   const partyRolesQuery = useLookupOptions("PartyRole");
   const docTypesQuery = useLookupOptions("DocumentType");
   const hearingOutcomesQuery = useLookupOptions("HearingOutcome");
@@ -466,6 +470,10 @@ export function CaseQuickIntakePage() {
       label: item.labelAr
     })
   );
+  const courtTypeOptions = (courtTypesQuery.data?.items ?? []).map((item) => ({
+    value: item.key,
+    label: item.labelAr
+  }));
 
   const partyRoleOptions = (partyRolesQuery.data?.items ?? []).map((item) => ({
     value: item.key,
@@ -666,10 +674,12 @@ export function CaseQuickIntakePage() {
 
   async function postCourt(caseId: string, row: DraftCourt) {
     const payload: CreateCaseCourtDto = {
-      courtName: row.courtName.trim(),
       courtLevel: row.courtLevel,
+      courtType: toNullable(row.courtType),
+      governorateValue: toNullable(row.governorateValue),
+      cityValue: toNullable(row.cityValue),
+      courtName: row.cityValue.trim() || undefined,
       circuit: toNullable(row.circuit),
-      caseNumber: toNullable(row.caseNumber),
       startedAt: toNullable(row.startedAt),
       notes: toNullable(row.notes)
     };
@@ -833,7 +843,10 @@ export function CaseQuickIntakePage() {
 
       if (canUpdateCases && shouldAttemptSection("courts")) {
         const rows = courts.filter(
-          (row) => row.courtName.trim() && row.courtLevel.trim()
+          (row) =>
+            row.courtLevel.trim() &&
+            row.governorateValue.trim() &&
+            row.cityValue.trim()
         );
         if (rows.length) {
           const result = await Promise.allSettled(
@@ -1304,67 +1317,17 @@ export function CaseQuickIntakePage() {
         >
           <div className="space-y-3">
             {courts.map((row) => (
-              <div
+              <QuickIntakeCourtRow
                 key={row.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
-              >
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field
-                    label={t("labels.courtName")}
-                    value={row.courtName}
-                    onChange={(value) =>
-                      updateCourtRow(row.id, { courtName: value })
-                    }
-                  />
-                  <SelectField
-                    label={t("labels.courtLevel")}
-                    value={row.courtLevel}
-                    onChange={(value) =>
-                      updateCourtRow(row.id, { courtLevel: value })
-                    }
-                    options={[
-                      { value: "", label: t("labels.none") },
-                      ...courtLevelOptions
-                    ]}
-                  />
-                  <Field
-                    label={t("labels.circuit")}
-                    value={row.circuit}
-                    onChange={(value) =>
-                      updateCourtRow(row.id, { circuit: value })
-                    }
-                  />
-                  <Field
-                    label={t("labels.caseNumber")}
-                    value={row.caseNumber}
-                    onChange={(value) =>
-                      updateCourtRow(row.id, { caseNumber: value })
-                    }
-                  />
-                  <Field
-                    label={t("labels.startDate")}
-                    type="date"
-                    value={row.startedAt}
-                    onChange={(value) =>
-                      updateCourtRow(row.id, { startedAt: value })
-                    }
-                  />
-                  <Field
-                    label={t("labels.notes")}
-                    value={row.notes}
-                    onChange={(value) =>
-                      updateCourtRow(row.id, { notes: value })
-                    }
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="text-sm text-red-600"
-                  onClick={() => removeCourtRow(row.id)}
-                >
-                  {t("actions.delete")}
-                </button>
-              </div>
+                row={row}
+                courtLevelOptions={courtLevelOptions}
+                courtTypeOptions={courtTypeOptions}
+                governorateOptions={governorateOptions}
+                language={language}
+                onUpdate={(patch) => updateCourtRow(row.id, patch)}
+                onRemove={() => removeCourtRow(row.id)}
+                t={t}
+              />
             ))}
             <button
               type="button"
@@ -1720,8 +1683,9 @@ export function CaseQuickIntakePage() {
             </p>
             <p>
               {t("quickIntake.optionalSummary", {
-                courts: courts.filter((row) => row.courtName && row.courtLevel)
-                  .length,
+                courts: courts.filter(
+                  (row) => row.courtLevel && row.governorateValue && row.cityValue
+                ).length,
                 parties: parties.filter((row) => row.name && row.role).length,
                 assignments: assignments.filter((row) => row.userId).length,
                 hearings: hearings.filter((row) => row.sessionDatetime).length,
@@ -1773,6 +1737,83 @@ export function CaseQuickIntakePage() {
           ) : null}
         </SectionCard>
       </form>
+    </div>
+  );
+}
+
+function QuickIntakeCourtRow({
+  row,
+  courtLevelOptions,
+  courtTypeOptions,
+  governorateOptions,
+  language,
+  onUpdate,
+  onRemove,
+  t
+}: {
+  row: DraftCourt;
+  courtLevelOptions: Array<{ value: string; label: string }>;
+  courtTypeOptions: Array<{ value: string; label: string }>;
+  governorateOptions: Array<{ value: string; label: string }>;
+  language: string;
+  onUpdate: (patch: Partial<DraftCourt>) => void;
+  onRemove: () => void;
+  t: (key: string) => string;
+}) {
+  const cityQuery = useCityLookups(row.governorateValue);
+  const cityOptions = toLocalizedLocationOptions(cityQuery.data?.items, language);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        <SelectField
+          label={t("labels.governorate")}
+          value={row.governorateValue}
+          onChange={(value) => onUpdate({ governorateValue: value, cityValue: "" })}
+          options={[{ value: "", label: t("labels.none") }, ...governorateOptions]}
+        />
+        <SelectField
+          label={t("labels.city")}
+          value={row.cityValue}
+          onChange={(value) => onUpdate({ cityValue: value })}
+          options={[{ value: "", label: t("labels.none") }, ...cityOptions]}
+        />
+        <SelectField
+          label={t("labels.courtType")}
+          value={row.courtType}
+          onChange={(value) => onUpdate({ courtType: value })}
+          options={[{ value: "", label: t("labels.none") }, ...courtTypeOptions]}
+        />
+        <SelectField
+          label={t("labels.courtLevel")}
+          value={row.courtLevel}
+          onChange={(value) => onUpdate({ courtLevel: value })}
+          options={[{ value: "", label: t("labels.none") }, ...courtLevelOptions]}
+        />
+        <Field
+          label={t("labels.circuit")}
+          value={row.circuit}
+          onChange={(value) => onUpdate({ circuit: value })}
+        />
+        <Field
+          label={t("labels.startDate")}
+          type="date"
+          value={row.startedAt}
+          onChange={(value) => onUpdate({ startedAt: value })}
+        />
+        <Field
+          label={t("labels.notes")}
+          value={row.notes}
+          onChange={(value) => onUpdate({ notes: value })}
+        />
+      </div>
+      <button
+        type="button"
+        className="text-sm text-red-600"
+        onClick={onRemove}
+      >
+        {t("actions.delete")}
+      </button>
     </div>
   );
 }
