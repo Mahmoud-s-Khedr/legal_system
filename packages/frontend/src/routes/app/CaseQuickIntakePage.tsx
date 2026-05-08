@@ -17,7 +17,6 @@ import {
   CaseStatus,
   ClientType,
   Language,
-  SessionOutcome,
   TaskPriority,
   TaskStatus,
   type CaseDto,
@@ -86,7 +85,7 @@ type DraftHearing = {
   assignedLawyerId: string;
   sessionDatetime: string;
   nextSessionAt: string;
-  outcome: SessionOutcome | "";
+  outcome: string;
   notes: string;
 };
 
@@ -397,6 +396,7 @@ export function CaseQuickIntakePage() {
   const courtLevelsQuery = useLookupOptions("CourtLevel");
   const partyRolesQuery = useLookupOptions("PartyRole");
   const docTypesQuery = useLookupOptions("DocumentType");
+  const hearingOutcomesQuery = useLookupOptions("HearingOutcome");
 
   const createClientMutation = useMutation({
     mutationFn: (payload: CreateClientDto) =>
@@ -484,9 +484,9 @@ export function CaseQuickIntakePage() {
 
   const sessionOutcomeOptions = [
     { value: "", label: t("labels.none") },
-    ...Object.values(SessionOutcome).map((value) => ({
-      value,
-      label: getEnumLabel(t, "SessionOutcome", value)
+    ...(hearingOutcomesQuery.data?.items ?? []).map((item) => ({
+      value: item.key,
+      label: getEnumLabel(t, "HearingOutcome", item.key)
     }))
   ];
 
@@ -501,8 +501,8 @@ export function CaseQuickIntakePage() {
   }));
   if (!documentTypeOptions.length) {
     documentTypeOptions.push({
-      value: "GENERAL",
-      label: getEnumLabel(t, "DocumentType", "GENERAL")
+      value: "GENERAL_OTHER",
+      label: getEnumLabel(t, "DocumentType", "GENERAL_OTHER")
     });
   }
 
@@ -637,7 +637,7 @@ export function CaseQuickIntakePage() {
     const rows = Array.from(files).map((file) => ({
       id: makeId("document"),
       title: file.name,
-      type: "GENERAL",
+      type: "GENERAL_OTHER",
       file
     }));
     setDocuments((prev) => [...prev, ...rows]);
@@ -716,7 +716,7 @@ export function CaseQuickIntakePage() {
       nextSessionAt: row.nextSessionAt
         ? new Date(row.nextSessionAt).toISOString()
         : null,
-      outcome: row.outcome ? (row.outcome as SessionOutcome) : null,
+      outcome: row.outcome || null,
       notes: toNullable(row.notes)
     };
 
@@ -749,7 +749,7 @@ export function CaseQuickIntakePage() {
 
     const formData = new FormData();
     formData.append("title", row.title.trim() || file.name);
-    formData.append("type", row.type || "GENERAL");
+    formData.append("type", row.type || "GENERAL_OTHER");
     formData.append("caseId", caseId);
     formData.append("file", file);
 
@@ -1526,7 +1526,7 @@ export function CaseQuickIntakePage() {
                     value={row.outcome}
                     onChange={(value) =>
                       updateHearingRow(row.id, {
-                        outcome: value as SessionOutcome | ""
+                        outcome: value
                       })
                     }
                     options={sessionOutcomeOptions}

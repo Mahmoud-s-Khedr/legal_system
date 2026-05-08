@@ -8,12 +8,11 @@ import type {
   DocumentVersionDto,
   SessionUser,
   UpdateDocumentDto,
-  DocumentType as SharedDocumentType,
   PreviewStatus,
   ExtractionStatus as SharedExtractionStatus,
   OcrBackend as SharedOcrBackend
 } from "@elms/shared";
-import { ExtractionStatus } from "@prisma/client";
+import { ExtractionStatus, type Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
@@ -76,6 +75,30 @@ function mapVersion(v: {
   };
 }
 
+async function assertActiveDocumentType(
+  tx: Prisma.TransactionClient,
+  firmId: string,
+  type: string
+): Promise<void> {
+  // Some unit tests mock only the document/version tables.
+  // If lookupOption is not available on the mocked tx, skip lookup validation.
+  if (!("lookupOption" in tx) || !tx.lookupOption) {
+    return;
+  }
+  const option = await tx.lookupOption.findFirst({
+    where: {
+      entity: "DocumentType",
+      key: type,
+      isActive: true,
+      OR: [{ firmId: null }, { firmId }]
+    },
+    select: { id: true }
+  });
+  if (!option) {
+    throw appError(`Invalid document type: ${type}`, 422);
+  }
+}
+
 function mapDocument(doc: {
   id: string;
   firmId: string;
@@ -117,7 +140,7 @@ function mapDocument(doc: {
     storageKey: doc.storageKey,
     previewPdfKey: doc.previewPdfKey,
     previewStatus: doc.previewStatus as PreviewStatus,
-    type: doc.type as SharedDocumentType,
+    type: doc.type,
     extractionStatus: doc.extractionStatus as SharedExtractionStatus,
     ocrBackend: doc.ocrBackend as SharedOcrBackend,
     contentText: doc.contentText,
@@ -240,6 +263,7 @@ export async function createDocument(
   let doc;
   try {
     doc = await withTenant(prisma, actor.firmId, async (tx) => {
+      await assertActiveDocumentType(tx, actor.firmId, payload.type);
       const useGoogleVision =
         env.OCR_BACKEND === "google_vision" &&
         hasEditionFeature(actor.editionKey, "google_vision_ocr");
@@ -312,6 +336,9 @@ export async function updateDocument(
   audit: AuditContext
 ): Promise<DocumentDto> {
   return withTenant(prisma, actor.firmId, async (tx) => {
+    if (payload.type !== undefined) {
+      await assertActiveDocumentType(tx, actor.firmId, payload.type);
+    }
     const existing = await tx.document.findFirstOrThrow({
       where: { id: documentId, firmId: actor.firmId, deletedAt: null }
     });

@@ -1,14 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  SessionOutcome,
-  type HearingListResponseDto,
-  type HearingDto
-} from "@elms/shared";
+import { type HearingListResponseDto, type HearingDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { useLookupOptions } from "../../lib/lookups";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { useToastStore } from "../../store/toastStore";
 import {
@@ -31,12 +28,18 @@ import {
   formatDateTime
 } from "./ui";
 
-function OutcomeCell({ hearing }: { hearing: HearingDto }) {
+function OutcomeCell({
+  hearing,
+  outcomeKeys
+}: {
+  hearing: HearingDto;
+  outcomeKeys: string[];
+}) {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
   const addToast = useToastStore((state) => state.addToast);
   const mutation = useMutation({
-    mutationFn: (outcome: SessionOutcome | null) =>
+    mutationFn: (outcome: string | null) =>
       apiFetch(`/api/hearings/${hearing.id}/outcome`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -55,14 +58,14 @@ function OutcomeCell({ hearing }: { hearing: HearingDto }) {
       className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 focus:border-accent focus:outline-none disabled:opacity-50"
       disabled={mutation.isPending}
       onChange={(e) =>
-        mutation.mutate((e.target.value || null) as SessionOutcome | null)
+        mutation.mutate(e.target.value || null)
       }
       value={hearing.outcome ?? ""}
     >
       <option value="">—</option>
-      {Object.values(SessionOutcome).map((v) => (
+      {outcomeKeys.map((v) => (
         <option key={v} value={v}>
-          {getEnumLabel(t, "SessionOutcome", v)}
+          {getEnumLabel(t, "HearingOutcome", v)}
         </option>
       ))}
     </select>
@@ -85,6 +88,8 @@ export function HearingsPage() {
         `/api/hearings?${table.toApiQueryString()}`
       )
   });
+  const outcomesQuery = useLookupOptions("HearingOutcome");
+  const outcomeKeys = (outcomesQuery.data?.items ?? []).map((item) => item.key);
   const queryClient = useQueryClient();
   const addToast = useToastStore((state) => state.addToast);
   const deleteHearingMutation = useMutation({
@@ -199,7 +204,7 @@ export function HearingsPage() {
                   label: t("labels.outcome"),
                   render: (item) =>
                     item.outcome
-                      ? getEnumLabel(t, "SessionOutcome", item.outcome)
+                      ? getEnumLabel(t, "HearingOutcome", item.outcome)
                       : "—"
                 }
               ]}
@@ -259,7 +264,7 @@ export function HearingsPage() {
                         {hearing.assignedLawyerName ?? t("labels.unassigned")}
                       </TableCell>
                       <TableCell>
-                        <OutcomeCell hearing={hearing} />
+                        <OutcomeCell hearing={hearing} outcomeKeys={outcomeKeys} />
                       </TableCell>
                       <TableCell align="end">
                         <div className="flex justify-end gap-2">

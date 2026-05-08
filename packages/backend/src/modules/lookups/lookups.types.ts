@@ -3,6 +3,7 @@ export const LOOKUP_ENTITIES = [
   "CourtLevel",
   "PartyRole",
   "DocumentType",
+  "HearingOutcome",
   "PaymentMethod",
   "FeeType",
   "ExpenseCategory",

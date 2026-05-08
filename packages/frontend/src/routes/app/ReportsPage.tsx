@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useToastStore } from "../../store/toastStore";
 import { apiFetch } from "../../lib/api";
 import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
+import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import {
   Area,
@@ -563,7 +564,9 @@ function ReportTable({
               className="rounded-2xl border border-slate-200 bg-white p-4"
             >
               <p className="text-xs text-slate-500">{t("labels.outcome")}</p>
-              <p className="font-semibold">{r.outcome ?? "—"}</p>
+              <p className="font-semibold">
+                {r.outcome ? getEnumLabel(t, "HearingOutcome", r.outcome) : "—"}
+              </p>
               <p className="mt-2 text-xs text-slate-500">
                 {t("reports.count")}
               </p>
@@ -586,7 +589,9 @@ function ReportTable({
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className="border-b border-slate-50">
-                  <td className="px-3 py-2">{r.outcome ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    {r.outcome ? getEnumLabel(t, "HearingOutcome", r.outcome) : "—"}
+                  </td>
                   <td className="px-3 py-2 text-end font-semibold">
                     {r.count}
                   </td>

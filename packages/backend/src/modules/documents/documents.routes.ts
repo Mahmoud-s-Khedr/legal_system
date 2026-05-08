@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
-import { DocumentType } from "@elms/shared";
 import { documentDtoSchema, listResponseSchema, successSchema } from "../../schemas/index.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
@@ -23,7 +22,7 @@ import {
 
 const updateDocumentSchema = z.object({
   title: z.string().min(1).optional(),
-  type: z.nativeEnum(DocumentType).optional(),
+  type: z.string().min(1).optional(),
   caseId: z.string().uuid().nullable().optional(),
   clientId: z.string().uuid().nullable().optional(),
   taskId: z.string().uuid().nullable().optional()
@@ -122,15 +121,10 @@ export async function registerDocumentRoutes(app: FastifyInstance, env: AppEnv) 
 
       const fields = data.fields as Record<string, { value: string }>;
       const title = fields.title?.value ?? data.filename;
-      const type = fields.type?.value ?? DocumentType.GENERAL;
+      const type = fields.type?.value ?? "GENERAL_OTHER";
       const caseId = fields.caseId?.value || undefined;
       const clientId = fields.clientId?.value || undefined;
       const taskId = fields.taskId?.value || undefined;
-
-      // Validate type field
-      if (!Object.values(DocumentType).includes(type as DocumentType)) {
-        return reply.status(422).send({ message: `Invalid document type: ${type}` });
-      }
 
       const doc = await createDocument(
         actor,

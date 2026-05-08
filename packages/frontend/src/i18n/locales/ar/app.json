@@ -696,7 +696,8 @@
       "PaymentMethod": "طرق الدفع",
       "FeeType": "أنواع الأتعاب",
       "ExpenseCategory": "فئات المصروفات",
-      "LibraryDocType": "أنواع مستندات المكتبة"
+      "LibraryDocType": "أنواع مستندات المكتبة",
+      "HearingOutcome": "قرارات الجلسات"
     },
     "descriptions": {
       "CaseType": "أنواع القضايا المستخدمة في إنشاء القضايا وتصنيفها.",
@@ -706,7 +707,8 @@
       "PaymentMethod": "طرق الدفع المتاحة في الفواتير.",
       "FeeType": "هيكل الأتعاب المستخدم في الفواتير.",
       "ExpenseCategory": "فئات المصروفات لتصنيف التكاليف.",
-      "LibraryDocType": "أنواع المستندات داخل المكتبة القانونية."
+      "LibraryDocType": "أنواع المستندات داخل المكتبة القانونية.",
+      "HearingOutcome": "قرارات الجلسات المستخدمة في جدولة الجلسات ومتابعتها."
     }
   },
   "roles": {
@@ -1129,7 +1131,24 @@
       "CONTRACT": "عقد",
       "COURT_FILING": "مستند تقاضٍ",
       "RECEIPT": "إيصال",
-      "POWER_OF_ATTORNEY": "توكيل رسمي"
+      "POWER_OF_ATTORNEY": "توكيل",
+      "GENERAL_OTHER": "عام / أخرى",
+      "POLICE_REPORT": "محضر شرطة / محضر جمع استدلالات",
+      "INVESTIGATION_REPORT": "محضر تحقيقات",
+      "LAWSUIT_STATEMENT_WRIT": "صحيفة الدعوى",
+      "APPEAL_OBJECTION_STATEMENT": "صحيفة استئناف / طعن / معارضة",
+      "DEFENSE_MEMORANDUM": "مذكرة دفاع",
+      "HEARING_MINUTES": "محضر الجلسة",
+      "JUDGMENT_COPY": "صورة رسمية من الحكم",
+      "EXECUTIVE_FORMULA": "صيغة تنفيذية",
+      "EXPERT_REPORT": "تقرير الخبير",
+      "MEDICAL_REPORT": "تقرير طبي",
+      "OFFICIAL_CERTIFICATE": "شهادة رسمية",
+      "WARNING_LEGAL_NOTICE": "إنذار رسمي",
+      "CONTRACT_AGREEMENT": "عقد / اتفاق",
+      "PROOF_OF_PAYMENT_RECEIPTS": "إيصالات / قسائم سداد أموال",
+      "TAX_CARD": "بطاقة ضريبية",
+      "CLIENT_ID_COMMERCIAL_REGISTER": "هوية موكل / سجل تجاري"
     },
     "ExtractionStatus": {
       "PENDING": "في الانتظار",
@@ -1154,6 +1173,25 @@
       "PARTIALLY_PAID": "مدفوعة جزئيًا",
       "PAID": "مدفوعة",
       "VOID": "ملغاة"
+    },
+    "HearingOutcome": {
+      "POSTPONED_DOCUMENT_SUBMISSION": "تأجيل لتقديم مستندات",
+      "POSTPONED_REVIEW_MEMO": "تأجيل للاطلاع / مذكرات",
+      "POSTPONED_NOTIFICATION_RENOTIFICATION": "تأجيل للإعلان / إعادة إعلان",
+      "POSTPONED_EXPERT_REPORT_REVIEW": "تأجيل للاطلاع على تقرير الخبير",
+      "POSTPONED_WITNESS_TESTIMONY": "تأجيل لسماع الشهود",
+      "POSTPONED_JOIN_INTERVENING_PARTIES": "تأجيل لإدخال أو تدخل خصوم",
+      "POSTPONED_FINAL_PLEADING": "تأجيل للمرافعة",
+      "ADMINISTRATIVE_POSTPONEMENT": "تأجيل إداري / أجل إداري",
+      "REFERRED_TO_EXPERTS": "إحالة لمكتب الخبراء",
+      "RESERVED_FOR_JUDGMENT": "حجز للحكم",
+      "INTERLOCUTORY_JUDGMENT_ISSUED": "حكم تمهيدي",
+      "JUDGMENT_ISSUED": "صدر حكم",
+      "CASE_DISMISSED": "شطب الدعوى",
+      "SUSPENDED": "وقف تعليقي / جزائي",
+      "DISCONTINUATION_OF_LITIGATION": "انقطاع سير الخصومة",
+      "REFERRED_TO_ANOTHER_CIRCUIT_COURT": "إحالة لدائرة/محكمة أخرى",
+      "SETTLED_RECONCILED": "تصالح"
     }
   },
   "billing": {
@@ -1476,6 +1514,23 @@
     "DEFENDANT": "مدعى عليه"
   },
   "caseTypes": {
-    "CIVIL": "مدني"
+    "CIVIL": "مدني",
+    "FELONIES_CRIMINAL": "جنايات / جنائي",
+    "MISDEMEANORS": "جنح",
+    "CORPORATE_COMPANIES": "شركات",
+    "TAXES": "ضرائب",
+    "CUSTOMS": "جمارك",
+    "ECONOMIC_COURT": "اقتصادي",
+    "MILITARY": "عسكري",
+    "STATE_COUNCIL_ADMINISTRATIVE": "مجلس الدولة / إداري",
+    "ARBITRATION": "تحكيم",
+    "RENTAL_DISPUTES": "منازعات الإيجارات",
+    "INHERITANCE_ESTATE": "إعلام وراثة / تركات",
+    "FAMILY": "أسرة",
+    "SHARIA": "شرعي",
+    "CYBERCRIMES": "جرائم تقنية المعلومات / إلكترونية",
+    "BANKING_FINANCE": "منازعات مصرفية / بنوك",
+    "TRAFFIC_OFFENSES": "مخالفات وجنح المرور",
+    "BANKRUPTCY": "إفلاس"
   }
 }

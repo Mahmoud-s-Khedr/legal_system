@@ -1,4 +1,4 @@
-import { SessionOutcome as PrismaSessionOutcome, type CaseSession, type Prisma } from "@prisma/client";
+import type { CaseSession, Prisma } from "@prisma/client";
 import type { RepositoryTx } from "../types.js";
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 
@@ -171,7 +171,7 @@ export async function createHearingRecord(
     assignedLawyerId: string | null;
     sessionDatetime: Date;
     nextSessionAt: Date | null;
-    outcome: PrismaSessionOutcome | null;
+    outcome: string | null;
     notes: string | null;
   }
 ): Promise<HearingRecord> {
@@ -189,7 +189,7 @@ export async function updateHearingRecordById(
     assignedLawyerId: string | null;
     sessionDatetime: Date;
     nextSessionAt: Date | null;
-    outcome: PrismaSessionOutcome | null;
+    outcome: string | null;
     notes: string | null;
   }
 ): Promise<HearingRecord> {
@@ -203,7 +203,7 @@ export async function updateHearingRecordById(
 export async function updateHearingOutcomeById(
   tx: RepositoryTx,
   hearingId: string,
-  outcome: PrismaSessionOutcome | null
+  outcome: string | null
 ): Promise<HearingRecord> {
   return tx.caseSession.update({
     where: { id: hearingId },

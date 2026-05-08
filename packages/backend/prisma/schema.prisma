@@ -85,18 +85,6 @@ enum CaseRoleOnCase {
   CONSULTANT
 }
 
-enum SessionOutcome {
-  POSTPONED
-  DECIDED
-  PARTIAL_RULING
-  ADJOURNED
-  EVIDENCE
-  EXPERT
-  MEDIATION
-  PLEADING
-  CANCELLED
-}
-
 enum TaskStatus {
   PENDING
   IN_PROGRESS
@@ -489,7 +477,7 @@ model CaseSession {
   assignedLawyerId     String?        @db.Uuid
   sessionDatetime      DateTime
   nextSessionAt        DateTime?
-  outcome              SessionOutcome?
+  outcome              String?
   notes                String?        @db.Text
   googleCalendarEventId String?
   deletedAt            DateTime?

@@ -1,4 +1,4 @@
-import type { DocumentType, ExtractionStatus, OcrBackend, PreviewStatus } from "../enums/index.js";
+import type { ExtractionStatus, OcrBackend, PreviewStatus } from "../enums/index.js";
 
 export interface DocumentVersionDto {
   id: string;
@@ -22,7 +22,7 @@ export interface DocumentDto {
   storageKey: string;
   previewPdfKey?: string | null;
   previewStatus: PreviewStatus;
-  type: DocumentType;
+  type: string;
   extractionStatus: ExtractionStatus;
   ocrBackend: OcrBackend;
   contentText: string | null;
@@ -33,7 +33,7 @@ export interface DocumentDto {
 
 export interface CreateDocumentDto {
   title: string;
-  type: DocumentType;
+  type: string;
   caseId?: string;
   clientId?: string;
   taskId?: string;
@@ -41,7 +41,7 @@ export interface CreateDocumentDto {
 
 export interface UpdateDocumentDto {
   title?: string;
-  type?: DocumentType;
+  type?: string;
   caseId?: string | null;
   clientId?: string | null;
   taskId?: string | null;
@@ -59,7 +59,7 @@ export interface DocumentSearchResultDto {
   title: string;
   fileName: string;
   mimeType: string;
-  type: DocumentType;
+  type: string;
   extractionStatus: ExtractionStatus;
   caseId: string | null;
   clientId: string | null;

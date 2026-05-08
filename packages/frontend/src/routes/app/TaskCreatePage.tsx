@@ -145,8 +145,8 @@ export function TaskCreatePage() {
   );
   if (!documentTypeOptions.length) {
     documentTypeOptions.push({
-      value: "GENERAL",
-      label: getEnumLabel(t, "DocumentType", "GENERAL")
+      value: "GENERAL_OTHER",
+      label: getEnumLabel(t, "DocumentType", "GENERAL_OTHER")
     });
   }
 
@@ -159,7 +159,7 @@ export function TaskCreatePage() {
     const rows = Array.from(files).map((file) => ({
       id: makeId("document"),
       title: file.name,
-      type: "GENERAL",
+      type: "GENERAL_OTHER",
       file
     }));
     setDocuments((prev) => [...prev, ...rows]);
@@ -205,7 +205,7 @@ export function TaskCreatePage() {
         upload: async (row) => {
           const formData = new FormData();
           formData.append("title", row.title.trim() || row.file.name);
-          formData.append("type", row.type || "GENERAL");
+          formData.append("type", row.type || "GENERAL_OTHER");
           formData.append("taskId", taskId);
           if (caseId) {
             formData.append("caseId", caseId);

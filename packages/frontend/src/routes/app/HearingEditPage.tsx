@@ -6,7 +6,6 @@ import {
 } from "../../lib/useUnsavedChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  SessionOutcome,
   type CaseListResponseDto,
   type CreateHearingDto,
   type HearingDto,
@@ -17,6 +16,7 @@ import { apiFetch } from "../../lib/api";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { useLookupOptions } from "../../lib/lookups";
 import {
   EmptyState,
   Field,
@@ -59,6 +59,7 @@ export function HearingEditPage() {
     queryKey: ["users"],
     queryFn: () => apiFetch<UserListResponseDto>("/api/users")
   });
+  const outcomesQuery = useLookupOptions("HearingOutcome");
 
   const [form, setForm] = useState<CreateHearingDto>({
     caseId: "",
@@ -140,12 +141,12 @@ export function HearingEditPage() {
   const outcomeOptions = useMemo(
     () => [
       { value: "", label: t("labels.none") },
-      ...Object.values(SessionOutcome).map((value) => ({
-        value,
-        label: getEnumLabel(t, "SessionOutcome", value)
+      ...(outcomesQuery.data?.items ?? []).map((item) => ({
+        value: item.key,
+        label: getEnumLabel(t, "HearingOutcome", item.key)
       }))
     ],
-    [t]
+    [outcomesQuery.data?.items, t]
   );
 
   const updateField = useCallback(
@@ -269,7 +270,7 @@ export function HearingEditPage() {
           <SelectField
             label={t("labels.outcome")}
             onChange={(value) =>
-              updateField("outcome", value ? (value as SessionOutcome) : null)
+              updateField("outcome", value || null)
             }
             options={outcomeOptions}
             value={form.outcome ?? ""}

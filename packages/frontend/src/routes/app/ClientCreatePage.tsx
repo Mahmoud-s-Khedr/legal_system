@@ -158,8 +158,8 @@ export function ClientCreatePage() {
   );
   if (!documentTypeOptions.length) {
     documentTypeOptions.push({
-      value: "GENERAL",
-      label: getEnumLabel(t, "DocumentType", "GENERAL")
+      value: "GENERAL_OTHER",
+      label: getEnumLabel(t, "DocumentType", "GENERAL_OTHER")
     });
   }
 
@@ -172,7 +172,7 @@ export function ClientCreatePage() {
     const rows = Array.from(files).map((file) => ({
       id: makeId("document"),
       title: file.name,
-      type: "GENERAL",
+      type: "GENERAL_OTHER",
       file
     }));
     setDocuments((prev) => [...prev, ...rows]);
@@ -217,7 +217,7 @@ export function ClientCreatePage() {
         upload: async (row) => {
           const formData = new FormData();
           formData.append("title", row.title.trim() || row.file.name);
-          formData.append("type", row.type || "GENERAL");
+          formData.append("type", row.type || "GENERAL_OTHER");
           formData.append("clientId", clientId);
           formData.append("file", row.file);
 

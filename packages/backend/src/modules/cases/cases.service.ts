@@ -249,6 +249,26 @@ async function assertActivePartyRole(
   }
 }
 
+async function assertActiveCaseType(
+  tx: Prisma.TransactionClient,
+  firmId: string,
+  type: string
+): Promise<void> {
+  const existingType = await tx.lookupOption.findFirst({
+    where: {
+      entity: "CaseType",
+      key: type,
+      isActive: true,
+      OR: [{ firmId: null }, { firmId }]
+    },
+    select: { id: true }
+  });
+
+  if (!existingType) {
+    throw appError(`Invalid case type "${type}"`, 422);
+  }
+}
+
 export async function listCases(
   actor: SessionUser,
   query: {
@@ -369,6 +389,7 @@ export async function createCase(
       where: { id: payload.clientId, firmId: actor.firmId, deletedAt: null },
       select: { name: true }
     });
+    await assertActiveCaseType(tx, actor.firmId, payload.type);
 
     const caseRecord = await tx.case.create({
       data: {
@@ -431,6 +452,7 @@ export async function updateCase(
         where: { id: payload.clientId, firmId: actor.firmId, deletedAt: null }
       });
     }
+    await assertActiveCaseType(tx, actor.firmId, payload.type);
 
     const caseRecord = await tx.case.update({
       where: { id: caseId },

@@ -1,4 +1,3 @@
-import { SessionOutcome } from "../enums/index";
 import type { ApiListResponse } from "../types/common";
 
 export interface HearingDto {
@@ -9,7 +8,7 @@ export interface HearingDto {
   assignedLawyerName: string | null;
   sessionDatetime: string;
   nextSessionAt: string | null;
-  outcome: SessionOutcome | null;
+  outcome: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -20,14 +19,14 @@ export interface CreateHearingDto {
   assignedLawyerId?: string | null;
   sessionDatetime: string;
   nextSessionAt?: string | null;
-  outcome?: SessionOutcome | null;
+  outcome?: string | null;
   notes?: string | null;
 }
 
 export type UpdateHearingDto = CreateHearingDto;
 
 export interface UpdateHearingOutcomeDto {
-  outcome: SessionOutcome | null;
+  outcome: string | null;
 }
 
 export interface HearingConflictDto {

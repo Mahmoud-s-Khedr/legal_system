@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
-import { SessionOutcome } from "@elms/shared";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { getAuditContext } from "../../utils/auditContext.js";
@@ -25,7 +24,7 @@ const hearingSchema = z.object({
   assignedLawyerId: z.string().uuid().nullable().optional(),
   sessionDatetime: z.string().datetime(),
   nextSessionAt: z.string().datetime().nullable().optional(),
-  outcome: z.nativeEnum(SessionOutcome).nullable().optional(),
+  outcome: z.string().min(1).nullable().optional(),
   notes: z.string().nullable().optional()
 });
 
@@ -41,7 +40,7 @@ const hearingListQuerySchema = z.object({
 });
 
 const hearingOutcomeSchema = z.object({
-  outcome: z.nativeEnum(SessionOutcome).nullable()
+  outcome: z.string().min(1).nullable()
 });
 
 const idParamsSchema = z.object({ id: z.string().min(1) });

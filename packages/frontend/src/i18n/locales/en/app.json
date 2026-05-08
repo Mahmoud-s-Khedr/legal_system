@@ -943,7 +943,11 @@
       "PaymentMethod": "Payment methods",
       "FeeType": "Fee types",
       "ExpenseCategory": "Expense categories",
-      "LibraryDocType": "Library document types"
+      "LibraryDocType": "Library document types",
+      "HearingOutcome": "Hearing outcomes"
+    },
+    "descriptions": {
+      "HearingOutcome": "Session decisions and outcome labels used in hearing scheduling and tracking."
     }
   },
   "roles": {
@@ -1116,7 +1120,24 @@
       "CONTRACT": "Contract",
       "COURT_FILING": "Court Filing",
       "RECEIPT": "Receipt",
-      "POWER_OF_ATTORNEY": "Power of Attorney"
+      "POWER_OF_ATTORNEY": "Power of Attorney",
+      "GENERAL_OTHER": "General / Other",
+      "POLICE_REPORT": "Police Report",
+      "INVESTIGATION_REPORT": "Investigation Report",
+      "LAWSUIT_STATEMENT_WRIT": "Lawsuit Statement / Writ of Summons",
+      "APPEAL_OBJECTION_STATEMENT": "Appeal / Objection Statement",
+      "DEFENSE_MEMORANDUM": "Defense Memorandum",
+      "HEARING_MINUTES": "Hearing Minutes",
+      "JUDGMENT_COPY": "Judgment Copy",
+      "EXECUTIVE_FORMULA": "Executive Formula",
+      "EXPERT_REPORT": "Expert Report",
+      "MEDICAL_REPORT": "Medical Report",
+      "OFFICIAL_CERTIFICATE": "Official Certificate",
+      "WARNING_LEGAL_NOTICE": "Warning / Legal Notice",
+      "CONTRACT_AGREEMENT": "Contract / Agreement",
+      "PROOF_OF_PAYMENT_RECEIPTS": "Proof of Payment / Receipts",
+      "TAX_CARD": "Tax Card",
+      "CLIENT_ID_COMMERCIAL_REGISTER": "Client ID / Commercial Register"
     },
     "ExtractionStatus": {
       "PENDING": "Pending",
@@ -1141,6 +1162,25 @@
       "PARTIALLY_PAID": "Partially Paid",
       "PAID": "Paid",
       "VOID": "Void"
+    },
+    "HearingOutcome": {
+      "POSTPONED_DOCUMENT_SUBMISSION": "Postponed for Document Submission",
+      "POSTPONED_REVIEW_MEMO": "Postponed for Review / Memo",
+      "POSTPONED_NOTIFICATION_RENOTIFICATION": "Postponed for Notification / Re-notification",
+      "POSTPONED_EXPERT_REPORT_REVIEW": "Postponed to Review Expert Report",
+      "POSTPONED_WITNESS_TESTIMONY": "Postponed for Witness Testimony",
+      "POSTPONED_JOIN_INTERVENING_PARTIES": "Postponed for Joining/Intervening Parties",
+      "POSTPONED_FINAL_PLEADING": "Postponed for Final Pleading",
+      "ADMINISTRATIVE_POSTPONEMENT": "Administrative Postponement",
+      "REFERRED_TO_EXPERTS": "Referred to Experts",
+      "RESERVED_FOR_JUDGMENT": "Reserved for Judgment",
+      "INTERLOCUTORY_JUDGMENT_ISSUED": "Interlocutory Judgment Issued",
+      "JUDGMENT_ISSUED": "Judgment Issued",
+      "CASE_DISMISSED": "Case Dismissed",
+      "SUSPENDED": "Suspended",
+      "DISCONTINUATION_OF_LITIGATION": "Discontinuation of Litigation",
+      "REFERRED_TO_ANOTHER_CIRCUIT_COURT": "Referred to Another Circuit/Court",
+      "SETTLED_RECONCILED": "Settled / Reconciled"
     }
   },
   "billing": {
@@ -1434,7 +1474,24 @@
     "DEFENDANT": "Defendant"
   },
   "caseTypes": {
-    "CIVIL": "Civil"
+    "CIVIL": "Civil",
+    "FELONIES_CRIMINAL": "Felonies / Criminal",
+    "MISDEMEANORS": "Misdemeanors",
+    "CORPORATE_COMPANIES": "Corporate / Companies",
+    "TAXES": "Taxes",
+    "CUSTOMS": "Customs",
+    "ECONOMIC_COURT": "Economic Court",
+    "MILITARY": "Military",
+    "STATE_COUNCIL_ADMINISTRATIVE": "State Council / Administrative",
+    "ARBITRATION": "Arbitration",
+    "RENTAL_DISPUTES": "Rental Disputes",
+    "INHERITANCE_ESTATE": "Inheritance & Estates",
+    "FAMILY": "Family",
+    "SHARIA": "Sharia",
+    "CYBERCRIMES": "Cybercrimes",
+    "BANKING_FINANCE": "Banking & Finance",
+    "TRAFFIC_OFFENSES": "Traffic Offenses",
+    "BANKRUPTCY": "Bankruptcy"
   },
   "partyTypes": {
     "CLIENT": "Client",

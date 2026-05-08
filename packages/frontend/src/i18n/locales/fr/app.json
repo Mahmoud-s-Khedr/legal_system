@@ -693,7 +693,11 @@
       "PaymentMethod": "Modes de paiement",
       "FeeType": "Types d'honoraires",
       "ExpenseCategory": "Catégories de dépenses",
-      "LibraryDocType": "Types de document bibliothèque"
+      "LibraryDocType": "Types de document bibliothèque",
+      "HearingOutcome": "Résultats d'audience"
+    },
+    "descriptions": {
+      "HearingOutcome": "Décisions d'audience utilisées pour la planification et le suivi des sessions."
     }
   },
   "roles": {
@@ -1104,7 +1108,24 @@
       "CONTRACT": "Contrat",
       "COURT_FILING": "Acte judiciaire",
       "RECEIPT": "Reçu",
-      "POWER_OF_ATTORNEY": "Procuration"
+      "POWER_OF_ATTORNEY": "Procuration",
+      "GENERAL_OTHER": "Général / autre",
+      "POLICE_REPORT": "Procès-verbal de police / constatations",
+      "INVESTIGATION_REPORT": "Procès-verbal d’enquête",
+      "LAWSUIT_STATEMENT_WRIT": "Assignation / requête introductive d’instance",
+      "APPEAL_OBJECTION_STATEMENT": "Déclaration d’appel / pourvoi / opposition",
+      "DEFENSE_MEMORANDUM": "Mémoire en défense",
+      "HEARING_MINUTES": "Procès-verbal d’audience",
+      "JUDGMENT_COPY": "Expédition officielle du jugement",
+      "EXECUTIVE_FORMULA": "Formule exécutoire",
+      "EXPERT_REPORT": "Rapport d’expert",
+      "MEDICAL_REPORT": "Rapport médical",
+      "OFFICIAL_CERTIFICATE": "Certificat officiel",
+      "WARNING_LEGAL_NOTICE": "Mise en demeure / sommation",
+      "CONTRACT_AGREEMENT": "Contrat / accord",
+      "PROOF_OF_PAYMENT_RECEIPTS": "Preuves de paiement / reçus",
+      "TAX_CARD": "Carte fiscale",
+      "CLIENT_ID_COMMERCIAL_REGISTER": "Pièce d’identité client / registre du commerce"
     },
     "ExtractionStatus": {
       "PENDING": "En attente",
@@ -1129,6 +1150,25 @@
       "PARTIALLY_PAID": "Partiellement payée",
       "PAID": "Payée",
       "VOID": "Annulée"
+    },
+    "HearingOutcome": {
+      "POSTPONED_DOCUMENT_SUBMISSION": "Reporté pour dépôt de documents",
+      "POSTPONED_REVIEW_MEMO": "Reporté pour consultation / mémoires",
+      "POSTPONED_NOTIFICATION_RENOTIFICATION": "Reporté pour notification / renotification",
+      "POSTPONED_EXPERT_REPORT_REVIEW": "Reporté pour consultation du rapport d’expert",
+      "POSTPONED_WITNESS_TESTIMONY": "Reporté pour audition des témoins",
+      "POSTPONED_JOIN_INTERVENING_PARTIES": "Reporté pour mise en cause / intervention de parties",
+      "POSTPONED_FINAL_PLEADING": "Reporté pour plaidoirie finale",
+      "ADMINISTRATIVE_POSTPONEMENT": "Report administratif",
+      "REFERRED_TO_EXPERTS": "Renvoi au bureau des experts",
+      "RESERVED_FOR_JUDGMENT": "Mise en délibéré",
+      "INTERLOCUTORY_JUDGMENT_ISSUED": "Jugement interlocutoire rendu",
+      "JUDGMENT_ISSUED": "Jugement rendu",
+      "CASE_DISMISSED": "Affaire radiée",
+      "SUSPENDED": "Sursis / suspension",
+      "DISCONTINUATION_OF_LITIGATION": "Interruption de l’instance",
+      "REFERRED_TO_ANOTHER_CIRCUIT_COURT": "Renvoi à une autre chambre/juridiction",
+      "SETTLED_RECONCILED": "Transaction / conciliation"
     }
   },
   "billing": {
@@ -1438,7 +1478,24 @@
     "DEFENDANT": "Défendeur"
   },
   "caseTypes": {
-    "CIVIL": "Civil"
+    "CIVIL": "Civil",
+    "FELONIES_CRIMINAL": "Crimes majeurs / pénal",
+    "MISDEMEANORS": "Délits",
+    "CORPORATE_COMPANIES": "Sociétés",
+    "TAXES": "Fiscalité",
+    "CUSTOMS": "Douanes",
+    "ECONOMIC_COURT": "Tribunal économique",
+    "MILITARY": "Militaire",
+    "STATE_COUNCIL_ADMINISTRATIVE": "Conseil d’État / administratif",
+    "ARBITRATION": "Arbitrage",
+    "RENTAL_DISPUTES": "Litiges locatifs",
+    "INHERITANCE_ESTATE": "Successions et patrimoines",
+    "FAMILY": "Famille",
+    "SHARIA": "Charia",
+    "CYBERCRIMES": "Cybercriminalité",
+    "BANKING_FINANCE": "Banque et finance",
+    "TRAFFIC_OFFENSES": "Infractions routières",
+    "BANKRUPTCY": "Faillite"
   },
   "partyTypes": {
     "CLIENT": "Client",

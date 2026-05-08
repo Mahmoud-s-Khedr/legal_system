@@ -117,7 +117,14 @@ export async function refreshDeterministicAnalyticsSeed(prisma: PrismaClient) {
   });
 
   const caseStatuses = ["ACTIVE", "ACTIVE", "ACTIVE", "SUSPENDED", "CLOSED", "ACTIVE"] as const;
-  const outcomes = ["DECIDED", "POSTPONED", "ADJOURNED", "EVIDENCE", "PARTIAL_RULING", "PLEADING"] as const;
+  const outcomes = [
+    "JUDGMENT_ISSUED",
+    "POSTPONED_DOCUMENT_SUBMISSION",
+    "POSTPONED_REVIEW_MEMO",
+    "RESERVED_FOR_JUDGMENT",
+    "INTERLOCUTORY_JUDGMENT_ISSUED",
+    "POSTPONED_FINAL_PLEADING"
+  ] as const;
   const taskStatuses = ["PENDING", "IN_PROGRESS", "DONE", "PENDING", "DONE", "IN_PROGRESS", "CANCELLED"] as const;
   const taskPriorities = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
   const invoiceStatuses = ["ISSUED", "PARTIALLY_PAID", "PAID", "ISSUED", "PAID", "PARTIALLY_PAID"] as const;

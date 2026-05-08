@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DocumentType, type DocumentDto, type DocumentListResponseDto } from "@elms/shared";
+import { type DocumentDto, type DocumentListResponseDto } from "@elms/shared";
 import { Modal } from "antd";
 import { apiDownload, apiFetch } from "../../lib/api";
 import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
@@ -28,6 +28,7 @@ import { useAuthBootstrap } from "../../store/authStore";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { DocumentViewer } from "./DocumentViewer";
+import { useLookupOptions } from "../../lib/lookups";
 
 interface DocumentListProps {
   caseId?: string;
@@ -69,8 +70,9 @@ export function DocumentList({
     useState<DocumentDto | null>(null);
   const [editingDoc, setEditingDoc] = useState<DocumentDto | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editType, setEditType] = useState<DocumentType>(DocumentType.GENERAL);
+  const [editType, setEditType] = useState<string>("GENERAL_OTHER");
   const [editError, setEditError] = useState<string | null>(null);
+  const docTypesQuery = useLookupOptions("DocumentType");
 
   const params = new URLSearchParams();
   if (caseId) params.set("caseId", caseId);
@@ -419,10 +421,10 @@ export function DocumentList({
             <SelectField
               label={t("documents.fileType")}
               value={editType}
-              onChange={(value) => setEditType(value as DocumentType)}
-              options={Object.values(DocumentType).map((type) => ({
-                value: type,
-                label: getEnumLabel(t, "DocumentType", type)
+              onChange={setEditType}
+              options={(docTypesQuery.data?.items ?? []).map((item) => ({
+                value: item.key,
+                label: getEnumLabel(t, "DocumentType", item.key)
               }))}
             />
             <div className="flex justify-end gap-2">

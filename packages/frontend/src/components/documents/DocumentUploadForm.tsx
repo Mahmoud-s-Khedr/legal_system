@@ -52,7 +52,7 @@ export function DocumentUploadForm({
   const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>(
     {}
   );
-  const [type, setType] = useState<string>("GENERAL");
+  const [type, setType] = useState<string>("GENERAL_OTHER");
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [summary, setSummary] =
@@ -64,8 +64,8 @@ export function DocumentUploadForm({
   }));
   if (!typeOptions.length) {
     typeOptions.push({
-      value: "GENERAL",
-      label: getEnumLabel(t, "DocumentType", "GENERAL")
+      value: "GENERAL_OTHER",
+      label: getEnumLabel(t, "DocumentType", "GENERAL_OTHER")
     });
   }
 
