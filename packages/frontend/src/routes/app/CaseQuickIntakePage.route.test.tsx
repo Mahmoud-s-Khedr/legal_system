@@ -98,8 +98,10 @@ vi.mock("../../lib/api", () => ({
   apiFormFetch: (...args: unknown[]) => apiFormFetchMock(...args)
 }));
 
-vi.mock("../../lib/egyptGovernorates", () => ({
-  getEgyptGovernorateOptions: () => []
+vi.mock("../../lib/locationLookups", () => ({
+  useGovernorateLookups: () => ({ data: { items: [] } }),
+  useCityLookups: () => ({ data: { items: [] } }),
+  toLocalizedLocationOptions: () => []
 }));
 
 vi.mock("../../lib/enumLabel", () => ({

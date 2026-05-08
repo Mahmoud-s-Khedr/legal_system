@@ -35,6 +35,7 @@ const clientSchema = z.object({
   phone: phoneSchema.nullish(),
   email: z.string().email().nullable().optional(),
   governorate: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
   preferredLanguage: z.nativeEnum(Language).optional(),
   nationalId: z.string().nullable().optional(),
   commercialRegister: z.string().nullable().optional(),

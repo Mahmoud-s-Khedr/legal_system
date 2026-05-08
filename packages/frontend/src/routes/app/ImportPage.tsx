@@ -251,7 +251,7 @@ export function ImportPage() {
                 onClick={() => {
                   const headers =
                     entityType === "clients"
-                      ? "name,type,phone,email,nationalId,governorate"
+                      ? "name,type,phone,email,nationalId,governorate,city"
                       : "title,caseNumber,type,status,judicialYear,client_id";
                   void saveTextToDownloads(
                     `${headers}\n`,

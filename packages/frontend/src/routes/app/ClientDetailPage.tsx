@@ -67,6 +67,7 @@ export function ClientDetailPage() {
         phone: field === "phone" ? value || null : current.phone,
         email: field === "email" ? value || null : current.email,
         governorate: current.governorate,
+        city: current.city,
         preferredLanguage: current.preferredLanguage,
         nationalId: current.nationalId,
         commercialRegister: current.commercialRegister,
@@ -228,6 +229,7 @@ export function ClientDetailPage() {
               label={t("labels.governorate")}
               value={client.governorate}
             />
+            <Detail label={t("labels.city")} value={client.city} />
             <Detail
               label={t("labels.language")}
               value={getEnumLabel(t, "Language", client.preferredLanguage)}

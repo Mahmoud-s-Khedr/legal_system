@@ -14,6 +14,7 @@ import type { SessionUser } from "@elms/shared";
 import { writeAuditLog } from "../../services/audit.service.js";
 import { applyArrayTableQuery, normalizeSort, type SortDir } from "../../utils/tableQuery.js";
 import { createTableSession, getTableSession } from "../../utils/tableSessionStore.js";
+import { validateGovernorateCityPair } from "../locations/locations.service.js";
 
 // ─── Row types ────────────────────────────────────────────────────────────────
 
@@ -55,7 +56,8 @@ const clientRowSchema = z.object({
   nationalId: z.string().optional(),
   commercialRegister: z.string().optional(),
   taxNumber: z.string().optional(),
-  governorate: z.string().optional()
+  governorate: z.string().optional(),
+  city: z.string().optional()
 });
 
 const caseRowSchema = z.object({
@@ -209,6 +211,11 @@ export async function executeClientImport(
 
     try {
       const d = result.data;
+      const isLocationValid = await validateGovernorateCityPair(d.governorate, d.city);
+      if (!isLocationValid) {
+        errors.push({ rowNumber, error: "Invalid governorate/city combination" });
+        continue;
+      }
       const client = await prisma.client.create({
         data: {
           firmId: actor.firmId,
@@ -219,7 +226,8 @@ export async function executeClientImport(
           nationalId: d.nationalId || null,
           commercialRegister: d.commercialRegister || null,
           taxNumber: d.taxNumber || null,
-          governorate: d.governorate || null
+          governorate: d.governorate || null,
+          city: d.city || null
         }
       });
       await writeAuditLog(prisma, { actor, ipAddress: auditCtx.ipAddress, userAgent: auditCtx.userAgent }, {
@@ -346,6 +354,11 @@ export async function executeClientImportPreview(
 
     try {
       const d = result.data;
+      const isLocationValid = await validateGovernorateCityPair(d.governorate, d.city);
+      if (!isLocationValid) {
+        errors.push({ rowNumber: row.rowNumber, error: "Invalid governorate/city combination" });
+        continue;
+      }
       const client = await prisma.client.create({
         data: {
           firmId: actor.firmId,
@@ -356,7 +369,8 @@ export async function executeClientImportPreview(
           nationalId: d.nationalId || null,
           commercialRegister: d.commercialRegister || null,
           taxNumber: d.taxNumber || null,
-          governorate: d.governorate || null
+          governorate: d.governorate || null,
+          city: d.city || null
         }
       });
       await writeAuditLog(prisma, { actor, ipAddress: auditCtx.ipAddress, userAgent: auditCtx.userAgent }, {

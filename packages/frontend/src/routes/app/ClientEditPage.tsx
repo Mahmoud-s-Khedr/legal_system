@@ -16,9 +16,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import {
-  getEgyptGovernorateOptions,
-  withLegacyGovernorateOption
-} from "../../lib/egyptGovernorates";
+  toLocalizedLocationOptions,
+  useCityLookups,
+  useGovernorateLookups,
+  withLegacyLocationOption
+} from "../../lib/locationLookups";
 import { getEnumLabel } from "../../lib/enumLabel";
 import {
   EmptyState,
@@ -57,6 +59,7 @@ function normalizePayload(form: CreateClientDto): CreateClientDto {
     phone: toNullable(form.phone),
     email: toNullable(form.email),
     governorate: toNullable(form.governorate),
+    city: toNullable(form.city),
     nationalId: isIdentityType(form.type) ? toNullable(form.nationalId) : null,
     commercialRegister:
       form.type === ClientType.COMPANY
@@ -75,6 +78,7 @@ export function ClientEditPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
 
   const clientTypeOptions = Object.values(ClientType).map((v) => ({
     value: v,
@@ -96,6 +100,7 @@ export function ClientEditPage() {
     phone: "",
     email: "",
     governorate: "",
+    city: "",
     preferredLanguage: Language.AR,
     nationalId: "",
     commercialRegister: "",
@@ -114,9 +119,15 @@ export function ClientEditPage() {
     }
   );
 
-  const governorateOptions = withLegacyGovernorateOption(
-    getEgyptGovernorateOptions(i18n.resolvedLanguage ?? i18n.language ?? "en"),
+  const governorateQuery = useGovernorateLookups();
+  const cityQuery = useCityLookups(form.governorate);
+  const governorateOptions = withLegacyLocationOption(
+    toLocalizedLocationOptions(governorateQuery.data?.items, language),
     form.governorate
+  );
+  const cityOptions = withLegacyLocationOption(
+    toLocalizedLocationOptions(cityQuery.data?.items, language),
+    form.city
   );
 
   useEffect(() => {
@@ -128,6 +139,7 @@ export function ClientEditPage() {
         phone: c.phone ?? "",
         email: c.email ?? "",
         governorate: c.governorate ?? "",
+        city: c.city ?? "",
         preferredLanguage: c.preferredLanguage,
         nationalId: c.nationalId ?? "",
         commercialRegister: c.commercialRegister ?? "",
@@ -252,10 +264,19 @@ export function ClientEditPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField
               label={t("labels.governorate")}
-              onChange={(value) => setForm({ ...form, governorate: value })}
+              onChange={(value) => setForm({ ...form, governorate: value, city: "" })}
               options={[{ value: "", label: "-" }, ...governorateOptions]}
               value={form.governorate ?? ""}
             />
+            <SelectField
+              disabled={!form.governorate}
+              label={t("labels.city")}
+              onChange={(value) => setForm({ ...form, city: value })}
+              options={[{ value: "", label: "-" }, ...cityOptions]}
+              value={form.city ?? ""}
+            />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <SelectField
               label={t("labels.language")}
               onChange={(value) =>

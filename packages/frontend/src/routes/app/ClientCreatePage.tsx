@@ -16,7 +16,11 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch, apiFormFetch } from "../../lib/api";
-import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
+import {
+  toLocalizedLocationOptions,
+  useCityLookups,
+  useGovernorateLookups
+} from "../../lib/locationLookups";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
@@ -79,6 +83,7 @@ function normalizePayload(form: ClientFormState): CreateClientDto {
     phone: toNullable(form.phone),
     email: toNullable(form.email),
     governorate: toNullable(form.governorate),
+    city: toNullable(form.city),
     preferredLanguage: form.preferredLanguage ?? Language.AR,
     nationalId: isIdentityType(form.type) ? toNullable(form.nationalId) : null,
     commercialRegister:
@@ -108,9 +113,8 @@ export function ClientCreatePage() {
     value: v,
     label: getEnumLabel(t, "Language", v)
   }));
-  const governorateOptions = getEgyptGovernorateOptions(
-    i18n.resolvedLanguage ?? i18n.language ?? "en"
-  );
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const governorateQuery = useGovernorateLookups();
 
   const [form, setForm] = useState<ClientFormState>({
     name: "",
@@ -118,6 +122,7 @@ export function ClientCreatePage() {
     phone: "",
     email: "",
     governorate: "",
+    city: "",
     preferredLanguage: Language.AR,
     nationalId: "",
     commercialRegister: "",
@@ -140,6 +145,7 @@ export function ClientCreatePage() {
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
   const documentPickerRef = useRef<HTMLInputElement>(null);
   const docTypesQuery = useLookupOptions("DocumentType");
+  const cityQuery = useCityLookups(form.governorate);
 
   useUnsavedChanges(
     form.name !== "" || form.type !== "" || documents.length > 0,
@@ -166,6 +172,11 @@ export function ClientCreatePage() {
   const hasFailedDocuments = documents.some(
     (doc) => fileStates[doc.id]?.status === "failed"
   );
+  const governorateOptions = toLocalizedLocationOptions(
+    governorateQuery.data?.items,
+    language
+  );
+  const cityOptions = toLocalizedLocationOptions(cityQuery.data?.items, language);
 
   function addDocumentFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -434,12 +445,19 @@ export function ClientCreatePage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <SelectField
                   label={t("labels.governorate")}
-                  onChange={(value) =>
-                    setForm({ ...form, governorate: value })
-                  }
+                  onChange={(value) => setForm({ ...form, governorate: value, city: "" })}
                   options={[{ value: "", label: "-" }, ...governorateOptions]}
                   value={form.governorate ?? ""}
                 />
+                <SelectField
+                  disabled={!form.governorate}
+                  label={t("labels.city")}
+                  onChange={(value) => setForm({ ...form, city: value })}
+                  options={[{ value: "", label: "-" }, ...cityOptions]}
+                  value={form.city ?? ""}
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
                 <SelectField
                   label={t("labels.language")}
                   onChange={(value) =>

@@ -3,6 +3,7 @@ import { ensureSystemSecurityModel } from "../src/security/bootstrap.js";
 import { ensureSystemLookupOptions } from "../src/security/lookupSeed.js";
 import { ensureSystemLibraryCategories } from "../src/security/librarySeed.js";
 import { seedDevEnvironment } from "../src/security/devSeed.js";
+import { ensureEgyptLocationLookups } from "../src/security/locationSeed.js";
 
 const prisma = new PrismaClient();
 
@@ -21,6 +22,7 @@ async function main() {
   console.log("[seed] phase=reference");
   await ensureSystemLookupOptions(prisma);
   await ensureSystemLibraryCategories(prisma);
+  await ensureEgyptLocationLookups(prisma);
 
   if (process.env.NODE_ENV === "development") {
     console.log("[seed] phase=tenant-core/tenant-edge/integration-fixtures");

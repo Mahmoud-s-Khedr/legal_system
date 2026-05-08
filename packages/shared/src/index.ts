@@ -13,6 +13,7 @@ export * from "./dtos/tasks";
 export * from "./dtos/dashboard";
 export * from "./dtos/documents";
 export * from "./dtos/lookups";
+export * from "./dtos/locations";
 export * from "./dtos/billing";
 export * from "./dtos/reports";
 export * from "./dtos/notifications";

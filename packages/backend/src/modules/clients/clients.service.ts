@@ -22,6 +22,8 @@ import {
   updateFirmClientById,
   type ClientRecord
 } from "../../repositories/clients/clients.repository.js";
+import { appError } from "../../errors/appError.js";
+import { validateGovernorateCityPair } from "../locations/locations.service.js";
 
 function mapClient(client: ClientRecord): ClientDto {
   return {
@@ -31,6 +33,7 @@ function mapClient(client: ClientRecord): ClientDto {
     phone: client.phone,
     email: client.email,
     governorate: client.governorate,
+    city: (client as ClientRecord & { city?: string | null }).city ?? null,
     preferredLanguage: client.preferredLanguage,
     nationalId: client.nationalId,
     commercialRegister: client.commercialRegister,
@@ -114,6 +117,11 @@ export async function createClient(
   payload: CreateClientDto,
   audit: AuditContext
 ): Promise<{ client: ClientDto; conflictWarnings: ConflictWarningDto[] }> {
+  const isLocationValid = await validateGovernorateCityPair(payload.governorate, payload.city);
+  if (!isLocationValid) {
+    throw appError("Selected city does not belong to the selected governorate", 400);
+  }
+
   const conflictWarnings = await checkClientConflictOnIntake(
     actor.firmId,
     payload.name,
@@ -146,6 +154,11 @@ export async function updateClient(
   audit: AuditContext
 ) {
   return inTenantTransaction(actor.firmId, async (tx) => {
+    const isLocationValid = await validateGovernorateCityPair(payload.governorate, payload.city);
+    if (!isLocationValid) {
+      throw appError("Selected city does not belong to the selected governorate", 400);
+    }
+
     const existing = await getFirmClientRowByIdOrThrow(tx, actor.firmId, clientId);
 
     await replaceClientContacts(tx, clientId, payload.contacts);

@@ -27,6 +27,9 @@ vi.mock("../../db/tenant.js", () => ({
   )
 }));
 vi.mock("../../services/audit.service.js", () => ({ writeAuditLog: vi.fn() }));
+vi.mock("../locations/locations.service.js", () => ({
+  validateGovernorateCityPair: vi.fn(async () => true)
+}));
 
 const { listClients, createClient, getClient, updateClient, removeClient } = await import(
   "./clients.service.js"
@@ -51,6 +54,7 @@ function makeClientRecord(overrides: Record<string, unknown> = {}) {
     phone: "+20111111111",
     email: "ahmed@example.com",
     governorate: "Cairo",
+    city: null,
     preferredLanguage: "ar",
     nationalId: null,
     commercialRegister: null,

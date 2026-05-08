@@ -30,6 +30,7 @@ const registerDashboardRoutes = vi.fn();
 const registerDocumentRoutes = vi.fn();
 const registerSearchRoutes = vi.fn();
 const registerLookupRoutes = vi.fn();
+const registerLocationLookupRoutes = vi.fn();
 const registerBillingRoutes = vi.fn();
 const registerNotificationRoutes = vi.fn();
 const registerTemplateRoutes = vi.fn();
@@ -79,6 +80,7 @@ vi.mock("./modules/dashboard/dashboard.routes.js", () => ({ registerDashboardRou
 vi.mock("./modules/documents/documents.routes.js", () => ({ registerDocumentRoutes }));
 vi.mock("./modules/documents/search.routes.js", () => ({ registerSearchRoutes }));
 vi.mock("./modules/lookups/lookups.routes.js", () => ({ registerLookupRoutes }));
+vi.mock("./modules/locations/locations.routes.js", () => ({ registerLocationLookupRoutes }));
 vi.mock("./modules/billing/billing.routes.js", () => ({ registerBillingRoutes }));
 vi.mock("./modules/notifications/notifications.routes.js", () => ({ registerNotificationRoutes }));
 vi.mock("./modules/templates/templates.routes.js", () => ({ registerTemplateRoutes }));
@@ -137,6 +139,7 @@ describe("createApp", () => {
     expect(registerAuthRoutes).toHaveBeenCalledWith(app, expect.anything());
     expect(registerRoleRoutes).toHaveBeenCalledWith(app);
     expect(registerUserRoutes).toHaveBeenCalledWith(app, expect.anything());
+    expect(registerLocationLookupRoutes).toHaveBeenCalledWith(app);
     expect(registerLibraryRoutes).toHaveBeenCalledWith(app, expect.anything());
     expect(registerGoogleCalendarRoutes).toHaveBeenCalledWith(app, expect.anything());
     expect(registerPowersRoutes).toHaveBeenCalledWith(app);

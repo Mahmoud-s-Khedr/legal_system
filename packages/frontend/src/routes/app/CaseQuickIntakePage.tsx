@@ -39,7 +39,11 @@ import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLookupOptions } from "../../lib/lookups";
 import { runUploadQueue } from "../../lib/uploadQueue";
-import { getEgyptGovernorateOptions } from "../../lib/egyptGovernorates";
+import {
+  toLocalizedLocationOptions,
+  useCityLookups,
+  useGovernorateLookups
+} from "../../lib/locationLookups";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useHasPermission } from "../../store/authStore";
 import {
@@ -140,6 +144,7 @@ export function normalizeClientPayload(form: ClientFormState): CreateClientDto {
     phone: toNullable(form.phone),
     email: toNullable(form.email),
     governorate: toNullable(form.governorate),
+    city: toNullable(form.city),
     preferredLanguage: form.preferredLanguage ?? Language.AR,
     nationalId: isIdentityType(form.type) ? toNullable(form.nationalId) : null,
     commercialRegister:
@@ -324,6 +329,7 @@ export function CaseQuickIntakePage() {
     phone: "",
     email: "",
     governorate: "",
+    city: "",
     preferredLanguage: Language.AR,
     nationalId: "",
     commercialRegister: "",
@@ -448,9 +454,11 @@ export function CaseQuickIntakePage() {
     label: getEnumLabel(t, "Language", value)
   }));
 
-  const governorateOptions = getEgyptGovernorateOptions(
-    i18n.resolvedLanguage ?? i18n.language ?? "en"
-  );
+  const language = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const governorateQuery = useGovernorateLookups();
+  const cityQuery = useCityLookups(clientForm.governorate);
+  const governorateOptions = toLocalizedLocationOptions(governorateQuery.data?.items, language);
+  const cityOptions = toLocalizedLocationOptions(cityQuery.data?.items, language);
 
   const courtLevelOptions = (courtLevelsQuery.data?.items ?? []).map(
     (item) => ({
@@ -1108,11 +1116,18 @@ export function CaseQuickIntakePage() {
                   <SelectField
                     label={t("labels.governorate")}
                     value={clientForm.governorate ?? ""}
-                    onChange={(value) =>
-                      setClientForm({ ...clientForm, governorate: value })
-                    }
+                    onChange={(value) => setClientForm({ ...clientForm, governorate: value, city: "" })}
                     options={[{ value: "", label: "-" }, ...governorateOptions]}
                   />
+                  <SelectField
+                    disabled={!clientForm.governorate}
+                    label={t("labels.city")}
+                    value={clientForm.city ?? ""}
+                    onChange={(value) => setClientForm({ ...clientForm, city: value })}
+                    options={[{ value: "", label: "-" }, ...cityOptions]}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
                   <SelectField
                     label={t("labels.language")}
                     value={clientForm.preferredLanguage ?? Language.AR}

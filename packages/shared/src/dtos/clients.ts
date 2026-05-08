@@ -16,6 +16,7 @@ export interface ClientDto {
   phone: string | null;
   email: string | null;
   governorate: string | null;
+  city: string | null;
   preferredLanguage: string;
   nationalId: string | null;
   commercialRegister: string | null;
@@ -36,6 +37,7 @@ export interface CreateClientDto {
   phone?: string | null;
   email?: string | null;
   governorate?: string | null;
+  city?: string | null;
   preferredLanguage?: string;
   nationalId?: string | null;
   commercialRegister?: string | null;
@@ -53,4 +55,3 @@ export interface CreateClientDto {
 export type UpdateClientDto = CreateClientDto;
 
 export type ClientListResponseDto = ApiListResponse<ClientDto>;
-

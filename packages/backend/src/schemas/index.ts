@@ -123,6 +123,7 @@ export const clientDtoSchema = {
     phone: { type: ["string", "null"] },
     email: { type: ["string", "null"] },
     governorate: { type: ["string", "null"] },
+    city: { type: ["string", "null"] },
     preferredLanguage: { type: "string" },
     nationalId: { type: ["string", "null"] },
     commercialRegister: { type: ["string", "null"] },

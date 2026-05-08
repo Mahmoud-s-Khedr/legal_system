@@ -26,6 +26,7 @@ import { registerDocumentRoutes } from "./modules/documents/documents.routes.js"
 import { registerSearchRoutes } from "./modules/documents/search.routes.js";
 import { registerGlobalSearchRoutes } from "./modules/search/globalSearch.routes.js";
 import { registerLookupRoutes } from "./modules/lookups/lookups.routes.js";
+import { registerLocationLookupRoutes } from "./modules/locations/locations.routes.js";
 import { registerBillingRoutes } from "./modules/billing/billing.routes.js";
 import { registerNotificationRoutes } from "./modules/notifications/notifications.routes.js";
 import { registerTemplateRoutes } from "./modules/templates/templates.routes.js";
@@ -143,6 +144,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   await registerSearchRoutes(app);
   await registerGlobalSearchRoutes(app);
   await registerLookupRoutes(app);
+  await registerLocationLookupRoutes(app);
   await registerBillingRoutes(app);
   await registerNotificationRoutes(app);
   await registerTemplateRoutes(app);

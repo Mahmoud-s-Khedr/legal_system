@@ -190,6 +190,38 @@ model LookupOption {
   @@index([entity, isActive])
 }
 
+model GovernorateLookup {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  labelAr   String
+  labelEn   String
+  labelFr   String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cities    CityLookup[]
+
+  @@index([isActive, sortOrder])
+}
+
+model CityLookup {
+  id            String            @id @default(uuid()) @db.Uuid
+  governorateId String            @db.Uuid
+  key           String
+  labelAr       String
+  labelEn       String
+  labelFr       String
+  isActive      Boolean           @default(true)
+  sortOrder     Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  governorate   GovernorateLookup @relation(fields: [governorateId], references: [id], onDelete: Cascade)
+
+  @@unique([governorateId, key])
+  @@index([governorateId, isActive, sortOrder])
+}
+
 model Firm {
   id              String              @id @default(uuid()) @db.Uuid
   name            String
@@ -346,6 +378,7 @@ model Client {
   phone                 String?
   email                 String?
   governorate           String?
+  city                  String?
   preferredLanguage     Language              @default(AR)
   portalEmail           String?
   portalPasswordHash    String?

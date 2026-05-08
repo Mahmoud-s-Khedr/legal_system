@@ -118,6 +118,7 @@
     "email": "Email",
     "phone": "Phone",
     "governorate": "Governorate",
+    "city": "City",
     "language": "Language",
     "nationalId": "National ID",
     "commercialRegister": "Commercial register",
