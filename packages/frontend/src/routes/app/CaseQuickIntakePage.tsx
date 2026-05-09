@@ -37,7 +37,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch, apiFormFetch } from "../../lib/api";
 import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import { runUploadQueue } from "../../lib/uploadQueue";
 import {
   toLocalizedLocationOptions,
@@ -401,12 +401,12 @@ export function CaseQuickIntakePage() {
     enabled: canAssignCases || canCreateHearings || canCreateTasks
   });
 
-  const caseTypesQuery = useLookupOptions("CaseType");
-  const courtLevelsQuery = useLookupOptions("CourtLevel");
-  const courtTypesQuery = useLookupOptions("CourtType");
-  const partyRolesQuery = useLookupOptions("PartyRole");
-  const docTypesQuery = useLookupOptions("DocumentType");
-  const hearingOutcomesQuery = useLookupOptions("HearingOutcome");
+  const caseTypesQuery = useLocalizedLookupOptions("CaseType");
+  const courtLevelsQuery = useLocalizedLookupOptions("CourtLevel");
+  const courtTypesQuery = useLocalizedLookupOptions("CourtType");
+  const partyRolesQuery = useLocalizedLookupOptions("PartyRole");
+  const docTypesQuery = useLocalizedLookupOptions("DocumentType");
+  const hearingOutcomesQuery = useLocalizedLookupOptions("HearingOutcome");
 
   const createClientMutation = useMutation({
     mutationFn: (payload: CreateClientDto) =>
@@ -437,14 +437,13 @@ export function CaseQuickIntakePage() {
     [clientsQuery.data?.items, t]
   );
 
-  const caseTypeOptions = (caseTypesQuery.data?.items ?? []).map((o) => ({
-    value: o.key,
-    label: o.labelAr
-  }));
+  const caseTypeOptions = [...caseTypesQuery.options];
   if (!caseTypeOptions.length) {
+    const fallbackLabel = caseTypesQuery.getLabel("CIVIL");
     caseTypeOptions.push({
       value: "CIVIL",
-      label: t("caseTypes.CIVIL", "Civil")
+      label: fallbackLabel,
+      searchText: `CIVIL ${fallbackLabel}`
     });
   }
 
@@ -464,21 +463,10 @@ export function CaseQuickIntakePage() {
   const governorateOptions = toLocalizedLocationOptions(governorateQuery.data?.items, language);
   const cityOptions = toLocalizedLocationOptions(cityQuery.data?.items, language);
 
-  const courtLevelOptions = (courtLevelsQuery.data?.items ?? []).map(
-    (item) => ({
-      value: item.key,
-      label: item.labelAr
-    })
-  );
-  const courtTypeOptions = (courtTypesQuery.data?.items ?? []).map((item) => ({
-    value: item.key,
-    label: item.labelAr
-  }));
+  const courtLevelOptions = courtLevelsQuery.options;
+  const courtTypeOptions = courtTypesQuery.options;
 
-  const partyRoleOptions = (partyRolesQuery.data?.items ?? []).map((item) => ({
-    value: item.key,
-    label: item.labelAr
-  }));
+  const partyRoleOptions = partyRolesQuery.options;
 
   const userOptions = [
     { value: "", label: t("labels.selectUser") },
@@ -499,11 +487,12 @@ export function CaseQuickIntakePage() {
   }));
 
   const sessionOutcomeOptions = [
-    { value: "", label: t("labels.none") },
-    ...(hearingOutcomesQuery.data?.items ?? []).map((item) => ({
-      value: item.key,
-      label: getEnumLabel(t, "HearingOutcome", item.key)
-    }))
+    {
+      value: "",
+      label: t("labels.none"),
+      searchText: t("labels.none")
+    },
+    ...hearingOutcomesQuery.options
   ];
 
   const taskPriorityOptions = Object.values(TaskPriority).map((value) => ({
@@ -511,14 +500,13 @@ export function CaseQuickIntakePage() {
     label: getEnumLabel(t, "TaskPriority", value)
   }));
 
-  const documentTypeOptions = (docTypesQuery.data?.items ?? []).map((item) => ({
-    value: item.key,
-    label: getEnumLabel(t, "DocumentType", item.key)
-  }));
+  const documentTypeOptions = [...docTypesQuery.options];
   if (!documentTypeOptions.length) {
+    const fallbackLabel = docTypesQuery.getLabel("GENERAL_OTHER");
     documentTypeOptions.push({
       value: "GENERAL_OTHER",
-      label: getEnumLabel(t, "DocumentType", "GENERAL_OTHER")
+      label: fallbackLabel,
+      searchText: `GENERAL_OTHER ${fallbackLabel}`
     });
   }
 

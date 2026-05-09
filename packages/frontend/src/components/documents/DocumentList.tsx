@@ -7,7 +7,6 @@ import { apiDownload, apiFetch } from "../../lib/api";
 import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { confirmAction, showErrorDialog } from "../../lib/dialog";
-import { getEnumLabel } from "../../lib/enumLabel";
 import {
   DataTable,
   EmptyState,
@@ -28,7 +27,7 @@ import { useAuthBootstrap } from "../../store/authStore";
 import { EnumBadge } from "../shared/EnumBadge";
 import { ExtractionStatusBadge } from "./ExtractionStatusBadge";
 import { DocumentViewer } from "./DocumentViewer";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 
 interface DocumentListProps {
   caseId?: string;
@@ -72,7 +71,7 @@ export function DocumentList({
   const [editTitle, setEditTitle] = useState("");
   const [editType, setEditType] = useState<string>("GENERAL_OTHER");
   const [editError, setEditError] = useState<string | null>(null);
-  const docTypesQuery = useLookupOptions("DocumentType");
+  const docTypesQuery = useLocalizedLookupOptions("DocumentType");
 
   const params = new URLSearchParams();
   if (caseId) params.set("caseId", caseId);
@@ -422,10 +421,7 @@ export function DocumentList({
               label={t("documents.fileType")}
               value={editType}
               onChange={setEditType}
-              options={(docTypesQuery.data?.items ?? []).map((item) => ({
-                value: item.key,
-                label: getEnumLabel(t, "DocumentType", item.key)
-              }))}
+              options={docTypesQuery.options}
             />
             <div className="flex justify-end gap-2">
               <button

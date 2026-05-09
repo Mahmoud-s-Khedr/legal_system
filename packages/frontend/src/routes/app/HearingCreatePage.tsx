@@ -14,8 +14,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
-import { getEnumLabel } from "../../lib/enumLabel";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import {
   Field,
   FormExitActions,
@@ -99,7 +98,7 @@ export function HearingCreatePage() {
     queryKey: ["users"],
     queryFn: () => apiFetch<UserListResponseDto>("/api/users")
   });
-  const outcomesQuery = useLookupOptions("HearingOutcome");
+  const outcomesQuery = useLocalizedLookupOptions("HearingOutcome");
 
   const caseOptions = useMemo(
     () => [
@@ -124,13 +123,14 @@ export function HearingCreatePage() {
 
   const outcomeOptions = useMemo(
     () => [
-      { value: "", label: t("labels.none") },
-      ...(outcomesQuery.data?.items ?? []).map((item) => ({
-        value: item.key,
-        label: getEnumLabel(t, "HearingOutcome", item.key)
-      }))
+      {
+        value: "",
+        label: t("labels.none"),
+        searchText: t("labels.none")
+      },
+      ...outcomesQuery.options
     ],
-    [outcomesQuery.data?.items, t]
+    [outcomesQuery.options, t]
   );
 
   const updateField = useCallback(

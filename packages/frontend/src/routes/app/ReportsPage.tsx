@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useToastStore } from "../../store/toastStore";
 import { apiFetch } from "../../lib/api";
 import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
-import { getEnumLabel } from "../../lib/enumLabel";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import {
   Area,
@@ -505,6 +505,7 @@ function ReportTable({
   >;
 }) {
   const { t } = useTranslation("app");
+  const hearingOutcomesQuery = useLocalizedLookupOptions("HearingOutcome");
 
   if (reportType === "case-status") {
     const rows = data as CaseStatusRow[];
@@ -565,7 +566,7 @@ function ReportTable({
             >
               <p className="text-xs text-slate-500">{t("labels.outcome")}</p>
               <p className="font-semibold">
-                {r.outcome ? getEnumLabel(t, "HearingOutcome", r.outcome) : "—"}
+                {r.outcome ? hearingOutcomesQuery.getLabel(r.outcome) : "—"}
               </p>
               <p className="mt-2 text-xs text-slate-500">
                 {t("reports.count")}
@@ -590,7 +591,7 @@ function ReportTable({
               {rows.map((r, i) => (
                 <tr key={i} className="border-b border-slate-50">
                   <td className="px-3 py-2">
-                    {r.outcome ? getEnumLabel(t, "HearingOutcome", r.outcome) : "—"}
+                    {r.outcome ? hearingOutcomesQuery.getLabel(r.outcome) : "—"}
                   </td>
                   <td className="px-3 py-2 text-end font-semibold">
                     {r.count}

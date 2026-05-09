@@ -4,8 +4,7 @@ import { type HearingListResponseDto, type HearingDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
-import { getEnumLabel } from "../../lib/enumLabel";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { useToastStore } from "../../store/toastStore";
 import {
@@ -30,10 +29,10 @@ import {
 
 function OutcomeCell({
   hearing,
-  outcomeKeys
+  outcomeOptions
 }: {
   hearing: HearingDto;
-  outcomeKeys: string[];
+  outcomeOptions: Array<{ value: string; label: string; searchText?: string }>;
 }) {
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
@@ -63,9 +62,9 @@ function OutcomeCell({
       value={hearing.outcome ?? ""}
     >
       <option value="">—</option>
-      {outcomeKeys.map((v) => (
-        <option key={v} value={v}>
-          {getEnumLabel(t, "HearingOutcome", v)}
+      {outcomeOptions.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
         </option>
       ))}
     </select>
@@ -88,8 +87,8 @@ export function HearingsPage() {
         `/api/hearings?${table.toApiQueryString()}`
       )
   });
-  const outcomesQuery = useLookupOptions("HearingOutcome");
-  const outcomeKeys = (outcomesQuery.data?.items ?? []).map((item) => item.key);
+  const outcomesQuery = useLocalizedLookupOptions("HearingOutcome");
+  const outcomeOptions = outcomesQuery.options;
   const queryClient = useQueryClient();
   const addToast = useToastStore((state) => state.addToast);
   const deleteHearingMutation = useMutation({
@@ -204,7 +203,7 @@ export function HearingsPage() {
                   label: t("labels.outcome"),
                   render: (item) =>
                     item.outcome
-                      ? getEnumLabel(t, "HearingOutcome", item.outcome)
+                      ? outcomesQuery.getLabel(item.outcome)
                       : "—"
                 }
               ]}
@@ -264,7 +263,10 @@ export function HearingsPage() {
                         {hearing.assignedLawyerName ?? t("labels.unassigned")}
                       </TableCell>
                       <TableCell>
-                        <OutcomeCell hearing={hearing} outcomeKeys={outcomeKeys} />
+                        <OutcomeCell
+                          hearing={hearing}
+                          outcomeOptions={outcomeOptions}
+                        />
                       </TableCell>
                       <TableCell align="end">
                         <div className="flex justify-end gap-2">

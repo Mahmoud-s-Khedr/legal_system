@@ -72,23 +72,50 @@ vi.mock("../../lib/feedback", () => ({
 }));
 
 vi.mock("../../lib/lookups", () => ({
-  useLookupOptions: (key: string) => {
+  useLocalizedLookupOptions: (key: string) => {
     if (key === "CaseType") {
-      return { data: { items: [{ key: "CIVIL", labelAr: "Civil" }] } };
+      return {
+        data: { items: [{ key: "CIVIL", labelAr: "مدني", labelEn: "Civil", labelFr: "Civil" }] },
+        options: [{ value: "CIVIL", label: "Civil", searchText: "CIVIL Civil مدني" }],
+        getLabel: (value: string) => (value === "CIVIL" ? "Civil" : value)
+      };
     }
     if (key === "CourtLevel") {
-      return { data: { items: [{ key: "PRIMARY", labelAr: "Primary" }] } };
+      return {
+        data: { items: [{ key: "PRIMARY", labelAr: "ابتدائي", labelEn: "Primary", labelFr: "Primaire" }] },
+        options: [{ value: "PRIMARY", label: "Primary", searchText: "PRIMARY Primary ابتدائي" }],
+        getLabel: (value: string) => (value === "PRIMARY" ? "Primary" : value)
+      };
     }
     if (key === "CourtType") {
-      return { data: { items: [{ key: "CIVIL", labelAr: "Civil Court" }] } };
+      return {
+        data: { items: [{ key: "CIVIL", labelAr: "مدني", labelEn: "Civil Court", labelFr: "Tribunal civil" }] },
+        options: [{ value: "CIVIL", label: "Civil Court", searchText: "CIVIL Civil Court مدني" }],
+        getLabel: (value: string) => (value === "CIVIL" ? "Civil Court" : value)
+      };
     }
     if (key === "PartyRole") {
-      return { data: { items: [{ key: "PLAINTIFF", labelAr: "Plaintiff" }] } };
+      return {
+        data: { items: [{ key: "PLAINTIFF", labelAr: "مدعي", labelEn: "Plaintiff", labelFr: "Demandeur" }] },
+        options: [{ value: "PLAINTIFF", label: "Plaintiff", searchText: "PLAINTIFF Plaintiff مدعي" }],
+        getLabel: (value: string) => (value === "PLAINTIFF" ? "Plaintiff" : value)
+      };
     }
     if (key === "DocumentType") {
-      return { data: { items: [{ key: "GENERAL", labelAr: "General" }] } };
+      return {
+        data: { items: [{ key: "GENERAL", labelAr: "عام", labelEn: "General", labelFr: "Général" }] },
+        options: [{ value: "GENERAL", label: "General", searchText: "GENERAL General عام" }],
+        getLabel: (value: string) => (value === "GENERAL" ? "General" : value)
+      };
     }
-    return { data: { items: [] } };
+    if (key === "HearingOutcome") {
+      return {
+        data: { items: [{ key: "ADJOURNED", labelAr: "تأجيل", labelEn: "Adjourned", labelFr: "Ajourné" }] },
+        options: [{ value: "ADJOURNED", label: "Adjourned", searchText: "ADJOURNED Adjourned تأجيل" }],
+        getLabel: (value: string) => (value === "ADJOURNED" ? "Adjourned" : value)
+      };
+    }
+    return { data: { items: [] }, options: [], getLabel: (value: string) => value };
   }
 }));
 

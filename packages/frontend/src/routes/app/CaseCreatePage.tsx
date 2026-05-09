@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import {
   Field,
   FormAlert,
@@ -43,7 +43,7 @@ export function CaseCreatePage() {
     queryFn: () => apiFetch<ClientListResponseDto>("/api/clients?limit=200")
   });
 
-  const caseTypesQuery = useLookupOptions("CaseType");
+  const caseTypesQuery = useLocalizedLookupOptions("CaseType");
   useUnsavedChanges(
     JSON.stringify(form) !==
       JSON.stringify({
@@ -78,14 +78,13 @@ export function CaseCreatePage() {
     )
   ];
 
-  const caseTypeOptions = (caseTypesQuery.data?.items ?? []).map((o) => ({
-    value: o.key,
-    label: o.labelAr
-  }));
+  const caseTypeOptions = [...caseTypesQuery.options];
   if (!caseTypeOptions.length) {
+    const fallbackLabel = caseTypesQuery.getLabel("CIVIL");
     caseTypeOptions.push({
       value: "CIVIL",
-      label: t("caseTypes.CIVIL", "Civil")
+      label: fallbackLabel,
+      searchText: `CIVIL ${fallbackLabel}`
     });
   }
 

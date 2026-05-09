@@ -10,11 +10,12 @@
     "build": "tsc -p tsconfig.json && vite build",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:tokens": "node ./scripts/check-tailwind-tokens.mjs",
+    "lint:lookup-i18n": "node ./scripts/check-lookup-localization.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --passWithNoTests",
     "test:coverage": "vitest run --coverage --passWithNoTests",
-    "i18n:check": "node ./scripts/check-i18n-keys.mjs"
+    "i18n:check": "node ./scripts/check-i18n-keys.mjs && node ./scripts/check-lookup-localization.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

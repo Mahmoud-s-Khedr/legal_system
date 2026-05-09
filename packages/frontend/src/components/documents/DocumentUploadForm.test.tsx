@@ -10,10 +10,12 @@ vi.mock("../../lib/api", () => ({
 }));
 
 vi.mock("../../lib/lookups", () => ({
-  useLookupOptions: () => ({
+  useLocalizedLookupOptions: () => ({
     data: {
-      items: [{ key: "GENERAL" }]
-    }
+      items: [{ key: "GENERAL", labelAr: "عام", labelEn: "General", labelFr: "Général" }]
+    },
+    options: [{ value: "GENERAL", label: "General", searchText: "GENERAL General عام" }],
+    getLabel: (key: string) => key
   })
 }));
 

@@ -15,8 +15,7 @@ import { apiDownload, apiFetch } from "../../lib/api";
 import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
 import { saveBlobToDownloads } from "../../lib/desktopDownloads";
 import { confirmAction } from "../../lib/dialog";
-import { useLookupOptions } from "../../lib/lookups";
-import i18n from "../../i18n";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import {
   ErrorState,
   FormAlert,
@@ -86,9 +85,7 @@ export function InvoiceDetailPage() {
   const [editError, setEditError] = useState("");
   const addToast = useToastStore((state) => state.addToast);
   const creditBalance = useClientCreditBalance(invoice?.clientId);
-  const paymentMethods = useLookupOptions("PaymentMethod");
-  const lang = (i18n.resolvedLanguage ?? "ar") as "ar" | "en" | "fr";
-  const labelKey = `label${lang.charAt(0).toUpperCase()}${lang.slice(1)}` as "labelAr" | "labelEn" | "labelFr";
+  const paymentMethods = useLocalizedLookupOptions("PaymentMethod");
 
   if (isLoading)
     return <p className="p-8 text-slate-500">{t("labels.loading")}</p>;
@@ -637,8 +634,7 @@ export function InvoiceDetailPage() {
         ) : (
           <div className="space-y-2">
             {currentInvoice.payments.map((payment) => {
-              const methodObj = paymentMethods.data?.items.find(m => m.key === payment.method);
-              const methodLabel = methodObj ? methodObj[labelKey] : payment.method;
+              const methodLabel = paymentMethods.getLabel(payment.method);
               return (
               <div key={payment.id} className="flex justify-between text-sm">
                 <span>
@@ -700,9 +696,9 @@ export function InvoiceDetailPage() {
                   <option value="" disabled>
                     {t("actions.select", "Select")}
                   </option>
-                  {paymentMethods.data?.items.map((m) => (
-                    <option key={m.key} value={m.key}>
-                      {m[labelKey]}
+                  {paymentMethods.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>

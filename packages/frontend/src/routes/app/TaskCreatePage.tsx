@@ -19,7 +19,7 @@ import { toCaseSelectOption } from "../../lib/caseOptions";
 import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import {
   runUploadQueue,
   type UploadQueueStatus
@@ -80,7 +80,7 @@ export function TaskCreatePage() {
   const [submitSummary, setSubmitSummary] = useState<string | null>(null);
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
   const documentPickerRef = useRef<HTMLInputElement>(null);
-  const docTypesQuery = useLookupOptions("DocumentType");
+  const docTypesQuery = useLocalizedLookupOptions("DocumentType");
 
   useUnsavedChanges(
     Boolean(
@@ -136,17 +136,15 @@ export function TaskCreatePage() {
   );
 
   const documentTypeOptions = useMemo(
-    () =>
-      (docTypesQuery.data?.items ?? []).map((item) => ({
-        value: item.key,
-        label: getEnumLabel(t, "DocumentType", item.key)
-      })),
-    [docTypesQuery.data?.items, t]
+    () => [...docTypesQuery.options],
+    [docTypesQuery.options]
   );
   if (!documentTypeOptions.length) {
+    const fallbackLabel = docTypesQuery.getLabel("GENERAL_OTHER");
     documentTypeOptions.push({
       value: "GENERAL_OTHER",
-      label: getEnumLabel(t, "DocumentType", "GENERAL_OTHER")
+      label: fallbackLabel,
+      searchText: `GENERAL_OTHER ${fallbackLabel}`
     });
   }
 

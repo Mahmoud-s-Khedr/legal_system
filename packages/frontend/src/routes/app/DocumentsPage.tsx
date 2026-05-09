@@ -10,8 +10,7 @@ import {
   TableToolbar
 } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
-import { getEnumLabel } from "../../lib/enumLabel";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 
 export function DocumentsPage() {
   const { t } = useTranslation("app");
@@ -21,7 +20,7 @@ export function DocumentsPage() {
     defaultLimit: 20,
     filterKeys: ["type"]
   });
-  const docTypesQuery = useLookupOptions("DocumentType");
+  const docTypesQuery = useLocalizedLookupOptions("DocumentType");
 
   const queryKey = [
     "documents",
@@ -35,10 +34,7 @@ export function DocumentsPage() {
 
   const typeOptions = [
     { value: "", label: t("labels.all") },
-    ...(docTypesQuery.data?.items ?? []).map((o) => ({
-      value: o.key,
-      label: getEnumLabel(t, "DocumentType", o.key)
-    }))
+    ...docTypesQuery.options
   ];
 
   return (

@@ -26,7 +26,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import {
   toLocalizedLocationOptions,
   useCityLookups,
@@ -145,10 +145,10 @@ export function CaseDetailPage() {
     queryKey: ["case-tasks", caseId],
     queryFn: () => apiFetch<TaskListResponseDto>(`/api/tasks?caseId=${caseId}`)
   });
-  const partyRolesQuery = useLookupOptions("PartyRole");
-  const courtLevelsQuery = useLookupOptions("CourtLevel");
-  const courtTypesQuery = useLookupOptions("CourtType");
-  const caseTypesQuery = useLookupOptions("CaseType");
+  const partyRolesQuery = useLocalizedLookupOptions("PartyRole");
+  const courtLevelsQuery = useLocalizedLookupOptions("CourtLevel");
+  const courtTypesQuery = useLocalizedLookupOptions("CourtType");
+  const caseTypesQuery = useLocalizedLookupOptions("CaseType");
   const [editingCourt, setEditingCourt] = useState<CaseCourtDto | null>(null);
   const defaultPartyRole = partyRolesQuery.data?.items?.[0]?.key ?? "";
 
@@ -309,30 +309,25 @@ export function CaseDetailPage() {
     ? clientQuery.data.name
     : (caseItem.clientId ?? null);
 
-  const caseTypeLabel =
-    caseTypesQuery.data?.items.find((o) => o.key === caseItem.type)?.labelAr ??
-    caseItem.type;
+  const caseTypeLabel = caseTypesQuery.getLabel(caseItem.type);
 
   const courtLevelMap = new Map(
-    (courtLevelsQuery.data?.items ?? []).map((o) => [o.key, o.labelAr])
+    (courtLevelsQuery.data?.items ?? []).map((o) => [
+      o.key,
+      courtLevelsQuery.getLabel(o.key)
+    ])
   );
   const courtTypeMap = new Map(
-    (courtTypesQuery.data?.items ?? []).map((o) => [o.key, o.labelAr])
+    (courtTypesQuery.data?.items ?? []).map((o) => [
+      o.key,
+      courtTypesQuery.getLabel(o.key)
+    ])
   );
 
-  const courtLevelOptions = (courtLevelsQuery.data?.items ?? []).map((o) => ({
-    value: o.key,
-    label: o.labelAr
-  }));
-  const courtTypeOptions = (courtTypesQuery.data?.items ?? []).map((o) => ({
-    value: o.key,
-    label: o.labelAr
-  }));
+  const courtLevelOptions = courtLevelsQuery.options;
+  const courtTypeOptions = courtTypesQuery.options;
 
-  const partyRoleOptions = (partyRolesQuery.data?.items ?? []).map((o) => ({
-    value: o.key,
-    label: o.labelAr
-  }));
+  const partyRoleOptions = partyRolesQuery.options;
   const clientOptions = [
     { value: "", label: t("labels.selectClient") },
     ...(clientsQuery.data?.items ?? []).map((client) =>
@@ -645,7 +640,7 @@ export function CaseDetailPage() {
                       <TableRow key={party.id}>
                         <TableCell>{party.name}</TableCell>
                         <TableCell>
-                          {getEnumLabel(t, "PartyRole", party.role)}
+                          {partyRolesQuery.getLabel(party.role)}
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${

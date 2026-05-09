@@ -30,7 +30,11 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key
+    t: (key: string) => key,
+    i18n: {
+      resolvedLanguage: "en",
+      language: "en"
+    }
   })
 }));
 

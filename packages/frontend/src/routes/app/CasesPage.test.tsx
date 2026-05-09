@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseQuery = vi.fn();
 const mockUseTableQueryState = vi.fn();
-const mockUseLookupOptions = vi.fn();
+const mockUseLocalizedLookupOptions = vi.fn();
 const mockUseAuthBootstrap = vi.fn();
 
 vi.mock("@tanstack/react-query", () => ({
@@ -36,7 +36,8 @@ vi.mock("../../lib/tableQueryState", () => ({
 }));
 
 vi.mock("../../lib/lookups", () => ({
-  useLookupOptions: (...args: unknown[]) => mockUseLookupOptions(...args)
+  useLocalizedLookupOptions: (...args: unknown[]) =>
+    mockUseLocalizedLookupOptions(...args)
 }));
 
 vi.mock("../../store/authStore", () => ({
@@ -169,7 +170,11 @@ beforeEach(() => {
     setFilter: vi.fn(),
     toApiQueryString: () => ""
   });
-  mockUseLookupOptions.mockReturnValue({ data: { items: [] } });
+  mockUseLocalizedLookupOptions.mockReturnValue({
+    data: { items: [] },
+    options: [],
+    getLabel: (key: string) => key
+  });
   mockUseAuthBootstrap.mockReturnValue({ user: { id: "user-1" } });
   mockUseQuery.mockReturnValue({
     isLoading: false,

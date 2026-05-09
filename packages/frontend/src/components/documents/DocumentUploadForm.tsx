@@ -3,14 +3,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { DocumentDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFormFetch } from "../../lib/api";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import {
   runUploadQueue,
   type UploadQueueStatus,
   type UploadQueueSummary
 } from "../../lib/uploadQueue";
 import { PrimaryButton, SelectField } from "../../routes/app/ui";
-import { getEnumLabel } from "../../lib/enumLabel";
 
 const ACCEPTED_TYPES = ".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif";
 
@@ -46,7 +45,7 @@ export function DocumentUploadForm({
   const { t } = useTranslation("app");
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const docTypesQuery = useLookupOptions("DocumentType");
+  const docTypesQuery = useLocalizedLookupOptions("DocumentType");
 
   const [selectedFiles, setSelectedFiles] = useState<SelectedUploadFile[]>([]);
   const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>(
@@ -58,14 +57,13 @@ export function DocumentUploadForm({
   const [summary, setSummary] =
     useState<UploadQueueSummary<DocumentDto> | null>(null);
 
-  const typeOptions = (docTypesQuery.data?.items ?? []).map((o) => ({
-    value: o.key,
-    label: getEnumLabel(t, "DocumentType", o.key)
-  }));
+  const typeOptions = [...docTypesQuery.options];
   if (!typeOptions.length) {
+    const fallbackLabel = docTypesQuery.getLabel("GENERAL_OTHER");
     typeOptions.push({
       value: "GENERAL_OTHER",
-      label: getEnumLabel(t, "DocumentType", "GENERAL_OTHER")
+      label: fallbackLabel,
+      searchText: `GENERAL_OTHER ${fallbackLabel}`
     });
   }
 

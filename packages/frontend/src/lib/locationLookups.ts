@@ -12,6 +12,28 @@ function normalizeLanguage(language: string): "ar" | "en" | "fr" {
   return "en";
 }
 
+function resolveLocationLabel(
+  row: { value: string; labelAr: string; labelEn: string; labelFr: string },
+  language: string
+): string {
+  const active = normalizeLanguage(language);
+  const byLanguage: Record<"ar" | "en" | "fr", string> = {
+    ar: row.labelAr,
+    en: row.labelEn,
+    fr: row.labelFr
+  };
+  const order: Array<"ar" | "en" | "fr"> = [active, "ar", "en", "fr"];
+
+  for (const lang of Array.from(new Set(order))) {
+    const candidate = byLanguage[lang]?.trim();
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return row.value;
+}
+
 export function useGovernorateLookups() {
   return useQuery({
     queryKey: ["location-lookups", "governorates"],
@@ -38,12 +60,11 @@ export function toLocalizedLocationOptions<
   rows: T[] | undefined,
   language: string
 ): Array<{ value: string; label: string }> {
-  const locale = normalizeLanguage(language);
   if (!rows?.length) return [];
 
   return rows.map((row) => ({
     value: row.value,
-    label: locale === "ar" ? row.labelAr : locale === "fr" ? row.labelFr : row.labelEn
+    label: resolveLocationLabel(row, language)
   }));
 }
 

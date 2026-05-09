@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
-import { useLookupOptions } from "../../lib/lookups";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import { useAuthBootstrap } from "../../store/authStore";
 import {
   DataTable,
@@ -49,7 +49,7 @@ export function CasesPage() {
   });
   const [assignedToMe, setAssignedToMe] = useState(false);
 
-  const caseTypesQuery = useLookupOptions("CaseType");
+  const caseTypesQuery = useLocalizedLookupOptions("CaseType");
   const lawyersQuery = useQuery({
     queryKey: ["users-list"],
     queryFn: () => apiFetch<UserListResponseDto>("/api/users")
@@ -127,10 +127,7 @@ export function CasesPage() {
             onChange={(value) => table.setFilter("type", value)}
             options={[
               { value: "", label: t("labels.all") },
-              ...(caseTypesQuery.data?.items ?? []).map((o) => ({
-                value: o.key,
-                label: o.labelAr ?? o.key
-              }))
+              ...caseTypesQuery.options
             ]}
             value={table.state.filters.type ?? ""}
           />
