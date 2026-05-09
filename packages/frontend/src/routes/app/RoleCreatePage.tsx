@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreateRoleDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { resolveFormValidationError } from "../../lib/formValidation";
+import { pickFieldError } from "../../lib/validationErrors";
 import { Field, FormExitActions, PageHeader, SectionCard } from "./ui";
 import { PermissionChecklist } from "../../components/shared/PermissionChecklist";
 
@@ -15,6 +17,7 @@ export function RoleCreatePage() {
   const [form, setForm] = useState({ key: "", name: "" });
   const [permissions, setPermissions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const createMutation = useMutation({
     mutationFn: async (payload: CreateRoleDto) => {
@@ -27,7 +30,11 @@ export function RoleCreatePage() {
       await queryClient.invalidateQueries({ queryKey: ["roles"] });
       void navigate({ to: "/app/settings/roles" });
     },
-    onError: (err: Error) => setError(err.message)
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setError(resolved.message);
+      setFieldErrors(resolved.fieldErrors);
+    }
   });
 
   return (
@@ -46,6 +53,7 @@ export function RoleCreatePage() {
             return;
           }
           setError(null);
+          setFieldErrors({});
           void createMutation.mutateAsync({
             ...form,
             permissionKeys: permissions
@@ -65,12 +73,14 @@ export function RoleCreatePage() {
               }
               placeholder="my_custom_role"
               required
+              error={pickFieldError(fieldErrors, ["key"]) ?? undefined}
               value={form.key}
             />
             <Field
               label={t("labels.name")}
               onChange={(v) => setForm({ ...form, name: v })}
               required
+              error={pickFieldError(fieldErrors, ["name"]) ?? undefined}
               value={form.name}
             />
           </div>

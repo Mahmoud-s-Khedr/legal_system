@@ -15,6 +15,8 @@ import { apiFetch } from "../../lib/api";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
+import { resolveFormValidationError } from "../../lib/formValidation";
+import { pickFieldError } from "../../lib/validationErrors";
 import {
   Field,
   FormExitActions,
@@ -52,6 +54,8 @@ export function HearingCreatePage() {
     outcome: null,
     notes: ""
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [initialForm, setInitialForm] = useState<CreateHearingDto>(() => ({
     caseId: search.caseId ?? "",
     assignedLawyerId: "",
@@ -168,6 +172,11 @@ export function HearingCreatePage() {
       await queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       allowNextNavigation();
       void navigate({ to: "/app/hearings" });
+    },
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setSubmitError(resolved.message);
+      setFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -186,6 +195,8 @@ export function HearingCreatePage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            setSubmitError(null);
+            setFieldErrors({});
             if (!isValidDateTimeInput(form.sessionDatetime)) {
               return;
             }
@@ -197,12 +208,14 @@ export function HearingCreatePage() {
             onChange={(value) => updateField("caseId", value)}
             options={caseOptions}
             required
+            error={pickFieldError(fieldErrors, ["caseId"]) ?? undefined}
             value={form.caseId}
           />
           <SelectField
             label={t("labels.assignedLawyer")}
             onChange={(value) => updateField("assignedLawyerId", value)}
             options={assigneeOptions}
+            error={pickFieldError(fieldErrors, ["assignedLawyerId"]) ?? undefined}
             value={form.assignedLawyerId ?? ""}
           />
           <Field
@@ -212,6 +225,7 @@ export function HearingCreatePage() {
             required
             type="datetime-local"
             commitMode="blur"
+            error={pickFieldError(fieldErrors, ["sessionDatetime"]) ?? undefined}
             value={form.sessionDatetime}
           />
           <Field
@@ -220,6 +234,7 @@ export function HearingCreatePage() {
             onChange={(value) => updateField("nextSessionAt", value)}
             type="datetime-local"
             commitMode="blur"
+            error={pickFieldError(fieldErrors, ["nextSessionAt"]) ?? undefined}
             value={form.nextSessionAt ?? ""}
           />
           <SelectField
@@ -228,11 +243,13 @@ export function HearingCreatePage() {
               updateField("outcome", value || null)
             }
             options={outcomeOptions}
+            error={pickFieldError(fieldErrors, ["outcome"]) ?? undefined}
             value={form.outcome ?? ""}
           />
           <TextAreaField
             label={t("labels.notes")}
             onChange={(value) => updateField("notes", value)}
+            error={pickFieldError(fieldErrors, ["notes"]) ?? undefined}
             value={form.notes ?? ""}
           />
           {conflictQuery.data?.hasConflict ? (
@@ -240,11 +257,7 @@ export function HearingCreatePage() {
               {t("hearings.conflictWarning")}
             </p>
           ) : null}
-          {createMutation.error ? (
-            <p className="text-sm text-red-600">
-              {(createMutation.error as Error).message}
-            </p>
-          ) : null}
+          {submitError ? <p className="text-sm text-red-600">{submitError}</p> : null}
           <FormExitActions
             cancelTo="/app/hearings"
             cancelLabel={t("actions.cancel")}

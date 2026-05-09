@@ -15,6 +15,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { resolveFormValidationError } from "../../lib/formValidation";
 import {
   toLocalizedLocationOptions,
   useCityLookups,
@@ -34,6 +35,7 @@ import {
 } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { DocumentUploadForm } from "../../components/documents/DocumentUploadForm";
+import { pickFieldError } from "../../lib/validationErrors";
 
 const PHONE_ERROR = "Enter a valid phone number";
 
@@ -110,6 +112,8 @@ export function ClientEditPage() {
     contacts: []
   });
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const loadedFormRef = useRef<CreateClientDto | null>(null);
   useUnsavedChanges(
     loadedFormRef.current !== null &&
@@ -164,6 +168,11 @@ export function ClientEditPage() {
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
       allowNextNavigation();
       void navigate({ to: "/app/clients/$clientId", params: { clientId } });
+    },
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setSubmitError(resolved.message);
+      setFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -222,6 +231,8 @@ export function ClientEditPage() {
             if (nextPhoneError) {
               return;
             }
+            setSubmitError(null);
+            setFieldErrors({});
             updateMutation.mutate(normalizePayload(form));
           }}
         >
@@ -229,6 +240,7 @@ export function ClientEditPage() {
             label={t("labels.name")}
             onChange={(value) => setForm({ ...form, name: value })}
             required
+            error={pickFieldError(fieldErrors, ["name"]) ?? undefined}
             value={form.name}
           />
           <SelectField
@@ -238,6 +250,7 @@ export function ClientEditPage() {
             }
             options={clientTypeOptions}
             required
+            error={pickFieldError(fieldErrors, ["type"]) ?? undefined}
             value={form.type}
           />
           <div className="grid gap-4 md:grid-cols-2">
@@ -246,6 +259,7 @@ export function ClientEditPage() {
               label={t("labels.email")}
               onChange={(value) => setForm({ ...form, email: value })}
               type="email"
+              error={pickFieldError(fieldErrors, ["email"]) ?? undefined}
               value={form.email ?? ""}
             />
           <Field
@@ -266,6 +280,7 @@ export function ClientEditPage() {
               label={t("labels.governorate")}
               onChange={(value) => setForm({ ...form, governorate: value, city: "" })}
               options={[{ value: "", label: "-" }, ...governorateOptions]}
+              error={pickFieldError(fieldErrors, ["governorate"]) ?? undefined}
               value={form.governorate ?? ""}
             />
             <SelectField
@@ -273,6 +288,7 @@ export function ClientEditPage() {
               label={t("labels.city")}
               onChange={(value) => setForm({ ...form, city: value })}
               options={[{ value: "", label: "-" }, ...cityOptions]}
+              error={pickFieldError(fieldErrors, ["city"]) ?? undefined}
               value={form.city ?? ""}
             />
           </div>
@@ -283,6 +299,7 @@ export function ClientEditPage() {
                 setForm({ ...form, preferredLanguage: value as Language })
               }
               options={languageOptions}
+              error={pickFieldError(fieldErrors, ["preferredLanguage"]) ?? undefined}
               value={form.preferredLanguage ?? Language.AR}
             />
           </div>
@@ -291,6 +308,7 @@ export function ClientEditPage() {
               dir="ltr"
               label={t("labels.nationalId")}
               onChange={(value) => setForm({ ...form, nationalId: value })}
+              error={pickFieldError(fieldErrors, ["nationalId"]) ?? undefined}
               value={form.nationalId ?? ""}
             />
           ) : null}
@@ -302,12 +320,14 @@ export function ClientEditPage() {
                 onChange={(value) =>
                   setForm({ ...form, commercialRegister: value })
                 }
+                error={pickFieldError(fieldErrors, ["commercialRegister"]) ?? undefined}
                 value={form.commercialRegister ?? ""}
               />
               <Field
                 dir="ltr"
                 label={t("labels.taxNumber")}
                 onChange={(value) => setForm({ ...form, taxNumber: value })}
+                error={pickFieldError(fieldErrors, ["taxNumber"]) ?? undefined}
                 value={form.taxNumber ?? ""}
               />
             </div>
@@ -316,11 +336,13 @@ export function ClientEditPage() {
             dir="ltr"
             label={t("labels.poaNumber")}
             onChange={(value) => setForm({ ...form, poaNumber: value })}
+            error={pickFieldError(fieldErrors, ["poaNumber"]) ?? undefined}
             value={form.poaNumber ?? ""}
           />
           <Field
             label={t("labels.internalRef")}
             onChange={(value) => setForm({ ...form, internalRef: value })}
+            error={pickFieldError(fieldErrors, ["internalRef"]) ?? undefined}
             value={form.internalRef ?? ""}
           />
           <FormExitActions
@@ -336,11 +358,7 @@ export function ClientEditPage() {
               {t("actions.back")}
             </PrimaryButton>
           </div>
-          {updateMutation.error ? (
-            <p className="text-sm text-red-600">
-              {(updateMutation.error as Error).message}
-            </p>
-          ) : null}
+          {submitError ? <p className="text-sm text-red-600">{submitError}</p> : null}
         </form>
       </SectionCard>
       <SectionCard

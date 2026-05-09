@@ -9,6 +9,8 @@ import type {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { resolveFormValidationError } from "../../lib/formValidation";
+import { pickFieldError } from "../../lib/validationErrors";
 import {
   EmptyState,
   ErrorState,
@@ -43,6 +45,9 @@ export function LookupSettingsDetailPage() {
     null
   );
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createFieldErrors, setCreateFieldErrors] = useState<Record<string, string>>({});
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateLookupOptionDto) =>
@@ -53,9 +58,14 @@ export function LookupSettingsDetailPage() {
     onSuccess: async () => {
       setCreateForm(EMPTY_CREATE);
       setCreateError(null);
+      setCreateFieldErrors({});
       await queryClient.invalidateQueries({ queryKey: ["lookups", entity] });
     },
-    onError: (err: Error) => setCreateError(err.message)
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setCreateError(resolved.message);
+      setCreateFieldErrors(resolved.fieldErrors);
+    }
   });
 
   const updateMutation = useMutation({
@@ -72,7 +82,14 @@ export function LookupSettingsDetailPage() {
       }),
     onSuccess: async () => {
       setEditingOption(null);
+      setEditError(null);
+      setEditFieldErrors({});
       await queryClient.invalidateQueries({ queryKey: ["lookups", entity] });
+    },
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setEditError(resolved.message);
+      setEditFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -170,6 +187,8 @@ export function LookupSettingsDetailPage() {
                 onSubmit={(payload) =>
                   updateMutation.mutate({ id: editingOption.id, payload })
                 }
+                summaryError={editError}
+                fieldErrors={editFieldErrors}
                 t={t}
               />
             </SectionCard>
@@ -182,6 +201,8 @@ export function LookupSettingsDetailPage() {
                 className="space-y-4"
                 onSubmit={(e) => {
                   e.preventDefault();
+                  setCreateError(null);
+                  setCreateFieldErrors({});
                   void createMutation.mutateAsync(createForm);
                 }}
               >
@@ -195,23 +216,27 @@ export function LookupSettingsDetailPage() {
                     })
                   }
                   placeholder="MY_CUSTOM_VALUE"
+                  error={pickFieldError(createFieldErrors, ["key"]) ?? undefined}
                   value={createForm.key}
                 />
                 <Field
                   label={t("lookups.labelAr")}
                   onChange={(v) => setCreateForm({ ...createForm, labelAr: v })}
+                  error={pickFieldError(createFieldErrors, ["labelAr"]) ?? undefined}
                   value={createForm.labelAr}
                 />
                 <Field
                   dir="ltr"
                   label={t("lookups.labelEn")}
                   onChange={(v) => setCreateForm({ ...createForm, labelEn: v })}
+                  error={pickFieldError(createFieldErrors, ["labelEn"]) ?? undefined}
                   value={createForm.labelEn}
                 />
                 <Field
                   dir="ltr"
                   label={t("lookups.labelFr")}
                   onChange={(v) => setCreateForm({ ...createForm, labelFr: v })}
+                  error={pickFieldError(createFieldErrors, ["labelFr"]) ?? undefined}
                   value={createForm.labelFr}
                 />
                 {createError ? (
@@ -234,12 +259,16 @@ function LookupEditForm({
   isPending,
   onCancel,
   onSubmit,
+  summaryError,
+  fieldErrors,
   t
 }: {
   option: LookupOptionDto;
   isPending: boolean;
   onCancel: () => void;
   onSubmit: (payload: UpdateLookupOptionDto) => void;
+  summaryError: string | null;
+  fieldErrors: Record<string, string>;
   t: (key: string) => string;
 }) {
   const [form, setForm] = useState<UpdateLookupOptionDto>({
@@ -271,20 +300,24 @@ function LookupEditForm({
       <Field
         label={t("lookups.labelAr")}
         onChange={(v) => setForm({ ...form, labelAr: v })}
+        error={pickFieldError(fieldErrors, ["labelAr"]) ?? undefined}
         value={form.labelAr}
       />
       <Field
         dir="ltr"
         label={t("lookups.labelEn")}
         onChange={(v) => setForm({ ...form, labelEn: v })}
+        error={pickFieldError(fieldErrors, ["labelEn"]) ?? undefined}
         value={form.labelEn}
       />
       <Field
         dir="ltr"
         label={t("lookups.labelFr")}
         onChange={(v) => setForm({ ...form, labelFr: v })}
+        error={pickFieldError(fieldErrors, ["labelFr"]) ?? undefined}
         value={form.labelFr}
       />
+      {summaryError ? <p className="text-sm text-red-600">{summaryError}</p> : null}
       <div className="flex gap-3">
         <PrimaryButton type="submit">
           {isPending ? "..." : t("actions.saveChanges")}

@@ -27,12 +27,17 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: unknown }) => <a>{children as never}</a>
 }));
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async () => {
+  const actual = await vi.importActual<typeof import("react-i18next")>("react-i18next");
+  return {
+    ...actual,
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: { resolvedLanguage: "en" }
   })
-}));
+
+  };
+});
 
 vi.mock("../../../lib/api", () => ({
   apiFetch: vi.fn(),

@@ -1,3 +1,4 @@
+import i18n from "../i18n";
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? "";
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
 const desktopRuntimeVariant = (import.meta.env.VITE_DESKTOP_RUNTIME_VARIANT as string | undefined) ?? "embedded";
@@ -70,17 +71,115 @@ export interface ApiDownloadResult {
   contentLength?: number | null;
 }
 
+type ValidationMessageKey =
+  | "VALIDATION_REQUIRED"
+  | "VALIDATION_INVALID_TYPE"
+  | "VALIDATION_INVALID_EMAIL"
+  | "VALIDATION_INVALID_DATE"
+  | "VALIDATION_INVALID_ENUM"
+  | "VALIDATION_TOO_SMALL"
+  | "VALIDATION_TOO_BIG"
+  | "VALIDATION_INVALID_VALUE";
+
+type ApiValidationIssuePayload = {
+  path?: unknown;
+  code?: unknown;
+  message?: unknown;
+  messageKey?: unknown;
+};
+
+type ApiValidationPayload = {
+  code?: unknown;
+  message?: unknown;
+  messageKey?: unknown;
+  issues?: unknown;
+};
+
+function localizeValidationIssueMessage(messageKey: ValidationMessageKey, fallback?: string) {
+  switch (messageKey) {
+    case "VALIDATION_REQUIRED":
+      return i18n.t("errors.validation.issue.required", "This field is required.");
+    case "VALIDATION_INVALID_TYPE":
+      return i18n.t("errors.validation.issue.invalidType", "The provided value has an invalid type.");
+    case "VALIDATION_INVALID_EMAIL":
+      return i18n.t("errors.validation.issue.invalidEmail", "Enter a valid email address.");
+    case "VALIDATION_INVALID_DATE":
+      return i18n.t("errors.validation.issue.invalidDate", "Enter a valid date.");
+    case "VALIDATION_INVALID_ENUM":
+      return i18n.t("errors.validation.issue.invalidOption", "Choose a valid option.");
+    case "VALIDATION_TOO_SMALL":
+      return i18n.t("errors.validation.issue.tooSmall", fallback ?? "Value is below the allowed minimum.");
+    case "VALIDATION_TOO_BIG":
+      return i18n.t("errors.validation.issue.tooBig", "Value exceeds the allowed maximum.");
+    case "VALIDATION_INVALID_VALUE":
+      return i18n.t("errors.validation.issue.invalidValue", fallback ?? "Invalid value.");
+    default:
+      return fallback ?? i18n.t("errors.validation.issue.invalidValue", "Invalid value.");
+  }
+}
+
+function localizeApiValidationPayload(payload: unknown) {
+  if (typeof payload !== "object" || payload === null) {
+    return payload;
+  }
+
+  const candidate = payload as ApiValidationPayload;
+  if (candidate.code !== "VALIDATION_ERROR") {
+    return payload;
+  }
+
+  const localizedTopLevel = i18n.t(
+    "errors.validation.summary",
+    "Please review the highlighted fields and try again."
+  );
+
+  const normalizedIssues = Array.isArray(candidate.issues)
+    ? candidate.issues.map((issue) => {
+        if (typeof issue !== "object" || issue === null) {
+          return issue;
+        }
+        const entry = issue as ApiValidationIssuePayload;
+        const messageKey =
+          typeof entry.messageKey === "string" ? (entry.messageKey as ValidationMessageKey) : null;
+        const fallbackMessage =
+          typeof entry.message === "string" && entry.message.trim().length > 0
+            ? entry.message
+            : undefined;
+
+        return {
+          ...entry,
+          message: messageKey
+            ? localizeValidationIssueMessage(messageKey, fallbackMessage)
+            : fallbackMessage ??
+              i18n.t("errors.validation.issue.invalidValue", "Invalid value.")
+        };
+      })
+    : candidate.issues;
+
+  return {
+    ...candidate,
+    message: localizedTopLevel,
+    issues: normalizedIssues
+  };
+}
+
 async function parseErrorPayload(response: Response) {
   const payload = await response
     .json()
     .catch(() => ({ message: response.statusText || "Request failed" }));
 
+  const normalizedPayload = localizeApiValidationPayload(payload);
+
   const message =
-    typeof payload?.message === "string" && payload.message.trim().length > 0
-      ? payload.message
+    typeof normalizedPayload === "object" &&
+    normalizedPayload !== null &&
+    "message" in normalizedPayload &&
+    typeof (normalizedPayload as { message?: unknown }).message === "string" &&
+    (normalizedPayload as { message: string }).message.trim().length > 0
+      ? (normalizedPayload as { message: string }).message
       : "Request failed";
 
-  throw new ApiError(message, response.status, payload);
+  throw new ApiError(message, response.status, normalizedPayload);
 }
 
 function readDesktopLocalSessionToken() {

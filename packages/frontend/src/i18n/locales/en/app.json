@@ -10,7 +10,20 @@
     "reload": "Reload page",
     "requiredNameAndType": "Name and type are required",
     "notFound": "Not found",
-    "unauthorized": "You are not authorized to access this resource."
+    "unauthorized": "You are not authorized to access this resource.",
+    "validation": {
+      "summary": "Please review the highlighted fields and try again.",
+      "issue": {
+        "required": "This field is required.",
+        "invalidType": "The provided value has an invalid type.",
+        "invalidEmail": "Enter a valid email address.",
+        "invalidDate": "Enter a valid date.",
+        "invalidOption": "Choose a valid option.",
+        "tooSmall": "Value is below the allowed minimum.",
+        "tooBig": "Value exceeds the allowed maximum.",
+        "invalidValue": "Invalid value."
+      }
+    }
   },
   "greeting": {
     "morning": "Good morning",

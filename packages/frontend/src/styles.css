@@ -248,6 +248,17 @@ textarea {
   box-shadow: 0 0 0 1px var(--color-accent) !important;
 }
 
+.elms-select-error .ant-select-selector {
+  border-color: rgb(239 68 68) !important;
+  box-shadow: 0 0 0 1px rgb(239 68 68) !important;
+}
+
+.elms-select-error.ant-select-open .ant-select-selector,
+.elms-select-error.ant-select-focused .ant-select-selector {
+  border-color: rgb(220 38 38) !important;
+  box-shadow: 0 0 0 1px rgb(220 38 38) !important;
+}
+
 .elms-select .ant-select-selection-item,
 .elms-select .ant-select-selection-placeholder,
 .elms-select .ant-select-selection-search-input {
@@ -288,6 +299,13 @@ textarea {
 .elms-date-picker.ant-picker-status-error.ant-picker-focused {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.elms-date-picker-error.ant-picker,
+.elms-date-picker-error.ant-picker:hover,
+.elms-date-picker-error.ant-picker-focused {
+  border-color: rgb(239 68 68) !important;
+  box-shadow: 0 0 0 1px rgb(239 68 68) !important;
 }
 
 .elms-date-picker .ant-picker-input > input {

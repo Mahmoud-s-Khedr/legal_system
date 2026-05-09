@@ -13,11 +13,16 @@ vi.mock("@tanstack/react-router", () => ({
   useBlocker: useBlockerMock
 }));
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async () => {
+  const actual = await vi.importActual<typeof import("react-i18next")>("react-i18next");
+  return {
+    ...actual,
   useTranslation: () => ({
     t: (_key: string, fallback?: string) => fallback ?? "Confirm leaving?"
   })
-}));
+
+  };
+});
 
 vi.mock("./dialog", () => ({
   confirmAction: confirmActionMock

@@ -10,7 +10,9 @@ import {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { resolveFormValidationError } from "../../lib/formValidation";
 import { useAuthBootstrap } from "../../store/authStore";
+import { pickFieldError } from "../../lib/validationErrors";
 import {
   EmptyState,
   ErrorState,
@@ -34,6 +36,8 @@ export function UserCreatePage() {
     roleId: "",
     preferredLanguage: Language.AR
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const rolesQuery = useQuery({
     queryKey: ["roles"],
@@ -50,6 +54,14 @@ export function UserCreatePage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       void navigate({ to: "/app/users" });
+    },
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      const message = resolved.message.toLowerCase().includes("seat limit")
+        ? t("users.seatLimitReached")
+        : resolved.message;
+      setSubmitError(message);
+      setFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -97,6 +109,8 @@ export function UserCreatePage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            setSubmitError(null);
+            setFieldErrors({});
             createMutation.mutate(form);
           }}
         >
@@ -104,6 +118,7 @@ export function UserCreatePage() {
             label={t("labels.fullName")}
             onChange={(value) => setForm({ ...form, fullName: value })}
             required
+            error={pickFieldError(fieldErrors, ["fullName"]) ?? undefined}
             value={form.fullName}
           />
           <Field
@@ -112,6 +127,7 @@ export function UserCreatePage() {
             onChange={(value) => setForm({ ...form, email: value })}
             required
             type="email"
+            error={pickFieldError(fieldErrors, ["email"]) ?? undefined}
             value={form.email}
           />
           <Field
@@ -120,6 +136,7 @@ export function UserCreatePage() {
             onChange={(value) => setForm({ ...form, password: value })}
             required
             type="password"
+            error={pickFieldError(fieldErrors, ["password"]) ?? undefined}
             value={form.password}
           />
           <SelectField
@@ -133,6 +150,7 @@ export function UserCreatePage() {
               }))
             ]}
             required
+            error={pickFieldError(fieldErrors, ["roleId"]) ?? undefined}
             value={form.roleId}
           />
           <SelectField
@@ -144,6 +162,7 @@ export function UserCreatePage() {
               value,
               label: getEnumLabel(t, "Language", value)
             }))}
+            error={pickFieldError(fieldErrors, ["preferredLanguage"]) ?? undefined}
             value={form.preferredLanguage ?? Language.AR}
           />
           <FormExitActions
@@ -158,15 +177,7 @@ export function UserCreatePage() {
               !rolesQuery.data?.items?.length
             }
           />
-          {createMutation.error ? (
-            <p className="text-sm text-red-600">
-              {(createMutation.error as Error).message
-                ?.toLowerCase()
-                .includes("seat limit")
-                ? t("users.seatLimitReached")
-                : t("errors.fallback")}
-            </p>
-          ) : null}
+          {submitError ? <p className="text-sm text-red-600">{submitError}</p> : null}
         </form>
       </SectionCard>
     </div>

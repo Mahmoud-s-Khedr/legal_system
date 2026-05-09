@@ -13,7 +13,9 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { resolveFormValidationError } from "../../lib/formValidation";
 import { useAuthBootstrap } from "../../store/authStore";
+import { pickFieldError } from "../../lib/validationErrors";
 import {
   EmptyState,
   Field,
@@ -60,6 +62,8 @@ export function UserDetailPage() {
     preferredLanguage: Language.AR,
     status: UserStatus.ACTIVE
   });
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [passwordForm, setPasswordForm] = useState<AdminSetPasswordDto>({
     newPassword: ""
   });
@@ -88,6 +92,11 @@ export function UserDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       await queryClient.invalidateQueries({ queryKey: ["user", userId] });
       void navigate({ to: "/app/users" });
+    },
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setUpdateError(resolved.message);
+      setFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -159,12 +168,15 @@ export function UserDetailPage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            setUpdateError(null);
+            setFieldErrors({});
             updateMutation.mutate(form);
           }}
         >
           <Field
             label={t("labels.fullName")}
             onChange={(value) => setForm({ ...form, fullName: value })}
+            error={pickFieldError(fieldErrors, ["fullName"]) ?? undefined}
             value={form.fullName}
           />
           <Field
@@ -172,6 +184,7 @@ export function UserDetailPage() {
             label={t("labels.email")}
             onChange={(value) => setForm({ ...form, email: value })}
             type="email"
+            error={pickFieldError(fieldErrors, ["email"]) ?? undefined}
             value={form.email}
           />
           <div className="grid gap-4 md:grid-cols-2">
@@ -186,6 +199,7 @@ export function UserDetailPage() {
                     label: role.name
                   }))
                 ]}
+                error={pickFieldError(fieldErrors, ["roleId"]) ?? undefined}
                 value={form.roleId}
               />
             ) : null}
@@ -198,6 +212,7 @@ export function UserDetailPage() {
                 value,
                 label: getEnumLabel(t, "UserStatus", value)
               }))}
+              error={pickFieldError(fieldErrors, ["status"]) ?? undefined}
               value={form.status}
             />
           </div>
@@ -210,6 +225,7 @@ export function UserDetailPage() {
               value,
               label: getEnumLabel(t, "Language", value)
             }))}
+            error={pickFieldError(fieldErrors, ["preferredLanguage"]) ?? undefined}
             value={form.preferredLanguage}
           />
           <div className="flex flex-wrap gap-3">
@@ -256,11 +272,7 @@ export function UserDetailPage() {
               </button>
             ) : null}
           </div>
-          {updateMutation.error ? (
-            <p className="text-sm text-red-600">
-              {(updateMutation.error as Error).message}
-            </p>
-          ) : null}
+          {updateError ? <p className="text-sm text-red-600">{updateError}</p> : null}
           {statusMutation.error ? (
             <p className="text-sm text-red-600">
               {(statusMutation.error as Error).message}

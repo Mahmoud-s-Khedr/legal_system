@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RoleDto, UpdateRoleDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { resolveFormValidationError } from "../../lib/formValidation";
+import { pickFieldError } from "../../lib/validationErrors";
 import {
   EmptyState,
   ErrorState,
@@ -30,6 +32,7 @@ export function RoleEditPage() {
   const [name, setName] = useState("");
   const [permissions, setPermissions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (role) {
@@ -49,7 +52,11 @@ export function RoleEditPage() {
       await queryClient.invalidateQueries({ queryKey: ["roles"] });
       void navigate({ to: "/app/settings/roles" });
     },
-    onError: (err: Error) => setError(err.message)
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setError(resolved.message);
+      setFieldErrors(resolved.fieldErrors);
+    }
   });
 
   if (roleQuery.isLoading) {
@@ -98,6 +105,8 @@ export function RoleEditPage() {
         className="space-y-6"
         onSubmit={(e) => {
           e.preventDefault();
+          setError(null);
+          setFieldErrors({});
           void updateMutation.mutateAsync({ name });
         }}
       >
@@ -118,6 +127,7 @@ export function RoleEditPage() {
               label={t("labels.name")}
               onChange={setName}
               required
+              error={pickFieldError(fieldErrors, ["name"]) ?? undefined}
               value={name}
             />
           </div>

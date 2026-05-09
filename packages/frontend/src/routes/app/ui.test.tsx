@@ -69,6 +69,7 @@ describe("shared ui fields", () => {
     );
     expect(error?.textContent).toBe("Invalid email");
     expect(hint?.textContent).toBe("Use your work email");
+    expect(input?.className).toContain("border-red-500");
   });
 
   it("renders form alert with polite live region", () => {
@@ -104,6 +105,7 @@ describe("shared ui fields", () => {
           { value: "COMPANY", label: "Company" }
         ]}
         hint="Choose a type"
+        error="Required"
       />
     );
 
@@ -115,6 +117,7 @@ describe("shared ui fields", () => {
     const selectRoot = view.querySelector(".ant-select");
     const combobox = view.querySelector("input[role='combobox']");
     expect(selectRoot).not.toBeNull();
+    expect(selectRoot?.className).toContain("elms-select-error");
     expect(combobox).not.toBeNull();
   });
 

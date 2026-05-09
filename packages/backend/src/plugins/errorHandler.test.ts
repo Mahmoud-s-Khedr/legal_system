@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 const captureBackendException = vi.fn();
 
@@ -50,6 +51,161 @@ function setup() {
 }
 
 describe("registerErrorHandler", () => {
+  it("maps zod validation errors to structured validation payload", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+    const schema = z.object({ title: z.string() });
+
+    let validationError: unknown = null;
+    try {
+      schema.parse({});
+    } catch (error) {
+      validationError = error;
+    }
+
+    invokeHandler(validationError, request, reply);
+
+    expect(replyState.statusCode).toBe(400);
+    expect(replyState.payload).toEqual({
+      message: "Please review the highlighted fields and try again.",
+      messageKey: "VALIDATION_SUMMARY",
+      code: "VALIDATION_ERROR",
+      issues: [
+        {
+          path: "title",
+          pathSegments: ["title"],
+          code: "invalid_type",
+          message: "This field is required.",
+          messageKey: "VALIDATION_REQUIRED"
+        }
+      ]
+    });
+  });
+
+  it("maps invalid email to localized invalid email issue", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+    const schema = z.object({ email: z.string().email() });
+
+    let validationError: unknown = null;
+    try {
+      schema.parse({ email: "not-an-email" });
+    } catch (error) {
+      validationError = error;
+    }
+
+    invokeHandler(validationError, request, reply);
+
+    expect(replyState.statusCode).toBe(400);
+    expect(replyState.payload).toEqual({
+      message: "Please review the highlighted fields and try again.",
+      messageKey: "VALIDATION_SUMMARY",
+      code: "VALIDATION_ERROR",
+      issues: [
+        {
+          path: "email",
+          pathSegments: ["email"],
+          code: "invalid_format",
+          message: "Enter a valid email address.",
+          messageKey: "VALIDATION_INVALID_EMAIL"
+        }
+      ]
+    });
+  });
+
+  it("maps invalid date format to localized invalid date issue", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+    const schema = z.object({ date: z.string().date() });
+
+    let validationError: unknown = null;
+    try {
+      schema.parse({ date: "not-a-date" });
+    } catch (error) {
+      validationError = error;
+    }
+
+    invokeHandler(validationError, request, reply);
+
+    expect(replyState.statusCode).toBe(400);
+    expect(replyState.payload).toEqual({
+      message: "Please review the highlighted fields and try again.",
+      messageKey: "VALIDATION_SUMMARY",
+      code: "VALIDATION_ERROR",
+      issues: [
+        {
+          path: "date",
+          pathSegments: ["date"],
+          code: "invalid_format",
+          message: "Enter a valid date.",
+          messageKey: "VALIDATION_INVALID_DATE"
+        }
+      ]
+    });
+  });
+
+  it("maps invalid enum to localized invalid enum issue", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+    const schema = z.object({ role: z.enum(["admin", "viewer"]) });
+
+    let validationError: unknown = null;
+    try {
+      schema.parse({ role: "owner" });
+    } catch (error) {
+      validationError = error;
+    }
+
+    invokeHandler(validationError, request, reply);
+
+    expect(replyState.statusCode).toBe(400);
+    expect(replyState.payload).toEqual({
+      message: "Please review the highlighted fields and try again.",
+      messageKey: "VALIDATION_SUMMARY",
+      code: "VALIDATION_ERROR",
+      issues: [
+        {
+          path: "role",
+          pathSegments: ["role"],
+          code: "invalid_value",
+          message: "Choose a valid option.",
+          messageKey: "VALIDATION_INVALID_ENUM"
+        }
+      ]
+    });
+  });
+
+  it("maps string min(1) failures to required message", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+    const schema = z.object({ title: z.string().min(1) });
+
+    let validationError: unknown = null;
+    try {
+      schema.parse({ title: "" });
+    } catch (error) {
+      validationError = error;
+    }
+
+    invokeHandler(validationError, request, reply);
+
+    expect(replyState.statusCode).toBe(400);
+    expect(replyState.payload).toEqual({
+      message: "Please review the highlighted fields and try again.",
+      messageKey: "VALIDATION_SUMMARY",
+      code: "VALIDATION_ERROR",
+      issues: [
+        {
+          path: "title",
+          pathSegments: ["title"],
+          code: "too_small",
+          message: "This field is required.",
+          messageKey: "VALIDATION_REQUIRED"
+        }
+      ]
+    });
+  });
+
   it("maps P2002 to 409 with safe message", () => {
     const { handler, request, reply, replyState } = setup();
     const invokeHandler = handler as RegisteredErrorHandler;

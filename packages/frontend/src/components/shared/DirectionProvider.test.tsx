@@ -4,9 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseTranslation = vi.fn();
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async () => {
+  const actual = await vi.importActual<typeof import("react-i18next")>("react-i18next");
+  return {
+    ...actual,
   useTranslation: () => mockUseTranslation()
-}));
+
+  };
+});
 
 const { DirectionProvider } = await import("./DirectionProvider");
 

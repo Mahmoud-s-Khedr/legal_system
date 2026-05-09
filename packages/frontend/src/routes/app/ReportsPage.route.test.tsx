@@ -28,7 +28,10 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: (...args: unknown[]) => queryMock(...args)
 }));
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async () => {
+  const actual = await vi.importActual<typeof import("react-i18next")>("react-i18next");
+  return {
+    ...actual,
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: {
@@ -36,7 +39,9 @@ vi.mock("react-i18next", () => ({
       language: "en"
     }
   })
-}));
+
+  };
+});
 
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (state: { addToast: typeof addToastMock }) => unknown) =>

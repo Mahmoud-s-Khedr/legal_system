@@ -7,6 +7,7 @@ import { apiFetch } from "../../lib/api";
 import { toCaseSelectOption, toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useCreateInvoice } from "../../lib/billing";
+import { extractApiValidationError, pickFieldError } from "../../lib/validationErrors";
 import {
   useUnsavedChanges,
   useUnsavedChangesBypass
@@ -78,6 +79,7 @@ export function InvoiceCreatePage() {
     { id: "item-1", description: "", quantity: "1", unitPrice: "0" }
   ]);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   useUnsavedChanges(
     Boolean(
       caseId ||
@@ -193,6 +195,7 @@ export function InvoiceCreatePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
 
     const normalizedTaxAmount = normalizeMoneyInput(taxAmount);
     if (normalizedTaxAmount === null) {
@@ -251,7 +254,13 @@ export function InvoiceCreatePage() {
         params: { invoiceId: invoice.id }
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("errors.fallback"));
+      const validation = extractApiValidationError(err);
+      if (validation) {
+        setError(validation.message);
+        setFieldErrors(validation.fieldErrors);
+      } else {
+        setError(err instanceof Error ? err.message : t("errors.fallback"));
+      }
     }
   }
 
@@ -280,6 +289,7 @@ export function InvoiceCreatePage() {
               value={caseId}
               onChange={handleCaseChange}
               options={caseOptions}
+              error={pickFieldError(fieldErrors, ["caseId"]) ?? undefined}
             />
             <SelectField
               label={`${t("labels.client")} (${t("labels.optional")})`}
@@ -287,6 +297,7 @@ export function InvoiceCreatePage() {
               onChange={handleClientChange}
               options={clientOptions}
               disabled={Boolean(caseId)}
+              error={pickFieldError(fieldErrors, ["clientId"]) ?? undefined}
               hint={
                 caseId
                   ? t(
@@ -305,6 +316,7 @@ export function InvoiceCreatePage() {
                 { value: "HOURLY", label: t("billing.feeTypeHourly") },
                 { value: "CONTINGENCY", label: t("billing.feeTypeContingency") }
               ]}
+              error={pickFieldError(fieldErrors, ["feeType"]) ?? undefined}
             />
             <div>
               <Field
@@ -313,6 +325,7 @@ export function InvoiceCreatePage() {
                 commitMode="blur"
                 value={dueDate}
                 onChange={setDueDate}
+                error={pickFieldError(fieldErrors, ["dueDate"]) ?? undefined}
               />
               <div className="mt-1 flex gap-2">
                 {[15, 30, 60].map((days) => (

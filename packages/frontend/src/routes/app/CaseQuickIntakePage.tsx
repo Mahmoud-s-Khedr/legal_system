@@ -38,6 +38,7 @@ import { apiFetch, apiFormFetch } from "../../lib/api";
 import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
+import { extractApiValidationError, pickFieldError } from "../../lib/validationErrors";
 import { runUploadQueue } from "../../lib/uploadQueue";
 import {
   toLocalizedLocationOptions,
@@ -314,6 +315,7 @@ export function CaseQuickIntakePage() {
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null
   );
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitSummary, setSubmitSummary] = useState<{
     caseId: string | null;
     failedSections: SubmitSection[];
@@ -768,6 +770,7 @@ export function CaseQuickIntakePage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setValidationMessage(null);
+    setFieldErrors({});
     setSubmitSummary(null);
 
     if (!canCreateCases) {
@@ -968,7 +971,13 @@ export function CaseQuickIntakePage() {
       allowNextNavigation();
       void navigate({ to: "/app/cases/$caseId", params: { caseId: resolvedCaseId } });
     } catch (error) {
-      setValidationMessage((error as Error)?.message ?? t("errors.fallback"));
+      const validation = extractApiValidationError(error);
+      if (validation) {
+        setValidationMessage(validation.message);
+        setFieldErrors(validation.fieldErrors);
+      } else {
+        setValidationMessage((error as Error)?.message ?? t("errors.fallback"));
+      }
     }
   }
 
@@ -1052,6 +1061,7 @@ export function CaseQuickIntakePage() {
                   }}
                   options={clientOptions}
                   required
+                  error={pickFieldError(fieldErrors, ["clientId"]) ?? undefined}
                 />
                 {clientsQuery.isError ? (
                   <FormAlert
@@ -1072,6 +1082,7 @@ export function CaseQuickIntakePage() {
                     scheduleDuplicateCheck(value);
                   }}
                   required
+                  error={pickFieldError(fieldErrors, ["name"]) ?? undefined}
                 />
                 {duplicateWarning ? <FormAlert message={duplicateWarning} variant="info" /> : null}
                 <SelectField
@@ -1088,6 +1099,7 @@ export function CaseQuickIntakePage() {
                     ...clientTypeOptions
                   ]}
                   required
+                  error={pickFieldError(fieldErrors, ["type"]) ?? undefined}
                 />
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field
@@ -1098,6 +1110,7 @@ export function CaseQuickIntakePage() {
                     onChange={(value) =>
                       setClientForm({ ...clientForm, email: value })
                     }
+                    error={pickFieldError(fieldErrors, ["email"]) ?? undefined}
                   />
                   <Field
                     dir="ltr"
@@ -1119,6 +1132,7 @@ export function CaseQuickIntakePage() {
                     value={clientForm.governorate ?? ""}
                     onChange={(value) => setClientForm({ ...clientForm, governorate: value, city: "" })}
                     options={[{ value: "", label: "-" }, ...governorateOptions]}
+                    error={pickFieldError(fieldErrors, ["governorate"]) ?? undefined}
                   />
                   <SelectField
                     disabled={!clientForm.governorate}
@@ -1126,6 +1140,7 @@ export function CaseQuickIntakePage() {
                     value={clientForm.city ?? ""}
                     onChange={(value) => setClientForm({ ...clientForm, city: value })}
                     options={[{ value: "", label: "-" }, ...cityOptions]}
+                    error={pickFieldError(fieldErrors, ["city"]) ?? undefined}
                   />
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -1139,6 +1154,7 @@ export function CaseQuickIntakePage() {
                       })
                     }
                     options={languageOptions}
+                    error={pickFieldError(fieldErrors, ["preferredLanguage"]) ?? undefined}
                   />
                 </div>
                 {isIdentityType(clientForm.type) ? (
@@ -1149,6 +1165,7 @@ export function CaseQuickIntakePage() {
                     onChange={(value) =>
                       setClientForm({ ...clientForm, nationalId: value })
                     }
+                    error={pickFieldError(fieldErrors, ["nationalId"]) ?? undefined}
                   />
                 ) : null}
                 {clientForm.type === ClientType.COMPANY ? (
@@ -1163,6 +1180,7 @@ export function CaseQuickIntakePage() {
                           commercialRegister: value
                         })
                       }
+                      error={pickFieldError(fieldErrors, ["commercialRegister"]) ?? undefined}
                     />
                     <Field
                       dir="ltr"
@@ -1171,6 +1189,7 @@ export function CaseQuickIntakePage() {
                       onChange={(value) =>
                         setClientForm({ ...clientForm, taxNumber: value })
                       }
+                      error={pickFieldError(fieldErrors, ["taxNumber"]) ?? undefined}
                     />
                   </div>
                 ) : null}
@@ -1182,6 +1201,7 @@ export function CaseQuickIntakePage() {
                     onChange={(value) =>
                       setClientForm({ ...clientForm, poaNumber: value })
                     }
+                    error={pickFieldError(fieldErrors, ["poaNumber"]) ?? undefined}
                   />
                   <Field
                     dir="ltr"
@@ -1190,6 +1210,7 @@ export function CaseQuickIntakePage() {
                     onChange={(value) =>
                       setClientForm({ ...clientForm, internalRef: value })
                     }
+                    error={pickFieldError(fieldErrors, ["internalRef"]) ?? undefined}
                   />
                 </div>
               </>
@@ -1207,6 +1228,7 @@ export function CaseQuickIntakePage() {
               value={caseForm.title}
               onChange={(value) => setCaseForm({ ...caseForm, title: value })}
               required
+              error={pickFieldError(fieldErrors, ["title"]) ?? undefined}
             />
             <Field
               label={t("labels.caseNumber")}
@@ -1215,6 +1237,7 @@ export function CaseQuickIntakePage() {
                 setCaseForm({ ...caseForm, caseNumber: value })
               }
               required
+              error={pickFieldError(fieldErrors, ["caseNumber"]) ?? undefined}
             />
             <div className="grid gap-4 md:grid-cols-2">
               <Field
@@ -1236,6 +1259,7 @@ export function CaseQuickIntakePage() {
                     judicialYear: Number.isNaN(parsed) ? null : parsed
                   });
                 }}
+                error={pickFieldError(fieldErrors, ["judicialYear"]) ?? undefined}
               />
               <Field
                 dir="ltr"
@@ -1244,6 +1268,7 @@ export function CaseQuickIntakePage() {
                 onChange={(value) =>
                   setCaseForm({ ...caseForm, internalRef: value || null })
                 }
+                error={pickFieldError(fieldErrors, ["internalRef"]) ?? undefined}
               />
             </div>
             <SelectField
@@ -1252,6 +1277,7 @@ export function CaseQuickIntakePage() {
               onChange={(value) => setCaseForm({ ...caseForm, type: value })}
               options={caseTypeOptions}
               required
+              error={pickFieldError(fieldErrors, ["type"]) ?? undefined}
             />
           </div>
         </SectionCard>

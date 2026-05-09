@@ -15,6 +15,8 @@ import { confirmAction } from "../../lib/dialog";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { resolveFormValidationError } from "../../lib/formValidation";
+import { pickFieldError } from "../../lib/validationErrors";
 import {
   EmptyState,
   ErrorState,
@@ -56,6 +58,8 @@ export function TaskDetailPage() {
     assignedToId: "",
     dueAt: ""
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (taskQuery.data) {
@@ -137,6 +141,11 @@ export function TaskDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ["task", taskId] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       void navigate({ to: "/app/tasks" });
+    },
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setSubmitError(resolved.message);
+      setFieldErrors(resolved.fieldErrors);
     }
   });
   const deleteMutation = useMutation({
@@ -217,29 +226,35 @@ export function TaskDetailPage() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            setSubmitError(null);
+            setFieldErrors({});
             updateMutation.mutate(form);
           }}
         >
           <Field
             label={t("labels.taskTitle")}
             onChange={(value) => updateField("title", value)}
+            error={pickFieldError(fieldErrors, ["title"]) ?? undefined}
             value={form.title}
           />
           <TextAreaField
             label={t("labels.description")}
             onChange={(value) => updateField("description", value)}
+            error={pickFieldError(fieldErrors, ["description"]) ?? undefined}
             value={form.description ?? ""}
           />
           <SelectField
             label={t("labels.case")}
             onChange={(value) => updateField("caseId", value)}
             options={caseOptions}
+            error={pickFieldError(fieldErrors, ["caseId"]) ?? undefined}
             value={form.caseId ?? ""}
           />
           <SelectField
             label={t("labels.assignedLawyer")}
             onChange={(value) => updateField("assignedToId", value)}
             options={assigneeOptions}
+            error={pickFieldError(fieldErrors, ["assignedToId"]) ?? undefined}
             value={form.assignedToId ?? ""}
           />
           <div className="grid gap-4 md:grid-cols-2">
@@ -247,6 +262,7 @@ export function TaskDetailPage() {
               label={t("labels.status")}
               onChange={(value) => updateField("status", value as TaskStatus)}
               options={statusOptions}
+              error={pickFieldError(fieldErrors, ["status"]) ?? undefined}
               value={form.status ?? TaskStatus.PENDING}
             />
             <SelectField
@@ -255,6 +271,7 @@ export function TaskDetailPage() {
                 updateField("priority", value as TaskPriority)
               }
               options={priorityOptions}
+              error={pickFieldError(fieldErrors, ["priority"]) ?? undefined}
               value={form.priority ?? TaskPriority.MEDIUM}
             />
           </div>
@@ -264,6 +281,7 @@ export function TaskDetailPage() {
             onChange={(value) => updateField("dueAt", value)}
             type="datetime-local"
             commitMode="blur"
+            error={pickFieldError(fieldErrors, ["dueAt"]) ?? undefined}
             value={form.dueAt ?? ""}
           />
           <PrimaryButton
@@ -277,11 +295,7 @@ export function TaskDetailPage() {
               {t("actions.back")}
             </PrimaryButton>
           </div>
-          {updateMutation.error ? (
-            <p className="text-sm text-red-600">
-              {(updateMutation.error as Error).message}
-            </p>
-          ) : null}
+          {submitError ? <p className="text-sm text-red-600">{submitError}</p> : null}
         </form>
       </SectionCard>
       <SectionCard

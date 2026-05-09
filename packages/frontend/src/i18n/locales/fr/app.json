@@ -10,7 +10,20 @@
     "reload": "Recharger la page",
     "requiredNameAndType": "Le nom et le type sont requis",
     "notFound": "Introuvable",
-    "unauthorized": "Vous n'êtes pas autorisé à accéder à cette ressource."
+    "unauthorized": "Vous n'êtes pas autorisé à accéder à cette ressource.",
+    "validation": {
+      "summary": "Veuillez vérifier les champs mis en évidence puis réessayer.",
+      "issue": {
+        "required": "Ce champ est obligatoire.",
+        "invalidType": "Le type de valeur fourni est invalide.",
+        "invalidEmail": "Veuillez saisir une adresse e-mail valide.",
+        "invalidDate": "Veuillez saisir une date valide.",
+        "invalidOption": "Veuillez sélectionner une option valide.",
+        "tooSmall": "La valeur est inférieure au minimum autorisé.",
+        "tooBig": "La valeur dépasse le maximum autorisé.",
+        "invalidValue": "Valeur invalide."
+      }
+    }
   },
   "greeting": {
     "morning": "Bonjour",

@@ -24,6 +24,7 @@ import {
 import { useMutationFeedback } from "../../lib/feedback";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
+import { extractApiValidationError, pickFieldError } from "../../lib/validationErrors";
 import {
   runUploadQueue,
   type UploadQueueStatus
@@ -134,6 +135,7 @@ export function ClientCreatePage() {
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null
   );
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [createdClientId, setCreatedClientId] = useState<string | null>(null);
@@ -352,6 +354,7 @@ export function ClientCreatePage() {
               }
 
               setValidationMessage(null);
+              setFieldErrors({});
               setSubmitSummary(null);
 
               try {
@@ -385,9 +388,15 @@ export function ClientCreatePage() {
                   params: { clientId: targetClientId }
                 });
               } catch (error) {
-                setValidationMessage(
-                  (error as Error)?.message ?? t("errors.fallback")
-                );
+                const validation = extractApiValidationError(error);
+                if (validation) {
+                  setValidationMessage(validation.message);
+                  setFieldErrors(validation.fieldErrors);
+                } else {
+                  setValidationMessage(
+                    (error as Error)?.message ?? t("errors.fallback")
+                  );
+                }
               }
             })();
           }}
@@ -400,6 +409,7 @@ export function ClientCreatePage() {
             }}
             required
             value={form.name}
+            error={pickFieldError(fieldErrors, ["name"]) ?? undefined}
           />
           <SelectField
             label={t("labels.type")}
@@ -412,6 +422,7 @@ export function ClientCreatePage() {
             ]}
             required
             value={form.type}
+            error={pickFieldError(fieldErrors, ["type"]) ?? undefined}
           />
           {form.type ? (
             <>
@@ -425,6 +436,7 @@ export function ClientCreatePage() {
                   }}
                   type="email"
                   value={form.email ?? ""}
+                  error={pickFieldError(fieldErrors, ["email"]) ?? undefined}
                 />
                 <Field
                   dir="ltr"
@@ -446,6 +458,7 @@ export function ClientCreatePage() {
                   onChange={(value) => setForm({ ...form, governorate: value, city: "" })}
                   options={[{ value: "", label: "-" }, ...governorateOptions]}
                   value={form.governorate ?? ""}
+                  error={pickFieldError(fieldErrors, ["governorate"]) ?? undefined}
                 />
                 <SelectField
                   disabled={!form.governorate}
@@ -453,6 +466,7 @@ export function ClientCreatePage() {
                   onChange={(value) => setForm({ ...form, city: value })}
                   options={[{ value: "", label: "-" }, ...cityOptions]}
                   value={form.city ?? ""}
+                  error={pickFieldError(fieldErrors, ["city"]) ?? undefined}
                 />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -463,6 +477,7 @@ export function ClientCreatePage() {
                   }
                   options={languageOptions}
                   value={form.preferredLanguage ?? Language.AR}
+                  error={pickFieldError(fieldErrors, ["preferredLanguage"]) ?? undefined}
                 />
               </div>
               {isIdentityType(form.type) ? (
@@ -473,6 +488,7 @@ export function ClientCreatePage() {
                     setForm({ ...form, nationalId: value });
                   }}
                   value={form.nationalId ?? ""}
+                  error={pickFieldError(fieldErrors, ["nationalId"]) ?? undefined}
                 />
               ) : null}
               {form.type === ClientType.COMPANY ? (
@@ -484,6 +500,7 @@ export function ClientCreatePage() {
                       setForm({ ...form, commercialRegister: value })
                     }
                     value={form.commercialRegister ?? ""}
+                    error={pickFieldError(fieldErrors, ["commercialRegister"]) ?? undefined}
                   />
                   <Field
                     dir="ltr"
@@ -492,6 +509,7 @@ export function ClientCreatePage() {
                       setForm({ ...form, taxNumber: value })
                     }
                     value={form.taxNumber ?? ""}
+                    error={pickFieldError(fieldErrors, ["taxNumber"]) ?? undefined}
                   />
                 </div>
               ) : null}
@@ -500,11 +518,13 @@ export function ClientCreatePage() {
                 label={t("labels.poaNumber")}
                 onChange={(value) => setForm({ ...form, poaNumber: value })}
                 value={form.poaNumber ?? ""}
+                error={pickFieldError(fieldErrors, ["poaNumber"]) ?? undefined}
               />
               <Field
                 label={t("labels.internalRef")}
                 onChange={(value) => setForm({ ...form, internalRef: value })}
                 value={form.internalRef ?? ""}
+                error={pickFieldError(fieldErrors, ["internalRef"]) ?? undefined}
               />
             </>
           ) : null}

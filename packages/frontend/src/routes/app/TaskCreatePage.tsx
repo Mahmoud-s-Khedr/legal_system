@@ -20,6 +20,7 @@ import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
+import { extractApiValidationError, pickFieldError } from "../../lib/validationErrors";
 import {
   runUploadQueue,
   type UploadQueueStatus
@@ -78,6 +79,7 @@ export function TaskCreatePage() {
     {}
   );
   const [submitSummary, setSubmitSummary] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
   const documentPickerRef = useRef<HTMLInputElement>(null);
   const docTypesQuery = useLocalizedLookupOptions("DocumentType");
@@ -298,6 +300,7 @@ export function TaskCreatePage() {
             event.preventDefault();
             void (async () => {
               setSubmitSummary(null);
+              setFieldErrors({});
               try {
                 const task =
                   createdTask ?? (await createMutation.mutateAsync(form));
@@ -324,7 +327,13 @@ export function TaskCreatePage() {
                 allowNextNavigation();
                 void navigate({ to: "/app/tasks" });
               } catch (error) {
-                setSubmitSummary((error as Error)?.message ?? t("errors.fallback"));
+                const validation = extractApiValidationError(error);
+                if (validation) {
+                  setSubmitSummary(validation.message);
+                  setFieldErrors(validation.fieldErrors);
+                } else {
+                  setSubmitSummary((error as Error)?.message ?? t("errors.fallback"));
+                }
               }
             })();
           }}
@@ -334,23 +343,27 @@ export function TaskCreatePage() {
             onChange={(value) => updateField("title", value)}
             required
             value={form.title}
+            error={pickFieldError(fieldErrors, ["title"]) ?? undefined}
           />
           <TextAreaField
             label={t("labels.description")}
             onChange={(value) => updateField("description", value)}
             value={form.description ?? ""}
+            error={pickFieldError(fieldErrors, ["description"]) ?? undefined}
           />
           <SelectField
             label={t("labels.case")}
             onChange={(value) => updateField("caseId", value)}
             options={caseOptions}
             value={form.caseId ?? ""}
+            error={pickFieldError(fieldErrors, ["caseId"]) ?? undefined}
           />
           <SelectField
             label={t("labels.assignedLawyer")}
             onChange={(value) => updateField("assignedToId", value)}
             options={assigneeOptions}
             value={form.assignedToId ?? ""}
+            error={pickFieldError(fieldErrors, ["assignedToId"]) ?? undefined}
           />
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField
@@ -358,12 +371,14 @@ export function TaskCreatePage() {
               onChange={(value) => updateField("status", value as TaskStatus)}
               options={statusOptions}
               value={form.status ?? TaskStatus.PENDING}
+              error={pickFieldError(fieldErrors, ["status"]) ?? undefined}
             />
             <SelectField
               label={t("labels.priority")}
               onChange={(value) => updateField("priority", value as TaskPriority)}
               options={priorityOptions}
               value={form.priority ?? TaskPriority.MEDIUM}
+              error={pickFieldError(fieldErrors, ["priority"]) ?? undefined}
             />
           </div>
           <Field
@@ -373,6 +388,7 @@ export function TaskCreatePage() {
             type="datetime-local"
             commitMode="blur"
             value={form.dueAt ?? ""}
+            error={pickFieldError(fieldErrors, ["dueAt"]) ?? undefined}
           />
 
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">

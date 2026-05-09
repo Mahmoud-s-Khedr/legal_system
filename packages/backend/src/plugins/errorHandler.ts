@@ -4,6 +4,135 @@ import { Prisma } from "@prisma/client";
 import { captureBackendException } from "../monitoring/sentry.js";
 import { isAppError } from "../errors/appError.js";
 
+type ValidationMessageKey =
+  | "VALIDATION_REQUIRED"
+  | "VALIDATION_INVALID_TYPE"
+  | "VALIDATION_INVALID_EMAIL"
+  | "VALIDATION_INVALID_DATE"
+  | "VALIDATION_INVALID_ENUM"
+  | "VALIDATION_TOO_SMALL"
+  | "VALIDATION_TOO_BIG"
+  | "VALIDATION_INVALID_VALUE";
+
+type ValidationIssuePayload = {
+  path: string;
+  pathSegments: Array<string | number>;
+  code: string;
+  message: string;
+  messageKey: ValidationMessageKey;
+};
+
+function normalizePathSegments(path: readonly PropertyKey[]): Array<string | number> {
+  return path
+    .filter((segment): segment is string | number =>
+      typeof segment === "string" || typeof segment === "number"
+    );
+}
+
+function formatValidationPath(path: Array<string | number>): string {
+  return path
+    .map((segment) =>
+      typeof segment === "number" ? `[${segment}]` : String(segment)
+    )
+    .join(".")
+    .replace(/\.\[/g, "[");
+}
+
+function formatValidationIssue(issue: ZodError["issues"][number]): ValidationIssuePayload {
+  const pathSegments = normalizePathSegments(issue.path);
+  const path = formatValidationPath(pathSegments);
+
+  if (issue.code === "invalid_type") {
+    const required = issue.input === undefined || issue.input === null;
+    return {
+      path,
+      pathSegments,
+      code: issue.code,
+      message: required ? "This field is required." : "The provided value has an invalid type.",
+      messageKey: required ? "VALIDATION_REQUIRED" : "VALIDATION_INVALID_TYPE"
+    };
+  }
+
+  if (issue.code === "too_small") {
+    if (issue.origin === "string") {
+      const required = issue.minimum === 1;
+      return {
+        path,
+        pathSegments,
+        code: issue.code,
+        message: required
+          ? "This field is required."
+          : `Must be at least ${issue.minimum} characters.`,
+        messageKey: required ? "VALIDATION_REQUIRED" : "VALIDATION_TOO_SMALL"
+      };
+    }
+
+    return {
+      path,
+      pathSegments,
+      code: issue.code,
+      message: "Value is below the allowed minimum.",
+      messageKey: "VALIDATION_TOO_SMALL"
+    };
+  }
+
+  if (issue.code === "too_big") {
+    return {
+      path,
+      pathSegments,
+      code: issue.code,
+      message: "Value exceeds the allowed maximum.",
+      messageKey: "VALIDATION_TOO_BIG"
+    };
+  }
+
+  if (issue.code === "invalid_format") {
+    const validationName = issue.format;
+
+    if (validationName === "email") {
+      return {
+        path,
+        pathSegments,
+        code: issue.code,
+        message: "Enter a valid email address.",
+        messageKey: "VALIDATION_INVALID_EMAIL"
+      };
+    }
+
+    if (validationName === "datetime" || validationName === "date") {
+      return {
+        path,
+        pathSegments,
+        code: issue.code,
+        message: "Enter a valid date.",
+        messageKey: "VALIDATION_INVALID_DATE"
+      };
+    }
+  }
+
+  if (issue.code === "invalid_value") {
+    return {
+      path,
+      pathSegments,
+      code: issue.code,
+      message: "Choose a valid option.",
+      messageKey: "VALIDATION_INVALID_ENUM"
+    };
+  }
+
+  return {
+    path,
+    pathSegments,
+    code: issue.code,
+    message: issue.message || "Invalid value.",
+    messageKey: "VALIDATION_INVALID_VALUE"
+  };
+}
+
+function formatValidationIssues(error: ZodError): ValidationIssuePayload[] {
+  return error.issues.map((issue) => formatValidationIssue(issue));
+}
+
 function getPrismaErrorCode(error: unknown): string | null {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     return error.code;
@@ -67,9 +196,12 @@ function isSchemaMismatchError(error: unknown): boolean {
 export function registerErrorHandler(app: FastifyInstance) {
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {
+      const issues = formatValidationIssues(error);
       return reply.status(400).send({
-        message: "Validation failed",
-        issues: error.issues
+        message: "Please review the highlighted fields and try again.",
+        messageKey: "VALIDATION_SUMMARY",
+        code: "VALIDATION_ERROR",
+        issues
       });
     }
 

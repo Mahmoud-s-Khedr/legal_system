@@ -575,6 +575,12 @@ export function Field({
     }
   }, [isBlurCommit, value]);
 
+  const textFieldClass = `w-full rounded-2xl border bg-white px-4 py-3 transition focus:outline-none ${
+    error
+      ? "border-red-500 text-red-900 focus:border-red-600 focus:ring-1 focus:ring-red-500"
+      : "border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent"
+  }`;
+
   return (
     <div className="block space-y-2">
       <label className="text-sm font-semibold" htmlFor={fieldId}>
@@ -588,7 +594,7 @@ export function Field({
       {isDateField ? (
         <DatePicker
           id={fieldId}
-          className="elms-date-picker"
+          className={`elms-date-picker ${error ? "elms-date-picker-error" : ""}`.trim()}
           classNames={{ popup: { root: "elms-date-picker-dropdown" } }}
           format={
             type === "date"
@@ -619,7 +625,7 @@ export function Field({
         />
       ) : (
         <input
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+          className={textFieldClass}
           id={fieldId}
           dir={dir}
           onChange={(event) => {
@@ -712,6 +718,8 @@ export function SelectField({
     [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
   const selectStyle = dir && dir !== "auto" ? { direction: dir } : undefined;
 
+  const selectClass = `elms-select ${error ? "elms-select-error" : ""}`.trim();
+
   return (
     <div className="block space-y-2">
       <label className="text-sm font-semibold" htmlFor={fieldId} id={labelId}>
@@ -724,7 +732,7 @@ export function SelectField({
       </label>
       <Select<string>
         id={fieldId}
-        className="elms-select"
+        className={selectClass}
         classNames={{ popup: { root: "elms-select-dropdown" } }}
         options={options}
         showSearch
@@ -796,6 +804,12 @@ export function TextAreaField({
   const describedBy =
     [hintId, errorId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
 
+  const textAreaClass = `min-h-28 w-full rounded-2xl border bg-white px-4 py-3 transition focus:outline-none ${
+    error
+      ? "border-red-500 text-red-900 focus:border-red-600 focus:ring-1 focus:ring-red-500"
+      : "border-slate-200 focus:border-accent focus:ring-1 focus:ring-accent"
+  }`;
+
   return (
     <div className="block space-y-2">
       <label className="text-sm font-semibold" htmlFor={fieldId}>
@@ -807,7 +821,7 @@ export function TextAreaField({
         )}
       </label>
       <textarea
-        className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+        className={textAreaClass}
         id={fieldId}
         dir={dir}
         onChange={(event) => onChange(event.target.value)}

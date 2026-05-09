@@ -12,12 +12,17 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>
 }));
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async () => {
+  const actual = await vi.importActual<typeof import("react-i18next")>("react-i18next");
+  return {
+    ...actual,
   useTranslation: () => ({
     t: (key: string, args?: Record<string, unknown>) =>
       key === "library.resultsCount" ? `${args?.count ?? 0}` : key
   })
-}));
+
+  };
+});
 
 vi.mock("antd", () => ({
   Select: ({

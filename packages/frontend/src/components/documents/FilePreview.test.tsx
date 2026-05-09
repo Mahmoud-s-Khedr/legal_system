@@ -26,11 +26,16 @@ vi.mock("./DocxViewer", () => ({
   DocxViewer: () => <div data-testid="docx-viewer" />
 }));
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async () => {
+  const actual = await vi.importActual<typeof import("react-i18next")>("react-i18next");
+  return {
+    ...actual,
   useTranslation: () => ({
     t: (key: string) => key
   })
-}));
+
+  };
+});
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;

@@ -11,6 +11,7 @@ import { apiFetch } from "../../lib/api";
 import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
+import { extractApiValidationError, pickFieldError } from "../../lib/validationErrors";
 import {
   Field,
   FormAlert,
@@ -37,6 +38,8 @@ export function CaseCreatePage() {
     type: "CIVIL",
     internalRef: null
   });
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const clientsQuery = useQuery({
     queryKey: ["clients"],
@@ -106,7 +109,21 @@ export function CaseCreatePage() {
             if (form.title.trim().length < 2) {
               return;
             }
-            createMutation.mutate(form);
+            setValidationMessage(null);
+            setFieldErrors({});
+            void (async () => {
+              try {
+                await createMutation.mutateAsync(form);
+              } catch (error) {
+                const validation = extractApiValidationError(error);
+                if (validation) {
+                  setValidationMessage(validation.message);
+                  setFieldErrors(validation.fieldErrors);
+                  return;
+                }
+                setValidationMessage((error as Error)?.message ?? t("errors.fallback"));
+              }
+            })();
           }}
         >
           <SelectField
@@ -115,23 +132,27 @@ export function CaseCreatePage() {
             options={clientOptions}
             required
             value={form.clientId}
+            error={pickFieldError(fieldErrors, ["clientId"]) ?? undefined}
           />
           <Field
             label={t("labels.caseTitle")}
             onChange={(value) => setForm({ ...form, title: value })}
             required
             value={form.title}
+            error={pickFieldError(fieldErrors, ["title"]) ?? undefined}
           />
           <Field
             label={t("labels.caseNumber")}
             onChange={(value) => setForm({ ...form, caseNumber: value })}
             required
             value={form.caseNumber}
+            error={pickFieldError(fieldErrors, ["caseNumber"]) ?? undefined}
           />
           <Field
             label={t("labels.internalRef")}
             onChange={(value) => setForm({ ...form, internalRef: value || null })}
             value={form.internalRef ?? ""}
+            error={pickFieldError(fieldErrors, ["internalRef"]) ?? undefined}
           />
           <SelectField
             label={t("labels.caseType")}
@@ -139,6 +160,7 @@ export function CaseCreatePage() {
             options={caseTypeOptions}
             required
             value={form.type}
+            error={pickFieldError(fieldErrors, ["type"]) ?? undefined}
           />
           <p className="text-sm text-slate-500">
             {t("cases.courtNoteAfterCreate")}
@@ -152,9 +174,7 @@ export function CaseCreatePage() {
               createMutation.isPending || form.title.trim().length < 2
             }
           />
-          {createMutation.error ? (
-            <FormAlert message={(createMutation.error as Error).message} />
-          ) : null}
+          {validationMessage ? <FormAlert message={validationMessage} /> : null}
         </form>
       </SectionCard>
     </div>
