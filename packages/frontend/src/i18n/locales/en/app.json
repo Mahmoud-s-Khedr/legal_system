@@ -326,6 +326,7 @@
     "linkNotesPlaceholder": "Optional context or article reference…",
     "referencesHelp": "Legal authorities and precedents linked to this case.",
     "addReference": "Add reference",
+    "admin": "Admin",
     "adminTitle": "Library Administration",
     "adminDescription": "Manage categories and the document structure of the law library.",
     "newCategory": "New category",
@@ -369,7 +370,20 @@
     "author": "Author",
     "publishedAt": "Published at",
     "extractionPending": "Text extraction is pending",
-    "downloadFile": "Download file"
+    "downloadFile": "Download file",
+    "uploadStep1": "Step 1: Select files",
+    "uploadStep2": "Step 2: Choose type and category",
+    "uploadStep3": "Step 3: Add metadata",
+    "uploadStep4": "Step 4: Review and upload",
+    "uploadFirmOnlyHint": "All uploads in desktop mode are saved to your firm library only.",
+    "categoriesLoading": "Loading categories for this type...",
+    "categoriesEmptyForType": "No categories are configured for this document type yet.",
+    "validationCategoryRequired": "Choose a category before uploading.",
+    "validationLawYearInvalid": "Law year must be a valid number.",
+    "newType": "New type",
+    "typesManager": "Library types",
+    "validationTypeRequired": "Choose a type before uploading.",
+    "typeCode": "Type code"
   },
   "research": {
     "eyebrow": "AI-powered legal research",
@@ -965,7 +979,11 @@
     "descriptions": {
       "CourtType": "Court categories used when adding court stages (civil, family, criminal, etc.).",
       "HearingOutcome": "Session decisions and outcome labels used in hearing scheduling and tracking."
-    }
+    },
+    "libraryDocTypeHintTitle": "Library type values only",
+    "libraryDocTypeHintWithAccess": "This page manages library document type values. To manage upload categories, open Library Admin.",
+    "libraryDocTypeHintNoAccess": "This page manages library document type values. Category management is available in Library Admin for users with library management permission.",
+    "openLibraryAdmin": "Open Library Admin"
   },
   "roles": {
     "title": "Roles and permissions",

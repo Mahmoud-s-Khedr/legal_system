@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Search,
+  Settings,
   Upload
 } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
@@ -47,6 +48,7 @@ interface DocumentsResponse {
 export function LibraryPage() {
   const { t, i18n } = useTranslation("app");
   const canUploadLibraryDocuments = useHasPermission("library:read");
+  const canManageLibrary = useHasPermission("library:manage");
   const resolvedLanguage = i18n.resolvedLanguage ?? i18n.language ?? "en";
   const isRtl = isArabicLanguage(resolvedLanguage);
   const isFrench = resolvedLanguage.startsWith("fr");
@@ -169,6 +171,15 @@ export function LibraryPage() {
         title={t("library.title")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {canManageLibrary ? (
+              <Link
+                className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold transition hover:border-accent"
+                to="/app/library/admin"
+              >
+                <Settings aria-hidden="true" className="size-4" />
+                {t("library.admin")}
+              </Link>
+            ) : null}
             {canUploadLibraryDocuments ? (
               <Link
                 className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold transition hover:border-accent"

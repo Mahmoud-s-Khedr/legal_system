@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LibraryDocumentType } from "@elms/shared";
 import { useTranslation } from "react-i18next";
-import { Upload, FileText, XCircle, Loader2 } from "lucide-react";
+import { Upload, FileText, XCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { apiFetch, apiFormFetch } from "../../../lib/api";
 import {
   runUploadQueue,
   type UploadQueueStatus,
   type UploadQueueSummary
 } from "../../../lib/uploadQueue";
-import { useHasPermission } from "../../../store/authStore";
 import {
+  EmptyState,
+  ErrorState,
   Field,
   PageHeader,
   SectionCard,
@@ -18,8 +19,18 @@ import {
   SelectField
 } from "../ui";
 
+interface LibraryType {
+  id: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  nameFr: string;
+  isActive: boolean;
+}
+
 interface CategoryNode {
   id: string;
+  typeId: string | null;
   nameAr: string;
   nameEn: string;
   nameFr: string;
@@ -28,113 +39,126 @@ interface CategoryNode {
 
 type UploadResult = { id: string; extractionStatus: string };
 
-type SelectedLibraryFile = {
-  id: string;
-  file: File;
-};
+type SelectedLibraryFile = { id: string; file: File };
 
-type FileUploadState = {
-  status: UploadQueueStatus;
-  error?: string;
-};
+type FileUploadState = { status: UploadQueueStatus; error?: string };
 
 function flattenCategories(
   nodes: CategoryNode[],
+  locale: string,
   depth = 0
 ): { id: string; label: string }[] {
-  const locale =
-    typeof window !== "undefined" ? document.documentElement.lang : "en";
   const selectName = (node: CategoryNode) => {
-    if (locale === "ar") return node.nameAr;
-    if (locale === "fr") return node.nameFr;
+    if (locale.startsWith("ar")) return node.nameAr;
+    if (locale.startsWith("fr")) return node.nameFr;
     return node.nameEn;
   };
 
   return nodes.flatMap((n) => [
     { id: n.id, label: "\u00a0".repeat(depth * 2) + selectName(n) },
-    ...flattenCategories(n.children, depth + 1)
+    ...flattenCategories(n.children, locale, depth + 1)
   ]);
 }
 
-const DOCUMENT_TYPES = Object.values(LibraryDocumentType);
-
 const LEGISLATION_STATUSES = ["ACTIVE", "AMENDED", "REPEALED"];
-
-const EMPTY_FORM = {
-  type: LibraryDocumentType.LEGISLATION,
-  scope: "FIRM",
-  categoryId: "",
-  lawNumber: "",
-  lawYear: "",
-  judgmentNumber: "",
-  judgmentDate: "",
-  author: "",
-  publishedAt: "",
-  legislationStatus: "ACTIVE"
-};
 
 function makeFileId() {
   return `file-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function LibraryUploadPage() {
-  const { t } = useTranslation("app");
+  const { t, i18n } = useTranslation("app");
   const queryClient = useQueryClient();
-  const canManageLibrary = useHasPermission("library:manage");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [files, setFiles] = useState<SelectedLibraryFile[]>([]);
   const [fileStates, setFileStates] = useState<Record<string, FileUploadState>>(
     {}
   );
-  const [form, setForm] = useState(EMPTY_FORM);
   const [summary, setSummary] =
     useState<UploadQueueSummary<UploadResult> | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const categoriesQuery = useQuery({
-    queryKey: ["library-categories"],
-    queryFn: () => apiFetch<CategoryNode[]>("/api/library/categories")
+  const typesQuery = useQuery({
+    queryKey: ["library-types"],
+    queryFn: () => apiFetch<LibraryType[]>("/api/library/types")
   });
 
-  const flatCategories = flattenCategories(categoriesQuery.data ?? []);
+  const activeTypes = useMemo(
+    () => (typesQuery.data ?? []).filter((type) => type.isActive),
+    [typesQuery.data]
+  );
+
+  const [form, setForm] = useState({
+    typeId: "",
+    typeCode: "LEGISLATION",
+    categoryId: "",
+    lawNumber: "",
+    lawYear: "",
+    judgmentNumber: "",
+    judgmentDate: "",
+    author: "",
+    publishedAt: "",
+    legislationStatus: "ACTIVE"
+  });
+
+  useEffect(() => {
+    if (!form.typeId && activeTypes.length > 0) {
+      setForm((current) => ({
+        ...current,
+        typeId: activeTypes[0].id,
+        typeCode: activeTypes[0].code
+      }));
+    }
+  }, [activeTypes, form.typeId]);
+
+  const categoriesQuery = useQuery({
+    enabled: Boolean(form.typeId),
+    queryKey: ["library-categories", form.typeId],
+    queryFn: () =>
+      apiFetch<CategoryNode[]>(
+        `/api/library/categories?typeId=${encodeURIComponent(form.typeId)}`
+      )
+  });
+
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const flatCategories = useMemo(
+    () => flattenCategories(categoriesQuery.data ?? [], locale),
+    [categoriesQuery.data, locale]
+  );
+
+  useEffect(() => {
+    if (!form.categoryId) return;
+    const isStillValid = flatCategories.some(
+      (category) => category.id === form.categoryId
+    );
+    if (!isStillValid) {
+      setForm((current) => ({ ...current, categoryId: "" }));
+    }
+  }, [flatCategories, form.categoryId]);
 
   const failedItems = useMemo(
     () => files.filter((entry) => fileStates[entry.id]?.status === "failed"),
     [files, fileStates]
   );
 
-  useEffect(() => {
-    setForm((current) => {
-      if (current.type === LibraryDocumentType.LEGISLATION) {
-        return {
-          ...current,
-          judgmentNumber: "",
-          judgmentDate: "",
-          author: "",
-          publishedAt: ""
-        };
-      }
-      if (current.type === LibraryDocumentType.JUDGMENT) {
-        return {
-          ...current,
-          lawNumber: "",
-          lawYear: "",
-          legislationStatus: "ACTIVE"
-        };
-      }
-      return {
-        ...current,
-        lawNumber: "",
-        lawYear: "",
-        legislationStatus: "ACTIVE",
-        judgmentNumber: "",
-        judgmentDate: "",
-        author: "",
-        publishedAt: ""
-      };
-    });
-  }, [form.type]);
+  const metadataIssues = useMemo(() => {
+    const issues: string[] = [];
+    if (!form.typeId) issues.push(t("library.validationTypeRequired"));
+    if (!form.categoryId) issues.push(t("library.validationCategoryRequired"));
+    if (form.typeCode === "LEGISLATION" && form.lawYear.trim() && Number.isNaN(Number(form.lawYear))) {
+      issues.push(t("library.validationLawYearInvalid"));
+    }
+    return issues;
+  }, [form, t]);
+
+  const canSubmit =
+    files.length > 0 &&
+    !isUploading &&
+    !categoriesQuery.isLoading &&
+    !categoriesQuery.isError &&
+    flatCategories.length > 0 &&
+    metadataIssues.length === 0;
 
   function getStatusLabel(status: UploadQueueStatus) {
     switch (status) {
@@ -153,15 +177,10 @@ export function LibraryUploadPage() {
 
   function appendFiles(newFiles: FileList | null) {
     if (!newFiles?.length) return;
-    const incoming = Array.from(newFiles).map((file) => ({
-      id: makeFileId(),
-      file
-    }));
+    const incoming = Array.from(newFiles).map((file) => ({ id: makeFileId(), file }));
     setFiles((prev) => [...prev, ...incoming]);
     setSummary(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function removeFile(fileId: string) {
@@ -173,34 +192,32 @@ export function LibraryUploadPage() {
     });
   }
 
+  function resetUploadFlow() {
+    setFiles([]);
+    setFileStates({});
+    setSummary(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function uploadFiles(mode: "all" | "failed") {
     const targets =
       mode === "failed"
         ? failedItems
         : files.filter((entry) => fileStates[entry.id]?.status !== "success");
-
-    if (!targets.length) {
-      return;
-    }
-
-    const effectiveScope = canManageLibrary ? form.scope : "FIRM";
+    if (!targets.length) return;
 
     setSummary(null);
     setIsUploading(true);
 
-    const uploadSummary = await runUploadQueue<
-      SelectedLibraryFile,
-      UploadResult
-    >({
+    const uploadSummary = await runUploadQueue<SelectedLibraryFile, UploadResult>({
       items: targets,
       concurrency: 3,
       upload: async (entry) => {
         const fd = new FormData();
         fd.append("file", entry.file);
-
         const sharedPayload = {
-          type: form.type,
-          scope: effectiveScope,
+          typeId: form.typeId,
+          type: form.typeCode,
           categoryId: form.categoryId,
           lawNumber: form.lawNumber,
           lawYear: form.lawYear,
@@ -210,13 +227,9 @@ export function LibraryUploadPage() {
           publishedAt: form.publishedAt,
           legislationStatus: form.legislationStatus
         };
-
         Object.entries(sharedPayload).forEach(([k, v]) => {
-          if (v) {
-            fd.append(k, v);
-          }
+          if (v) fd.append(k, v);
         });
-
         return apiFormFetch<UploadResult>("/api/library/documents/upload", {
           method: "POST",
           body: fd
@@ -225,10 +238,7 @@ export function LibraryUploadPage() {
       onStatusChange: (index, status, error) => {
         const target = targets[index];
         if (!target) return;
-        setFileStates((prev) => ({
-          ...prev,
-          [target.id]: { status, error }
-        }));
+        setFileStates((prev) => ({ ...prev, [target.id]: { status, error } }));
       }
     });
 
@@ -237,277 +247,108 @@ export function LibraryUploadPage() {
     }
 
     setSummary(uploadSummary);
-    if (uploadSummary.failedCount === 0) {
-      setFiles([]);
-      setFileStates({});
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-
+    if (uploadSummary.failedCount === 0) resetUploadFlow();
     setIsUploading(false);
   }
 
+  const isArabic = locale.startsWith("ar");
+  const isFrench = locale.startsWith("fr");
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        description={t("library.uploadDescription")}
-        eyebrow={t("library.eyebrow")}
-        title={t("library.uploadTitle")}
-      />
+      <PageHeader description={t("library.uploadDescription")} eyebrow={t("library.eyebrow")} title={t("library.uploadTitle")} />
 
-      {summary && (
-        <div
-          className={`rounded-2xl border px-4 py-3 ${summary.failedCount > 0 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-green-200 bg-green-50 text-green-800"}`}
-        >
-          {t("documents.uploadSummary", {
-            successCount: summary.successCount,
-            failedCount: summary.failedCount
-          })}
-        </div>
-      )}
-
-      <SectionCard title={t("library.uploadFile")}>
-        <div className="space-y-4">
-          <div
-            className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center hover:border-accent hover:bg-accentSoft"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="mb-3 size-8 text-slate-400" />
-            {files.length > 0 ? (
-              <div className="space-y-1">
-                <p className="font-medium text-accent">
-                  {t("documents.filesSelected", { count: files.length })}
-                </p>
-                <p className="text-sm text-slate-500">
-                  {t("library.allowedTypes")}
-                </p>
-              </div>
-            ) : (
-              <>
-                <p className="font-medium text-slate-600">
-                  {t("library.dropFiles")}
-                </p>
-                <p className="text-sm text-slate-400">
-                  {t("library.allowedTypes")}
-                </p>
-              </>
-            )}
+      {summary && summary.successCount > 0 && !summary.failedCount ? (
+        <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+          <div className="flex items-center gap-2 font-semibold text-green-900">
+            <CheckCircle2 className="size-4" />
+            {t("library.uploadSuccess")}
           </div>
-          <input
-            ref={fileInputRef}
-            accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif"
-            className="hidden"
-            type="file"
-            multiple
-            onChange={(e) => appendFiles(e.target.files)}
-          />
-
-          {files.length > 0 ? (
-            <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              {files.map((entry) => {
-                const state = fileStates[entry.id];
-                return (
-                  <div
-                    key={entry.id}
-                    className="flex flex-wrap items-center gap-2 text-sm"
-                  >
-                    <FileText className="size-4 text-accent" />
-                    <span className="font-medium text-slate-800">
-                      {entry.file.name}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      ({(entry.file.size / 1024).toFixed(1)} KB)
-                    </span>
-                    {state ? (
-                      <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs">
-                        {getStatusLabel(state.status)}
-                      </span>
-                    ) : null}
-                    {state?.error ? (
-                      <span className="text-xs text-red-600">
-                        {state.error}
-                      </span>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="ms-auto text-xs text-red-600"
-                      onClick={() => removeFile(entry.id)}
-                      disabled={isUploading && state?.status === "uploading"}
-                    >
-                      {t("documents.removeFile")}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-      </SectionCard>
-
-      <SectionCard title={t("library.documentMetadata")}>
-        <div className="space-y-4">
-          <div
-            className={`grid grid-cols-1 gap-3 ${canManageLibrary ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
-          >
-            <SelectField
-              label={t("library.type")}
-              value={form.type}
-              onChange={(value) =>
-                setForm({ ...form, type: value as LibraryDocumentType })
-              }
-              options={DOCUMENT_TYPES.map((dt) => ({ value: dt, label: dt }))}
-            />
-            {canManageLibrary ? (
-              <SelectField
-                label={t("library.scope")}
-                value={form.scope}
-                onChange={(value) => setForm({ ...form, scope: value })}
-                options={[
-                  { value: "FIRM", label: t("library.scopeFirm") },
-                  { value: "SYSTEM", label: t("library.scopeSystem") }
-                ]}
-              />
-            ) : null}
-            <SelectField
-              label={t("library.category")}
-              value={form.categoryId}
-              onChange={(value) => setForm({ ...form, categoryId: value })}
-              options={[
-                { value: "", label: t("library.noCategory") },
-                ...flatCategories.map((c) => ({ value: c.id, label: c.label }))
-              ]}
-            />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <PrimaryButton onClick={resetUploadFlow}>{t("actions.uploadAnother")}</PrimaryButton>
+            <Link className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700" to="/app/library">{t("actions.view")}</Link>
           </div>
-
-          {form.type === LibraryDocumentType.LEGISLATION && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <label className="block space-y-1">
-                <span className="text-sm font-semibold">
-                  {t("library.lawNumber")}
-                </span>
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                  placeholder="e.g. 84"
-                  type="text"
-                  value={form.lawNumber}
-                  onChange={(e) =>
-                    setForm({ ...form, lawNumber: e.target.value })
-                  }
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-sm font-semibold">
-                  {t("library.lawYear")}
-                </span>
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                  placeholder="e.g. 2002"
-                  type="number"
-                  value={form.lawYear}
-                  onChange={(e) =>
-                    setForm({ ...form, lawYear: e.target.value })
-                  }
-                />
-              </label>
-              <SelectField
-                label={t("library.legislationStatus")}
-                value={form.legislationStatus}
-                onChange={(value) =>
-                  setForm({ ...form, legislationStatus: value })
-                }
-                options={LEGISLATION_STATUSES.map((status) => ({
-                  value: status,
-                  label: status
-                }))}
-              />
-            </div>
-          )}
-
-          {form.type === LibraryDocumentType.JUDGMENT && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block space-y-1">
-                <span className="text-sm font-semibold">
-                  {t("library.judgmentNumber")}
-                </span>
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                  type="text"
-                  value={form.judgmentNumber}
-                  onChange={(e) =>
-                    setForm({ ...form, judgmentNumber: e.target.value })
-                  }
-                />
-              </label>
-              <Field
-                label={t("library.judgmentDate")}
-                type="date"
-                commitMode="blur"
-                value={form.judgmentDate}
-                onChange={(value) => setForm({ ...form, judgmentDate: value })}
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">
-                {t("library.author")}
-              </span>
-              <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-                type="text"
-                value={form.author}
-                onChange={(e) => setForm({ ...form, author: e.target.value })}
-              />
-            </label>
-            <Field
-              label={t("library.publishedAt")}
-              type="date"
-              commitMode="blur"
-              value={form.publishedAt}
-              onChange={(value) => setForm({ ...form, publishedAt: value })}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <PrimaryButton
-              disabled={!files.length || isUploading}
-              onClick={() => void uploadFiles("all")}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  {t("library.uploading")}
-                </>
-              ) : (
-                <>
-                  <Upload className="size-4" />
-                  {t("library.upload")}
-                </>
-              )}
-            </PrimaryButton>
-
-            {failedItems.length > 0 ? (
-              <button
-                type="button"
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
-                onClick={() => void uploadFiles("failed")}
-                disabled={isUploading}
-              >
-                {t("documents.retryFailed")}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </SectionCard>
-
-      {summary?.failedCount ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-          <XCircle className="size-5 shrink-0" />
-          <span>{t("documents.someUploadsFailed")}</span>
         </div>
       ) : null}
+
+      <SectionCard title={t("library.uploadStep1")}>
+        <div className="rounded-xl bg-accentSoft px-3 py-2 text-sm text-accent">{t("library.uploadFirmOnlyHint")}</div>
+        <div className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center hover:border-accent hover:bg-accentSoft" onClick={() => fileInputRef.current?.click()}>
+          <Upload className="mb-3 size-8 text-slate-400" />
+          <p className="font-medium text-slate-600">{t("library.dropFiles")}</p>
+          <p className="text-sm text-slate-400">{t("library.allowedTypes")}</p>
+        </div>
+        <input ref={fileInputRef} accept=".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif" className="hidden" type="file" multiple onChange={(e) => appendFiles(e.target.files)} />
+
+        {files.length > 0 ? (
+          <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            {files.map((entry) => {
+              const state = fileStates[entry.id];
+              return (
+                <div key={entry.id} className="flex flex-wrap items-center gap-2 text-sm">
+                  <FileText className="size-4 text-accent" />
+                  <span className="font-medium text-slate-800">{entry.file.name}</span>
+                  {state ? <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs">{getStatusLabel(state.status)}</span> : null}
+                  <button type="button" className="ms-auto text-xs text-red-600" onClick={() => removeFile(entry.id)}>{t("documents.removeFile")}</button>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </SectionCard>
+
+      <SectionCard title={t("library.uploadStep2")}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <SelectField
+            label={t("library.type")}
+            value={form.typeId}
+            onChange={(value) => {
+              const found = activeTypes.find((type) => type.id === value);
+              setForm((current) => ({
+                ...current,
+                typeId: value,
+                typeCode: found?.code ?? current.typeCode,
+                categoryId: ""
+              }));
+            }}
+            options={activeTypes.map((type) => ({
+              value: type.id,
+              label: isArabic ? type.nameAr : isFrench ? type.nameFr : type.nameEn
+            }))}
+            disabled={typesQuery.isLoading || typesQuery.isError}
+          />
+          <SelectField
+            label={t("library.category")}
+            value={form.categoryId}
+            onChange={(value) => setForm({ ...form, categoryId: value })}
+            options={flatCategories.map((c) => ({ value: c.id, label: c.label }))}
+            disabled={categoriesQuery.isLoading || categoriesQuery.isError || flatCategories.length === 0}
+          />
+        </div>
+        {categoriesQuery.isError ? <div className="mt-3"><ErrorState title={t("errors.title")} description={(categoriesQuery.error as Error)?.message ?? t("errors.fallback")} /></div> : null}
+        {categoriesQuery.isLoading ? <p className="mt-3 text-sm text-slate-500">{t("library.categoriesLoading")}</p> : null}
+        {!categoriesQuery.isLoading && !categoriesQuery.isError && flatCategories.length === 0 ? <div className="mt-3"><EmptyState title={t("empty.noCategories")} description={t("library.categoriesEmptyForType")} /></div> : null}
+      </SectionCard>
+
+      <SectionCard title={t("library.uploadStep3")}>
+        {form.typeCode === "LEGISLATION" ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <label className="block space-y-1"><span className="text-sm font-semibold">{t("library.lawNumber")}</span><input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent" type="text" value={form.lawNumber} onChange={(e) => setForm({ ...form, lawNumber: e.target.value })} /></label>
+            <label className="block space-y-1"><span className="text-sm font-semibold">{t("library.lawYear")}</span><input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent" type="number" value={form.lawYear} onChange={(e) => setForm({ ...form, lawYear: e.target.value })} /></label>
+            <SelectField label={t("library.legislationStatus")} value={form.legislationStatus} onChange={(value) => setForm({ ...form, legislationStatus: value })} options={LEGISLATION_STATUSES.map((status) => ({ value: status, label: status }))} />
+          </div>
+        ) : null}
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block space-y-1"><span className="text-sm font-semibold">{t("library.author")}</span><input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent" type="text" value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} /></label>
+          <Field label={t("library.publishedAt")} type="date" commitMode="blur" value={form.publishedAt} onChange={(value) => setForm({ ...form, publishedAt: value })} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title={t("library.uploadStep4")}>
+        <PrimaryButton disabled={!canSubmit} onClick={() => void uploadFiles("all")}>{isUploading ? <><Loader2 className="size-4 animate-spin" />{t("library.uploading")}</> : <><Upload className="size-4" />{t("library.upload")}</>}</PrimaryButton>
+      </SectionCard>
+
+      {summary?.failedCount ? <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700"><XCircle className="size-5 shrink-0" /><span>{t("documents.someUploadsFailed")}</span></div> : null}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { LibraryDocumentType } from "@elms/shared";
 
 interface CategoryRow {
   slug: string;
@@ -101,19 +102,65 @@ const SYSTEM_CATEGORIES: CategoryRow[] = [
   }
 ];
 
+const TYPE_CATEGORY_MAP: Record<LibraryDocumentType, CategoryRow[]> = {
+  [LibraryDocumentType.LEGISLATION]: SYSTEM_CATEGORIES,
+  [LibraryDocumentType.JUDGMENT]: [
+    {
+      slug: "judgments",
+      nameAr: "الأحكام",
+      nameEn: "Judgments",
+      nameFr: "Judgments"
+    }
+  ],
+  [LibraryDocumentType.PRACTICE_GUIDE]: [
+    {
+      slug: "practice-guides",
+      nameAr: "الأدلة العملية",
+      nameEn: "Practice Guides",
+      nameFr: "Practice Guides"
+    }
+  ],
+  [LibraryDocumentType.ARTICLE]: [
+    {
+      slug: "legal-articles",
+      nameAr: "المقالات القانونية",
+      nameEn: "Legal Articles",
+      nameFr: "Legal Articles"
+    }
+  ],
+  [LibraryDocumentType.COMMENTARY]: [
+    {
+      slug: "commentaries",
+      nameAr: "الشروح القانونية",
+      nameEn: "Commentaries",
+      nameFr: "Commentaries"
+    }
+  ],
+  [LibraryDocumentType.GENERAL]: [
+    {
+      slug: "general-library",
+      nameAr: "مكتبة عامة",
+      nameEn: "General Library",
+      nameFr: "General Library"
+    }
+  ]
+};
+
 async function upsertCategory(
   prisma: PrismaClient,
   cat: Omit<CategoryRow, "children">,
+  documentType: LibraryDocumentType,
   parentId?: string
 ) {
-  // slug is unique per (firmId, slug) — for system categories firmId is null
+  // slug is unique per (firmId, slug, documentType) — for system categories firmId is null
   const existing = await prisma.legalCategory.findFirst({
-    where: { firmId: null, slug: cat.slug }
+    where: { firmId: null, slug: cat.slug, documentType }
   });
   if (existing) {
     return prisma.legalCategory.update({
       where: { id: existing.id },
       data: {
+        documentType,
         nameAr: cat.nameAr,
         nameEn: cat.nameEn,
         nameFr: cat.nameFr,
@@ -124,6 +171,7 @@ async function upsertCategory(
   return prisma.legalCategory.create({
     data: {
       slug: cat.slug,
+      documentType,
       nameAr: cat.nameAr,
       nameEn: cat.nameEn,
       nameFr: cat.nameFr,
@@ -133,12 +181,16 @@ async function upsertCategory(
 }
 
 export async function ensureSystemLibraryCategories(prisma: PrismaClient): Promise<void> {
-  for (const cat of SYSTEM_CATEGORIES) {
-    const parent = await upsertCategory(prisma, cat);
+  const documentTypes = Object.values(LibraryDocumentType);
+  for (const documentType of documentTypes) {
+    const categories = TYPE_CATEGORY_MAP[documentType] ?? [];
+    for (const cat of categories) {
+      const parent = await upsertCategory(prisma, cat, documentType);
 
-    if (cat.children) {
-      for (const child of cat.children) {
-        await upsertCategory(prisma, child, parent.id);
+      if (cat.children) {
+        for (const child of cat.children) {
+          await upsertCategory(prisma, child, documentType, parent.id);
+        }
       }
     }
   }

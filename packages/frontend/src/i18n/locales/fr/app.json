@@ -326,6 +326,7 @@
     "linkNotesPlaceholder": "Contexte optionnel ou référence d'article…",
     "referencesHelp": "Autorités juridiques et précédents liés à ce dossier.",
     "addReference": "Ajouter une référence",
+    "admin": "Administration",
     "adminTitle": "Administration de la bibliothèque",
     "adminDescription": "Gérez les catégories et la structure de la bibliothèque juridique.",
     "newCategory": "Nouvelle catégorie",
@@ -369,7 +370,20 @@
     "author": "Auteur",
     "publishedAt": "Date de publication",
     "extractionPending": "Extraction du texte en attente",
-    "downloadFile": "Télécharger le fichier"
+    "downloadFile": "Télécharger le fichier",
+    "uploadStep1": "Étape 1 : Sélectionner les fichiers",
+    "uploadStep2": "Étape 2 : Choisir le type et la catégorie",
+    "uploadStep3": "Étape 3 : Ajouter les métadonnées",
+    "uploadStep4": "Étape 4 : Vérifier et téléverser",
+    "uploadFirmOnlyHint": "En mode desktop, tous les téléversements sont enregistrés uniquement dans la bibliothèque de votre cabinet.",
+    "categoriesLoading": "Chargement des catégories pour ce type...",
+    "categoriesEmptyForType": "Aucune catégorie n'est encore configurée pour ce type de document.",
+    "validationCategoryRequired": "Choisissez une catégorie avant de téléverser.",
+    "validationLawYearInvalid": "L'année de la loi doit être un nombre valide.",
+    "newType": "Nouveau type",
+    "typesManager": "Types de la bibliothèque",
+    "validationTypeRequired": "Choisissez un type avant de téléverser.",
+    "typeCode": "Code du type"
   },
   "research": {
     "eyebrow": "Recherche juridique par IA",
@@ -715,7 +729,11 @@
     "descriptions": {
       "CourtType": "Catégories de juridiction utilisées lors de l’ajout des étapes judiciaires.",
       "HearingOutcome": "Décisions d'audience utilisées pour la planification et le suivi des sessions."
-    }
+    },
+    "libraryDocTypeHintTitle": "Page des types uniquement",
+    "libraryDocTypeHintWithAccess": "Cette page gère les valeurs des types de documents de la bibliothèque. Pour gérer les catégories d’import, ouvrez l’administration de la bibliothèque.",
+    "libraryDocTypeHintNoAccess": "Cette page gère les valeurs des types de documents de la bibliothèque. La gestion des catégories est disponible dans l’administration de la bibliothèque pour les utilisateurs autorisés.",
+    "openLibraryAdmin": "Ouvrir l’administration de la bibliothèque"
   },
   "roles": {
     "title": "Rôles et permissions",

@@ -278,9 +278,10 @@ export function ClientCreatePage() {
       if (seq !== dupCheckSeq.current) {
         return;
       }
-      if (result.items.length > 0) {
+      const items = Array.isArray(result.items) ? result.items : [];
+      if (items.length > 0) {
         setDuplicateWarning(
-          t("clients.duplicateWarning", { name: result.items[0].name })
+          t("clients.duplicateWarning", { name: items[0].name })
         );
       } else {
         setDuplicateWarning(null);

@@ -1,14 +1,18 @@
 import type { SessionUser } from "@elms/shared";
+import { LibraryDocumentType } from "@elms/shared";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
 import { Prisma } from "@prisma/client";
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { normalizeArabic } from "../../utils/arabic.js";
+import { appError } from "../../errors/appError.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface CategoryTree {
   id: string;
+  typeId: string | null;
+  documentType: string;
   nameAr: string;
   nameEn: string;
   nameFr: string;
@@ -19,6 +23,8 @@ export interface CategoryTree {
 
 export interface LibraryDocumentSummary {
   id: string;
+  typeId: string | null;
+  typeLabel: string | null;
   type: string;
   scope: string;
   title: string;
@@ -72,6 +78,7 @@ export interface CaseLegalReferenceDto {
 
 export interface LibraryFilter {
   type?: string;
+  typeId?: string;
   scope?: string;
   categoryId?: string;
   dateFrom?: string;
@@ -79,11 +86,112 @@ export interface LibraryFilter {
   q?: string;
 }
 
+export interface LibraryDocTypeDto {
+  id: string;
+  code: string;
+  slug: string;
+  nameAr: string;
+  nameEn: string;
+  nameFr: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
+const DEFAULT_LIBRARY_TYPES: Array<{
+  code: LibraryDocumentType;
+  slug: string;
+  nameAr: string;
+  nameEn: string;
+  nameFr: string;
+}> = [
+  {
+    code: LibraryDocumentType.LEGISLATION,
+    slug: "legislation",
+    nameAr: "تشريع",
+    nameEn: "Legislation",
+    nameFr: "Législation"
+  },
+  {
+    code: LibraryDocumentType.JUDGMENT,
+    slug: "judgment",
+    nameAr: "حكم",
+    nameEn: "Judgment",
+    nameFr: "Jugement"
+  },
+  {
+    code: LibraryDocumentType.PRACTICE_GUIDE,
+    slug: "practice-guide",
+    nameAr: "دليل عملي",
+    nameEn: "Practice Guide",
+    nameFr: "Guide pratique"
+  },
+  {
+    code: LibraryDocumentType.ARTICLE,
+    slug: "article",
+    nameAr: "مقال",
+    nameEn: "Article",
+    nameFr: "Article"
+  },
+  {
+    code: LibraryDocumentType.COMMENTARY,
+    slug: "commentary",
+    nameAr: "شرح",
+    nameEn: "Commentary",
+    nameFr: "Commentaire"
+  },
+  {
+    code: LibraryDocumentType.GENERAL,
+    slug: "general",
+    nameAr: "عام",
+    nameEn: "General",
+    nameFr: "Général"
+  }
+];
+
+async function ensureFirmLibraryTypes(actor: SessionUser) {
+  const existing = await prisma.libraryDocType.count({
+    where: { firmId: actor.firmId }
+  });
+  if (existing === 0) {
+    await prisma.libraryDocType.createMany({
+      data: DEFAULT_LIBRARY_TYPES.map((type) => ({
+        firmId: actor.firmId,
+        code: type.code,
+        slug: type.slug,
+        nameAr: type.nameAr,
+        nameEn: type.nameEn,
+        nameFr: type.nameFr,
+        isActive: true,
+        isDefault: true
+      }))
+    });
+  }
+
+  const typeMap = await prisma.libraryDocType.findMany({
+    where: { firmId: actor.firmId },
+    select: { id: true, code: true }
+  });
+  const byCode = new Map(typeMap.map((type) => [type.code, type.id]));
+
+  for (const [code, id] of byCode.entries()) {
+    await prisma.legalCategory.updateMany({
+      where: { firmId: actor.firmId, documentType: code, typeId: null },
+      data: { typeId: id }
+    });
+    await prisma.libraryDocument.updateMany({
+      where: { firmId: actor.firmId, type: code, typeId: null },
+      data: { typeId: id }
+    });
+  }
+}
+
 // ── Category helpers ──────────────────────────────────────────────────────────
 
 function buildTree(
   allCategories: Array<{
     id: string;
+    typeId: string | null;
+    documentType: string;
     nameAr: string;
     nameEn: string;
     nameFr: string;
@@ -97,6 +205,8 @@ function buildTree(
     .filter((c) => c.parentId === parentId)
     .map((c) => ({
       id: c.id,
+      typeId: c.typeId,
+      documentType: c.documentType,
       nameAr: c.nameAr,
       nameEn: c.nameEn,
       nameFr: c.nameFr,
@@ -108,24 +218,146 @@ function buildTree(
 
 // ── Categories ────────────────────────────────────────────────────────────────
 
-export async function listCategories(actor: SessionUser): Promise<CategoryTree[]> {
+export async function listCategories(
+  actor: SessionUser,
+  typeId?: string
+): Promise<CategoryTree[]> {
+  await ensureFirmLibraryTypes(actor);
   const rows = await prisma.legalCategory.findMany({
     where: {
-      OR: [{ firmId: null }, { firmId: actor.firmId }]
+      firmId: actor.firmId,
+      ...(typeId ? { typeId } : {})
     },
-    select: { id: true, nameAr: true, nameEn: true, nameFr: true, slug: true, firmId: true, parentId: true },
+    select: {
+      id: true,
+      typeId: true,
+      documentType: true,
+      nameAr: true,
+      nameEn: true,
+      nameFr: true,
+      slug: true,
+      firmId: true,
+      parentId: true
+    },
     orderBy: { nameEn: "asc" }
   });
   return buildTree(rows);
 }
 
+export async function listLibraryTypes(actor: SessionUser): Promise<LibraryDocTypeDto[]> {
+  await ensureFirmLibraryTypes(actor);
+  const rows = await prisma.libraryDocType.findMany({
+    where: { firmId: actor.firmId },
+    orderBy: [{ isActive: "desc" }, { nameEn: "asc" }]
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    code: row.code,
+    slug: row.slug,
+    nameAr: row.nameAr,
+    nameEn: row.nameEn,
+    nameFr: row.nameFr,
+    isActive: row.isActive,
+    isDefault: row.isDefault
+  }));
+}
+
+export async function createLibraryType(
+  actor: SessionUser,
+  data: Omit<LibraryDocTypeDto, "id" | "isDefault">
+): Promise<LibraryDocTypeDto> {
+  await ensureFirmLibraryTypes(actor);
+  const created = await prisma.libraryDocType.create({
+    data: {
+      firmId: actor.firmId,
+      code: data.code,
+      slug: data.slug,
+      nameAr: data.nameAr,
+      nameEn: data.nameEn,
+      nameFr: data.nameFr,
+      isActive: data.isActive,
+      isDefault: false
+    }
+  });
+  return {
+    id: created.id,
+    code: created.code,
+    slug: created.slug,
+    nameAr: created.nameAr,
+    nameEn: created.nameEn,
+    nameFr: created.nameFr,
+    isActive: created.isActive,
+    isDefault: created.isDefault
+  };
+}
+
+export async function updateLibraryType(
+  actor: SessionUser,
+  typeId: string,
+  data: Partial<Omit<LibraryDocTypeDto, "id">>
+): Promise<LibraryDocTypeDto | null> {
+  await ensureFirmLibraryTypes(actor);
+  const existing = await prisma.libraryDocType.findFirst({
+    where: { id: typeId, firmId: actor.firmId }
+  });
+  if (!existing) return null;
+  const updated = await prisma.libraryDocType.update({
+    where: { id: typeId },
+    data: {
+      code: data.code ?? existing.code,
+      slug: data.slug ?? existing.slug,
+      nameAr: data.nameAr ?? existing.nameAr,
+      nameEn: data.nameEn ?? existing.nameEn,
+      nameFr: data.nameFr ?? existing.nameFr,
+      isActive: data.isActive ?? existing.isActive
+    }
+  });
+  return {
+    id: updated.id,
+    code: updated.code,
+    slug: updated.slug,
+    nameAr: updated.nameAr,
+    nameEn: updated.nameEn,
+    nameFr: updated.nameFr,
+    isActive: updated.isActive,
+    isDefault: updated.isDefault
+  };
+}
+
 export async function createCategory(
   actor: SessionUser,
-  data: { nameAr: string; nameEn: string; nameFr: string; slug: string; parentId?: string }
+  data: {
+    nameAr: string;
+    nameEn: string;
+    nameFr: string;
+    slug: string;
+    typeId: string;
+    parentId?: string;
+  }
 ): Promise<CategoryTree> {
+  const type = await prisma.libraryDocType.findFirst({
+    where: { id: data.typeId, firmId: actor.firmId, isActive: true }
+  });
+  if (!type) throw appError("Library type not found or inactive", 404);
+
+  if (data.parentId) {
+    const parent = await prisma.legalCategory.findFirst({
+      where: {
+        id: data.parentId,
+        firmId: actor.firmId
+      }
+    });
+    if (!parent) throw appError("Parent category not found", 404);
+    if (parent.typeId !== data.typeId) {
+      throw appError("Parent category type must match category type", 400);
+    }
+  }
+
   const cat = await prisma.legalCategory.create({
     data: {
       firmId: actor.firmId,
+      typeId: data.typeId,
+      documentType: type.code,
       nameAr: data.nameAr,
       nameEn: data.nameEn,
       nameFr: data.nameFr,
@@ -135,6 +367,8 @@ export async function createCategory(
   });
   return {
     id: cat.id,
+    typeId: cat.typeId,
+    documentType: cat.documentType,
     nameAr: cat.nameAr,
     nameEn: cat.nameEn,
     nameFr: cat.nameFr,
@@ -147,16 +381,45 @@ export async function createCategory(
 export async function updateCategory(
   actor: SessionUser,
   categoryId: string,
-  data: { nameAr?: string; nameEn?: string; nameFr?: string; slug?: string; parentId?: string | null }
+  data: {
+    nameAr?: string;
+    nameEn?: string;
+    nameFr?: string;
+    slug?: string;
+    typeId?: string;
+    parentId?: string | null;
+  }
 ): Promise<CategoryTree | null> {
   const existing = await prisma.legalCategory.findFirst({
     where: { id: categoryId, firmId: actor.firmId }
   });
   if (!existing) return null;
 
+  const nextTypeId = data.typeId ?? existing.typeId;
+  if (!nextTypeId) throw appError("Category type is required", 400);
+  const type = await prisma.libraryDocType.findFirst({
+    where: { id: nextTypeId, firmId: actor.firmId, isActive: true }
+  });
+  if (!type) throw appError("Library type not found or inactive", 404);
+
+  if (data.parentId) {
+    const parent = await prisma.legalCategory.findFirst({
+      where: {
+        id: data.parentId,
+        firmId: actor.firmId
+      }
+    });
+    if (!parent) throw appError("Parent category not found", 404);
+    if (parent.typeId !== nextTypeId) {
+      throw appError("Parent category type must match category type", 400);
+    }
+  }
+
   const updateResult = await prisma.legalCategory.updateMany({
     where: { id: categoryId, firmId: actor.firmId },
     data: {
+      typeId: nextTypeId,
+      documentType: type.code,
       nameAr: data.nameAr ?? existing.nameAr,
       nameEn: data.nameEn ?? existing.nameEn,
       nameFr: data.nameFr ?? existing.nameFr,
@@ -175,6 +438,8 @@ export async function updateCategory(
 
   return {
     id: updated.id,
+    typeId: updated.typeId,
+    documentType: updated.documentType,
     nameAr: updated.nameAr,
     nameEn: updated.nameEn,
     nameFr: updated.nameFr,
@@ -182,6 +447,27 @@ export async function updateCategory(
     firmId: updated.firmId,
     children: []
   };
+}
+
+async function validateCategoryForType(
+  actor: SessionUser,
+  categoryId: string | undefined,
+  typeId: string
+) {
+  if (!categoryId) return;
+  const category = await prisma.legalCategory.findFirst({
+    where: {
+      id: categoryId,
+      firmId: actor.firmId
+    },
+    select: { id: true, typeId: true }
+  });
+  if (!category) {
+    throw appError("Category not found", 404);
+  }
+  if (category.typeId !== typeId) {
+    throw appError("Category does not match selected document type", 400);
+  }
 }
 
 export async function deleteCategory(actor: SessionUser, categoryId: string): Promise<boolean> {
@@ -194,14 +480,17 @@ export async function deleteCategory(actor: SessionUser, categoryId: string): Pr
 // ── Documents ─────────────────────────────────────────────────────────────────
 
 function docToSummary(doc: {
-  id: string; type: string; scope: string; title: string;
+  id: string; typeId: string | null; type: string; scope: string; title: string;
   summary: string | null; lawNumber: string | null; lawYear: number | null;
   judgmentNumber: string | null; judgmentDate: Date | null; publishedAt: Date | null;
   legislationStatus: string | null; categoryId: string | null; firmId: string | null;
   createdAt: Date;
+  docType?: { nameAr: string; nameEn: string; nameFr: string } | null;
 }): LibraryDocumentSummary {
   return {
     id: doc.id,
+    typeId: doc.typeId,
+    typeLabel: doc.docType?.nameEn ?? null,
     type: doc.type,
     scope: doc.scope,
     title: doc.title,
@@ -231,6 +520,7 @@ export async function listDocuments(
   };
 
   if (filter.type) where.type = { equals: filter.type };
+  if (filter.typeId) where.typeId = filter.typeId;
   if (filter.scope) where.scope = filter.scope as "SYSTEM" | "FIRM";
   if (filter.categoryId) where.categoryId = filter.categoryId;
   if (filter.dateFrom) where.publishedAt = { gte: new Date(filter.dateFrom) };
@@ -251,9 +541,10 @@ export async function listDocuments(
       take: limit,
       orderBy: { createdAt: "desc" },
       select: {
-        id: true, type: true, scope: true, title: true, summary: true,
+        id: true, typeId: true, type: true, scope: true, title: true, summary: true,
         lawNumber: true, lawYear: true, judgmentNumber: true, judgmentDate: true,
-        publishedAt: true, legislationStatus: true, categoryId: true, firmId: true, createdAt: true
+        publishedAt: true, legislationStatus: true, categoryId: true, firmId: true, createdAt: true,
+        docType: { select: { nameAr: true, nameEn: true, nameFr: true } }
       }
     }),
     prisma.libraryDocument.count({ where })
@@ -314,7 +605,7 @@ export async function createDocument(
   actor: SessionUser,
   data: {
     type: string;
-    scope?: "SYSTEM" | "FIRM";
+    typeId?: string;
     title: string;
     summary?: string;
     contentText?: string;
@@ -331,10 +622,21 @@ export async function createDocument(
     articles?: Array<{ articleNumber: string; title?: string; body: string }>;
   }
 ): Promise<LibraryDocumentDetail> {
+  let resolvedTypeId = data.typeId;
+  if (!resolvedTypeId) {
+    const fallback = await prisma.libraryDocType.findFirst({
+      where: { firmId: actor.firmId, code: data.type, isActive: true }
+    });
+    resolvedTypeId = fallback?.id;
+  }
+  if (!resolvedTypeId) throw appError("Library type is required", 400);
+  await validateCategoryForType(actor, data.categoryId, resolvedTypeId);
+
   const doc = await prisma.libraryDocument.create({
     data: {
-      firmId: data.scope === "SYSTEM" ? null : actor.firmId,
-      scope: data.scope ?? "FIRM",
+      firmId: actor.firmId,
+      scope: "FIRM",
+      typeId: resolvedTypeId,
       type: data.type as string,
       title: data.title,
       summary: data.summary ?? null,
@@ -402,6 +704,12 @@ export async function updateDocument(
     where: { id: documentId, deletedAt: null, OR: [{ scope: "SYSTEM" }, { firmId: actor.firmId }] }
   });
   if (!existing) return null;
+
+  const effectiveTypeId = existing.typeId;
+  if (!effectiveTypeId) throw appError("Document type is missing", 400);
+  const requestedCategoryId =
+    data.categoryId !== undefined ? data.categoryId : existing.categoryId ?? undefined;
+  await validateCategoryForType(actor, requestedCategoryId, effectiveTypeId);
 
   const updated = await prisma.libraryDocument.update({
     where: { id: documentId },
@@ -607,7 +915,7 @@ export interface LibrarySearchResult {
 export async function searchLibrary(
   actor: SessionUser,
   query: string,
-  filter: { type?: string; scope?: string; categoryId?: string } = {},
+  filter: { type?: string; typeId?: string; scope?: string; categoryId?: string } = {},
   limit = 20
 ): Promise<LibrarySearchResult[]> {
   const normalizedQuery = normalizeArabic(query.trim());
@@ -643,6 +951,7 @@ export async function searchLibrary(
         @@ websearch_to_tsquery('simple', ${normalizedQuery})
       )
       ${filter.type ? Prisma.sql`AND d.type = ${filter.type}` : Prisma.empty}
+      ${filter.typeId ? Prisma.sql`AND d."typeId" = ${filter.typeId}::uuid` : Prisma.empty}
       ${filter.scope ? Prisma.sql`AND d.scope = ${filter.scope}` : Prisma.empty}
       ${filter.categoryId ? Prisma.sql`AND d."categoryId" = ${filter.categoryId}::uuid` : Prisma.empty}
     ORDER BY rank DESC

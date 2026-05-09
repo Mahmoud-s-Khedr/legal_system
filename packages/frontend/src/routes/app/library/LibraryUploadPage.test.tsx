@@ -4,8 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../../i18n";
 import { LibraryUploadPage } from "./LibraryUploadPage";
 
-const mockUseHasPermission = vi.fn<(permission: string) => boolean>();
-
 vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: [], isLoading: false, isError: false }),
   useMutation: () => ({
@@ -15,10 +13,6 @@ vi.mock("@tanstack/react-query", () => ({
     error: null
   }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() })
-}));
-
-vi.mock("../../../store/authStore", () => ({
-  useHasPermission: (permission: string) => mockUseHasPermission(permission)
 }));
 
 let root: Root | null = null;
@@ -43,7 +37,6 @@ afterEach(() => {
   container?.remove();
   root = null;
   container = null;
-  mockUseHasPermission.mockReset();
 });
 
 function render(element: JSX.Element) {
@@ -57,26 +50,21 @@ function render(element: JSX.Element) {
 }
 
 describe("LibraryUploadPage", () => {
-  it("shows scope selector for managers", () => {
-    mockUseHasPermission.mockImplementation(
-      (permission) => permission === "library:manage"
-    );
+  it("shows firm-only upload hint", () => {
     const view = render(<LibraryUploadPage />);
 
-    expect(view.textContent).toContain(i18n.t("library.scope", { ns: "app" }));
+    expect(view.textContent).toContain(
+      i18n.t("library.uploadFirmOnlyHint", { ns: "app" })
+    );
   });
 
-  it("hides scope selector for non-managers", () => {
-    mockUseHasPermission.mockReturnValue(false);
+  it("does not show scope selector", () => {
     const view = render(<LibraryUploadPage />);
 
-    expect(view.textContent).not.toContain(
-      i18n.t("library.scope", { ns: "app" })
-    );
+    expect(view.textContent).not.toContain(i18n.t("library.scope", { ns: "app" }));
   });
 
   it("uses expanded safe image/scanner accept types", () => {
-    mockUseHasPermission.mockReturnValue(false);
     const view = render(<LibraryUploadPage />);
     const input = view.querySelector('input[type="file"]');
     expect(input?.getAttribute("accept")).toBe(

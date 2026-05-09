@@ -326,6 +326,7 @@
     "linkNotesPlaceholder": "سياق اختياري أو إشارة مادة…",
     "referencesHelp": "السلطات القانونية والسوابق المرتبطة بهذه القضية.",
     "addReference": "إضافة مرجع",
+    "admin": "الإدارة",
     "adminTitle": "إدارة المكتبة",
     "adminDescription": "إدارة الفئات وهيكل مستندات المكتبة القانونية.",
     "newCategory": "فئة جديدة",
@@ -369,7 +370,20 @@
     "author": "المؤلف",
     "publishedAt": "تاريخ النشر",
     "extractionPending": "استخراج النص قيد الانتظار",
-    "downloadFile": "تنزيل الملف"
+    "downloadFile": "تنزيل الملف",
+    "uploadStep1": "الخطوة 1: اختيار الملفات",
+    "uploadStep2": "الخطوة 2: اختيار النوع والفئة",
+    "uploadStep3": "الخطوة 3: إضافة البيانات الوصفية",
+    "uploadStep4": "الخطوة 4: المراجعة والرفع",
+    "uploadFirmOnlyHint": "جميع الرفوعات في وضع سطح المكتب تُحفَظ داخل مكتبة مكتبك فقط.",
+    "categoriesLoading": "جارٍ تحميل الفئات لهذا النوع...",
+    "categoriesEmptyForType": "لا توجد فئات مهيأة لهذا النوع من المستندات بعد.",
+    "validationCategoryRequired": "اختر فئة قبل الرفع.",
+    "validationLawYearInvalid": "يجب أن تكون سنة القانون رقمًا صالحًا.",
+    "newType": "نوع جديد",
+    "typesManager": "أنواع المكتبة",
+    "validationTypeRequired": "اختر نوعًا قبل الرفع.",
+    "typeCode": "رمز النوع"
   },
   "research": {
     "eyebrow": "بحث قانوني بالذكاء الاصطناعي",
@@ -726,7 +740,11 @@
       "ExpenseCategory": "فئات المصروفات لتصنيف التكاليف.",
       "LibraryDocType": "أنواع المستندات داخل المكتبة القانونية.",
       "HearingOutcome": "قرارات الجلسات المستخدمة في جدولة الجلسات ومتابعتها."
-    }
+    },
+    "libraryDocTypeHintTitle": "هذه الصفحة لأنواع المستندات فقط",
+    "libraryDocTypeHintWithAccess": "هذه الصفحة لإدارة قيم أنواع مستندات المكتبة. لإدارة فئات الرفع، افتح إدارة المكتبة.",
+    "libraryDocTypeHintNoAccess": "هذه الصفحة لإدارة قيم أنواع مستندات المكتبة. إدارة الفئات متاحة في إدارة المكتبة للمستخدمين الذين لديهم صلاحية إدارة المكتبة.",
+    "openLibraryAdmin": "فتح إدارة المكتبة"
   },
   "roles": {
     "title": "الأدوار والصلاحيات",

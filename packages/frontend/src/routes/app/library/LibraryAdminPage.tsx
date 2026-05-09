@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, RotateCcw } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
 import {
   EmptyState,
@@ -12,13 +12,46 @@ import {
   SelectField
 } from "../ui";
 
-function FieldWrap({
-  label,
-  children
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+interface LibraryType {
+  id: string;
+  code: string;
+  slug: string;
+  nameAr: string;
+  nameEn: string;
+  nameFr: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
+interface CategoryNode {
+  id: string;
+  slug: string;
+  typeId: string | null;
+  nameAr: string;
+  nameEn: string;
+  nameFr: string;
+  children: CategoryNode[];
+}
+
+const EMPTY_TYPE_FORM = {
+  code: "",
+  slug: "",
+  nameAr: "",
+  nameEn: "",
+  nameFr: "",
+  isActive: true
+};
+
+const EMPTY_CATEGORY_FORM = {
+  typeId: "",
+  nameAr: "",
+  nameEn: "",
+  nameFr: "",
+  slug: "",
+  parentId: ""
+};
+
+function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-2">
       <span className="text-sm font-semibold">{label}</span>
@@ -27,78 +60,97 @@ function FieldWrap({
   );
 }
 
-interface CategoryNode {
-  id: string;
-  slug: string;
-  nameAr: string;
-  nameEn: string;
-  nameFr: string;
-  children: CategoryNode[];
-}
-
-const EMPTY_FORM = {
-  nameAr: "",
-  nameEn: "",
-  nameFr: "",
-  slug: "",
-  parentId: ""
-};
-
 export function LibraryAdminPage() {
-  const { t } = useTranslation("app");
+  const { t, i18n } = useTranslation("app");
   const queryClient = useQueryClient();
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [selectedType, setSelectedType] = useState("");
+  const [typeForm, setTypeForm] = useState(EMPTY_TYPE_FORM);
+  const [categoryForm, setCategoryForm] = useState(EMPTY_CATEGORY_FORM);
+  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [showTypeForm, setShowTypeForm] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
 
-  const categoriesQuery = useQuery({
-    queryKey: ["library-categories"],
-    queryFn: () => apiFetch<CategoryNode[]>("/api/library/categories")
+  const typesQuery = useQuery({
+    queryKey: ["library-types"],
+    queryFn: () => apiFetch<LibraryType[]>("/api/library/types")
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: typeof EMPTY_FORM) =>
+  const categoriesQuery = useQuery({
+    enabled: Boolean(selectedType),
+    queryKey: ["library-categories", selectedType],
+    queryFn: () => apiFetch<CategoryNode[]>(`/api/library/categories?typeId=${encodeURIComponent(selectedType)}`)
+  });
+
+  React.useEffect(() => {
+    if (!selectedType && (typesQuery.data?.length ?? 0) > 0) {
+      setSelectedType(typesQuery.data![0].id);
+      setCategoryForm((current) => ({ ...current, typeId: typesQuery.data![0].id }));
+    }
+  }, [typesQuery.data, selectedType]);
+
+  const createTypeMutation = useMutation({
+    mutationFn: (data: typeof EMPTY_TYPE_FORM) =>
+      apiFetch("/api/library/types", {
+        method: "POST",
+        body: JSON.stringify(data)
+      }),
+    onSuccess: () => {
+      setTypeForm(EMPTY_TYPE_FORM);
+      setShowTypeForm(false);
+      void queryClient.invalidateQueries({ queryKey: ["library-types"] });
+    }
+  });
+
+  const updateTypeMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<typeof EMPTY_TYPE_FORM> }) =>
+      apiFetch(`/api/library/types/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data)
+      }),
+    onSuccess: () => {
+      setEditingTypeId(null);
+      setTypeForm(EMPTY_TYPE_FORM);
+      void queryClient.invalidateQueries({ queryKey: ["library-types"] });
+    }
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: (data: typeof EMPTY_CATEGORY_FORM) =>
       apiFetch("/api/library/categories", {
         method: "POST",
         body: JSON.stringify({
-          nameAr: data.nameAr,
-          nameEn: data.nameEn,
-          nameFr: data.nameFr,
-          slug: data.slug,
+          ...data,
           parentId: data.parentId || undefined
         })
       }),
     onSuccess: () => {
-      setForm(EMPTY_FORM);
-      setShowForm(false);
-      void queryClient.invalidateQueries({ queryKey: ["library-categories"] });
+      setCategoryForm({ ...EMPTY_CATEGORY_FORM, typeId: selectedType });
+      setShowCategoryForm(false);
+      void queryClient.invalidateQueries({ queryKey: ["library-categories", selectedType] });
     }
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: typeof EMPTY_FORM }) =>
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: typeof EMPTY_CATEGORY_FORM }) =>
       apiFetch(`/api/library/categories/${id}`, {
         method: "PUT",
         body: JSON.stringify({
-          nameAr: data.nameAr || undefined,
-          nameEn: data.nameEn || undefined,
-          nameFr: data.nameFr || undefined,
-          slug: data.slug,
+          ...data,
           parentId: data.parentId || null
         })
       }),
     onSuccess: () => {
-      setEditingId(null);
-      setForm(EMPTY_FORM);
-      void queryClient.invalidateQueries({ queryKey: ["library-categories"] });
+      setEditingCategoryId(null);
+      setCategoryForm({ ...EMPTY_CATEGORY_FORM, typeId: selectedType });
+      void queryClient.invalidateQueries({ queryKey: ["library-categories", selectedType] });
     }
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiFetch(`/api/library/categories/${id}`, { method: "DELETE" }),
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/library/categories/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["library-categories"] });
+      void queryClient.invalidateQueries({ queryKey: ["library-categories", selectedType] });
     }
   });
 
@@ -113,24 +165,10 @@ export function LibraryAdminPage() {
     ]);
   }
 
-  function startEdit(node: CategoryNode, parentId?: string) {
-    setEditingId(node.id);
-    setForm({
-      nameAr: node.nameAr,
-      nameEn: node.nameEn,
-      nameFr: node.nameFr,
-      slug: node.slug,
-      parentId: parentId ?? ""
-    });
-    setShowForm(false);
-  }
-
-  const allCategories = categoriesQuery.data ?? [];
-  const flat = flattenCategories(allCategories);
-  const selectableParents = flat.map(({ node, depth }) => ({
-    id: node.id,
-    nameEn: `${"\u00A0".repeat(depth * 2)}${node.nameEn}`
-  }));
+  const flatCategories = flattenCategories(categoriesQuery.data ?? []);
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const isArabic = locale.startsWith("ar");
+  const isFrench = locale.startsWith("fr");
 
   return (
     <div className="space-y-6">
@@ -139,110 +177,165 @@ export function LibraryAdminPage() {
         eyebrow={t("library.eyebrow")}
         title={t("library.adminTitle")}
         actions={
-          <PrimaryButton
-            onClick={() => {
-              setShowForm(true);
-              setEditingId(null);
-              setForm(EMPTY_FORM);
-            }}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            {t("library.newCategory")}
-          </PrimaryButton>
+          <div className="flex gap-2">
+            <PrimaryButton onClick={() => setShowTypeForm((s) => !s)}>
+              <Plus className="size-4" />
+              {t("library.newType")}
+            </PrimaryButton>
+            <PrimaryButton
+              onClick={() => {
+                setShowCategoryForm((s) => !s);
+                setCategoryForm((current) => ({ ...current, typeId: selectedType }));
+              }}
+            >
+              <Plus className="size-4" />
+              {t("library.newCategory")}
+            </PrimaryButton>
+          </div>
         }
       />
 
-      {/* Create form */}
-      {showForm && (
-        <SectionCard title={t("library.newCategory")}>
-          <CategoryForm
-            allCategories={selectableParents}
-            form={form}
-            isPending={createMutation.isPending}
-            submitLabel={t("actions.create")}
-            t={t}
-            onChange={setForm}
-            onCancel={() => setShowForm(false)}
-            onSubmit={() => createMutation.mutate(form)}
-          />
-        </SectionCard>
-      )}
+      <SectionCard title={t("library.typesManager")}>
+        {showTypeForm ? (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder={t("library.typeCode")} value={typeForm.code} onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value.toUpperCase() })} />
+            <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder={t("library.categorySlug")} value={typeForm.slug} onChange={(e) => setTypeForm({ ...typeForm, slug: e.target.value })} />
+            <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder={t("library.categoryNameEn")} value={typeForm.nameEn} onChange={(e) => setTypeForm({ ...typeForm, nameEn: e.target.value })} />
+            <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder={t("library.categoryNameAr")} value={typeForm.nameAr} onChange={(e) => setTypeForm({ ...typeForm, nameAr: e.target.value })} />
+            <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder={t("library.categoryNameFr")} value={typeForm.nameFr} onChange={(e) => setTypeForm({ ...typeForm, nameFr: e.target.value })} />
+            <div className="flex gap-2">
+              <PrimaryButton onClick={() => createTypeMutation.mutate(typeForm)} disabled={!typeForm.code || !typeForm.slug || !typeForm.nameEn || !typeForm.nameAr || !typeForm.nameFr}>{t("actions.create")}</PrimaryButton>
+              <button
+                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                onClick={() => {
+                  setShowTypeForm(false);
+                  setTypeForm(EMPTY_TYPE_FORM);
+                }}
+                type="button"
+              >
+                {t("actions.cancel")}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
-      <SectionCard title={t("library.categories")}>
-        {categoriesQuery.isLoading ? (
-          <p className="text-sm text-slate-500">{t("labels.loading")}</p>
-        ) : null}
-        {categoriesQuery.isError ? (
-          <ErrorState
-            title={t("errors.title")}
-            description={
-              (categoriesQuery.error as Error)?.message ?? t("errors.fallback")
-            }
-            retryLabel={t("errors.reload")}
-            onRetry={() => void categoriesQuery.refetch()}
-          />
-        ) : null}
-        {!categoriesQuery.isLoading &&
-        !categoriesQuery.isError &&
-        !flat.length ? (
-          <EmptyState
-            description={t("empty.noCategoriesHelp")}
-            title={t("empty.noCategories")}
-          />
-        ) : !categoriesQuery.isLoading && !categoriesQuery.isError ? (
-          <div className="space-y-2">
-            {flat.map(({ node, depth, parentId }) => (
-              <div key={node.id}>
-                {editingId === node.id ? (
-                  <div className="rounded-2xl border border-accent/30 bg-accentSoft p-4">
-                    <CategoryForm
-                      allCategories={selectableParents.filter(
-                        (category) => category.id !== node.id
-                      )}
-                      form={form}
-                      isPending={updateMutation.isPending}
-                      submitLabel={t("actions.save")}
-                      t={t}
-                      onChange={setForm}
-                      onCancel={() => setEditingId(null)}
-                      onSubmit={() =>
-                        updateMutation.mutate({ id: node.id, data: form })
-                      }
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                    style={{ marginInlineStart: `${depth * 24}px` }}
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium">{node.nameEn}</p>
-                      <p className="text-sm text-slate-500" dir="rtl">
-                        {node.nameAr}
-                      </p>
-                      <p className="text-xs text-slate-400">{node.nameFr}</p>
-                    </div>
-                    <code className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                      {node.slug}
-                    </code>
-                    <button
-                      aria-label={t("actions.edit")}
-                      className="rounded-lg p-1 text-slate-400 hover:text-accent"
-                      onClick={() => startEdit(node, parentId)}
-                    >
-                      <Pencil aria-hidden="true" className="size-4" />
-                    </button>
-                    <button
-                      aria-label={t("actions.delete")}
-                      className="rounded-lg p-1 text-slate-400 hover:text-red-500"
-                      onClick={() => deleteMutation.mutate(node.id)}
-                    >
-                      <Trash2 aria-hidden="true" className="size-4" />
-                    </button>
-                  </div>
-                )}
+        {typesQuery.isError ? (
+          <ErrorState title={t("errors.title")} description={(typesQuery.error as Error)?.message ?? t("errors.fallback")} />
+        ) : (
+          <div className="mt-3 space-y-2">
+            {(typesQuery.data ?? []).map((type) => (
+              <div key={type.id} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex-1">
+                  <p className="font-medium">{isArabic ? type.nameAr : isFrench ? type.nameFr : type.nameEn}</p>
+                  <p className="text-xs text-slate-500">{type.code} · {type.slug}</p>
+                </div>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${type.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>{type.isActive ? t("labels.active") : t("labels.inactive")}</span>
+                <button className="rounded-lg p-1 text-slate-500 hover:text-accent" onClick={() => {
+                  setEditingTypeId(type.id);
+                  setTypeForm({
+                    code: type.code,
+                    slug: type.slug,
+                    nameAr: type.nameAr,
+                    nameEn: type.nameEn,
+                    nameFr: type.nameFr,
+                    isActive: type.isActive
+                  });
+                }}><Pencil className="size-4" /></button>
+                <button className="rounded-lg p-1 text-slate-500 hover:text-amber-600" onClick={() => updateTypeMutation.mutate({ id: type.id, data: { isActive: !type.isActive } })}>{type.isActive ? <Power className="size-4" /> : <RotateCcw className="size-4" />}</button>
               </div>
             ))}
+            {editingTypeId ? (
+              <div className="rounded-xl border border-accent/30 bg-accentSoft p-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={typeForm.code} onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value.toUpperCase() })} />
+                  <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={typeForm.slug} onChange={(e) => setTypeForm({ ...typeForm, slug: e.target.value })} />
+                  <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={typeForm.nameEn} onChange={(e) => setTypeForm({ ...typeForm, nameEn: e.target.value })} />
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <PrimaryButton onClick={() => updateTypeMutation.mutate({ id: editingTypeId, data: typeForm })}>{t("actions.save")}</PrimaryButton>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title={t("library.categories")}> 
+        <SelectField
+          label={t("library.type")}
+          value={selectedType}
+          onChange={(value) => {
+            setSelectedType(value);
+            setCategoryForm((current) => ({ ...current, typeId: value, parentId: "" }));
+          }}
+          options={(typesQuery.data ?? []).filter((type) => type.isActive).map((type) => ({
+            value: type.id,
+            label: isArabic ? type.nameAr : isFrench ? type.nameFr : type.nameEn
+          }))}
+        />
+
+        {showCategoryForm ? (
+          <div className="mt-3">
+            <CategoryForm
+              allCategories={flatCategories.map(({ node, depth }) => ({
+                id: node.id,
+                label: `${"\u00A0".repeat(depth * 2)}${isArabic ? node.nameAr : isFrench ? node.nameFr : node.nameEn}`
+              }))}
+              form={categoryForm}
+              submitLabel={t("actions.create")}
+              isPending={createCategoryMutation.isPending}
+              t={t}
+              onChange={setCategoryForm}
+              onCancel={() => setShowCategoryForm(false)}
+              onSubmit={() => createCategoryMutation.mutate(categoryForm)}
+            />
+          </div>
+        ) : null}
+
+        {categoriesQuery.isLoading ? <p className="mt-3 text-sm text-slate-500">{t("library.categoriesLoading")}</p> : null}
+        {categoriesQuery.isError ? <ErrorState title={t("errors.title")} description={(categoriesQuery.error as Error)?.message ?? t("errors.fallback")} /> : null}
+        {!categoriesQuery.isLoading && !categoriesQuery.isError && !flatCategories.length ? <EmptyState title={t("empty.noCategories")} description={t("empty.noCategoriesHelp")} /> : null}
+
+        <div className="mt-3 space-y-2">
+          {flatCategories.map(({ node, depth, parentId }) => (
+            <div key={node.id} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3" style={{ marginInlineStart: `${depth * 16}px` }}>
+              <div className="flex-1">
+                <p className="font-medium">{isArabic ? node.nameAr : isFrench ? node.nameFr : node.nameEn}</p>
+                <p className="text-xs text-slate-500">{node.slug}</p>
+              </div>
+              <button className="rounded-lg p-1 text-slate-500 hover:text-accent" onClick={() => {
+                setEditingCategoryId(node.id);
+                setCategoryForm({
+                  typeId: selectedType,
+                  nameAr: node.nameAr,
+                  nameEn: node.nameEn,
+                  nameFr: node.nameFr,
+                  slug: node.slug,
+                  parentId: parentId ?? ""
+                });
+              }}><Pencil className="size-4" /></button>
+              <button className="rounded-lg p-1 text-slate-500 hover:text-red-500" onClick={() => deleteCategoryMutation.mutate(node.id)}><Trash2 className="size-4" /></button>
+            </div>
+          ))}
+        </div>
+
+        {editingCategoryId ? (
+          <div className="mt-3 rounded-2xl border border-accent/30 bg-accentSoft p-4">
+            <CategoryForm
+              allCategories={flatCategories
+                .filter(({ node }) => node.id !== editingCategoryId)
+                .map(({ node, depth }) => ({
+                  id: node.id,
+                  label: `${"\u00A0".repeat(depth * 2)}${isArabic ? node.nameAr : isFrench ? node.nameFr : node.nameEn}`
+                }))}
+              form={categoryForm}
+              submitLabel={t("actions.save")}
+              isPending={updateCategoryMutation.isPending}
+              t={t}
+              onChange={setCategoryForm}
+              onCancel={() => setEditingCategoryId(null)}
+              onSubmit={() => updateCategoryMutation.mutate({ id: editingCategoryId, data: categoryForm })}
+            />
           </div>
         ) : null}
       </SectionCard>
@@ -261,17 +354,19 @@ function CategoryForm({
   onCancel
 }: {
   form: {
+    typeId: string;
     nameAr: string;
     nameEn: string;
     nameFr: string;
     slug: string;
     parentId: string;
   };
-  allCategories: { id: string; nameEn: string }[];
+  allCategories: { id: string; label: string }[];
   submitLabel: string;
   isPending: boolean;
   t: (key: string) => string;
   onChange: (form: {
+    typeId: string;
     nameAr: string;
     nameEn: string;
     nameFr: string;
@@ -285,72 +380,29 @@ function CategoryForm({
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <FieldWrap label={t("library.categoryNameAr")}>
-          <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-            dir="rtl"
-            type="text"
-            value={form.nameAr}
-            onChange={(e) => onChange({ ...form, nameAr: e.target.value })}
-          />
+          <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent" dir="rtl" type="text" value={form.nameAr} onChange={(e) => onChange({ ...form, nameAr: e.target.value })} />
         </FieldWrap>
         <FieldWrap label={t("library.categoryNameEn")}>
-          <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-            type="text"
-            value={form.nameEn}
-            onChange={(e) => onChange({ ...form, nameEn: e.target.value })}
-          />
+          <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent" type="text" value={form.nameEn} onChange={(e) => onChange({ ...form, nameEn: e.target.value })} />
         </FieldWrap>
         <FieldWrap label={t("library.categoryNameFr")}>
-          <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent"
-            type="text"
-            value={form.nameFr}
-            onChange={(e) => onChange({ ...form, nameFr: e.target.value })}
-          />
+          <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent" type="text" value={form.nameFr} onChange={(e) => onChange({ ...form, nameFr: e.target.value })} />
         </FieldWrap>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <FieldWrap label={t("library.categorySlug")}>
-          <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm outline-none focus:border-accent"
-            type="text"
-            value={form.slug}
-            onChange={(e) => onChange({ ...form, slug: e.target.value })}
-          />
+          <input className="w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm outline-none focus:border-accent" type="text" value={form.slug} onChange={(e) => onChange({ ...form, slug: e.target.value })} />
         </FieldWrap>
         <SelectField
           label={t("library.parentCategory")}
           value={form.parentId}
           onChange={(value) => onChange({ ...form, parentId: value })}
-          options={[
-            { value: "", label: t("library.noParent") },
-            ...allCategories.map((category) => ({
-              value: category.id,
-              label: category.nameEn
-            }))
-          ]}
+          options={[{ value: "", label: t("library.noParent") }, ...allCategories.map((category) => ({ value: category.id, label: category.label }))]}
         />
       </div>
       <div className="flex gap-2">
-        <PrimaryButton
-          disabled={
-            !form.nameAr.trim() ||
-            !form.nameEn.trim() ||
-            !form.nameFr.trim() ||
-            !form.slug.trim() ||
-            isPending
-          }
-          onClick={onSubmit}
-        >
-          {submitLabel}
-        </PrimaryButton>
-        <button
-          className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
-          onClick={onCancel}
-        >
-          {t("actions.cancel")}
-        </button>
+        <PrimaryButton disabled={!form.typeId || !form.nameAr.trim() || !form.nameEn.trim() || !form.nameFr.trim() || !form.slug.trim() || isPending} onClick={onSubmit}>{submitLabel}</PrimaryButton>
+        <button className="rounded-xl border border-slate-200 px-4 py-2 text-sm" onClick={onCancel}>{t("actions.cancel")}</button>
       </div>
     </div>
   );

@@ -38,6 +38,9 @@ vi.mock("../editions/editionPolicy.js", () => ({
 }));
 
 vi.mock("./library.service.js", () => ({
+  listLibraryTypes: vi.fn(),
+  createLibraryType: vi.fn(),
+  updateLibraryType: vi.fn(),
   listCategories: vi.fn(),
   createCategory: vi.fn(),
   updateCategory: vi.fn(),

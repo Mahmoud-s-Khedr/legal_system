@@ -258,6 +258,7 @@ model Firm {
   notifications   Notification[]
   auditLogs       AuditLog[]
   libraryDocs     LibraryDocument[]
+  libraryDocTypes LibraryDocType[]
   categories      LegalCategory[]
   annotations     LibraryAnnotation[]
   research        ResearchSession[]
@@ -827,6 +828,8 @@ model LegalCategory {
   id         String          @id @default(uuid()) @db.Uuid
   firmId     String?         @db.Uuid
   parentId   String?         @db.Uuid
+  typeId     String?         @db.Uuid
+  documentType String
   nameAr     String
   nameEn     String
   nameFr     String
@@ -834,16 +837,39 @@ model LegalCategory {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   firm       Firm?           @relation(fields: [firmId], references: [id], onDelete: SetNull)
+  type       LibraryDocType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
   parent     LegalCategory?  @relation("LegalCategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children   LegalCategory[] @relation("LegalCategoryTree")
   documents  LibraryDocument[]
 
+  @@unique([firmId, slug, documentType])
+  @@index([firmId, typeId])
+}
+
+model LibraryDocType {
+  id         String          @id @default(uuid()) @db.Uuid
+  firmId     String          @db.Uuid
+  code       String
+  slug       String
+  nameAr     String
+  nameEn     String
+  nameFr     String
+  isActive   Boolean         @default(true)
+  isDefault  Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  firm       Firm            @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  categories LegalCategory[]
+  documents  LibraryDocument[]
+
+  @@unique([firmId, code])
   @@unique([firmId, slug])
 }
 
 model LibraryDocument {
   id                String               @id @default(uuid()) @db.Uuid
   firmId            String?              @db.Uuid
+  typeId            String?              @db.Uuid
   categoryId        String?              @db.Uuid
   type              String
   scope             LibraryScope         @default(SYSTEM)
@@ -865,6 +891,7 @@ model LibraryDocument {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   firm              Firm?                @relation(fields: [firmId], references: [id], onDelete: SetNull)
+  docType           LibraryDocType?      @relation(fields: [typeId], references: [id], onDelete: SetNull)
   category          LegalCategory?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   articles          LegislationArticle[]
   tags              LibraryDocumentTag[]

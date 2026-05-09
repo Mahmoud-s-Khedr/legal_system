@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeSessionUser } from "../../test-utils/session-user.js";
 
 const mockPrisma = {
+  libraryDocType: {
+    count: vi.fn(),
+    createMany: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn()
+  },
   legalCategory: {
     findMany: vi.fn(),
     create: vi.fn(),
@@ -14,6 +22,7 @@ const mockPrisma = {
     count: vi.fn(),
     findFirst: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
     create: vi.fn()
   },
   libraryTag: {
@@ -54,15 +63,27 @@ const {
 
 const actor = makeSessionUser();
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPrisma.libraryDocType.count.mockResolvedValue(1);
+    mockPrisma.libraryDocType.findMany.mockResolvedValue([
+      { id: "type-1", code: "LEGISLATION" }
+    ]);
+    mockPrisma.libraryDocType.findFirst.mockResolvedValue({
+      id: "type-1",
+      firmId: actor.firmId,
+      code: "LEGISLATION",
+      isActive: true
+    });
+  });
 
 describe("library.service", () => {
   it("builds category tree for system and firm categories", async () => {
     mockPrisma.legalCategory.findMany.mockResolvedValueOnce([
       {
         id: "root",
+        typeId: "type-1",
+        documentType: "LEGISLATION",
         nameAr: "جذر",
         nameEn: "Root",
         nameFr: "Racine",
@@ -72,6 +93,8 @@ describe("library.service", () => {
       },
       {
         id: "child",
+        typeId: "type-1",
+        documentType: "LEGISLATION",
         nameAr: "فرع",
         nameEn: "Child",
         nameFr: "Enfant",
@@ -171,7 +194,9 @@ describe("library.service", () => {
     mockPrisma.legalCategory.findFirst
       .mockResolvedValueOnce({
         id: "cat-1",
+        typeId: "type-1",
         firmId: actor.firmId,
+        documentType: "LEGISLATION",
         nameAr: "A",
         nameEn: "A",
         nameFr: "A",
@@ -180,7 +205,9 @@ describe("library.service", () => {
       })
       .mockResolvedValueOnce({
         id: "cat-1",
+        typeId: "type-1",
         firmId: actor.firmId,
+        documentType: "LEGISLATION",
         nameAr: "B",
         nameEn: "B",
         nameFr: "B",
@@ -191,6 +218,7 @@ describe("library.service", () => {
 
     mockPrisma.libraryDocument.findFirst.mockResolvedValueOnce({
       id: "doc-1",
+      typeId: "type-1",
       title: "Old",
       summary: null,
       contentText: null,
@@ -204,6 +232,7 @@ describe("library.service", () => {
     });
     mockPrisma.libraryDocument.update.mockResolvedValueOnce({
       id: "doc-1",
+      typeId: "type-1",
       type: "LAW",
       scope: "SYSTEM",
       title: "New",
@@ -276,6 +305,8 @@ describe("library.service", () => {
   it("creates category under actor firm", async () => {
     mockPrisma.legalCategory.create.mockResolvedValueOnce({
       id: "cat-1",
+      typeId: "type-1",
+      documentType: "LEGISLATION",
       nameAr: "أ",
       nameEn: "A",
       nameFr: "A",
@@ -287,6 +318,7 @@ describe("library.service", () => {
       nameAr: "أ",
       nameEn: "A",
       nameFr: "A",
+      typeId: "type-1",
       slug: "a"
     });
 

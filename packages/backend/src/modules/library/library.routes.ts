@@ -14,6 +14,9 @@ import { dispatchLibraryExtraction } from "../../jobs/libraryExtractionDispatche
 import { prisma } from "../../db/prisma.js";
 import { readUploadBuffer } from "../../utils/upload.js";
 import {
+  listLibraryTypes,
+  createLibraryType,
+  updateLibraryType,
   listCategories,
   createCategory,
   updateCategory,
@@ -60,6 +63,7 @@ const articleIdParamsSchema = z.object({ articleId: z.string().min(1) });
 const annotationIdParamsSchema = z.object({ annotationId: z.string().min(1) });
 const caseIdParamsSchema = z.object({ caseId: z.string().min(1) });
 const referenceIdParamsSchema = z.object({ referenceId: z.string().min(1) });
+const typeIdParamsSchema = z.object({ typeId: z.string().min(1) });
 const caseLegalReferenceLinkBodySchema = z.object({
   documentId: z.string().min(1),
   articleId: z.string().min(1).optional(),
@@ -70,9 +74,58 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
   // ── Categories ──────────────────────────────────────────────────────────────
 
   app.get(
+    "/api/library/types",
+    { preHandler: [requireAuth, requirePermission("library:read")] },
+    async (request) => listLibraryTypes(request.sessionUser!)
+  );
+
+  app.post(
+    "/api/library/types",
+    { preHandler: [requireAuth, requirePermission("library:manage")] },
+    async (request, reply) => {
+      const body = request.body as {
+        code: string;
+        slug: string;
+        nameAr: string;
+        nameEn: string;
+        nameFr: string;
+        isActive?: boolean;
+      };
+      const result = await createLibraryType(request.sessionUser!, {
+        ...body,
+        isActive: body.isActive ?? true
+      });
+      return reply.status(201).send(result);
+    }
+  );
+
+  app.put(
+    "/api/library/types/:typeId",
+    { preHandler: [requireAuth, requirePermission("library:manage")] },
+    async (request, reply) => {
+      const { typeId } = typeIdParamsSchema.parse(request.params);
+      const body = request.body as {
+        code?: string;
+        slug?: string;
+        nameAr?: string;
+        nameEn?: string;
+        nameFr?: string;
+        isActive?: boolean;
+      };
+      const result = await updateLibraryType(request.sessionUser!, typeId, body);
+      if (!result) return reply.status(404).send({ error: "Type not found" });
+      return result;
+    }
+  );
+
+  app.get(
     "/api/library/categories",
     { preHandler: [requireAuth, requirePermission("library:read")] },
-    async (request) => listCategories(request.sessionUser!)
+    async (request) => {
+      const q = request.query as Record<string, string>;
+      const typeId = q.typeId;
+      return listCategories(request.sessionUser!, typeId);
+    }
   );
 
   app.post(
@@ -84,6 +137,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
         nameEn: string;
         nameFr: string;
         slug: string;
+        typeId: string;
         parentId?: string;
       };
       const result = await createCategory(request.sessionUser!, body);
@@ -101,6 +155,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
         nameEn?: string;
         nameFr?: string;
         slug?: string;
+        typeId?: string;
         parentId?: string | null;
       };
       const result = await updateCategory(request.sessionUser!, categoryId, body);
@@ -132,7 +187,15 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
         : undefined;
       return listDocuments(
         request.sessionUser!,
-        { type, scope: q.scope, categoryId: q.categoryId, dateFrom: q.dateFrom, dateTo: q.dateTo, q: q.q },
+        {
+          type,
+          typeId: q.typeId,
+          scope: q.scope,
+          categoryId: q.categoryId,
+          dateFrom: q.dateFrom,
+          dateTo: q.dateTo,
+          q: q.q
+        },
         Number(q.page) || 1,
         Number(q.limit) || 20
       );
@@ -279,6 +342,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
         normalizedQuery,
         {
           type: q.type && Object.values(LibraryDocumentType).includes(q.type as LibraryDocumentType) ? q.type : undefined,
+          typeId: q.typeId,
           scope: q.scope,
           categoryId: q.categoryId
         },
@@ -311,15 +375,21 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
       const fields = data.fields as Record<string, { value: string }>;
       const title    = fields.title?.value ?? data.filename;
       const submittedType = fields.type?.value;
+      const typeId = fields.typeId?.value || undefined;
       const type = submittedType && Object.values(LibraryDocumentType).includes(submittedType as LibraryDocumentType)
         ? submittedType
         : LibraryDocumentType.LEGISLATION;
-      const requestedScope = (fields.scope?.value ?? "FIRM") as "SYSTEM" | "FIRM";
-      const canManageLibrary = actor.permissions.includes("library:manage");
-      if (!canManageLibrary && requestedScope === "SYSTEM") {
-        return reply.status(403).send({ message: "Only library managers can upload system library documents" });
+      if (!typeId) {
+        return reply.status(400).send({ message: "Library type is required" });
       }
-      const scope = canManageLibrary ? requestedScope : "FIRM";
+      const typeRecord = await prisma.libraryDocType.findFirst({
+        where: { id: typeId, firmId: actor.firmId, isActive: true },
+        select: { id: true, code: true }
+      });
+      if (!typeRecord) {
+        return reply.status(404).send({ message: "Library type not found or inactive" });
+      }
+      const scope = "FIRM";
       const categoryId   = fields.categoryId?.value || undefined;
       const lawNumber    = fields.lawNumber?.value || undefined;
       const lawYear      = fields.lawYear?.value ? Number(fields.lawYear.value) : undefined;
@@ -328,6 +398,24 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
       const author         = fields.author?.value || undefined;
       const publishedAt    = fields.publishedAt?.value || undefined;
       const legislationStatus = fields.legislationStatus?.value || undefined;
+
+      if (categoryId) {
+        const category = await prisma.legalCategory.findFirst({
+          where: {
+            id: categoryId,
+            firmId: actor.firmId
+          },
+          select: { id: true, typeId: true, documentType: true }
+        });
+        if (!category) {
+          return reply.status(404).send({ message: "Category not found" });
+        }
+        if (category.typeId !== typeId) {
+          return reply
+            .status(400)
+            .send({ message: "Category does not match selected document type" });
+        }
+      }
 
       const docId = randomUUID();
       const safeFilename = sanitizeFilename(data.filename);
@@ -345,9 +433,10 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
         doc = await prisma.libraryDocument.create({
           data: {
             id: docId,
-            firmId: scope === "SYSTEM" ? null : actor.firmId,
+            firmId: actor.firmId,
             scope,
-            type,
+            typeId,
+            type: typeRecord.code ?? type,
             title,
             categoryId: categoryId ?? null,
             lawNumber: lawNumber ?? null,

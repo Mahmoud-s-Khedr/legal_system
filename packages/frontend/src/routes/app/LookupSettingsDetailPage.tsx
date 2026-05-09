@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -10,6 +11,7 @@ import type {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { resolveFormValidationError } from "../../lib/formValidation";
+import { useHasPermission } from "../../store/authStore";
 import { pickFieldError } from "../../lib/validationErrors";
 import {
   EmptyState,
@@ -32,6 +34,8 @@ export function LookupSettingsDetailPage() {
   const { t } = useTranslation("app");
   const { entity } = useParams({ from: "/app/settings/lookups/$entity" });
   const queryClient = useQueryClient();
+  const canManageLibrary = useHasPermission("library:manage");
+  const isLibraryDocType = entity === "LibraryDocType";
 
   const optionsQuery = useQuery({
     queryKey: ["lookups", entity],
@@ -110,6 +114,25 @@ export function LookupSettingsDetailPage() {
         title={t(`lookups.entities.${entity}`, entity)}
         description={t("lookups.detailDescription")}
       />
+      {isLibraryDocType ? (
+        <SectionCard
+          title={t("lookups.libraryDocTypeHintTitle")}
+          description={
+            canManageLibrary
+              ? t("lookups.libraryDocTypeHintWithAccess")
+              : t("lookups.libraryDocTypeHintNoAccess")
+          }
+        >
+          {canManageLibrary ? (
+            <Link
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold transition hover:border-accent"
+              to="/app/library/admin"
+            >
+              {t("lookups.openLibraryAdmin")}
+            </Link>
+          ) : null}
+        </SectionCard>
+      ) : null}
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <SectionCard
           title={t("lookups.optionsList")}

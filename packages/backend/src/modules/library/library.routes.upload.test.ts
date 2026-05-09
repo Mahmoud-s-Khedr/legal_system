@@ -7,6 +7,12 @@ const fileTypeFromBuffer = vi.fn();
 const requirePermission = vi.fn((permission: string) => `perm:${permission}`);
 
 const prisma = {
+  libraryDocType: {
+    findFirst: vi.fn()
+  },
+  legalCategory: {
+    findFirst: vi.fn()
+  },
   libraryDocument: {
     create: vi.fn(),
     findFirst: vi.fn()
@@ -42,6 +48,9 @@ vi.mock("../editions/editionPolicy.js", () => ({
 }));
 
 vi.mock("./library.service.js", () => ({
+  listLibraryTypes: vi.fn(),
+  createLibraryType: vi.fn(),
+  updateLibraryType: vi.fn(),
   listCategories: vi.fn(),
   createCategory: vi.fn(),
   updateCategory: vi.fn(),
@@ -110,6 +119,15 @@ describe("library upload route authorization", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fileTypeFromBuffer.mockResolvedValue({ mime: "application/pdf" });
+    prisma.libraryDocType.findFirst.mockResolvedValue({
+      id: "type-1",
+      code: "LEGISLATION"
+    });
+    prisma.legalCategory.findFirst.mockResolvedValue({
+      id: "cat-1",
+      typeId: "type-1",
+      documentType: "LEGISLATION"
+    });
     prisma.libraryDocument.create.mockResolvedValue({ id: "doc-1" });
   });
 
@@ -137,7 +155,9 @@ describe("library upload route authorization", () => {
         file: Readable.from(Buffer.from("pdf-bytes")),
         fields: {
           title: { value: "Law 1" },
-          scope: { value: "FIRM" }
+          typeId: { value: "type-1" },
+          scope: { value: "FIRM" },
+          categoryId: { value: "cat-1" }
         }
       })
     };
@@ -179,7 +199,9 @@ describe("library upload route authorization", () => {
             ? {
                 title: { value: "Law Parsed After Stream" },
                 type: { value: "LEGISLATION" },
-                scope: { value: "FIRM" }
+                typeId: { value: "type-1" },
+                scope: { value: "FIRM" },
+                categoryId: { value: "cat-1" }
               }
             : {};
         }
@@ -196,13 +218,16 @@ describe("library upload route authorization", () => {
     expect(createArgs?.data?.scope).toBe("FIRM");
   });
 
-  it("rejects system-scope upload for non-managers", async () => {
+  it("forces firm scope even when system scope is requested", async () => {
     const app = createApp();
     await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
     const uploadCall = app.post.mock.calls.find((call) => call[0] === "/api/library/documents/upload");
     const handler = uploadCall?.[2] as (request: unknown, reply: unknown) => Promise<unknown>;
 
-    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const actor = makeSessionUser({
+      permissions: ["library:read", "library:manage"],
+      firmId: "firm-1"
+    });
     const request = {
       sessionUser: actor,
       file: vi.fn().mockResolvedValue({
@@ -210,33 +235,7 @@ describe("library upload route authorization", () => {
         file: Readable.from(Buffer.from("pdf-bytes")),
         fields: {
           title: { value: "Law 1" },
-          scope: { value: "SYSTEM" }
-        }
-      })
-    };
-    const reply = createReplyRecorder();
-
-    await handler(request, reply);
-
-    expect(reply.statusCode).toBe(403);
-    expect(reply.payload).toEqual({ message: "Only library managers can upload system library documents" });
-    expect(prisma.libraryDocument.create).not.toHaveBeenCalled();
-  });
-
-  it("allows system-scope upload for library managers", async () => {
-    const app = createApp();
-    await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
-    const uploadCall = app.post.mock.calls.find((call) => call[0] === "/api/library/documents/upload");
-    const handler = uploadCall?.[2] as (request: unknown, reply: unknown) => Promise<unknown>;
-
-    const actor = makeSessionUser({ permissions: ["library:read", "library:manage"], firmId: "firm-1" });
-    const request = {
-      sessionUser: actor,
-      file: vi.fn().mockResolvedValue({
-        filename: "law.pdf",
-        file: Readable.from(Buffer.from("pdf-bytes")),
-        fields: {
-          title: { value: "Law 1" },
+          typeId: { value: "type-1" },
           scope: { value: "SYSTEM" }
         }
       })
@@ -247,8 +246,8 @@ describe("library upload route authorization", () => {
 
     expect(reply.statusCode).toBe(201);
     const createArgs = prisma.libraryDocument.create.mock.calls[0]?.[0];
-    expect(createArgs?.data?.scope).toBe("SYSTEM");
-    expect(createArgs?.data?.firmId).toBeNull();
+    expect(createArgs?.data?.scope).toBe("FIRM");
+    expect(createArgs?.data?.firmId).toBe("firm-1");
   });
 
   it("accepts newly allowed image MIME types", async () => {
@@ -267,6 +266,7 @@ describe("library upload route authorization", () => {
         file: Readable.from(Buffer.from("webp-bytes")),
         fields: {
           title: { value: "WebP Scan" },
+          typeId: { value: "type-1" },
           scope: { value: "FIRM" }
         }
       })
@@ -363,5 +363,42 @@ describe("library upload route authorization", () => {
       "Content-Disposition",
       'attachment; filename="Law%201.pdf"'
     );
+  });
+
+  it("rejects category that does not match document type", async () => {
+    const app = createApp();
+    await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
+    const uploadCall = app.post.mock.calls.find((call) => call[0] === "/api/library/documents/upload");
+    const handler = uploadCall?.[2] as (request: unknown, reply: unknown) => Promise<unknown>;
+
+    prisma.legalCategory.findFirst.mockResolvedValueOnce({
+      id: "cat-2",
+      typeId: "type-2",
+      documentType: "JUDGMENT"
+    });
+
+    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const request = {
+      sessionUser: actor,
+      file: vi.fn().mockResolvedValue({
+        filename: "law.pdf",
+        file: Readable.from(Buffer.from("pdf-bytes")),
+        fields: {
+          title: { value: "Law 1" },
+          typeId: { value: "type-1" },
+          type: { value: "LEGISLATION" },
+          categoryId: { value: "cat-2" }
+        }
+      })
+    };
+    const reply = createReplyRecorder();
+
+    await handler(request, reply);
+
+    expect(reply.statusCode).toBe(400);
+    expect(reply.payload).toEqual({
+      message: "Category does not match selected document type"
+    });
+    expect(prisma.libraryDocument.create).not.toHaveBeenCalled();
   });
 });
