@@ -56,4 +56,26 @@ describe("templateEditor", () => {
     expect(html).toContain("<a");
     expect(html).not.toContain("javascript:");
   });
+
+  it("preserves bullet and ordered lists during normalization", () => {
+    const html = normalizeTemplateHtml(
+      "<ul><li>First bullet</li><li>Second bullet</li></ul><ol><li>First number</li><li>Second number</li></ol>"
+    );
+    expect(html).toContain("<ul>");
+    expect(html).toContain("</ul>");
+    expect(html).toContain("<ol>");
+    expect(html).toContain("</ol>");
+    expect(html).toContain("<li>First bullet</li>");
+    expect(html).toContain("<li>First number</li>");
+  });
+
+  it("preserves bullet and ordered lists during sanitization", () => {
+    const html = sanitizeTemplateHtml(
+      "<ul><li>Alpha</li></ul><ol><li>One</li></ol>"
+    );
+    expect(html).toContain("<ul>");
+    expect(html).toContain("<ol>");
+    expect(html).toContain("<li>Alpha</li>");
+    expect(html).toContain("<li>One</li>");
+  });
 });

@@ -241,7 +241,7 @@ export function TemplateEditPage() {
               {t("templates.previewRich")}
             </p>
             <div
-              className="prose prose-sm max-w-none"
+              className="template-render-content prose prose-sm max-w-none"
               dir="auto"
               dangerouslySetInnerHTML={{ __html: previewHtml }}
             />
