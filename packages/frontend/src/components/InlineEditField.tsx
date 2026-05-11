@@ -1,6 +1,8 @@
 import { useState, type InputHTMLAttributes } from "react";
 import { Check, X, Pencil } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { pickFieldError } from "../lib/validationErrors";
+import { resolveFormValidationError } from "../lib/formValidation";
 
 interface SelectOption {
   label: string;
@@ -26,6 +28,12 @@ interface Props {
   autoComplete?: string;
   /** Extra classes on the wrapper */
   className?: string;
+  /** Require non-empty value before save */
+  required?: boolean;
+  /** Minimum length for text/textarea values */
+  minLength?: number;
+  /** Candidate backend validation field paths for this inline editor */
+  fieldErrorPaths?: string[];
 }
 
 /**
@@ -42,7 +50,10 @@ export function InlineEditField({
   dir,
   inputMode,
   autoComplete,
-  className
+  className,
+  required = false,
+  minLength,
+  fieldErrorPaths = []
 }: Props) {
   const { t } = useTranslation("app");
   const [editing, setEditing] = useState(false);
@@ -62,13 +73,37 @@ export function InlineEditField({
   }
 
   async function confirmEdit() {
+    const normalized = draft.trim();
+    if ((type === "text" || type === "textarea") && required && normalized.length === 0) {
+      setError(t("errors.validation.issue.required"));
+      return;
+    }
+    if (
+      (type === "text" || type === "textarea") &&
+      typeof minLength === "number" &&
+      normalized.length > 0 &&
+      normalized.length < minLength
+    ) {
+      setError(
+        t("errors.validation.issue.tooSmall", {
+          minimum: minLength
+        })
+      );
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await onSave(draft);
       setEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      if (resolved.isValidationError) {
+        const fieldError = pickFieldError(resolved.fieldErrors, fieldErrorPaths);
+        setError(fieldError ?? t("errors.validation.summary"));
+      } else {
+        setError(resolved.message);
+      }
     } finally {
       setSaving(false);
     }

@@ -624,6 +624,14 @@
     "addCourtHelp": "Rattachez une nouvelle juridiction à la progression du dossier.",
     "editCourt": "Modifier l'étape",
     "editCourtHelp": "Mettez à jour les informations ou marquez l'étape comme terminée.",
+    "validation": {
+      "court": {
+        "summary": "Veuillez compléter les champs obligatoires de la juridiction et corriger les dates invalides.",
+        "courtLevelRequired": "Veuillez sélectionner un degré de juridiction.",
+        "governorateRequiredForCity": "Sélectionnez un gouvernorat avant de choisir une ville.",
+        "endDateBeforeStartDate": "La date de fin ne peut pas être antérieure à la date de début."
+      }
+    },
     "overview": "Vue du dossier",
     "overviewHelp": "Métadonnées de base et charge de travail de ce dossier.",
     "parties": "Parties",

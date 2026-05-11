@@ -338,6 +338,26 @@ async function resolveCityCourtName(
   return cityRow.labelAr;
 }
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseDateOnlyFilter(
+  value: string | undefined,
+  fieldName: "createdFrom" | "createdTo"
+): Date | undefined {
+  if (!value) return undefined;
+
+  if (!DATE_ONLY_PATTERN.test(value)) {
+    throw appError(`${fieldName} must be in YYYY-MM-DD format`, 422);
+  }
+
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    throw appError(`${fieldName} must be a valid date`, 422);
+  }
+
+  return new Date(timestamp);
+}
+
 export async function listCases(
   actor: SessionUser,
   query: {
@@ -358,6 +378,12 @@ export async function listCases(
   const searchCandidates = buildFuzzySearchCandidates(q);
   const sortBy = normalizeSort(query.sortBy, ["updatedAt", "createdAt", "title", "caseNumber", "status"] as const, "updatedAt");
   const sortDir = toPrismaSortOrder(query.sortDir ?? "desc");
+  const createdFrom = parseDateOnlyFilter(query.createdFrom, "createdFrom");
+  const createdTo = parseDateOnlyFilter(query.createdTo, "createdTo");
+
+  if (createdFrom && createdTo && createdFrom.getTime() > createdTo.getTime()) {
+    throw appError("createdFrom cannot be later than createdTo", 422);
+  }
 
   return withTenant(prisma, actor.firmId, async (tx) => {
     const where = {
@@ -368,11 +394,11 @@ export async function listCases(
       ...(query.assignedLawyerId
         ? { assignments: { some: { userId: query.assignedLawyerId, unassignedAt: null } } }
         : {}),
-      ...(query.createdFrom || query.createdTo
+      ...(createdFrom || createdTo
         ? {
             createdAt: {
-              ...(query.createdFrom ? { gte: new Date(query.createdFrom) } : {}),
-              ...(query.createdTo ? { lte: new Date(query.createdTo) } : {})
+              ...(createdFrom ? { gte: createdFrom } : {}),
+              ...(createdTo ? { lte: createdTo } : {})
             }
           }
         : {}),

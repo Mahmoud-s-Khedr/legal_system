@@ -160,6 +160,58 @@ describe("listCases", () => {
       expect.objectContaining({ skip: 20, take: 10 })
     );
   });
+
+  it("applies valid createdFrom/createdTo filters as Date values", async () => {
+    mockCaseDb.count.mockResolvedValue(0);
+    mockCaseDb.findMany.mockResolvedValue([]);
+
+    await listCases(actor, {
+      createdFrom: "2026-05-01",
+      createdTo: "2026-05-31",
+      page: 1,
+      limit: 20
+    });
+
+    expect(mockCaseDb.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          createdAt: expect.objectContaining({
+            gte: expect.any(Date),
+            lte: expect.any(Date)
+          })
+        })
+      })
+    );
+  });
+
+  it("rejects invalid createdFrom format with 422", async () => {
+    await expect(
+      listCases(actor, {
+        createdFrom: "31-05-2026",
+        page: 1,
+        limit: 20
+      })
+    ).rejects.toMatchObject({
+      statusCode: 422
+    });
+
+    expect(mockCaseDb.findMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects when createdFrom is later than createdTo", async () => {
+    await expect(
+      listCases(actor, {
+        createdFrom: "2026-06-01",
+        createdTo: "2026-05-01",
+        page: 1,
+        limit: 20
+      })
+    ).rejects.toMatchObject({
+      statusCode: 422
+    });
+
+    expect(mockCaseDb.findMany).not.toHaveBeenCalled();
+  });
 });
 
 describe("getCase", () => {

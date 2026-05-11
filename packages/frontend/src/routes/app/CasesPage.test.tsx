@@ -6,6 +6,7 @@ const mockUseQuery = vi.fn();
 const mockUseTableQueryState = vi.fn();
 const mockUseLocalizedLookupOptions = vi.fn();
 const mockUseAuthBootstrap = vi.fn();
+const mockApiFetch = vi.fn();
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args)
@@ -33,7 +34,7 @@ vi.mock("react-i18next", async () => {
 });
 
 vi.mock("../../lib/api", () => ({
-  apiFetch: vi.fn()
+  apiFetch: (...args: unknown[]) => mockApiFetch(...args)
 }));
 
 vi.mock("../../lib/tableQueryState", () => ({
@@ -153,6 +154,7 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockApiFetch.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
   mockUseTableQueryState.mockReturnValue({
     state: {
       q: "",
@@ -181,24 +183,27 @@ beforeEach(() => {
     getLabel: (key: string) => key
   });
   mockUseAuthBootstrap.mockReturnValue({ user: { id: "user-1" } });
-  mockUseQuery.mockReturnValue({
-    isLoading: false,
-    isError: false,
-    data: {
-      items: [
-        {
-          id: "case-1",
-          title: "Lease dispute",
-          caseNumber: "12/2026",
-          internalRef: "S-100",
-          judicialYear: 2026,
-          status: "OPEN"
-        }
-      ],
-      total: 1
-    },
-    error: null,
-    refetch: vi.fn()
+  mockUseQuery.mockImplementation(({ queryFn }: { queryFn: () => unknown }) => {
+    void queryFn();
+    return {
+      isLoading: false,
+      isError: false,
+      data: {
+        items: [
+          {
+            id: "case-1",
+            title: "Lease dispute",
+            caseNumber: "12/2026",
+            internalRef: "S-100",
+            judicialYear: 2026,
+            status: "OPEN"
+          }
+        ],
+        total: 1
+      },
+      error: null,
+      refetch: vi.fn()
+    };
   });
 });
 
@@ -210,5 +215,39 @@ describe("CasesPage", () => {
     expect(view.textContent).toContain("labels.judicialYear");
     expect(view.textContent).toContain("S-100");
     expect(view.textContent).toContain("2026");
+  });
+
+  it("sends canonical createdFrom/createdTo and drops malformed date filters", () => {
+    mockUseTableQueryState.mockReturnValueOnce({
+      state: {
+        q: "",
+        sortBy: "updatedAt",
+        sortDir: "desc",
+        page: 1,
+        limit: 20,
+        filters: {
+          status: "",
+          type: "",
+          assignedLawyerId: "",
+          createdFrom: "2026-05-03",
+          createdTo: "2026-13-99"
+        }
+      },
+      setQ: vi.fn(),
+      setPage: vi.fn(),
+      setLimit: vi.fn(),
+      setSort: vi.fn(),
+      setFilter: vi.fn(),
+      toApiQueryString: () => "page=1&limit=20"
+    });
+
+    render();
+
+    const caseRequest = mockApiFetch.mock.calls.find(
+      (call) => typeof call[0] === "string" && String(call[0]).startsWith("/api/cases?")
+    )?.[0];
+    expect(typeof caseRequest).toBe("string");
+    expect(String(caseRequest)).toContain("createdFrom=2026-05-03");
+    expect(String(caseRequest)).not.toContain("createdTo=");
   });
 });

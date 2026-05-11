@@ -2,10 +2,12 @@ import { act } from "react";
 import type { ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { EditionKey, FirmLifecycleStatus } from "@elms/shared";
 import i18n from "../i18n";
 import { router } from "../router";
 import { AuthShell } from "./auth/AuthShell";
 import { AboutPage } from "./public/AboutPage";
+import { useAuthBootstrap } from "../store/authStore";
 
 vi.mock("@tanstack/react-router", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
@@ -53,6 +55,12 @@ describe("contact integration smoke", () => {
   });
 
   afterEach(() => {
+    useAuthBootstrap.setState({
+      user: null,
+      mode: null,
+      needsSetup: false,
+      isBootstrapped: false
+    });
     if (root) {
       act(() => {
         root?.unmount();
@@ -92,5 +100,32 @@ describe("contact integration smoke", () => {
       view.querySelector("a[href='mailto:mahmoud.s.khedr.2@gmail.com']")
     ).not.toBeNull();
     expect(view.querySelector("a[href='tel:01016240934']")).not.toBeNull();
+  });
+
+  it("keeps authenticated users inside app navigation on about page", () => {
+    useAuthBootstrap.setState({
+      user: {
+        id: "u1",
+        firmId: "f1",
+        editionKey: EditionKey.SOLO_OFFLINE,
+        pendingEditionKey: null,
+        lifecycleStatus: FirmLifecycleStatus.ACTIVE,
+        trialEndsAt: null,
+        graceEndsAt: null,
+        roleId: "r1",
+        roleKey: "admin",
+        email: "user@elms.local",
+        fullName: "Test User",
+        preferredLanguage: "en",
+        permissions: ["dashboard:read"]
+      },
+      mode: "local",
+      needsSetup: false,
+      isBootstrapped: true
+    });
+
+    const view = render(<AboutPage />);
+    expect(view.querySelectorAll("a[href='/app/dashboard']")).toHaveLength(1);
+    expect(view.querySelector("a[href='/login']")).toBeNull();
   });
 });

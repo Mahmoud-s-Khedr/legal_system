@@ -32,6 +32,22 @@ import {
   TableWrapper
 } from "./ui";
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function normalizeDateFilter(value: string | undefined) {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed || !DATE_ONLY_PATTERN.test(trimmed)) {
+    return "";
+  }
+
+  const timestamp = Date.parse(trimmed);
+  if (Number.isNaN(timestamp)) {
+    return "";
+  }
+
+  return trimmed;
+}
+
 export function CasesPage() {
   const { t } = useTranslation("app");
   const { user } = useAuthBootstrap();
@@ -58,13 +74,13 @@ export function CasesPage() {
   const effectiveLawyerId = assignedToMe
     ? (user?.id ?? "")
     : (table.state.filters.assignedLawyerId ?? "");
+  const createdFrom = normalizeDateFilter(table.state.filters.createdFrom);
+  const createdTo = normalizeDateFilter(table.state.filters.createdTo);
 
   const extraParams = new URLSearchParams();
   if (effectiveLawyerId) extraParams.set("assignedLawyerId", effectiveLawyerId);
-  if (table.state.filters.createdFrom)
-    extraParams.set("createdFrom", table.state.filters.createdFrom);
-  if (table.state.filters.createdTo)
-    extraParams.set("createdTo", table.state.filters.createdTo);
+  if (createdFrom) extraParams.set("createdFrom", createdFrom);
+  if (createdTo) extraParams.set("createdTo", createdTo);
   const extraStr = extraParams.toString();
 
   const casesQuery = useQuery({

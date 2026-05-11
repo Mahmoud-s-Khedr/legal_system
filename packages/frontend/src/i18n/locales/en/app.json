@@ -624,6 +624,14 @@
     "addCourtHelp": "Attach a new court to the case progression.",
     "editCourt": "Edit court stage",
     "editCourtHelp": "Update court details or mark the stage as ended.",
+    "validation": {
+      "court": {
+        "summary": "Please complete the required court fields and fix any invalid dates.",
+        "courtLevelRequired": "Please select a court level.",
+        "governorateRequiredForCity": "Select a governorate before selecting a city.",
+        "endDateBeforeStartDate": "End date cannot be earlier than start date."
+      }
+    },
     "overview": "Case overview",
     "overviewHelp": "Core metadata and workload summary for this case.",
     "parties": "Parties",

@@ -138,6 +138,130 @@ describe("registerCaseRoutes", () => {
     );
   });
 
+  it("forwards a valid assigned lawyer UUID filter", async () => {
+    const app = createApp();
+    const actor = makeSessionUser({ permissions: ["cases:read"] });
+    parsePaginationQuery.mockReturnValueOnce({ page: 1, limit: 20 });
+    listCases.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+
+    await registerCaseRoutes(app as never);
+
+    const listCall = app.get.mock.calls.find((entry) => entry[0] === "/api/cases") as
+      | [string, { preHandler: unknown[] }, (request: unknown) => Promise<unknown>]
+      | undefined;
+
+    const lawyerId = "ab3bb1a8-b6a0-43a8-90aa-eeb5f126f303";
+    await listCall![2]({
+      query: { assignedLawyerId: lawyerId, page: "1", limit: "20" },
+      sessionUser: actor
+    });
+
+    expect(listCases).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({ assignedLawyerId: lawyerId })
+    );
+  });
+
+  it("forwards valid date-only filters", async () => {
+    const app = createApp();
+    const actor = makeSessionUser({ permissions: ["cases:read"] });
+    parsePaginationQuery.mockReturnValueOnce({ page: 1, limit: 20 });
+    listCases.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+
+    await registerCaseRoutes(app as never);
+
+    const listCall = app.get.mock.calls.find((entry) => entry[0] === "/api/cases") as
+      | [string, { preHandler: unknown[] }, (request: unknown) => Promise<unknown>]
+      | undefined;
+
+    await listCall![2]({
+      query: { createdFrom: "2026-05-01", createdTo: "2026-05-31", page: "1", limit: "20" },
+      sessionUser: actor
+    });
+
+    expect(listCases).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({
+        createdFrom: "2026-05-01",
+        createdTo: "2026-05-31"
+      })
+    );
+  });
+
+  it("rejects invalid date filter format before calling service", async () => {
+    const app = createApp();
+    const actor = makeSessionUser({ permissions: ["cases:read"] });
+
+    await registerCaseRoutes(app as never);
+
+    const listCall = app.get.mock.calls.find((entry) => entry[0] === "/api/cases") as
+      | [string, { preHandler: unknown[] }, (request: unknown) => Promise<unknown>]
+      | undefined;
+
+    await expect(
+      listCall![2]({
+        query: { createdFrom: "05/01/2026", page: "1", limit: "20" },
+        sessionUser: actor
+      })
+    ).rejects.toThrow();
+
+    expect(parsePaginationQuery).not.toHaveBeenCalled();
+    expect(listCases).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid assigned lawyer id before calling service", async () => {
+    const app = createApp();
+    const actor = makeSessionUser({ permissions: ["cases:read"] });
+
+    await registerCaseRoutes(app as never);
+
+    const listCall = app.get.mock.calls.find((entry) => entry[0] === "/api/cases") as
+      | [string, { preHandler: unknown[] }, (request: unknown) => Promise<unknown>]
+      | undefined;
+
+    await expect(
+      listCall![2]({
+        query: { assignedLawyerId: "big borg", page: "1", limit: "20" },
+        sessionUser: actor
+      })
+    ).rejects.toThrow();
+
+    expect(parsePaginationQuery).not.toHaveBeenCalled();
+    expect(listCases).not.toHaveBeenCalled();
+  });
+
+  it("normalizes empty query values to undefined", async () => {
+    const app = createApp();
+    const actor = makeSessionUser({ permissions: ["cases:read"] });
+    parsePaginationQuery.mockReturnValueOnce({ page: 1, limit: 20 });
+    listCases.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
+
+    await registerCaseRoutes(app as never);
+
+    const listCall = app.get.mock.calls.find((entry) => entry[0] === "/api/cases") as
+      | [string, { preHandler: unknown[] }, (request: unknown) => Promise<unknown>]
+      | undefined;
+
+    await listCall![2]({
+      query: { q: "   ", assignedLawyerId: "   ", page: "1", limit: "20" },
+      sessionUser: actor
+    });
+
+    expect(parsePaginationQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        q: undefined,
+        assignedLawyerId: undefined
+      })
+    );
+    expect(listCases).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({
+        q: undefined,
+        assignedLawyerId: undefined
+      })
+    );
+  });
+
   it("rejects invalid party payloads before calling service", async () => {
     const app = createApp();
     await registerCaseRoutes(app as never);

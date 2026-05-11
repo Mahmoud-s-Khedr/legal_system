@@ -407,6 +407,8 @@ export function CaseDetailPage() {
               </dt>
               <dd className="mt-0.5">
                 <InlineEditField
+                  fieldErrorPaths={["title"]}
+                  minLength={2}
                   onSave={async (v) => {
                     await apiFetch(`/api/cases/${caseId}`, {
                       method: "PUT",
@@ -425,6 +427,7 @@ export function CaseDetailPage() {
                       queryKey: ["cases"]
                     });
                   }}
+                  required
                   value={caseItem.title}
                 />
               </dd>
@@ -435,6 +438,7 @@ export function CaseDetailPage() {
               </dt>
               <dd className="mt-0.5">
                 <InlineEditField
+                  fieldErrorPaths={["status"]}
                   onSave={async (v) => {
                     await apiFetch(`/api/cases/${caseId}/status`, {
                       method: "PATCH",
@@ -1134,6 +1138,38 @@ function Detail({ label, value }: { label: string; value: string | null }) {
   );
 }
 
+type CourtFormErrors = Partial<
+  Record<"governorateValue" | "cityValue" | "courtLevel" | "startedAt" | "endedAt", string>
+>;
+
+function validateCourtDates({
+  startedAt,
+  endedAt,
+  t
+}: {
+  startedAt?: string | null;
+  endedAt?: string | null;
+  t: (key: string) => string;
+}): CourtFormErrors {
+  const errors: CourtFormErrors = {};
+  if (startedAt && Number.isNaN(Date.parse(startedAt))) {
+    errors.startedAt = t("errors.validation.issue.invalidDate");
+  }
+  if (endedAt && Number.isNaN(Date.parse(endedAt))) {
+    errors.endedAt = t("errors.validation.issue.invalidDate");
+  }
+  if (
+    startedAt &&
+    endedAt &&
+    !errors.startedAt &&
+    !errors.endedAt &&
+    new Date(endedAt).getTime() < new Date(startedAt).getTime()
+  ) {
+    errors.endedAt = t("cases.validation.court.endDateBeforeStartDate");
+  }
+  return errors;
+}
+
 function CourtAddForm({
   courtLevelOptions,
   courtTypeOptions,
@@ -1150,6 +1186,8 @@ function CourtAddForm({
   t: (key: string) => string;
 }) {
   const [form, setForm] = useState<CreateCaseCourtDto>(EMPTY_COURT);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<CourtFormErrors>({});
   const { i18n } = useTranslation("app");
   const governorateQuery = useGovernorateLookups();
   const cityQuery = useCityLookups(form.governorateValue);
@@ -1162,6 +1200,8 @@ function CourtAddForm({
   useEffect(() => {
     if (resetToken > 0) {
       setForm(EMPTY_COURT);
+      setValidationMessage(null);
+      setFieldErrors({});
     }
   }, [resetToken]);
 
@@ -1170,20 +1210,43 @@ function CourtAddForm({
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
+        const errors: CourtFormErrors = {};
+        if (!form.courtLevel?.trim()) {
+          errors.courtLevel = t("cases.validation.court.courtLevelRequired");
+        }
+        if (form.cityValue?.trim() && !form.governorateValue?.trim()) {
+          errors.governorateValue = t("cases.validation.court.governorateRequiredForCity");
+        }
+        Object.assign(errors, validateCourtDates({ startedAt: form.startedAt, t }));
+        if (Object.keys(errors).length > 0) {
+          setFieldErrors(errors);
+          setValidationMessage(t("cases.validation.court.summary"));
+          return;
+        }
+        setValidationMessage(null);
+        setFieldErrors({});
         onSubmit(form);
       }}
     >
       <SelectField
         label={t("labels.governorate")}
-        onChange={(v) => setForm({ ...form, governorateValue: v, cityValue: "" })}
+        onChange={(v) => {
+          setForm({ ...form, governorateValue: v, cityValue: "" });
+          setFieldErrors((prev) => ({ ...prev, governorateValue: undefined, cityValue: undefined }));
+        }}
         options={[{ value: "", label: t("labels.none") }, ...governorateOptions]}
         value={form.governorateValue ?? ""}
+        error={fieldErrors.governorateValue}
       />
       <SelectField
         label={t("labels.city")}
-        onChange={(v) => setForm({ ...form, cityValue: v })}
+        onChange={(v) => {
+          setForm({ ...form, cityValue: v });
+          setFieldErrors((prev) => ({ ...prev, cityValue: undefined, governorateValue: undefined }));
+        }}
         options={[{ value: "", label: t("labels.none") }, ...cityOptions]}
         value={form.cityValue ?? ""}
+        error={fieldErrors.cityValue}
       />
       <SelectField
         label={t("labels.courtType")}
@@ -1193,13 +1256,18 @@ function CourtAddForm({
       />
       <SelectField
         label={t("labels.courtLevel")}
-        onChange={(v) => setForm({ ...form, courtLevel: v })}
+        onChange={(v) => {
+          setForm({ ...form, courtLevel: v });
+          setFieldErrors((prev) => ({ ...prev, courtLevel: undefined }));
+        }}
         options={
           courtLevelOptions.length
             ? courtLevelOptions
             : [{ value: "PRIMARY", label: "Primary" }]
         }
         value={form.courtLevel}
+        required
+        error={fieldErrors.courtLevel}
       />
       <Field
         label={t("labels.circuit")}
@@ -1208,14 +1276,19 @@ function CourtAddForm({
       />
       <Field
         label={t("labels.startDate")}
-        onChange={(v) => setForm({ ...form, startedAt: v })}
+        onChange={(v) => {
+          setForm({ ...form, startedAt: v });
+          setFieldErrors((prev) => ({ ...prev, startedAt: undefined, endedAt: undefined }));
+        }}
         type="date"
         commitMode="blur"
         value={form.startedAt ?? ""}
+        error={fieldErrors.startedAt}
       />
       <PrimaryButton disabled={isPending} type="submit">
         {isPending ? "..." : t("cases.addCourt")}
       </PrimaryButton>
+      {validationMessage ? <FormAlert message={validationMessage} /> : null}
     </form>
   );
 }
@@ -1249,6 +1322,8 @@ function CourtEditForm({
     isActive: court.isActive,
     notes: court.notes ?? ""
   });
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<CourtFormErrors>({});
   const { i18n } = useTranslation("app");
   const governorateQuery = useGovernorateLookups();
   const cityQuery = useCityLookups(form.governorateValue);
@@ -1267,6 +1342,24 @@ function CourtEditForm({
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
+        const errors: CourtFormErrors = {};
+        if (!form.courtLevel?.trim()) {
+          errors.courtLevel = t("cases.validation.court.courtLevelRequired");
+        }
+        if (form.cityValue?.trim() && !form.governorateValue?.trim()) {
+          errors.governorateValue = t("cases.validation.court.governorateRequiredForCity");
+        }
+        Object.assign(
+          errors,
+          validateCourtDates({ startedAt: form.startedAt, endedAt: form.endedAt, t })
+        );
+        if (Object.keys(errors).length > 0) {
+          setFieldErrors(errors);
+          setValidationMessage(t("cases.validation.court.summary"));
+          return;
+        }
+        setValidationMessage(null);
+        setFieldErrors({});
         onSubmit({
           ...form,
           courtType: form.courtType || null,
@@ -1281,15 +1374,23 @@ function CourtEditForm({
     >
       <SelectField
         label={t("labels.governorate")}
-        onChange={(v) => setForm({ ...form, governorateValue: v, cityValue: "" })}
+        onChange={(v) => {
+          setForm({ ...form, governorateValue: v, cityValue: "" });
+          setFieldErrors((prev) => ({ ...prev, governorateValue: undefined, cityValue: undefined }));
+        }}
         options={[{ value: "", label: t("labels.none") }, ...governorateOptions]}
         value={form.governorateValue ?? ""}
+        error={fieldErrors.governorateValue}
       />
       <SelectField
         label={t("labels.city")}
-        onChange={(v) => setForm({ ...form, cityValue: v })}
+        onChange={(v) => {
+          setForm({ ...form, cityValue: v });
+          setFieldErrors((prev) => ({ ...prev, cityValue: undefined, governorateValue: undefined }));
+        }}
         options={[{ value: "", label: t("labels.none") }, ...cityOptions]}
         value={form.cityValue ?? ""}
+        error={fieldErrors.cityValue}
       />
       <SelectField
         label={t("labels.courtType")}
@@ -1299,13 +1400,18 @@ function CourtEditForm({
       />
       <SelectField
         label={t("labels.courtLevel")}
-        onChange={(v) => setForm({ ...form, courtLevel: v })}
+        onChange={(v) => {
+          setForm({ ...form, courtLevel: v });
+          setFieldErrors((prev) => ({ ...prev, courtLevel: undefined }));
+        }}
         options={
           courtLevelOptions.length
             ? courtLevelOptions
             : [{ value: "PRIMARY", label: "Primary" }]
         }
         value={form.courtLevel}
+        required
+        error={fieldErrors.courtLevel}
       />
       <Field
         label={t("labels.circuit")}
@@ -1314,17 +1420,25 @@ function CourtEditForm({
       />
       <Field
         label={t("labels.startDate")}
-        onChange={(v) => setForm({ ...form, startedAt: v })}
+        onChange={(v) => {
+          setForm({ ...form, startedAt: v });
+          setFieldErrors((prev) => ({ ...prev, startedAt: undefined, endedAt: undefined }));
+        }}
         type="date"
         commitMode="blur"
         value={form.startedAt ?? ""}
+        error={fieldErrors.startedAt}
       />
       <Field
         label={t("labels.endDate")}
-        onChange={(v) => setForm({ ...form, endedAt: v })}
+        onChange={(v) => {
+          setForm({ ...form, endedAt: v });
+          setFieldErrors((prev) => ({ ...prev, endedAt: undefined }));
+        }}
         type="date"
         commitMode="blur"
         value={form.endedAt ?? ""}
+        error={fieldErrors.endedAt}
       />
       <SelectField
         label={t("labels.status")}
@@ -1347,6 +1461,7 @@ function CourtEditForm({
           {t("actions.cancel")}
         </button>
       </div>
+      {validationMessage ? <FormAlert message={validationMessage} /> : null}
     </form>
   );
 }

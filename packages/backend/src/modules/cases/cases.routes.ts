@@ -102,6 +102,35 @@ const casePartyListQuerySchema = z.object({
   limit: z.string().optional()
 });
 
+const optionalTrimmedString = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}, z.string().optional());
+
+const optionalDateOnlyString = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}, z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional());
+
+const caseListQuerySchema = z.object({
+  q: optionalTrimmedString,
+  status: optionalTrimmedString,
+  type: optionalTrimmedString,
+  assignedLawyerId: z.preprocess((value) => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }, z.string().uuid().optional()),
+  createdFrom: optionalDateOnlyString,
+  createdTo: optionalDateOnlyString,
+  sortBy: optionalTrimmedString,
+  sortDir: z.enum(["asc", "desc"]).optional(),
+  page: optionalTrimmedString,
+  limit: optionalTrimmedString
+});
+
 const idParamsSchema = z.object({ id: z.string().min(1) });
 const idPartyParamsSchema = z.object({ id: z.string().min(1), partyId: z.string().min(1) });
 const idAssignmentParamsSchema = z.object({ id: z.string().min(1), assignmentId: z.string().min(1) });
@@ -158,18 +187,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
       preHandler: [requireAuth, requirePermission("cases:read")]
     },
     async (request) => {
-      const query = request.query as {
-        q?: string;
-        status?: string;
-        type?: string;
-        assignedLawyerId?: string;
-        createdFrom?: string;
-        createdTo?: string;
-        sortBy?: string;
-        sortDir?: "asc" | "desc";
-        page?: string;
-        limit?: string;
-      };
+      const query = caseListQuerySchema.parse(request.query as Record<string, unknown>);
       const { page, limit } = parsePaginationQuery(query);
       return listCases(request.sessionUser!, {
         q: query.q,

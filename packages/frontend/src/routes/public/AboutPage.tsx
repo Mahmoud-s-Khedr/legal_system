@@ -5,20 +5,27 @@ import { useTranslation } from "react-i18next";
 import { getDeveloperContact } from "../../lib/developerContact";
 import { BackToTopButton } from "../../components/navigation/BackToTopButton";
 import { ShellFooter } from "../../components/navigation/ShellFooter";
-import { buildAuthShellFooterLinks } from "../../components/navigation/shellFooterLinks";
+import {
+  buildAppShellFooterLinks,
+  buildAuthShellFooterLinks
+} from "../../components/navigation/shellFooterLinks";
 import {
   copyTextToClipboard,
   handleExternalLinkClick
 } from "../../lib/externalLinks";
+import { useAuthBootstrap } from "../../store/authStore";
 
 type CopyField = "developer" | "email" | "phone" | null;
 
 export function AboutPage() {
   const { t } = useTranslation("app");
+  const { user } = useAuthBootstrap();
   const contact = getDeveloperContact();
   const [copiedField, setCopiedField] = useState<CopyField>(null);
   const resetTimerRef = useRef<number | null>(null);
-  const footerLinks = buildAuthShellFooterLinks((key) => t(key));
+  const footerLinks = user
+    ? buildAppShellFooterLinks((key) => t(key))
+    : buildAuthShellFooterLinks((key) => t(key));
 
   useEffect(() => {
     return () => {
@@ -227,18 +234,22 @@ export function AboutPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link
-              to="/"
-              className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:border-accent hover:text-accent"
-            >
-              {t("footer.home")}
-            </Link>
-            <Link
-              to="/login"
-              className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:border-accent hover:text-accent"
-            >
-              {t("footer.login")}
-            </Link>
+            {!user ? (
+              <Link
+                to="/"
+                className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:border-accent hover:text-accent"
+              >
+                {t("footer.home")}
+              </Link>
+            ) : null}
+            {!user ? (
+              <Link
+                to="/login"
+                className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:border-accent hover:text-accent"
+              >
+                {t("footer.login")}
+              </Link>
+            ) : null}
           </div>
         </section>
       </main>
