@@ -143,10 +143,6 @@ export function useAccessibleOverlay({
     };
 
     const onPointerDownOutside = (event: MouseEvent | TouchEvent) => {
-      if (mode !== "popover") {
-        return;
-      }
-
       const currentContent = contentRef.current;
       if (!currentContent) {
         return;

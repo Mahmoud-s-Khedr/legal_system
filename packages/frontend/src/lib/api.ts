@@ -74,18 +74,33 @@ export interface ApiDownloadResult {
 type ValidationMessageKey =
   | "VALIDATION_REQUIRED"
   | "VALIDATION_INVALID_TYPE"
+  | "VALIDATION_INVALID_UUID"
   | "VALIDATION_INVALID_EMAIL"
   | "VALIDATION_INVALID_DATE"
+  | "VALIDATION_INVALID_DATETIME"
+  | "VALIDATION_INVALID_STRING_FORMAT"
   | "VALIDATION_INVALID_ENUM"
   | "VALIDATION_TOO_SMALL"
   | "VALIDATION_TOO_BIG"
   | "VALIDATION_INVALID_VALUE";
+
+type ApiValidationIssueParams = {
+  minimum?: number;
+  maximum?: number;
+  inclusive?: boolean;
+  exact?: boolean;
+  expected?: string;
+  received?: string;
+  format?: string;
+  origin?: string;
+};
 
 type ApiValidationIssuePayload = {
   path?: unknown;
   code?: unknown;
   message?: unknown;
   messageKey?: unknown;
+  params?: unknown;
 };
 
 type ApiValidationPayload = {
@@ -95,22 +110,64 @@ type ApiValidationPayload = {
   issues?: unknown;
 };
 
-function localizeValidationIssueMessage(messageKey: ValidationMessageKey, fallback?: string) {
+function toValidationParams(value: unknown): ApiValidationIssueParams {
+  if (typeof value !== "object" || value === null) {
+    return {};
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return {
+    minimum: typeof candidate.minimum === "number" ? candidate.minimum : undefined,
+    maximum: typeof candidate.maximum === "number" ? candidate.maximum : undefined,
+    inclusive: typeof candidate.inclusive === "boolean" ? candidate.inclusive : undefined,
+    exact: typeof candidate.exact === "boolean" ? candidate.exact : undefined,
+    expected: typeof candidate.expected === "string" ? candidate.expected : undefined,
+    received: typeof candidate.received === "string" ? candidate.received : undefined,
+    format: typeof candidate.format === "string" ? candidate.format : undefined,
+    origin: typeof candidate.origin === "string" ? candidate.origin : undefined
+  };
+}
+
+function localizeValidationIssueMessage(
+  messageKey: ValidationMessageKey,
+  fallback?: string,
+  rawParams?: unknown
+) {
+  const params = toValidationParams(rawParams);
+  const minimum = params.minimum;
+  const maximum = params.maximum;
+  const format = params.format;
+
   switch (messageKey) {
     case "VALIDATION_REQUIRED":
       return i18n.t("errors.validation.issue.required", "This field is required.");
     case "VALIDATION_INVALID_TYPE":
       return i18n.t("errors.validation.issue.invalidType", "The provided value has an invalid type.");
+    case "VALIDATION_INVALID_UUID":
+      return i18n.t("errors.validation.issue.invalidUuid", "Enter a valid identifier.");
     case "VALIDATION_INVALID_EMAIL":
       return i18n.t("errors.validation.issue.invalidEmail", "Enter a valid email address.");
     case "VALIDATION_INVALID_DATE":
       return i18n.t("errors.validation.issue.invalidDate", "Enter a valid date.");
+    case "VALIDATION_INVALID_DATETIME":
+      return i18n.t("errors.validation.issue.invalidDatetime", "Enter a valid date and time.");
+    case "VALIDATION_INVALID_STRING_FORMAT":
+      return i18n.t(
+        "errors.validation.issue.invalidFormat",
+        { format: format ?? "", defaultValue: "Invalid format." }
+      );
     case "VALIDATION_INVALID_ENUM":
       return i18n.t("errors.validation.issue.invalidOption", "Choose a valid option.");
     case "VALIDATION_TOO_SMALL":
-      return i18n.t("errors.validation.issue.tooSmall", fallback ?? "Value is below the allowed minimum.");
+      return i18n.t(
+        "errors.validation.issue.tooSmall",
+        { minimum: minimum ?? "", defaultValue: fallback ?? "Value is below the allowed minimum." }
+      );
     case "VALIDATION_TOO_BIG":
-      return i18n.t("errors.validation.issue.tooBig", "Value exceeds the allowed maximum.");
+      return i18n.t(
+        "errors.validation.issue.tooBig",
+        { maximum: maximum ?? "", defaultValue: "Value exceeds the allowed maximum." }
+      );
     case "VALIDATION_INVALID_VALUE":
       return i18n.t("errors.validation.issue.invalidValue", fallback ?? "Invalid value.");
     default:
@@ -149,7 +206,7 @@ function localizeApiValidationPayload(payload: unknown) {
         return {
           ...entry,
           message: messageKey
-            ? localizeValidationIssueMessage(messageKey, fallbackMessage)
+            ? localizeValidationIssueMessage(messageKey, fallbackMessage, entry.params)
             : fallbackMessage ??
               i18n.t("errors.validation.issue.invalidValue", "Invalid value.")
         };

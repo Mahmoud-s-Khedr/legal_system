@@ -5,6 +5,7 @@ export type ApiValidationIssue = {
   code?: string;
   message: string;
   messageKey?: string;
+  params?: Record<string, unknown>;
 };
 
 export type ApiValidationErrorDetails = {
@@ -24,6 +25,7 @@ type ApiValidationIssuePayload = {
   code?: unknown;
   message?: unknown;
   messageKey?: unknown;
+  params?: unknown;
 };
 
 function toPathString(path: unknown): string {
@@ -77,7 +79,11 @@ export function extractApiValidationError(error: unknown): ApiValidationErrorDet
         path: toPathString(issue.path).trim(),
         code: typeof issue.code === "string" ? issue.code : undefined,
         message: issue.message,
-        messageKey: typeof issue.messageKey === "string" ? issue.messageKey : undefined
+        messageKey: typeof issue.messageKey === "string" ? issue.messageKey : undefined,
+        params:
+          typeof issue.params === "object" && issue.params !== null
+            ? (issue.params as Record<string, unknown>)
+            : undefined
       });
     }
   }

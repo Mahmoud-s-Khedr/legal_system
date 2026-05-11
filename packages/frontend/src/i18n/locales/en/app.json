@@ -16,11 +16,14 @@
       "issue": {
         "required": "This field is required.",
         "invalidType": "The provided value has an invalid type.",
+        "invalidUuid": "Enter a valid identifier.",
         "invalidEmail": "Enter a valid email address.",
         "invalidDate": "Enter a valid date.",
+        "invalidDatetime": "Enter a valid date and time.",
+        "invalidFormat": "Invalid format.",
         "invalidOption": "Choose a valid option.",
-        "tooSmall": "Value is below the allowed minimum.",
-        "tooBig": "Value exceeds the allowed maximum.",
+        "tooSmall": "Value must be at least {{minimum}}.",
+        "tooBig": "Value must be at most {{maximum}}.",
         "invalidValue": "Invalid value."
       }
     }

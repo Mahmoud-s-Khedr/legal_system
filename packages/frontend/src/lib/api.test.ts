@@ -59,6 +59,55 @@ describe("apiDownload", () => {
     });
   });
 
+  it("localizes validation issues with interpolation params", async () => {
+    vi.resetModules();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: vi.fn().mockResolvedValue({
+        code: "VALIDATION_ERROR",
+        message: "Please review the highlighted fields and try again.",
+        issues: [
+          {
+            path: "title",
+            code: "too_small",
+            message: "Must be at least 2 characters.",
+            messageKey: "VALIDATION_TOO_SMALL",
+            params: { minimum: 2 }
+          }
+        ]
+      })
+    } satisfies Partial<Response>);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const i18nModule = await import("../i18n");
+    await i18nModule.default.changeLanguage("en");
+    const { apiFetch, ApiError } = await import("./api");
+
+    await expect(apiFetch("/api/cases", { method: "POST", body: "{}" })).rejects.toBeInstanceOf(ApiError);
+
+    try {
+      await apiFetch("/api/cases", { method: "POST", body: "{}" });
+    } catch (error) {
+      const apiError = error as InstanceType<typeof ApiError>;
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toMatchObject({
+        code: "VALIDATION_ERROR",
+        issues: [
+          {
+            path: "title",
+            messageKey: "VALIDATION_TOO_SMALL",
+            params: { minimum: 2 }
+          }
+        ]
+      });
+      const details = apiError.details as { issues?: Array<{ message?: string }> };
+      expect(details.issues?.[0]?.message).toContain("2");
+    }
+  });
+
   it("falls back to default desktop backend when saved override is unreachable", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_DESKTOP_SHELL", "true");

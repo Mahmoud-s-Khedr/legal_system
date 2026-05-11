@@ -16,11 +16,14 @@
       "issue": {
         "required": "Ce champ est obligatoire.",
         "invalidType": "Le type de valeur fourni est invalide.",
+        "invalidUuid": "Veuillez saisir un identifiant valide.",
         "invalidEmail": "Veuillez saisir une adresse e-mail valide.",
         "invalidDate": "Veuillez saisir une date valide.",
+        "invalidDatetime": "Veuillez saisir une date et une heure valides.",
+        "invalidFormat": "Format invalide.",
         "invalidOption": "Veuillez sélectionner une option valide.",
-        "tooSmall": "La valeur est inférieure au minimum autorisé.",
-        "tooBig": "La valeur dépasse le maximum autorisé.",
+        "tooSmall": "La valeur doit être au moins {{minimum}}.",
+        "tooBig": "La valeur doit être au plus {{maximum}}.",
         "invalidValue": "Valeur invalide."
       }
     }

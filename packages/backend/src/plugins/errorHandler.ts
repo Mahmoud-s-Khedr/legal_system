@@ -7,12 +7,26 @@ import { isAppError } from "../errors/appError.js";
 type ValidationMessageKey =
   | "VALIDATION_REQUIRED"
   | "VALIDATION_INVALID_TYPE"
+  | "VALIDATION_INVALID_UUID"
   | "VALIDATION_INVALID_EMAIL"
   | "VALIDATION_INVALID_DATE"
+  | "VALIDATION_INVALID_DATETIME"
+  | "VALIDATION_INVALID_STRING_FORMAT"
   | "VALIDATION_INVALID_ENUM"
   | "VALIDATION_TOO_SMALL"
   | "VALIDATION_TOO_BIG"
   | "VALIDATION_INVALID_VALUE";
+
+type ValidationIssueParams = Partial<{
+  minimum: number;
+  maximum: number;
+  inclusive: boolean;
+  exact: boolean;
+  expected: string;
+  received: string;
+  format: string;
+  origin: string;
+}>;
 
 type ValidationIssuePayload = {
   path: string;
@@ -20,7 +34,17 @@ type ValidationIssuePayload = {
   code: string;
   message: string;
   messageKey: ValidationMessageKey;
+  params?: ValidationIssueParams;
 };
+
+function toValidationNumber(value: number | bigint): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  const asNumber = Number(value);
+  return Number.isSafeInteger(asNumber) ? asNumber : undefined;
+}
 
 function normalizePathSegments(path: readonly PropertyKey[]): Array<string | number> {
   return path
@@ -49,13 +73,21 @@ function formatValidationIssue(issue: ZodError["issues"][number]): ValidationIss
       pathSegments,
       code: issue.code,
       message: required ? "This field is required." : "The provided value has an invalid type.",
-      messageKey: required ? "VALIDATION_REQUIRED" : "VALIDATION_INVALID_TYPE"
+      messageKey: required ? "VALIDATION_REQUIRED" : "VALIDATION_INVALID_TYPE",
+      params: required
+        ? undefined
+        : {
+            expected: String(issue.expected ?? ""),
+            received: String(issue.input === null ? "null" : typeof issue.input)
+          }
     };
   }
 
   if (issue.code === "too_small") {
+    const minimum = toValidationNumber(issue.minimum);
+
     if (issue.origin === "string") {
-      const required = issue.minimum === 1;
+      const required = issue.minimum === 1 || issue.minimum === 1n;
       return {
         path,
         pathSegments,
@@ -63,7 +95,15 @@ function formatValidationIssue(issue: ZodError["issues"][number]): ValidationIss
         message: required
           ? "This field is required."
           : `Must be at least ${issue.minimum} characters.`,
-        messageKey: required ? "VALIDATION_REQUIRED" : "VALIDATION_TOO_SMALL"
+        messageKey: required ? "VALIDATION_REQUIRED" : "VALIDATION_TOO_SMALL",
+        params: required
+          ? undefined
+          : {
+              minimum,
+              inclusive: issue.inclusive,
+              exact: issue.exact,
+              origin: issue.origin
+            }
       };
     }
 
@@ -72,22 +112,47 @@ function formatValidationIssue(issue: ZodError["issues"][number]): ValidationIss
       pathSegments,
       code: issue.code,
       message: "Value is below the allowed minimum.",
-      messageKey: "VALIDATION_TOO_SMALL"
+      messageKey: "VALIDATION_TOO_SMALL",
+      params: {
+        minimum,
+        inclusive: issue.inclusive,
+        exact: issue.exact,
+        origin: issue.origin
+      }
     };
   }
 
   if (issue.code === "too_big") {
+    const maximum = toValidationNumber(issue.maximum);
+
     return {
       path,
       pathSegments,
       code: issue.code,
       message: "Value exceeds the allowed maximum.",
-      messageKey: "VALIDATION_TOO_BIG"
+      messageKey: "VALIDATION_TOO_BIG",
+      params: {
+        maximum,
+        inclusive: issue.inclusive,
+        exact: issue.exact,
+        origin: issue.origin
+      }
     };
   }
 
   if (issue.code === "invalid_format") {
     const validationName = issue.format;
+
+    if (validationName === "uuid") {
+      return {
+        path,
+        pathSegments,
+        code: issue.code,
+        message: "Enter a valid identifier.",
+        messageKey: "VALIDATION_INVALID_UUID",
+        params: { format: validationName }
+      };
+    }
 
     if (validationName === "email") {
       return {
@@ -95,19 +160,41 @@ function formatValidationIssue(issue: ZodError["issues"][number]): ValidationIss
         pathSegments,
         code: issue.code,
         message: "Enter a valid email address.",
-        messageKey: "VALIDATION_INVALID_EMAIL"
+        messageKey: "VALIDATION_INVALID_EMAIL",
+        params: { format: validationName }
       };
     }
 
-    if (validationName === "datetime" || validationName === "date") {
+    if (validationName === "date") {
       return {
         path,
         pathSegments,
         code: issue.code,
         message: "Enter a valid date.",
-        messageKey: "VALIDATION_INVALID_DATE"
+        messageKey: "VALIDATION_INVALID_DATE",
+        params: { format: validationName }
       };
     }
+
+    if (validationName === "datetime") {
+      return {
+        path,
+        pathSegments,
+        code: issue.code,
+        message: "Enter a valid date and time.",
+        messageKey: "VALIDATION_INVALID_DATETIME",
+        params: { format: validationName }
+      };
+    }
+
+    return {
+      path,
+      pathSegments,
+      code: issue.code,
+      message: "Invalid format.",
+      messageKey: "VALIDATION_INVALID_STRING_FORMAT",
+      params: { format: validationName }
+    };
   }
 
   if (issue.code === "invalid_value") {
@@ -116,7 +203,10 @@ function formatValidationIssue(issue: ZodError["issues"][number]): ValidationIss
       pathSegments,
       code: issue.code,
       message: "Choose a valid option.",
-      messageKey: "VALIDATION_INVALID_ENUM"
+      messageKey: "VALIDATION_INVALID_ENUM",
+      params: {
+        expected: Array.isArray(issue.values) ? issue.values.join(", ") : undefined
+      }
     };
   }
 

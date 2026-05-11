@@ -5,6 +5,8 @@ import { EditionKey } from "@elms/shared";
 import { AuthShell } from "./AuthShell";
 import { useAuthBootstrap } from "../../store/authStore";
 import { Field, FormAlert, SelectField } from "../app/ui";
+import { resolveFormValidationError } from "../../lib/formValidation";
+import { pickFieldError } from "../../lib/validationErrors";
 
 export function SetupPage() {
   const { t } = useTranslation("auth");
@@ -22,19 +24,26 @@ export function SetupPage() {
     EditionKey.SOLO_OFFLINE
   );
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitting) return;
     setError(null);
+    setFieldErrors({});
     setIsSubmitting(true);
 
     try {
       await setup({ firmName, fullName, email, password, editionKey });
       await navigate({ to: "/app/dashboard" });
     } catch (submitError) {
-      setError((submitError as Error).message);
+      const resolved = resolveFormValidationError(
+        submitError,
+        "An unexpected error occurred. Please try again."
+      );
+      setError(resolved.message);
+      setFieldErrors(resolved.fieldErrors);
     } finally {
       setIsSubmitting(false);
     }
@@ -50,36 +59,55 @@ export function SetupPage() {
           id="setup-firm-name"
           label={t("firmName")}
           value={firmName}
-          onChange={setFirmName}
+          onChange={(value) => {
+            setFirmName(value);
+            setFieldErrors((current) => ({ ...current, firmName: "" }));
+          }}
           required
+          error={pickFieldError(fieldErrors, ["firmName"]) ?? undefined}
         />
         <Field
           id="setup-full-name"
           label={t("fullName")}
           value={fullName}
-          onChange={setFullName}
+          onChange={(value) => {
+            setFullName(value);
+            setFieldErrors((current) => ({ ...current, fullName: "" }));
+          }}
           required
+          error={pickFieldError(fieldErrors, ["fullName"]) ?? undefined}
         />
         <Field
           id="setup-email"
           label={t("email")}
           type="email"
           value={email}
-          onChange={setEmail}
+          onChange={(value) => {
+            setEmail(value);
+            setFieldErrors((current) => ({ ...current, email: "" }));
+          }}
           required
+          error={pickFieldError(fieldErrors, ["email"]) ?? undefined}
         />
         <Field
           id="setup-password"
           label={t("password")}
           type="password"
           value={password}
-          onChange={setPassword}
+          onChange={(value) => {
+            setPassword(value);
+            setFieldErrors((current) => ({ ...current, password: "" }));
+          }}
           required
+          error={pickFieldError(fieldErrors, ["password"]) ?? undefined}
         />
         <SelectField
           id="setup-edition"
           label={t("editionLabel")}
-          onChange={(value) => setEditionKey(value as EditionKey)}
+          onChange={(value) => {
+            setEditionKey(value as EditionKey);
+            setFieldErrors((current) => ({ ...current, editionKey: "" }));
+          }}
           options={[
             {
               value: EditionKey.SOLO_OFFLINE,
@@ -99,6 +127,7 @@ export function SetupPage() {
             }
           ]}
           value={editionKey}
+          error={pickFieldError(fieldErrors, ["editionKey"]) ?? undefined}
         />
         {error ? <FormAlert message={error} /> : null}
         <button

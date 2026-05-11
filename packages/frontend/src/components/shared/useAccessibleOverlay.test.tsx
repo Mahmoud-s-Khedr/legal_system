@@ -136,4 +136,21 @@ describe("useAccessibleOverlay", () => {
 
     expect(outside?.getAttribute("aria-hidden")).toBeNull();
   });
+
+  it("closes modal on outside click", () => {
+    const view = render(<TestOverlay />);
+    const openButton = view.querySelector<HTMLButtonElement>("#open-btn");
+    expect(openButton).toBeTruthy();
+
+    act(() => {
+      openButton?.click();
+    });
+    expect(view.querySelector("#overlay-panel")).toBeTruthy();
+
+    act(() => {
+      document.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    });
+
+    expect(view.querySelector("#overlay-panel")).toBeFalsy();
+  });
 });

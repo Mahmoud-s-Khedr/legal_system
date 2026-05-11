@@ -59,15 +59,6 @@ export function AppLayout() {
     onClose: closeHeaderMenu
   });
 
-  useEffect(() => {
-    if (!drawerOpen) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [drawerOpen]);
-
   const navSections = buildSidebarNavSections({
     t,
     permissions: user?.permissions ?? []

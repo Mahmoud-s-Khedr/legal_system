@@ -107,7 +107,8 @@ describe("registerErrorHandler", () => {
           pathSegments: ["email"],
           code: "invalid_format",
           message: "Enter a valid email address.",
-          messageKey: "VALIDATION_INVALID_EMAIL"
+          messageKey: "VALIDATION_INVALID_EMAIL",
+          params: { format: "email" }
         }
       ]
     });
@@ -138,7 +139,8 @@ describe("registerErrorHandler", () => {
           pathSegments: ["date"],
           code: "invalid_format",
           message: "Enter a valid date.",
-          messageKey: "VALIDATION_INVALID_DATE"
+          messageKey: "VALIDATION_INVALID_DATE",
+          params: { format: "date" }
         }
       ]
     });
@@ -169,7 +171,8 @@ describe("registerErrorHandler", () => {
           pathSegments: ["role"],
           code: "invalid_value",
           message: "Choose a valid option.",
-          messageKey: "VALIDATION_INVALID_ENUM"
+          messageKey: "VALIDATION_INVALID_ENUM",
+          params: { expected: "admin, viewer" }
         }
       ]
     });
@@ -201,6 +204,60 @@ describe("registerErrorHandler", () => {
           code: "too_small",
           message: "This field is required.",
           messageKey: "VALIDATION_REQUIRED"
+        }
+      ]
+    });
+  });
+
+  it("maps string min(n) failures to too_small params", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+    const schema = z.object({ title: z.string().min(2) });
+
+    let validationError: unknown = null;
+    try {
+      schema.parse({ title: "x" });
+    } catch (error) {
+      validationError = error;
+    }
+
+    invokeHandler(validationError, request, reply);
+
+    expect(replyState.statusCode).toBe(400);
+    expect(replyState.payload).toMatchObject({
+      code: "VALIDATION_ERROR",
+      issues: [
+        {
+          path: "title",
+          messageKey: "VALIDATION_TOO_SMALL",
+          params: { minimum: 2, origin: "string" }
+        }
+      ]
+    });
+  });
+
+  it("maps uuid format failures to dedicated message key", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+    const schema = z.object({ id: z.string().uuid() });
+
+    let validationError: unknown = null;
+    try {
+      schema.parse({ id: "not-uuid" });
+    } catch (error) {
+      validationError = error;
+    }
+
+    invokeHandler(validationError, request, reply);
+
+    expect(replyState.statusCode).toBe(400);
+    expect(replyState.payload).toMatchObject({
+      code: "VALIDATION_ERROR",
+      issues: [
+        {
+          path: "id",
+          messageKey: "VALIDATION_INVALID_UUID",
+          params: { format: "uuid" }
         }
       ]
     });
