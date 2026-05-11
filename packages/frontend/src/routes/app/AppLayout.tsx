@@ -16,6 +16,8 @@ import { ShellFooter } from "../../components/navigation/ShellFooter";
 import { buildAppShellFooterLinks } from "../../components/navigation/shellFooterLinks";
 import { isArabicLanguage } from "../../lib/language";
 
+const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
+
 export function AppLayout() {
   const { t, i18n } = useTranslation("app");
   const { user, logout } = useAuthBootstrap();
@@ -130,12 +132,14 @@ export function AppLayout() {
         onClose={() => setPaletteOpen(false)}
       />
       {/* ── Skip to main content (keyboard / screen reader) ── */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:start-2 focus:z-50 focus:rounded-xl focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
-      >
-        {t("actions.skipToContent")}
-      </a>
+      {!isDesktopShell ? (
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:start-2 focus:z-50 focus:rounded-xl focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        >
+          {t("actions.skipToContent")}
+        </a>
+      ) : null}
       {/* ── Header ── */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="shell-container flex items-center justify-between py-3">

@@ -174,4 +174,37 @@ describe("useTableQueryState", () => {
     expect(latestTable?.state.q).toBe("123");
     expect(latestTable?.toApiQueryString()).toContain("q=123");
   });
+
+  it("cycles sort state desc -> asc -> reset for the same column", () => {
+    mockedSearch = {
+      sortBy: "name",
+      sortDir: "desc",
+      page: 1,
+      limit: 20
+    };
+    renderProbe();
+
+    act(() => {
+      latestTable?.setSort("name");
+    });
+    setMockedSearchFromUrlWithNumericPageAndLimit();
+    act(() => {
+      root?.render(<Probe />);
+    });
+    expect(latestTable?.state.sortBy).toBe("name");
+    expect(latestTable?.state.sortDir).toBe("asc");
+
+    act(() => {
+      latestTable?.setSort("name");
+    });
+    setMockedSearchFromUrlWithNumericPageAndLimit();
+    act(() => {
+      root?.render(<Probe />);
+    });
+    expect(latestTable?.state.sortBy).toBe("");
+    expect(window.location.search).toContain("sortBy=");
+    expect(window.location.search).not.toContain("sortDir=");
+    expect(latestTable?.toApiQueryString()).not.toContain("sortBy=");
+    expect(latestTable?.toApiQueryString()).not.toContain("sortDir=");
+  });
 });

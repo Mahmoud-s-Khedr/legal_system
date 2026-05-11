@@ -105,11 +105,51 @@ describe("listClients", () => {
 
     await listClients(actor, "Ahmed", { page: 1, limit: 20 });
 
+    const findManyArgs = mockClientDb.findMany.mock.calls[0][0] as {
+      where: { OR?: Array<Record<string, unknown>> };
+    };
+    const orFilters = findManyArgs.where.OR ?? [];
+
     expect(mockClientDb.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ OR: expect.any(Array) })
       })
     );
+    expect(orFilters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: expect.objectContaining({ contains: expect.any(String) })
+        }),
+        expect.objectContaining({
+          email: expect.objectContaining({ contains: expect.any(String) })
+        }),
+        expect.objectContaining({
+          phone: expect.objectContaining({ contains: expect.any(String) })
+        }),
+        expect.objectContaining({
+          internalRef: expect.objectContaining({ contains: expect.any(String) })
+        }),
+        expect.objectContaining({
+          poaNumber: expect.objectContaining({ contains: expect.any(String) })
+        })
+      ])
+    );
+  });
+
+  it("adds a normalized phone candidate for search", async () => {
+    mockClientDb.count.mockResolvedValue(0);
+    mockClientDb.findMany.mockResolvedValue([]);
+
+    await listClients(actor, "+٢٠١ 11-222", { page: 1, limit: 20 });
+
+    const findManyArgs = mockClientDb.findMany.mock.calls[0][0] as {
+      where: { OR?: Array<Record<string, unknown>> };
+    };
+    const phoneContains = (findManyArgs.where.OR ?? [])
+      .map((entry) => (entry.phone as { contains?: string } | undefined)?.contains)
+      .filter((value): value is string => typeof value === "string");
+
+    expect(phoneContains).toContain("20111222");
   });
 });
 

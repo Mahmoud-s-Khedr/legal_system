@@ -1,5 +1,6 @@
 import { Language, type Client, type Prisma } from "@prisma/client";
 import type { ClientType, CreateClientDto, UpdateClientDto } from "@elms/shared";
+import { normalizeDigits } from "@elms/shared";
 import { prisma } from "../../db/prisma.js";
 import type { RepositoryTx } from "../types.js";
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
@@ -58,14 +59,25 @@ export async function listFirmClients(
 ): Promise<{ total: number; items: ClientRecord[] }> {
   const q = query.q?.trim();
   const searchCandidates = buildFuzzySearchCandidates(q);
+  const normalizedPhoneCandidate = q
+    ? normalizeDigits(q).replace(/[^\d]/g, "")
+    : "";
+  const phoneCandidates = normalizedPhoneCandidate.length > 0
+    ? [...new Set([...searchCandidates, normalizedPhoneCandidate])]
+    : searchCandidates;
   const where: Prisma.ClientWhereInput = {
     firmId,
     deletedAt: null,
     ...(searchCandidates.length > 0
       ? {
-          OR: searchCandidates.flatMap((candidate) => [
-            { name: { contains: candidate, mode: "insensitive" as const } },
-            { email: { contains: candidate, mode: "insensitive" as const } }
+            OR: searchCandidates.flatMap((candidate) => [
+              { name: { contains: candidate, mode: "insensitive" as const } },
+            { email: { contains: candidate, mode: "insensitive" as const } },
+            { internalRef: { contains: candidate, mode: "insensitive" as const } },
+            { poaNumber: { contains: candidate, mode: "insensitive" as const } },
+            ...phoneCandidates.map((phoneCandidate) => ({
+              phone: { contains: phoneCandidate, mode: "insensitive" as const }
+            }))
           ])
         }
       : {}),

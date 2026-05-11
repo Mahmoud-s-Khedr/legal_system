@@ -303,6 +303,13 @@ export function CommandPalette({ open, onClose }: Props) {
       e.preventDefault();
       setActiveIndex((i) => Math.max(i - 1, 0));
     }
+    if (
+      e.key === "Enter" &&
+      e.target instanceof HTMLElement &&
+      e.target.closest("a,button,textarea,select")
+    ) {
+      return;
+    }
     if (e.key === "Enter" && items[activeIndex]) {
       items[activeIndex].action();
     }

@@ -452,10 +452,12 @@ function Metric({
   valueClassName?: string;
 }) {
   return (
-    <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-4 ${className}`.trim()}>
-      <dt className="text-sm text-slate-500">{label}</dt>
+    <div
+      className={`min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 ${className}`.trim()}
+    >
+      <dt className="break-words text-sm text-slate-500">{label}</dt>
       <dd className={`mt-2 min-w-0 font-heading leading-tight ${valueClassName}`}>
-        <bdi className="block break-words">{value}</bdi>
+        <bdi className="block break-words [unicode-bidi:isolate]">{value}</bdi>
       </dd>
     </div>
   );

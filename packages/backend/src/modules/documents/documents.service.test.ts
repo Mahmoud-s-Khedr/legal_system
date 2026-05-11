@@ -177,6 +177,35 @@ describe("listDocuments", () => {
       expect.objectContaining({ skip: 20, take: 10 })
     );
   });
+
+  it("includes OCR/content text in search filters", async () => {
+    mockDocument.count.mockResolvedValue(0);
+    mockDocument.findMany.mockResolvedValue([]);
+
+    await listDocuments(actor, { q: "lease clause" }, { page: 1, limit: 20 });
+
+    const findManyArgs = mockDocument.findMany.mock.calls[0][0] as {
+      where: { OR?: Array<Record<string, unknown>> };
+    };
+    const orFilters = findManyArgs.where.OR ?? [];
+
+    expect(orFilters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: expect.objectContaining({ contains: expect.any(String) })
+        }),
+        expect.objectContaining({
+          fileName: expect.objectContaining({ contains: expect.any(String) })
+        }),
+        expect.objectContaining({
+          mimeType: expect.objectContaining({ contains: expect.any(String) })
+        }),
+        expect.objectContaining({
+          contentText: expect.objectContaining({ contains: expect.any(String) })
+        })
+      ])
+    );
+  });
 });
 
 // ── getDocument ────────────────────────────────────────────────────────────────

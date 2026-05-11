@@ -138,7 +138,6 @@ describe("AppLayout", () => {
   it("renders shell, breadcrumbs, and user initials", () => {
     const view = render(<AppLayout />);
 
-    expect(view.textContent).toContain("actions.skipToContent");
     expect(view.textContent).toContain("dashboard");
     expect(view.textContent).toContain("cases");
     expect(view.textContent).toContain("ELMS");

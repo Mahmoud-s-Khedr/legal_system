@@ -196,6 +196,12 @@ export async function listDocuments(
                   contains: candidate,
                   mode: "insensitive" as const
                 }
+              },
+              {
+                contentText: {
+                  contains: candidate,
+                  mode: "insensitive" as const
+                }
               }
             ])
           }

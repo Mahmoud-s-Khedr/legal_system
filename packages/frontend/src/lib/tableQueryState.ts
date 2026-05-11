@@ -91,10 +91,13 @@ export function useTableQueryState(options: {
     if (q.trim().length > 0) params.set("q", q.trim());
     else params.delete("q");
 
-    if (sortBy) params.set("sortBy", sortBy);
-    else params.delete("sortBy");
-
-    params.set("sortDir", sortDir);
+    if (sortBy.trim().length > 0) {
+      params.set("sortBy", sortBy);
+      params.set("sortDir", sortDir);
+    } else {
+      params.set("sortBy", "");
+      params.delete("sortDir");
+    }
     params.set("page", String(Math.max(1, page)));
     params.set("limit", String(Math.max(1, limit)));
 
@@ -117,10 +120,14 @@ export function useTableQueryState(options: {
 
   function setSort(sortBy: string) {
     if (state.sortBy === sortBy) {
-      update({ sortDir: state.sortDir === "asc" ? "desc" : "asc", page: 1 });
+      if (state.sortDir === "desc") {
+        update({ sortDir: "asc", page: 1 });
+        return;
+      }
+      update({ sortBy: "", page: 1 });
       return;
     }
-    update({ sortBy, sortDir: "asc", page: 1 });
+    update({ sortBy, sortDir: "desc", page: 1 });
   }
 
   function setPage(page: number) {
@@ -135,8 +142,10 @@ export function useTableQueryState(options: {
     const params = new URLSearchParams();
     const q = normalizeDigits(state.q).trim();
     if (q.length > 0) params.set("q", q);
-    params.set("sortBy", state.sortBy);
-    params.set("sortDir", state.sortDir);
+    if (state.sortBy.trim().length > 0) {
+      params.set("sortBy", state.sortBy);
+      params.set("sortDir", state.sortDir);
+    }
     params.set("page", String(state.page));
     params.set("limit", String(state.limit));
     for (const [key, value] of Object.entries(state.filters)) {

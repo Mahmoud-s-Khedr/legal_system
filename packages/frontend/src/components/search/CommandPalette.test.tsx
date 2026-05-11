@@ -38,12 +38,12 @@ let container: HTMLDivElement | null = null;
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-function render(open = true) {
+function render(open = true, onClose = vi.fn()) {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
   act(() => {
-    root?.render(<CommandPalette open={open} onClose={vi.fn()} />);
+    root?.render(<CommandPalette open={open} onClose={onClose} />);
   });
   return container;
 }
@@ -195,5 +195,28 @@ describe("CommandPalette", () => {
 
     expect(input.value).toBe("123");
     expect(mockUseQuery.mock.calls.some((call) => call[0]?.queryKey?.[1] === "123")).toBe(true);
+  });
+
+  it("navigates to advanced search when pressing Enter on the advanced search link", () => {
+    const onClose = vi.fn();
+    const view = render(true, onClose);
+    const advancedSearchLink = view.querySelector(
+      'a[href="/app/search"]'
+    ) as HTMLAnchorElement;
+
+    act(() => {
+      advancedSearchLink.focus();
+      advancedSearchLink.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      );
+      advancedSearchLink.click();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/app/search",
+      search: { q: "", page: 1, pageSize: 20 }
+    });
+    expect(onClose).toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalledWith({ to: "/app/dashboard" });
   });
 });
