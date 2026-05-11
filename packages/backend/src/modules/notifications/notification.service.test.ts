@@ -103,6 +103,21 @@ describe("buildNotificationContent", () => {
     expect(result.body).toContain("Review contract");
   });
 
+  it("builds correct content for TASK_ASSIGNED", () => {
+    const result = buildNotificationContent(NotificationType.TASK_ASSIGNED, { taskTitle: "Review contract" });
+    expect(result.body).toContain("Review contract");
+  });
+
+  it("builds correct content for CASE_ASSIGNED", () => {
+    const result = buildNotificationContent(NotificationType.CASE_ASSIGNED, { caseTitle: "Case X" });
+    expect(result.body).toContain("Case X");
+  });
+
+  it("builds correct content for HEARING_ASSIGNED", () => {
+    const result = buildNotificationContent(NotificationType.HEARING_ASSIGNED, { caseTitle: "Case Y" });
+    expect(result.body).toContain("Case Y");
+  });
+
   it("builds correct content for INVOICE_OVERDUE", () => {
     const result = buildNotificationContent(NotificationType.INVOICE_OVERDUE, { invoiceNumber: "INV-2026-0001" });
     expect(result.body).toContain("INV-2026-0001");

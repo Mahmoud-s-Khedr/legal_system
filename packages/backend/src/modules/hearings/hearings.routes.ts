@@ -68,7 +68,7 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
     },
     async (request) => {
       const payload = hearingSchema.parse(request.body);
-      const hearing = await createHearing(request.sessionUser!, payload, getAuditContext(request));
+      const hearing = await createHearing(env, request.sessionUser!, payload, getAuditContext(request));
       const userId = request.sessionUser!.id;
       if (hasEditionFeature(request.sessionUser!.editionKey, "google_calendar_sync")) {
         setImmediate(() => {
@@ -116,6 +116,7 @@ export async function registerHearingRoutes(app: FastifyInstance, env: AppEnv) {
     async (request) => {
       const payload = hearingSchema.parse(request.body);
       const hearing = await updateHearing(
+        env,
         request.sessionUser!,
         idParamsSchema.parse(request.params).id,
         payload,

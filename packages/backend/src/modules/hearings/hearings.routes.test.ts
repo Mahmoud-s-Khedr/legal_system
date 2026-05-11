@@ -148,6 +148,7 @@ describe("registerHearingRoutes", () => {
     });
 
     expect(createHearing).toHaveBeenCalledWith(
+      {} as never,
       actor,
       expect.objectContaining({ caseId: "6f6dfa56-173a-4519-b6af-218e7863624a" }),
       { ipAddress: "127.0.0.1", userAgent: "vitest" }

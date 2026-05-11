@@ -19,6 +19,7 @@ import type {
   UpdateCasePartyDto,
   UpdateCaseDto
 } from "@elms/shared";
+import { NotificationType } from "@elms/shared";
 import { CaseStatus, CaseRoleOnCase as PrismaCaseRoleOnCase, Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { withTenant } from "../../db/tenant.js";
@@ -27,6 +28,8 @@ import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tabl
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { appError } from "../../errors/appError.js";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import type { AppEnv } from "../../config/env.js";
+import { dispatchNotification } from "../notifications/notification.service.js";
 
 function mapCourt(court: {
   id: string;
@@ -888,6 +891,7 @@ export async function removeCaseParty(
 
 
 export async function addCaseAssignment(
+  env: AppEnv,
   actor: SessionUser,
   caseId: string,
   payload: CreateCaseAssignmentDto,
@@ -915,6 +919,18 @@ export async function addCaseAssignment(
       entityId: assignment.id,
       newData: { caseId, userId: payload.userId, roleOnCase: payload.roleOnCase }
     });
+    const assignedCase = await tx.case.findFirstOrThrow({
+      where: { id: caseId, firmId: actor.firmId, deletedAt: null },
+      select: { title: true }
+    });
+    await dispatchNotification(
+      env,
+      actor.firmId,
+      payload.userId,
+      NotificationType.CASE_ASSIGNED,
+      { caseTitle: assignedCase.title },
+      { entityType: "Case", entityId: caseId }
+    );
 
     return getCaseRecord(actor, caseId);
   });

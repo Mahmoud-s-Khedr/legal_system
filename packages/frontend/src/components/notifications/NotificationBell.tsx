@@ -16,13 +16,17 @@ export function resolveNotificationPath(n: NotificationDto): string | null {
   const id = n.entityId;
   if (!id) return null;
   switch (n.type) {
+    case NotificationType.HEARING_ASSIGNED:
     case NotificationType.HEARING_7_DAYS:
     case NotificationType.HEARING_TOMORROW:
     case NotificationType.HEARING_TODAY:
       return `/app/hearings/${id}/edit`;
+    case NotificationType.TASK_ASSIGNED:
     case NotificationType.TASK_OVERDUE:
     case NotificationType.TASK_DAILY_DIGEST:
       return `/app/tasks/${id}`;
+    case NotificationType.CASE_ASSIGNED:
+      return `/app/cases/${id}`;
     case NotificationType.INVOICE_OVERDUE:
     case NotificationType.CHEQUE_MATURITY_DUE:
       return `/app/invoices/${id}`;

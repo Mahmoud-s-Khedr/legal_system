@@ -15,6 +15,7 @@ const createHearingRecord = vi.fn();
 const updateHearingRecordById = vi.fn();
 const getFirmHearingRowByIdOrThrow = vi.fn();
 const upsertHearingEvent = vi.fn();
+const dispatchNotification = vi.fn();
 
 vi.mock("../../repositories/unitOfWork.js", () => ({
   inTenantTransaction
@@ -41,6 +42,7 @@ vi.mock("../../services/audit.service.js", () => ({
 vi.mock("../../db/prisma.js", () => ({
   prisma: {}
 }));
+vi.mock("../notifications/notification.service.js", () => ({ dispatchNotification }));
 
 const { buildSessionDatetimeFilter, createHearing, updateHearing } = await import("./hearings.service.js");
 
@@ -132,6 +134,7 @@ describe("create/update hearing case guards", () => {
 
     await expect(
       createHearing(
+        {} as never,
         actor,
         {
           caseId: "case-404",
@@ -153,6 +156,7 @@ describe("create/update hearing case guards", () => {
 
     await expect(
       updateHearing(
+        {} as never,
         actor,
         "hearing-1",
         {
@@ -168,5 +172,69 @@ describe("create/update hearing case guards", () => {
     ).rejects.toThrow("Case not found or archived/deleted");
 
     expect(updateHearingRecordById).not.toHaveBeenCalled();
+  });
+
+  it("sends hearing-assigned notification on create when assignedLawyerId is set", async () => {
+    createHearingRecord.mockResolvedValue(
+      makeHearingRecord({ assignedLawyerId: "user-2", case: { id: "case-1", title: "Case A", firmId: "firm-1" } })
+    );
+
+    await createHearing(
+      {} as never,
+      actor,
+      {
+        caseId: "case-1",
+        sessionDatetime: "2026-03-22T10:00:00.000Z",
+        assignedLawyerId: "user-2",
+        nextSessionAt: null,
+        outcome: null,
+        notes: null
+      },
+      audit
+    );
+
+    expect(dispatchNotification).toHaveBeenCalledWith(
+      {} as never,
+      "firm-1",
+      "user-2",
+      "HEARING_ASSIGNED",
+      { caseTitle: "Case A" },
+      { entityType: "CaseSession", entityId: "hearing-1" }
+    );
+  });
+
+  it("sends hearing-assigned notification on reassignment only", async () => {
+    getFirmHearingRowByIdOrThrow.mockResolvedValue({
+      id: "hearing-1",
+      sessionDatetime: new Date("2026-03-20T10:00:00.000Z"),
+      assignedLawyerId: "user-old"
+    });
+    updateHearingRecordById.mockResolvedValue(
+      makeHearingRecord({ assignedLawyerId: "user-new", case: { id: "case-1", title: "Case B", firmId: "firm-1" } })
+    );
+
+    await updateHearing(
+      {} as never,
+      actor,
+      "hearing-1",
+      {
+        caseId: "case-1",
+        sessionDatetime: "2026-03-22T10:00:00.000Z",
+        assignedLawyerId: "user-new",
+        nextSessionAt: null,
+        outcome: null,
+        notes: null
+      },
+      audit
+    );
+
+    expect(dispatchNotification).toHaveBeenCalledWith(
+      {} as never,
+      "firm-1",
+      "user-new",
+      "HEARING_ASSIGNED",
+      { caseTitle: "Case B" },
+      { entityType: "CaseSession", entityId: "hearing-1" }
+    );
   });
 });

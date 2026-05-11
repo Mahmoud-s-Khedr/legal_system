@@ -9,10 +9,13 @@ import type {
   UpdateTaskDto
 } from "@elms/shared";
 import { Prisma, TaskStatus } from "@prisma/client";
+import { NotificationType } from "@elms/shared";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import type { AppEnv } from "../../config/env.js";
+import { dispatchNotification } from "../notifications/notification.service.js";
 import {
   createFirmTask,
   getFirmTaskByIdOrThrow,
@@ -143,6 +146,7 @@ export async function getTask(actor: SessionUser, taskId: string): Promise<TaskD
 }
 
 export async function createTask(
+  env: AppEnv,
   actor: SessionUser,
   payload: CreateTaskDto,
   audit: AuditContext
@@ -160,11 +164,23 @@ export async function createTask(
       }
     });
 
+    if (task.assignedToId) {
+      await dispatchNotification(
+        env,
+        actor.firmId,
+        task.assignedToId,
+        NotificationType.TASK_ASSIGNED,
+        { taskTitle: task.title },
+        { entityType: "Task", entityId: task.id }
+      );
+    }
+
     return mapTask(task);
   });
 }
 
 export async function updateTask(
+  env: AppEnv,
   actor: SessionUser,
   taskId: string,
   payload: UpdateTaskDto,
@@ -191,6 +207,19 @@ export async function updateTask(
         status: task.status
       }
     });
+
+    const previousAssignee = existing.assignedToId ?? null;
+    const newAssignee = task.assignedToId ?? null;
+    if (newAssignee && newAssignee !== previousAssignee) {
+      await dispatchNotification(
+        env,
+        actor.firmId,
+        newAssignee,
+        NotificationType.TASK_ASSIGNED,
+        { taskTitle: task.title },
+        { entityType: "Task", entityId: task.id }
+      );
+    }
 
     return mapTask(task);
   });

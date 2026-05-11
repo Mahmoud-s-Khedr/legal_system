@@ -16,6 +16,7 @@ const createFirmTask = vi.fn();
 const updateTaskById = vi.fn();
 const updateTaskStatusById = vi.fn();
 const softDeleteTaskById = vi.fn();
+const dispatchNotification = vi.fn();
 
 vi.mock("../../repositories/unitOfWork.js", () => ({ inTenantTransaction }));
 vi.mock("../../services/audit.service.js", () => ({ writeAuditLog }));
@@ -30,6 +31,7 @@ vi.mock("../../repositories/tasks/tasks.repository.js", () => ({
   updateTaskStatusById,
   softDeleteTaskById
 }));
+vi.mock("../notifications/notification.service.js", () => ({ dispatchNotification }));
 
 const {
   listTasks,
@@ -114,7 +116,7 @@ describe("tasks.service", () => {
   it("creates task and writes audit log", async () => {
     createFirmTask.mockResolvedValue(baseTask);
 
-    const result = await createTask(actor, { title: "Task", dueAt: null }, audit as never);
+    const result = await createTask({} as never, actor, { title: "Task", dueAt: null }, audit as never);
 
     expect(createFirmTask).toHaveBeenCalledWith({ tx: true }, "f-1", "u-1", { title: "Task", dueAt: null });
     expect(writeAuditLog).toHaveBeenCalledWith(
@@ -122,19 +124,27 @@ describe("tasks.service", () => {
       audit,
       expect.objectContaining({ action: "tasks.create", entityType: "Task", entityId: "t-1" })
     );
+    expect(dispatchNotification).toHaveBeenCalledWith(
+      {} as never,
+      "f-1",
+      "u-2",
+      "TASK_ASSIGNED",
+      { taskTitle: "Task" },
+      { entityType: "Task", entityId: "t-1" }
+    );
     expect(result.id).toBe("t-1");
   });
 
   it("updates task and logs old/new values", async () => {
-    getFirmTaskRowByIdOrThrow.mockResolvedValue({ ...baseTask, status: "PENDING", priority: "LOW" });
+    getFirmTaskRowByIdOrThrow.mockResolvedValue({ ...baseTask, status: "PENDING", priority: "LOW", assignedToId: "u-2" });
     updateTaskById.mockResolvedValue({ ...baseTask, title: "Updated", status: TaskStatus.DONE });
 
-    const result = await updateTask(actor, "t-1", { title: "Updated" }, audit as never);
+    const result = await updateTask({} as never, actor, "t-1", { title: "Updated", assignedToId: "u-2" }, audit as never);
 
     expect(updateTaskById).toHaveBeenCalledWith(
       { tx: true },
       "t-1",
-      { title: "Updated" },
+      { title: "Updated", assignedToId: "u-2" },
       { status: "PENDING", priority: "LOW" }
     );
     expect(writeAuditLog).toHaveBeenCalledWith(
@@ -142,7 +152,24 @@ describe("tasks.service", () => {
       audit,
       expect.objectContaining({ action: "tasks.update", entityId: "t-1" })
     );
+    expect(dispatchNotification).not.toHaveBeenCalled();
     expect(result.title).toBe("Updated");
+  });
+
+  it("sends assignment notification on reassignment only", async () => {
+    getFirmTaskRowByIdOrThrow.mockResolvedValue({ ...baseTask, assignedToId: "u-old", status: "PENDING", priority: "LOW" });
+    updateTaskById.mockResolvedValue({ ...baseTask, assignedToId: "u-new", title: "Updated" });
+
+    await updateTask({} as never, actor, "t-1", { title: "Updated", assignedToId: "u-new" }, audit as never);
+
+    expect(dispatchNotification).toHaveBeenCalledWith(
+      {} as never,
+      "f-1",
+      "u-new",
+      "TASK_ASSIGNED",
+      { taskTitle: "Updated" },
+      { entityType: "Task", entityId: "t-1" }
+    );
   });
 
   it("changes task status and deletes task with audit entries", async () => {

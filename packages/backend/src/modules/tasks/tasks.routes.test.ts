@@ -151,10 +151,12 @@ describe("registerTaskRoutes", () => {
         caseId: "7d8f8530-b7f9-4e6f-b12e-d6fb141b9ed2",
         dueAt: "2026-04-22T10:00:00.000Z"
       },
-      sessionUser: actor
+      sessionUser: actor,
+      server: { appEnv: { NODE_ENV: "test" } }
     });
 
     expect(createTask).toHaveBeenCalledWith(
+      { NODE_ENV: "test" },
       actor,
       expect.objectContaining({ title: "Prepare hearing file" }),
       { ipAddress: "127.0.0.1", userAgent: "vitest" }

@@ -36,6 +36,7 @@ const mockCourt = {
 const mockAuditLog = { create: vi.fn() };
 const mockClient = { findFirstOrThrow: vi.fn(), findMany: vi.fn() };
 const mockLookupOption = { findFirst: vi.fn() };
+const dispatchNotification = vi.fn();
 
 const mockPrisma = {
   case: mockCaseDb,
@@ -57,6 +58,7 @@ vi.mock("../../db/tenant.js", () => ({
 vi.mock("../../services/audit.service.js", () => ({
   writeAuditLog: vi.fn()
 }));
+vi.mock("../notifications/notification.service.js", () => ({ dispatchNotification }));
 
 const {
   listCases,
@@ -389,7 +391,7 @@ describe("addCaseAssignment", () => {
     mockAssignment.findFirst.mockResolvedValue({ id: "existing-assignment" });
 
     await expect(
-      addCaseAssignment(actor, "case-1", { userId: "user-2", roleOnCase: "LEAD" as never }, audit)
+      addCaseAssignment({} as never, actor, "case-1", { userId: "user-2", roleOnCase: "LEAD" as never }, audit)
     ).rejects.toThrow();
   });
 
@@ -400,6 +402,7 @@ describe("addCaseAssignment", () => {
     mockCaseDb.findFirstOrThrow.mockResolvedValue(caseRecord);
 
     const result = await addCaseAssignment(
+      {} as never,
       actor,
       "case-1",
       { userId: "user-2", roleOnCase: "LEAD" as never },
@@ -407,6 +410,14 @@ describe("addCaseAssignment", () => {
     );
 
     expect(mockAssignment.create).toHaveBeenCalled();
+    expect(dispatchNotification).toHaveBeenCalledWith(
+      {} as never,
+      "firm-1",
+      "user-2",
+      "CASE_ASSIGNED",
+      { caseTitle: "Test Case" },
+      { entityType: "Case", entityId: "case-1" }
+    );
     expect(result).toBeDefined();
   });
 });

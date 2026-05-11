@@ -72,6 +72,12 @@ export function buildNotificationContent(
   payload: Record<string, string>
 ): { title: string; body: string } {
   switch (type) {
+    case NotificationType.TASK_ASSIGNED:
+      return { title: "تم إسناد مهمة لك", body: `تم إسناد المهمة "${payload.taskTitle ?? ""}" إليك` };
+    case NotificationType.CASE_ASSIGNED:
+      return { title: "تم إسناد قضية لك", body: `تم إسناد قضية: ${payload.caseTitle ?? ""} إليك` };
+    case NotificationType.HEARING_ASSIGNED:
+      return { title: "تم إسناد جلسة لك", body: `تم إسناد جلسة في قضية: ${payload.caseTitle ?? ""}` };
     case NotificationType.HEARING_7_DAYS:
       return { title: "جلسة خلال 7 أيام", body: `لديك جلسة في قضية: ${payload.caseTitle ?? ""}` };
     case NotificationType.HEARING_TOMORROW:

@@ -7,12 +7,15 @@ import type {
   UpdateHearingOutcomeDto,
   UpdateHearingDto
 } from "@elms/shared";
+import { NotificationType } from "@elms/shared";
 import { Prisma } from "@prisma/client";
 import { writeAuditLog, type AuditContext } from "../../services/audit.service.js";
 import { normalizeSort, toPrismaSortOrder, type SortDir } from "../../utils/tableQuery.js";
 import { buildFuzzySearchCandidates } from "../../utils/fuzzySearch.js";
 import { appError } from "../../errors/appError.js";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
+import type { AppEnv } from "../../config/env.js";
+import { dispatchNotification } from "../notifications/notification.service.js";
 import {
   createHearingRecord,
   findFirmUserNameById,
@@ -208,6 +211,7 @@ export async function getHearing(actor: SessionUser, hearingId: string): Promise
 }
 
 export async function createHearing(
+  env: AppEnv,
   actor: SessionUser,
   payload: CreateHearingDto,
   audit: AuditContext
@@ -246,11 +250,23 @@ export async function createHearing(
       }
     });
 
+    if (hearing.assignedLawyerId) {
+      await dispatchNotification(
+        env,
+        actor.firmId,
+        hearing.assignedLawyerId,
+        NotificationType.HEARING_ASSIGNED,
+        { caseTitle: hearing.case.title },
+        { entityType: "CaseSession", entityId: hearing.id }
+      );
+    }
+
     return mapHearing(hearing, null);
   });
 }
 
 export async function updateHearing(
+  env: AppEnv,
   actor: SessionUser,
   hearingId: string,
   payload: UpdateHearingDto,
@@ -293,6 +309,19 @@ export async function updateHearing(
         sessionDatetime: hearing.sessionDatetime.toISOString()
       }
     });
+
+    const previousAssignee = existing.assignedLawyerId ?? null;
+    const newAssignee = hearing.assignedLawyerId ?? null;
+    if (newAssignee && newAssignee !== previousAssignee) {
+      await dispatchNotification(
+        env,
+        actor.firmId,
+        newAssignee,
+        NotificationType.HEARING_ASSIGNED,
+        { caseTitle: hearing.case.title },
+        { entityType: "CaseSession", entityId: hearing.id }
+      );
+    }
 
     return mapHearing(hearing, null);
   });

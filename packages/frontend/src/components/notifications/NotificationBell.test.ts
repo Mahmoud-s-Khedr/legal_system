@@ -25,4 +25,10 @@ describe("resolveNotificationPath", () => {
       "/app/research/abc"
     );
   });
+
+  it("routes assignment notifications to task/case/hearing pages", () => {
+    expect(resolveNotificationPath(makeNotification(NotificationType.TASK_ASSIGNED))).toBe("/app/tasks/abc");
+    expect(resolveNotificationPath(makeNotification(NotificationType.CASE_ASSIGNED))).toBe("/app/cases/abc");
+    expect(resolveNotificationPath(makeNotification(NotificationType.HEARING_ASSIGNED))).toBe("/app/hearings/abc/edit");
+  });
 });

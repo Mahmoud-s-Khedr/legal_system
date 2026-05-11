@@ -67,7 +67,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const payload = taskSchema.parse(request.body);
-      return createTask(request.sessionUser!, payload, getAuditContext(request));
+      return createTask(request.server.appEnv, request.sessionUser!, payload, getAuditContext(request));
     }
   );
 
@@ -89,6 +89,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
     async (request) => {
       const payload = taskSchema.parse(request.body);
       return updateTask(
+        request.server.appEnv,
         request.sessionUser!,
         idParamsSchema.parse(request.params).id,
         payload,

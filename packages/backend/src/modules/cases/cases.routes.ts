@@ -352,6 +352,7 @@ export async function registerCaseRoutes(app: FastifyInstance) {
     async (request) => {
       const payload = caseAssignmentSchema.parse(request.body);
       return addCaseAssignment(
+        request.server.appEnv,
         request.sessionUser!,
         idParamsSchema.parse(request.params).id,
         payload,
