@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requireEditionFeature } from "../../middleware/requireEditionFeature.js";
+import { requirePermission } from "../../middleware/requirePermission.js";
 import type { AppEnv } from "../../config/env.js";
 import {
   buildAuthUrl,
@@ -71,7 +72,11 @@ export async function registerGoogleCalendarRoutes(app: FastifyInstance, env: Ap
   app.get(
     "/api/integrations/google-calendar/auth",
     {
-      preHandler: [requireAuth, requireEditionFeature("google_calendar_sync")]
+      preHandler: [
+        requireAuth,
+        requirePermission("integrations:google_calendar:manage"),
+        requireEditionFeature("google_calendar_sync")
+      ]
     },
     async (request, reply) => {
       if (!env.GOOGLE_OAUTH_CLIENT_ID || !env.GOOGLE_OAUTH_REDIRECT_URI || !env.GOOGLE_OAUTH_CLIENT_SECRET) {
@@ -128,7 +133,11 @@ export async function registerGoogleCalendarRoutes(app: FastifyInstance, env: Ap
   app.get(
     "/api/integrations/google-calendar/status",
     {
-      preHandler: [requireAuth, requireEditionFeature("google_calendar_sync")]
+      preHandler: [
+        requireAuth,
+        requirePermission("integrations:google_calendar:manage"),
+        requireEditionFeature("google_calendar_sync")
+      ]
     },
     async (request) => getConnectionStatus(request.sessionUser!.id)
   );
@@ -138,7 +147,11 @@ export async function registerGoogleCalendarRoutes(app: FastifyInstance, env: Ap
   app.delete(
     "/api/integrations/google-calendar/revoke",
     {
-      preHandler: [requireAuth, requireEditionFeature("google_calendar_sync")]
+      preHandler: [
+        requireAuth,
+        requirePermission("integrations:google_calendar:manage"),
+        requireEditionFeature("google_calendar_sync")
+      ]
     },
     async (request, reply) => {
       await revokeCalendarAccess(request.sessionUser!.id, env);

@@ -131,23 +131,24 @@ describe("library upload route authorization", () => {
     prisma.libraryDocument.create.mockResolvedValue({ id: "doc-1" });
   });
 
-  it("registers upload route with library:read permission gate", async () => {
+  it("registers upload route with library:manage permission gate", async () => {
     const app = createApp();
     await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
 
     const uploadCall = app.post.mock.calls.find((call) => call[0] === "/api/library/documents/upload");
     expect(uploadCall).toBeDefined();
     const options = uploadCall?.[1] as { preHandler: unknown[] };
-    expect(options.preHandler).toContain("perm:library:read");
+    expect(options.preHandler).toContain("perm:library:manage");
+    expect(options.preHandler).not.toContain("perm:library:read");
   });
 
-  it("allows library readers to upload firm-scoped documents", async () => {
+  it("allows library managers to upload firm-scoped documents", async () => {
     const app = createApp();
     await registerLibraryRoutes(app as never, { OCR_BACKEND: "tesseract" } as never);
     const uploadCall = app.post.mock.calls.find((call) => call[0] === "/api/library/documents/upload");
     const handler = uploadCall?.[2] as (request: unknown, reply: unknown) => Promise<unknown>;
 
-    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const actor = makeSessionUser({ permissions: ["library:manage"], firmId: "firm-1" });
     const request = {
       sessionUser: actor,
       file: vi.fn().mockResolvedValue({
@@ -188,7 +189,7 @@ describe("library upload route authorization", () => {
       }
     });
 
-    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const actor = makeSessionUser({ permissions: ["library:manage"], firmId: "firm-1" });
     const request = {
       sessionUser: actor,
       file: vi.fn().mockResolvedValue({
@@ -258,7 +259,7 @@ describe("library upload route authorization", () => {
 
     fileTypeFromBuffer.mockResolvedValueOnce({ mime: "image/webp" });
 
-    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const actor = makeSessionUser({ permissions: ["library:manage"], firmId: "firm-1" });
     const request = {
       sessionUser: actor,
       file: vi.fn().mockResolvedValue({
@@ -292,7 +293,7 @@ describe("library upload route authorization", () => {
       reply: unknown
     ) => Promise<unknown>;
 
-    const actor = makeSessionUser({ permissions: ["library:read"], firmId: "firm-1" });
+    const actor = makeSessionUser({ permissions: ["library:manage"], firmId: "firm-1" });
     prisma.libraryDocument.findFirst.mockResolvedValueOnce({
       id: "doc-1",
       scope: "FIRM",

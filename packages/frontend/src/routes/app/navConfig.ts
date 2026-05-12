@@ -42,11 +42,11 @@ export interface SidebarNavSection {
 }
 
 export const navConfig: NavConfigItem[] = [
-  { id: "dashboard", labelKey: "nav.dashboard", to: "/app/dashboard", icon: LayoutDashboard, group: "core", order: 10 },
-  { id: "clients", labelKey: "nav.clients", to: "/app/clients", icon: Users, group: "core", order: 20 },
-  { id: "cases", labelKey: "nav.cases", to: "/app/cases", icon: Briefcase, group: "core", order: 30 },
-  { id: "calendar", labelKey: "nav.calendar", to: "/app/calendar", icon: CalendarDays, group: "core", order: 40 },
-  { id: "hearings", labelKey: "nav.hearings", to: "/app/hearings", icon: Scale, group: "core", order: 50 },
+  { id: "dashboard", labelKey: "nav.dashboard", to: "/app/dashboard", icon: LayoutDashboard, group: "core", order: 10, requiredPermission: "dashboard:read" },
+  { id: "clients", labelKey: "nav.clients", to: "/app/clients", icon: Users, group: "core", order: 20, requiredPermission: "clients:read" },
+  { id: "cases", labelKey: "nav.cases", to: "/app/cases", icon: Briefcase, group: "core", order: 30, requiredPermission: "cases:read" },
+  { id: "calendar", labelKey: "nav.calendar", to: "/app/calendar", icon: CalendarDays, group: "core", order: 40, requiredPermission: "hearings:read" },
+  { id: "hearings", labelKey: "nav.hearings", to: "/app/hearings", icon: Scale, group: "core", order: 50, requiredPermission: "hearings:read" },
   {
     id: "tasks",
     labelKey: "nav.tasks",
@@ -56,7 +56,7 @@ export const navConfig: NavConfigItem[] = [
     order: 60,
     requiredPermission: "tasks:read"
   },
-  { id: "documents", labelKey: "nav.documents", to: "/app/documents", icon: FileText, group: "core", order: 70 },
+  { id: "documents", labelKey: "nav.documents", to: "/app/documents", icon: FileText, group: "core", order: 70, requiredPermission: "documents:read" },
   {
     id: "invoices",
     labelKey: "nav.invoices",
@@ -108,7 +108,8 @@ export const navConfig: NavConfigItem[] = [
     to: "/app/integrations/ppo",
     icon: Landmark,
     group: "tools",
-    order: 240
+    order: 240,
+    requiredPermission: "integrations:google_calendar:manage"
   },
   {
     id: "users",

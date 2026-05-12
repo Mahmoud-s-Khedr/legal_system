@@ -3,33 +3,43 @@ import { CalendarDays, Scale } from "lucide-react";
 import { buildSidebarNavSections, navConfig } from "./navConfig";
 
 describe("buildSidebarNavSections", () => {
-  it("keeps core navigation available with no permissions", () => {
+  it("hides protected navigation with no permissions", () => {
     const sections = buildSidebarNavSections({
       t: (key) => key,
       permissions: []
     });
 
-    expect(sections.map((section) => section.id)).toEqual(["core", "tools"]);
-    expect(sections[0]?.items.map((item) => item.id)).toEqual([
-      "dashboard",
-      "clients",
-      "cases",
-      "calendar",
-      "hearings",
-      "documents"
-    ]);
-    expect(sections[1]?.id).toBe("tools");
-    expect(sections[1]?.items.map((item) => item.id)).toEqual(["ppoPortal"]);
+    expect(sections).toEqual([]);
   });
 
   it("filters and orders permission-gated sections", () => {
     const sections = buildSidebarNavSections({
       t: (key) => key,
-      permissions: ["tasks:read", "invoices:read", "expenses:read", "reports:read", "users:read"]
+      permissions: [
+        "dashboard:read",
+        "clients:read",
+        "cases:read",
+        "hearings:read",
+        "documents:read",
+        "tasks:read",
+        "invoices:read",
+        "expenses:read",
+        "reports:read",
+        "users:read",
+        "integrations:google_calendar:manage"
+      ]
     });
 
     expect(sections.map((section) => section.id)).toEqual(["core", "finance", "tools", "administration"]);
-    expect(sections.find((section) => section.id === "core")?.items.map((item) => item.id)).toContain("tasks");
+    expect(sections.find((section) => section.id === "core")?.items.map((item) => item.id)).toEqual([
+      "dashboard",
+      "clients",
+      "cases",
+      "calendar",
+      "hearings",
+      "tasks",
+      "documents"
+    ]);
     expect(sections.find((section) => section.id === "finance")?.items.map((item) => item.id)).toEqual([
       "invoices",
       "expenses"

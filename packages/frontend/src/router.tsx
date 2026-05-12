@@ -73,6 +73,13 @@ import { ErrorFallback } from "./components/ErrorFallback";
 import { PermissionGate } from "./components/PermissionGate";
 
 const BOOTSTRAP_UI_TIMEOUT_MS = 30_000;
+const SEARCH_READ_PERMISSIONS = [
+  "cases:read",
+  "clients:read",
+  "tasks:read",
+  "documents:read",
+  "library:read"
+];
 
 function RootComponent() {
   return (
@@ -258,82 +265,134 @@ const appRoute = createRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/dashboard",
-  component: DashboardPage
+  component: () => (
+    <PermissionGate permission="dashboard:read">
+      <DashboardPage />
+    </PermissionGate>
+  )
 });
 
 // Clients
 const clientsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/clients",
-  component: ClientsPage
+  component: () => (
+    <PermissionGate permission="clients:read">
+      <ClientsPage />
+    </PermissionGate>
+  )
 });
 
 const clientCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/clients/new",
-  component: ClientCreatePage
+  component: () => (
+    <PermissionGate permission="clients:create">
+      <ClientCreatePage />
+    </PermissionGate>
+  )
 });
 
 const clientDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/clients/$clientId",
-  component: ClientDetailPage
+  component: () => (
+    <PermissionGate permission="clients:read">
+      <ClientDetailPage />
+    </PermissionGate>
+  )
 });
 
 const clientEditRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/clients/$clientId/edit",
-  component: ClientEditPage
+  component: () => (
+    <PermissionGate permission="clients:update">
+      <ClientEditPage />
+    </PermissionGate>
+  )
 });
 
 // Cases
 const casesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/cases",
-  component: CasesPage
+  component: () => (
+    <PermissionGate permission="cases:read">
+      <CasesPage />
+    </PermissionGate>
+  )
 });
 
 const caseCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/cases/new",
-  component: CaseCreatePage
+  component: () => (
+    <PermissionGate permission="cases:create">
+      <CaseCreatePage />
+    </PermissionGate>
+  )
 });
 
 const caseQuickIntakeRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/cases/quick-new",
-  component: CaseQuickIntakePage
+  component: () => (
+    <PermissionGate permission="cases:create">
+      <CaseQuickIntakePage />
+    </PermissionGate>
+  )
 });
 
 const caseDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/cases/$caseId",
-  component: CaseDetailPage
+  component: () => (
+    <PermissionGate permission="cases:read">
+      <CaseDetailPage />
+    </PermissionGate>
+  )
 });
 
 // Hearings
 const calendarRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/calendar",
-  component: CalendarPage
+  component: () => (
+    <PermissionGate permission="hearings:read">
+      <CalendarPage />
+    </PermissionGate>
+  )
 });
 
 const hearingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/hearings",
-  component: HearingsPage
+  component: () => (
+    <PermissionGate permission="hearings:read">
+      <HearingsPage />
+    </PermissionGate>
+  )
 });
 
 const hearingCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/hearings/new",
-  component: HearingCreatePage
+  component: () => (
+    <PermissionGate permission="hearings:create">
+      <HearingCreatePage />
+    </PermissionGate>
+  )
 });
 
 const hearingEditRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/hearings/$hearingId/edit",
-  component: HearingEditPage
+  component: () => (
+    <PermissionGate permission="hearings:update">
+      <HearingEditPage />
+    </PermissionGate>
+  )
 });
 
 // Tasks
@@ -351,7 +410,7 @@ const taskCreateRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/tasks/new",
   component: () => (
-    <PermissionGate permission="tasks:read">
+    <PermissionGate permission="tasks:create">
       <TaskCreatePage />
     </PermissionGate>
   )
@@ -484,7 +543,11 @@ const roleEditRoute = createRoute({
 const documentsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/documents",
-  component: DocumentsPage
+  component: () => (
+    <PermissionGate permission="documents:read">
+      <DocumentsPage />
+    </PermissionGate>
+  )
 });
 
 const documentDetailRoute = createRoute({
@@ -500,7 +563,11 @@ const documentDetailRoute = createRoute({
 const documentUploadRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/documents/new",
-  component: DocumentUploadPage
+  component: () => (
+    <PermissionGate permission="documents:create">
+      <DocumentUploadPage />
+    </PermissionGate>
+  )
 });
 
 const searchRoute = createRoute({
@@ -511,7 +578,11 @@ const searchRoute = createRoute({
     page: coercePositiveInt(search.page, 1),
     pageSize: coercePositiveInt(search.pageSize, 20, 100)
   }),
-  component: SearchPage
+  component: () => (
+    <PermissionGate permissions={SEARCH_READ_PERMISSIONS}>
+      <SearchPage />
+    </PermissionGate>
+  )
 });
 
 function coercePositiveInt(
@@ -612,7 +683,11 @@ const reportBuilderRoute = createRoute({
 const ppoPortalRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/integrations/ppo",
-  component: PpoPortalPage
+  component: () => (
+    <PermissionGate permission="integrations:google_calendar:manage">
+      <PpoPortalPage />
+    </PermissionGate>
+  )
 });
 
 // Research
@@ -681,7 +756,7 @@ const libraryUploadRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/library/upload",
   component: () => (
-    <PermissionGate permission="library:read">
+    <PermissionGate permission="library:manage">
       <LibraryUploadPage />
     </PermissionGate>
   )

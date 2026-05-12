@@ -10,6 +10,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import type { AppEnv } from "../../config/env.js";
 import { prisma } from "../../db/prisma.js";
+import { requireAuth } from "../../middleware/requireAuth.js";
+import { requirePermission } from "../../middleware/requirePermission.js";
 
 const PORTAL_COOKIE = "elms_portal_token";
 const PORTAL_AUDIENCE = "elms-portal";
@@ -134,14 +136,8 @@ export async function registerPortalAuthRoutes(app: FastifyInstance, env: AppEnv
     "/api/clients/:clientId/portal/invite",
     {
       preHandler: [
-        // Must be authenticated staff
-        async (request, reply) => {
-          const user = request.sessionUser;
-          if (!user) return reply.status(401).send({ message: "Unauthorized" });
-          if (!user.permissions.includes("clients:manage") && !user.permissions.includes("clients:create")) {
-            return reply.status(403).send({ message: "Forbidden" });
-          }
-        }
+        requireAuth,
+        requirePermission("client_portal:manage")
       ]
     },
     async (request, reply) => {
@@ -178,13 +174,8 @@ export async function registerPortalAuthRoutes(app: FastifyInstance, env: AppEnv
     "/api/clients/:clientId/portal/access",
     {
       preHandler: [
-        async (request, reply) => {
-          const user = request.sessionUser;
-          if (!user) return reply.status(401).send({ message: "Unauthorized" });
-          if (!user.permissions.includes("clients:manage") && !user.permissions.includes("clients:create")) {
-            return reply.status(403).send({ message: "Forbidden" });
-          }
-        }
+        requireAuth,
+        requirePermission("client_portal:manage")
       ]
     },
     async (request) => {

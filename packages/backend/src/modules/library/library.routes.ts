@@ -356,7 +356,7 @@ export async function registerLibraryRoutes(app: FastifyInstance, env: AppEnv) {
 
   app.post(
     "/api/library/documents/upload",
-    { preHandler: [requireAuth, requirePermission("library:read")] },
+    { preHandler: [requireAuth, requirePermission("library:manage")] },
     async (request, reply) => {
       const actor = request.sessionUser!;
 

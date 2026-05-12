@@ -1,9 +1,10 @@
 import { useEffect, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuthBootstrap, useHasPermission } from "../store/authStore";
+import { useAuthBootstrap } from "../store/authStore";
 
 interface Props {
-  permission: string;
+  permission?: string;
+  permissions?: string[];
   children: ReactNode;
 }
 
@@ -11,9 +12,12 @@ interface Props {
  * Renders children only when the current user holds the required permission.
  * Redirects to /app/dashboard otherwise.
  */
-export function PermissionGate({ permission, children }: Props) {
+export function PermissionGate({ permission, permissions, children }: Props) {
   const isBootstrapped = useAuthBootstrap().isBootstrapped;
-  const allowed = useHasPermission(permission);
+  const userPermissions = useAuthBootstrap((state) => state.user?.permissions ?? []);
+  const allowed = permission
+    ? userPermissions.includes(permission)
+    : (permissions?.some((item) => userPermissions.includes(item)) ?? false);
   const navigate = useNavigate();
 
   useEffect(() => {

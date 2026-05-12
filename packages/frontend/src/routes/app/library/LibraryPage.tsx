@@ -47,7 +47,7 @@ interface DocumentsResponse {
 
 export function LibraryPage() {
   const { t, i18n } = useTranslation("app");
-  const canUploadLibraryDocuments = useHasPermission("library:read");
+  const canUploadLibraryDocuments = useHasPermission("library:manage");
   const canManageLibrary = useHasPermission("library:manage");
   const resolvedLanguage = i18n.resolvedLanguage ?? i18n.language ?? "en";
   const isRtl = isArabicLanguage(resolvedLanguage);

@@ -153,8 +153,16 @@ describe("portal-auth.routes", () => {
     await inviteCall![1].preHandler[0]!({ sessionUser: null } as never, reply as never);
     expect(reply.status).toHaveBeenCalledWith(401);
 
-    await inviteCall![1].preHandler[0]!({ sessionUser: { permissions: [] } } as never, reply as never);
+    await inviteCall![1].preHandler[1]!({ sessionUser: { permissions: [] } } as never, reply as never);
     expect(reply.status).toHaveBeenCalledWith(403);
+
+    expect(inviteCall![1].preHandler).toHaveLength(2);
+    const inviteAllowedReply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    await inviteCall![1].preHandler[1]!(
+      { sessionUser: { permissions: ["client_portal:manage"] } } as never,
+      inviteAllowedReply as never
+    );
+    expect(inviteAllowedReply.status).not.toHaveBeenCalled();
 
     mockPrisma.client.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "c-1" });
 
@@ -178,7 +186,14 @@ describe("portal-auth.routes", () => {
     expect(created.send).toHaveBeenCalledWith(expect.objectContaining({ inviteToken: expect.any(String) }));
 
     await revokeCall![1].preHandler[0]!({ sessionUser: null } as never, reply as never);
-    await revokeCall![1].preHandler[0]!({ sessionUser: { permissions: [] } } as never, reply as never);
+    await revokeCall![1].preHandler[1]!({ sessionUser: { permissions: [] } } as never, reply as never);
+    expect(revokeCall![1].preHandler).toHaveLength(2);
+    const revokeAllowedReply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    await revokeCall![1].preHandler[1]!(
+      { sessionUser: { permissions: ["client_portal:manage"] } } as never,
+      revokeAllowedReply as never
+    );
+    expect(revokeAllowedReply.status).not.toHaveBeenCalled();
 
     const revoked = await revokeCall![2](
       { sessionUser: { firmId: "f-1" }, params: { clientId: "c-1" } } as never,

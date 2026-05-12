@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppEnv } from "../../config/env.js";
 
 const requireAuth = vi.fn(async () => {});
+const requirePermission = vi.fn((permission: string) => `perm:${permission}`);
 const requireEditionFeatureHandler = vi.fn(async () => {});
 const requireEditionFeature = vi.fn(() => requireEditionFeatureHandler);
 
@@ -13,6 +14,10 @@ const getConnectionStatus = vi.fn();
 
 vi.mock("../../middleware/requireAuth.js", () => ({
   requireAuth
+}));
+
+vi.mock("../../middleware/requirePermission.js", () => ({
+  requirePermission
 }));
 
 vi.mock("../../middleware/requireEditionFeature.js", () => ({
@@ -52,6 +57,12 @@ describe("registerGoogleCalendarRoutes", () => {
     await registerGoogleCalendarRoutes(app as never, env);
 
     const authCall = get.mock.calls.find((entry) => entry[0] === "/api/integrations/google-calendar/auth");
+    expect(authCall?.[1].preHandler).toEqual([
+      requireAuth,
+      "perm:integrations:google_calendar:manage",
+      requireEditionFeatureHandler
+    ]);
+    expect(requirePermission).toHaveBeenCalledWith("integrations:google_calendar:manage");
     const authHandler = authCall?.[2] as (request: unknown, reply: unknown) => Promise<unknown>;
 
     const authReply = {
@@ -203,6 +214,11 @@ describe("registerGoogleCalendarRoutes", () => {
     await authHandler({ sessionUser: { id: "user-1", firmId: "firm-1" } }, authReply);
 
     expect(authReply.status).toHaveBeenCalledWith(503);
+
+    const statusCall = get.mock.calls.find((entry) => entry[0] === "/api/integrations/google-calendar/status");
+    const revokeCall = del.mock.calls.find((entry) => entry[0] === "/api/integrations/google-calendar/revoke");
+    expect(statusCall?.[1].preHandler).toContain("perm:integrations:google_calendar:manage");
+    expect(revokeCall?.[1].preHandler).toContain("perm:integrations:google_calendar:manage");
 
     const callbackCall = get.mock.calls.find((entry) => entry[0] === "/api/integrations/google-calendar/callback");
     const callbackHandler = callbackCall?.[1] as (request: unknown, reply: unknown) => Promise<unknown>;

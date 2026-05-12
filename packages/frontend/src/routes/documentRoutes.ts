@@ -11,11 +11,19 @@ import { LibrarySearchPage } from "./app/library/LibrarySearchPage";
 import { LibraryAdminPage } from "./app/library/LibraryAdminPage";
 import { LibraryUploadPage } from "./app/library/LibraryUploadPage";
 
+const SEARCH_READ_PERMISSIONS = [
+  "cases:read",
+  "clients:read",
+  "tasks:read",
+  "documents:read",
+  "library:read"
+];
+
 export function createDocumentRoutes(appRoute: AnyRoute) {
   const documentsRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "/documents",
-    component: DocumentsPage
+    component: () => createElement(PermissionGate, { permission: "documents:read", children: createElement(DocumentsPage) })
   });
 
   const documentDetailRoute = createRoute({
@@ -31,7 +39,7 @@ export function createDocumentRoutes(appRoute: AnyRoute) {
   const documentUploadRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "/documents/new",
-    component: DocumentUploadPage
+    component: () => createElement(PermissionGate, { permission: "documents:create", children: createElement(DocumentUploadPage) })
   });
 
   const searchRoute = createRoute({
@@ -42,7 +50,7 @@ export function createDocumentRoutes(appRoute: AnyRoute) {
       page: coercePositiveInt(search.page, 1),
       pageSize: coercePositiveInt(search.pageSize, 20, 100)
     }),
-    component: SearchPage
+    component: () => createElement(PermissionGate, { permissions: SEARCH_READ_PERMISSIONS, children: createElement(SearchPage) })
   });
 
   const libraryRoute = createRoute({
@@ -72,7 +80,7 @@ export function createDocumentRoutes(appRoute: AnyRoute) {
   const libraryUploadRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "/library/upload",
-    component: () => createElement(PermissionGate, { permission: "library:read", children: createElement(LibraryUploadPage) })
+    component: () => createElement(PermissionGate, { permission: "library:manage", children: createElement(LibraryUploadPage) })
   });
 
   return {
