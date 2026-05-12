@@ -95,13 +95,36 @@ describe("tasks.service", () => {
         deletedAt: null,
         OR: expect.any(Array),
         dueAt: expect.objectContaining({ gte: expect.any(Date), lte: expect.any(Date), lt: expect.any(Date) }),
-        status: { not: PrismaTaskStatus.DONE }
+        status: { notIn: [PrismaTaskStatus.DONE, PrismaTaskStatus.CANCELLED] }
       }),
       [{ dueAt: "asc" }, { createdAt: "desc" }],
       { page: 2, limit: 10 }
     );
     expect(result.total).toBe(1);
     expect(result.items[0]?.caseTitle).toBe("Case A");
+  });
+
+  it("supports dashboard filters for unassigned open tasks", async () => {
+    listFirmTasks.mockResolvedValue({ total: 1, items: [baseTask] });
+
+    await listTasks(
+      actor,
+      {
+        assignedToId: "unassigned",
+        open: "true"
+      },
+      { page: 1, limit: 20 }
+    );
+
+    expect(listFirmTasks).toHaveBeenCalledWith(
+      { tx: true },
+      expect.objectContaining({
+        assignedToId: null,
+        status: { notIn: [PrismaTaskStatus.DONE, PrismaTaskStatus.CANCELLED] }
+      }),
+      [{ dueAt: "asc" }, { createdAt: "desc" }],
+      { page: 1, limit: 20 }
+    );
   });
 
   it("gets task by id", async () => {

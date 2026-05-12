@@ -471,11 +471,17 @@
         "unassigned": "Non attribué"
       },
       "sections": {
-        "workQueue": {
-          "title": "Ma file de travail",
-          "description": "Tâches et audiences nécessitant un suivi immédiat.",
-          "emptyTitle": "Aucun travail urgent",
-          "emptyDescription": "Aucun élément urgent pour le moment."
+        "upcomingTasks": {
+          "title": "Tâches à venir",
+          "description": "Les prochaines tâches à traiter.",
+          "emptyTitle": "Aucune tâche à venir",
+          "emptyDescription": "Aucune échéance de tâche n’est planifiée prochainement."
+        },
+        "upcomingSessions": {
+          "title": "Audiences à venir",
+          "description": "Les prochaines audiences de votre agenda.",
+          "emptyTitle": "Aucune audience à venir",
+          "emptyDescription": "Aucune audience n’est planifiée prochainement."
         },
         "activity": {
           "title": "Activité récente sécurisée",
@@ -509,8 +515,8 @@
           "description": "Charge de travail à risque nécessitant un suivi immédiat"
         },
         "financeTrend": {
-          "title": "Répartition des statuts de factures",
-          "description": "Répartition des statuts de factures sur la période sélectionnée"
+          "title": "Revenus, profits et dépenses",
+          "description": "Tendance financière mensuelle des revenus facturés, du profit net et des dépenses"
         },
         "caseAgingBuckets": {
           "title": "Répartition d'ancienneté des dossiers",
@@ -527,6 +533,25 @@
         "invoiceVoidTrend": {
           "title": "Tendance des annulations de factures",
           "description": "Nombre et valeur des factures annulées par mois"
+        }
+      },
+      "series": {
+        "tasksTrend": {
+          "completed": "Terminées",
+          "overdue": "En retard"
+        },
+        "financeTrend": {
+          "revenue": "Revenus",
+          "profit": "Profit",
+          "expenses": "Dépenses"
+        },
+        "dsoCollectionLag": {
+          "avgCollectionDays": "Délai moyen",
+          "paidInvoices": "Factures payées"
+        },
+        "invoiceVoidTrend": {
+          "voidCount": "Nombre d'annulations",
+          "voidAmount": "Montant annulé"
         }
       },
       "enums": {

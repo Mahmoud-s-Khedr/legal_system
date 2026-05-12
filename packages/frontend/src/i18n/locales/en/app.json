@@ -471,11 +471,17 @@
         "unassigned": "Unassigned"
       },
       "sections": {
-        "workQueue": {
-          "title": "My work queue",
-          "description": "Tasks and hearings that need immediate follow-up.",
-          "emptyTitle": "No urgent work",
-          "emptyDescription": "You are clear for now."
+        "upcomingTasks": {
+          "title": "Upcoming tasks",
+          "description": "The next tasks due for follow-up.",
+          "emptyTitle": "No upcoming tasks",
+          "emptyDescription": "No task deadlines are scheduled next."
+        },
+        "upcomingSessions": {
+          "title": "Upcoming sessions",
+          "description": "The next court sessions on your calendar.",
+          "emptyTitle": "No upcoming sessions",
+          "emptyDescription": "No hearings are scheduled next."
         },
         "activity": {
           "title": "Recent safe activity",
@@ -509,8 +515,8 @@
           "description": "High-risk workload requiring immediate follow-up"
         },
         "financeTrend": {
-          "title": "Invoice status mix",
-          "description": "Invoice status distribution in selected range"
+          "title": "Revenue, profit, and expenses",
+          "description": "Monthly financial trend for billed revenue, net profit, and expenses"
         },
         "caseAgingBuckets": {
           "title": "Case aging buckets",
@@ -527,6 +533,25 @@
         "invoiceVoidTrend": {
           "title": "Invoice void trend",
           "description": "Voided invoice count and value by month"
+        }
+      },
+      "series": {
+        "tasksTrend": {
+          "completed": "Completed",
+          "overdue": "Overdue"
+        },
+        "financeTrend": {
+          "revenue": "Revenue",
+          "profit": "Profit",
+          "expenses": "Expenses"
+        },
+        "dsoCollectionLag": {
+          "avgCollectionDays": "Avg collection days",
+          "paidInvoices": "Paid invoices"
+        },
+        "invoiceVoidTrend": {
+          "voidCount": "Void count",
+          "voidAmount": "Void amount"
         }
       },
       "enums": {

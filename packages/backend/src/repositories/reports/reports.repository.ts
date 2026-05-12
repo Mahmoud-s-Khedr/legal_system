@@ -94,8 +94,10 @@ export async function countUpcomingAssignedHearings(
 export async function queryRevenueReport(
   tx: RepositoryTx,
   firmId: string,
-  filter: { dateFrom?: string; dateTo?: string }
+  filter: { dateFrom?: string; dateTo?: string },
+  options?: { caseIds?: string[] | null }
 ): Promise<Array<{ month: string; invoiced: string; paid: string }>> {
+  const caseIds = options?.caseIds ?? null;
   return tx.$queryRaw<Array<{ month: string; invoiced: string; paid: string }>>`
       SELECT
         TO_CHAR(DATE_TRUNC('month', "issuedAt"), 'YYYY-MM') AS month,
@@ -109,6 +111,10 @@ export async function queryRevenueReport(
         AND "issuedAt" IS NOT NULL
         AND (${filter.dateFrom ?? null}::timestamptz IS NULL OR "issuedAt" >= ${filter.dateFrom ?? null}::timestamptz)
         AND (${filter.dateTo ?? null}::timestamptz IS NULL OR "issuedAt" <= ${filter.dateTo ?? null}::timestamptz)
+        AND (
+          ${caseIds}::uuid[] IS NULL
+          OR "caseId" = ANY(${caseIds}::uuid[])
+        )
       GROUP BY DATE_TRUNC('month', "issuedAt")
       ORDER BY month ASC
     `;

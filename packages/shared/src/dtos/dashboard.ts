@@ -65,7 +65,8 @@ export interface DashboardResponseDto {
   roleLabel: string;
   widgets: DashboardWidgetDto[];
   priorityCards: DashboardPriorityCardDto[];
-  myWork: DashboardWorkItemDto[];
+  upcomingTasks: DashboardWorkItemDto[];
+  upcomingSessions: DashboardWorkItemDto[];
   recentActivity: DashboardActivityItemDto[];
 }
 
@@ -80,19 +81,24 @@ export type DashboardChartKind =
   | "dsoCollectionLag"
   | "invoiceVoidTrend";
 
+export interface DashboardChartSeriesDto {
+  key: string;
+}
+
 export interface DashboardChartPointDto {
   label: string;
-  value: number;
-  secondaryValue?: number;
+  values: Record<string, number>;
 }
 
 export interface DashboardChartDto {
   key: DashboardChartKind;
   title: string;
   description?: string;
+  series: DashboardChartSeriesDto[];
   points: DashboardChartPointDto[];
   redacted: boolean;
   emptyReason?: "no_data" | "suppressed";
+  valueFormat?: "number" | "currency" | "days";
 }
 
 export interface DashboardAnalyticsResponseDto {

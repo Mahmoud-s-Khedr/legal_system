@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import i18n from "../i18n";
 import {
   localizeDashboardChartLabel,
+  localizeDashboardSeriesLabel,
   localizeRangeLabel,
   localizeScopeLabel
 } from "./dashboardI18n";
@@ -30,5 +31,13 @@ describe("dashboardI18n", () => {
     const t = i18n.getFixedT("en", "app");
 
     expect(localizeDashboardChartLabel(t, "casesTrend", "VERY_CUSTOM_STATUS")).toBe("Very Custom Status");
+  });
+
+  it("localizes finance series labels", async () => {
+    await i18n.changeLanguage("en");
+    const t = i18n.getFixedT("en", "app");
+
+    expect(localizeDashboardSeriesLabel(t, "financeTrend", "revenue")).toBe("Revenue");
+    expect(localizeDashboardSeriesLabel(t, "financeTrend", "profit")).toBe("Profit");
   });
 });

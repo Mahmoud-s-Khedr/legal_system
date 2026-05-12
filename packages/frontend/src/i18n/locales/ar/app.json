@@ -471,11 +471,17 @@
         "unassigned": "غير مسند"
       },
       "sections": {
-        "workQueue": {
-          "title": "قائمة عملي",
-          "description": "مهام وجلسات تتطلب متابعة فورية.",
-          "emptyTitle": "لا توجد أعمال عاجلة",
-          "emptyDescription": "لا توجد عناصر عاجلة حاليًا."
+        "upcomingTasks": {
+          "title": "المهام القادمة",
+          "description": "أقرب المهام المستحقة للمتابعة.",
+          "emptyTitle": "لا توجد مهام قادمة",
+          "emptyDescription": "لا توجد مواعيد مهام قريبة حاليًا."
+        },
+        "upcomingSessions": {
+          "title": "الجلسات القادمة",
+          "description": "أقرب الجلسات المسجلة على جدولك.",
+          "emptyTitle": "لا توجد جلسات قادمة",
+          "emptyDescription": "لا توجد جلسات مجدولة قريبًا."
         },
         "activity": {
           "title": "النشاط الآمن الأخير",
@@ -509,8 +515,8 @@
           "description": "عبء عمل عالي المخاطر يحتاج متابعة فورية"
         },
         "financeTrend": {
-          "title": "مزيج حالات الفواتير",
-          "description": "توزيع حالات الفواتير خلال الفترة المحددة"
+          "title": "الإيرادات والربح والمصروفات",
+          "description": "اتجاه مالي شهري للإيرادات المفوترة وصافي الربح والمصروفات"
         },
         "caseAgingBuckets": {
           "title": "شرائح عمر القضايا",
@@ -527,6 +533,25 @@
         "invoiceVoidTrend": {
           "title": "اتجاه إلغاء الفواتير",
           "description": "عدد وقيمة الفواتير الملغاة شهريًا"
+        }
+      },
+      "series": {
+        "tasksTrend": {
+          "completed": "منجزة",
+          "overdue": "متأخرة"
+        },
+        "financeTrend": {
+          "revenue": "الإيرادات",
+          "profit": "الربح",
+          "expenses": "المصروفات"
+        },
+        "dsoCollectionLag": {
+          "avgCollectionDays": "متوسط أيام التحصيل",
+          "paidInvoices": "الفواتير المدفوعة"
+        },
+        "invoiceVoidTrend": {
+          "voidCount": "عدد الملغاة",
+          "voidAmount": "قيمة الملغاة"
         }
       },
       "enums": {

@@ -113,3 +113,5 @@ tree.log
 
 # Tesseract trained data (Optional: uncomment if you don't want to commit OCR models)
 *.traineddata
+
+.lighthouseci/

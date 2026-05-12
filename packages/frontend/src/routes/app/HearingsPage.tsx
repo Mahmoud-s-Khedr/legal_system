@@ -77,7 +77,7 @@ export function HearingsPage() {
     defaultSortBy: "sessionDatetime",
     defaultSortDir: "asc",
     defaultLimit: 20,
-    filterKeys: ["overdue"]
+    filterKeys: ["overdue", "from", "to"]
   });
 
   const hearingsQuery = useQuery({

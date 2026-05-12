@@ -54,6 +54,7 @@ export async function listTasks(
     assignedToId?: string;
     status?: string;
     overdue?: string;
+    open?: string;
     from?: string;
     to?: string;
     sortBy?: string;
@@ -88,8 +89,21 @@ export async function listTasks(
       firmId: actor.firmId,
       deletedAt: null,
       ...(filters.caseId ? { caseId: filters.caseId } : {}),
-      ...(filters.assignedToId ? { assignedToId: filters.assignedToId } : {}),
-      ...(filters.status ? { status: filters.status as TaskStatus } : {}),
+      ...(filters.assignedToId
+        ? {
+            assignedToId:
+              filters.assignedToId === "unassigned" ? null : filters.assignedToId
+          }
+        : {}),
+      ...(filters.status
+        ? { status: filters.status as TaskStatus }
+        : (filters.overdue === "true" || filters.open === "true")
+          ? {
+              status: {
+                notIn: [TaskStatus.DONE, TaskStatus.CANCELLED]
+              }
+            }
+          : {}),
       ...(searchCandidates.length > 0
         ? {
             OR: searchCandidates.flatMap((candidate) => [
@@ -117,13 +131,7 @@ export async function listTasks(
           }
         : {}),
       ...(Object.keys(dueAtFilter).length > 0 ? { dueAt: dueAtFilter } : {}),
-      ...(filters.overdue === "true"
-        ? {
-            status: {
-              not: TaskStatus.DONE
-            }
-          }
-        : {})
+      
     };
 
     const { total, items } = await listFirmTasks(tx, where, orderBy, { page, limit });

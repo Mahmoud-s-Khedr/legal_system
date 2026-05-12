@@ -83,56 +83,8 @@ export const DASHBOARD_WIDGET_RULES: DashboardWidgetRule[] = [
 
 export const DASHBOARD_CHART_RULES: DashboardChartRule[] = [
   {
-    key: "casesTrend",
-    title: "Cases opened vs closed",
-    allowedScopes: ["my", "team", "office"],
-    requiredAnyPermissions: ["cases:read"]
-  },
-  {
-    key: "tasksTrend",
-    title: "Tasks completed vs overdue",
-    allowedScopes: ["my", "team", "office"],
-    requiredAnyPermissions: ["tasks:read"]
-  },
-  {
-    key: "hearingsTrend",
-    title: "Hearings scheduled",
-    allowedScopes: ["my", "team", "office"],
-    requiredAnyPermissions: ["hearings:read"]
-  },
-  {
-    key: "riskBuckets",
-    title: "Risk buckets",
-    allowedScopes: ["my", "team", "office"],
-    requiredAnyPermissions: ["tasks:read", "hearings:read"]
-  },
-  {
     key: "financeTrend",
     title: "Invoice status mix",
-    allowedScopes: ["team", "office"],
-    requiredAnyPermissions: ["invoices:read"]
-  },
-  {
-    key: "caseAgingBuckets",
-    title: "Case aging buckets",
-    allowedScopes: ["my", "team", "office"],
-    requiredAnyPermissions: ["cases:read"]
-  },
-  {
-    key: "overdueTrajectory",
-    title: "Overdue trajectory",
-    allowedScopes: ["my", "team", "office"],
-    requiredAnyPermissions: ["tasks:read"]
-  },
-  {
-    key: "dsoCollectionLag",
-    title: "DSO collection lag",
-    allowedScopes: ["team", "office"],
-    requiredAnyPermissions: ["invoices:read"]
-  },
-  {
-    key: "invoiceVoidTrend",
-    title: "Invoice void trend",
     allowedScopes: ["team", "office"],
     requiredAnyPermissions: ["invoices:read"]
   }

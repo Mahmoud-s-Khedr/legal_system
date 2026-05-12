@@ -1,5 +1,4 @@
 import type {
-  DashboardActivityItemDto,
   DashboardAnalyticsResponseDto,
   DashboardChartDto,
   DashboardChartPointDto,
@@ -10,16 +9,13 @@ import type {
   DashboardWorkItemDto,
   SessionUser
 } from "@elms/shared";
-import { Prisma, TaskPriority, TaskStatus } from "@prisma/client";
+import { Prisma, TaskStatus } from "@prisma/client";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
-import { listRecentAuditActivity } from "../../repositories/dashboard/dashboard.repository.js";
 import {
-  queryDsoCollectionLagReport,
-  queryInvoiceVoidTrendReport
+  queryEarningsLossesReport,
+  queryRevenueReport
 } from "../../repositories/reports/reports.repository.js";
-import { resolveDashboardChartRules, resolveDashboardWidgets } from "./dashboard.registry.js";
-
-const K_ANONYMITY_MIN = 3;
+import { resolveDashboardChartRules } from "./dashboard.registry.js";
 
 function startDateForRange(range: DashboardRange): Date {
   const days = range === "90d" ? 90 : 30;
@@ -35,23 +31,17 @@ function titleCaseRole(roleKey: string) {
     .join(" ");
 }
 
-function isoDay(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
+function buildAppHref(path: string, params: Record<string, string | null | undefined>) {
+  const search = new URLSearchParams();
 
-function buildDaySeries(startDate: Date, endDate: Date): string[] {
-  const days: string[] = [];
-  const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-  const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-  while (cursor.getTime() <= end.getTime()) {
-    days.push(isoDay(cursor));
-    cursor.setDate(cursor.getDate() + 1);
+  for (const [key, value] of Object.entries(params)) {
+    if (value && value.trim().length > 0) {
+      search.set(key, value);
+    }
   }
-  return days;
-}
 
-function formatAction(action: string) {
-  return action.replace(/\./g, " ");
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
 }
 
 async function resolveScopeContext(tx: Prisma.TransactionClient, actor: SessionUser, scope: DashboardScope) {
@@ -143,10 +133,6 @@ function buildHearingWhere(actor: SessionUser, scope: DashboardScope, context: {
   };
 }
 
-function redactActivityTitle(action: string) {
-  return action.includes("invoice") ? "finance update" : formatAction(action);
-}
-
 export async function getDashboard(actor: SessionUser, scope: DashboardScope): Promise<DashboardResponseDto> {
   return inTenantTransaction(actor.firmId, async (tx) => {
     const scopeContext = await resolveScopeContext(tx, actor, scope);
@@ -156,11 +142,14 @@ export async function getDashboard(actor: SessionUser, scope: DashboardScope): P
     const weekAhead = new Date(now);
     weekAhead.setDate(now.getDate() + 7);
 
-    const [dueToday, overdue, hearings7d, unassigned, myTasks, myHearings, activities] = await Promise.all([
+    const dueTodayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dueTodayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    const [dueToday, overdue, hearings7d, unassigned, upcomingTasks, upcomingHearings] = await Promise.all([
       tx.task.count({
         where: {
           ...taskWhere,
-          dueAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()), lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) },
+          dueAt: { gte: dueTodayStart, lt: dueTodayEnd },
           status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }
         }
       }),
@@ -187,13 +176,14 @@ export async function getDashboard(actor: SessionUser, scope: DashboardScope): P
       tx.task.findMany({
         where: {
           ...taskWhere,
+          dueAt: { gte: now },
           status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }
         },
         include: {
           case: { select: { id: true, title: true } }
         },
         orderBy: [{ dueAt: "asc" }, { updatedAt: "desc" }],
-        take: 6
+        take: 2
       }),
       tx.caseSession.findMany({
         where: {
@@ -202,22 +192,40 @@ export async function getDashboard(actor: SessionUser, scope: DashboardScope): P
         },
         include: { case: { select: { id: true, title: true } } },
         orderBy: { sessionDatetime: "asc" },
-        take: 4
-      }),
-      listRecentAuditActivity(tx, actor.firmId, {
-        limit: 10,
-        userIds: scopeContext.userIds ?? undefined
+        take: 2
       })
     ]);
 
     const priorityCards: DashboardResponseDto["priorityCards"] = [
-      { key: "dueToday", label: "Due today", value: dueToday, href: "/app/tasks" },
-      { key: "overdue", label: "Overdue", value: overdue, href: "/app/tasks?overdue=true" },
-      { key: "hearings7d", label: "Hearings in 7 days", value: hearings7d, href: "/app/hearings" },
-      { key: "unassigned", label: "Unassigned", value: unassigned, href: "/app/tasks" }
+      {
+        key: "dueToday",
+        label: "Due today",
+        value: dueToday,
+        href: buildAppHref("/app/tasks", {
+          open: "true",
+          from: dueTodayStart.toISOString(),
+          to: dueTodayEnd.toISOString()
+        })
+      },
+      { key: "overdue", label: "Overdue", value: overdue, href: buildAppHref("/app/tasks", { overdue: "true" }) },
+      {
+        key: "hearings7d",
+        label: "Hearings in 7 days",
+        value: hearings7d,
+        href: buildAppHref("/app/hearings", {
+          from: now.toISOString(),
+          to: weekAhead.toISOString()
+        })
+      },
+      {
+        key: "unassigned",
+        label: "Unassigned",
+        value: unassigned,
+        href: buildAppHref("/app/tasks", { assignedToId: "unassigned", open: "true" })
+      }
     ];
 
-    const taskItems: DashboardWorkItemDto[] = myTasks.map((task) => ({
+    const taskItems: DashboardWorkItemDto[] = upcomingTasks.map((task) => ({
       id: task.id,
       type: "task",
       title: task.title,
@@ -227,58 +235,26 @@ export async function getDashboard(actor: SessionUser, scope: DashboardScope): P
       priority: task.priority.toLowerCase() as DashboardWorkItemDto["priority"]
     }));
 
-    const hearingItems: DashboardWorkItemDto[] = myHearings.map((hearing) => ({
+    const hearingItems: DashboardWorkItemDto[] = upcomingHearings.map((hearing) => ({
       id: hearing.id,
       type: "hearing",
       title: hearing.case.title,
       subtitle: "Hearing",
       dueAt: hearing.sessionDatetime.toISOString(),
-      href: `/app/cases/${hearing.case.id}`,
+      href: `/app/hearings/${hearing.id}/edit`,
       priority: "high"
     }));
-
-    const activityItems: DashboardActivityItemDto[] = activities.map((item) => {
-      const isFinanceActivity = item.action.startsWith("invoices") || item.action.startsWith("expenses");
-      const canSeeFinance = actor.permissions.includes("invoices:read") || actor.permissions.includes("expenses:read");
-      return {
-        id: item.id,
-        title: isFinanceActivity && !canSeeFinance ? "Finance activity" : redactActivityTitle(item.action),
-        subtitle: isFinanceActivity && !canSeeFinance ? "Restricted details" : item.entityType,
-        createdAt: item.createdAt.toISOString()
-      };
-    });
 
     return {
       scope,
       roleLabel: titleCaseRole(actor.roleKey),
-      widgets: resolveDashboardWidgets(actor, scope),
+      widgets: [],
       priorityCards,
-      myWork: [...taskItems, ...hearingItems]
-        .sort((a, b) => {
-          if (!a.dueAt && !b.dueAt) return 0;
-          if (!a.dueAt) return 1;
-          if (!b.dueAt) return -1;
-          return a.dueAt.localeCompare(b.dueAt);
-        })
-        .slice(0, 8),
-      recentActivity: activityItems
+      upcomingTasks: taskItems,
+      upcomingSessions: hearingItems,
+      recentActivity: []
     };
   });
-}
-
-function redactSmallGroups(points: DashboardChartPointDto[]): { redacted: boolean; points: DashboardChartPointDto[] } {
-  if (points.length === 0) {
-    return { redacted: false, points };
-  }
-
-  if (points.some((point) => point.value < K_ANONYMITY_MIN)) {
-    return {
-      redacted: true,
-      points: points.filter((point) => point.value >= K_ANONYMITY_MIN)
-    };
-  }
-
-  return { redacted: false, points };
 }
 
 function finalizeChart(chart: Omit<DashboardChartDto, "emptyReason">): DashboardChartDto {
@@ -300,249 +276,44 @@ export async function getDashboardAnalytics(
   return inTenantTransaction(actor.firmId, async (tx) => {
     const rules = resolveDashboardChartRules(actor, scope);
     const scopeContext = await resolveScopeContext(tx, actor, scope);
+    const now = new Date();
     const startDate = startDateForRange(range);
-    const taskWhere = buildTaskWhere(actor, scope, scopeContext);
-    const hearingWhere = buildHearingWhere(actor, scope, scopeContext);
 
     const chartByKey = new Map<string, DashboardChartDto>();
 
-    if (rules.some((r) => r.key === "casesTrend")) {
-      const caseWhere: Prisma.CaseWhereInput = {
-        firmId: actor.firmId,
-        deletedAt: null,
-        createdAt: { gte: startDate },
-        ...(scope !== "office" && scopeContext.caseIds ? { id: { in: scopeContext.caseIds } } : {})
-      };
-      const opened = await tx.case.groupBy({
-        by: ["status"],
-        where: caseWhere,
-        _count: { _all: true }
-      });
-      const points = opened.map((row) => ({ label: row.status, value: row._count._all }));
-      const redaction = redactSmallGroups(points);
-      chartByKey.set("casesTrend", finalizeChart({
-        key: "casesTrend",
-        title: "Cases opened vs closed",
-        description: "Status distribution in selected range",
-        points: redaction.points,
-        redacted: redaction.redacted
-      }));
-    }
-
-    if (rules.some((r) => r.key === "tasksTrend")) {
-      const now = new Date();
-      const days = buildDaySeries(startDate, now);
-      const doneRows = await tx.task.findMany({
-        where: {
-          ...taskWhere,
-          status: TaskStatus.DONE,
-          updatedAt: { gte: startDate, lte: now }
-        },
-        select: { updatedAt: true }
-      });
-      const overdueRows = await tx.task.findMany({
-        where: {
-          ...taskWhere,
-          dueAt: { gte: startDate, lt: now },
-          status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }
-        },
-        select: { dueAt: true }
-      });
-      const doneByDay = new Map<string, number>();
-      for (const row of doneRows) {
-        const key = isoDay(row.updatedAt);
-        doneByDay.set(key, (doneByDay.get(key) ?? 0) + 1);
-      }
-      const overdueByDay = new Map<string, number>();
-      for (const row of overdueRows) {
-        if (!row.dueAt) continue;
-        const key = isoDay(row.dueAt);
-        overdueByDay.set(key, (overdueByDay.get(key) ?? 0) + 1);
-      }
-      const points = days.map((day) => ({
-        label: day,
-        value: doneByDay.get(day) ?? 0,
-        secondaryValue: overdueByDay.get(day) ?? 0
-      }));
-      const redaction = redactSmallGroups(points.map((point) => ({ label: point.label, value: point.value })));
-      chartByKey.set("tasksTrend", finalizeChart({
-        key: "tasksTrend",
-        title: "Tasks completed vs overdue",
-        points: points.filter((point) => redaction.points.some((allowed) => allowed.label === point.label)),
-        redacted: redaction.redacted
-      }));
-    }
-
-    if (rules.some((r) => r.key === "hearingsTrend")) {
-      const hearingRows = await tx.caseSession.groupBy({
-        by: ["outcome"],
-        where: {
-          ...hearingWhere,
-          sessionDatetime: { gte: startDate }
-        },
-        _count: { _all: true }
-      });
-      const points = hearingRows.map((row) => ({ label: row.outcome ?? "Scheduled", value: row._count._all }));
-      const redaction = redactSmallGroups(points);
-      chartByKey.set("hearingsTrend", finalizeChart({
-        key: "hearingsTrend",
-        title: "Hearings scheduled",
-        points: redaction.points,
-        redacted: redaction.redacted
-      }));
-    }
-
-    if (rules.some((r) => r.key === "riskBuckets")) {
-      const now = new Date();
-      const [overdueHigh, upcomingUrgent] = await Promise.all([
-        tx.task.count({
-          where: {
-            ...taskWhere,
-            dueAt: { lt: now },
-            priority: { in: [TaskPriority.HIGH, TaskPriority.URGENT] },
-            status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }
-          }
-        }),
-        tx.caseSession.count({
-          where: {
-            ...hearingWhere,
-            sessionDatetime: { gte: now, lte: new Date(now.getTime() + 3 * 86_400_000) }
-          }
-        })
+    if (rules.some((r) => r.key === "financeTrend")) {
+      const [revenueRows, earningsRows] = await Promise.all([
+        queryRevenueReport(
+          tx,
+          actor.firmId,
+          { dateFrom: startDate.toISOString(), dateTo: now.toISOString() },
+          { caseIds: scope === "office" ? null : scopeContext.caseIds }
+        ),
+        queryEarningsLossesReport(
+          tx,
+          actor.firmId,
+          { dateFrom: startDate.toISOString(), dateTo: now.toISOString() },
+          { caseIds: scope === "office" ? null : scopeContext.caseIds }
+        )
       ]);
 
-      const points = [
-        { label: "Overdue high-priority tasks", value: overdueHigh },
-        { label: "Hearings in 72h", value: upcomingUrgent }
-      ];
-      const redaction = redactSmallGroups(points);
-      chartByKey.set("riskBuckets", finalizeChart({
-        key: "riskBuckets",
-        title: "Risk buckets",
-        points: redaction.points,
-        redacted: redaction.redacted
+      const revenueByMonth = new Map(revenueRows.map((row) => [row.month, Number(row.invoiced)]));
+      const points: DashboardChartPointDto[] = earningsRows.map((row) => ({
+        label: row.month,
+        values: {
+          revenue: revenueByMonth.get(row.month) ?? 0,
+          expenses: Number(row.operatingExpenses),
+          profit: Number(row.netProfitAccrual)
+        }
       }));
-    }
 
-    if (rules.some((r) => r.key === "financeTrend")) {
-      const invoiceRows = await tx.invoice.groupBy({
-        by: ["status"],
-        where: {
-          firmId: actor.firmId,
-          createdAt: { gte: startDate },
-          ...(scope !== "office" && scopeContext.caseIds ? { caseId: { in: scopeContext.caseIds } } : {})
-        },
-        _count: { _all: true }
-      });
-
-      const points = invoiceRows.map((row) => ({ label: row.status, value: row._count._all }));
-      const redaction = redactSmallGroups(points);
       chartByKey.set("financeTrend", finalizeChart({
         key: "financeTrend",
-        title: "Invoice status mix",
-        points: redaction.points,
-        redacted: redaction.redacted
-      }));
-    }
-
-    if (rules.some((r) => r.key === "caseAgingBuckets")) {
-      const now = new Date();
-      const rows = await tx.case.findMany({
-        where: {
-          firmId: actor.firmId,
-          deletedAt: null,
-          status: { not: "CLOSED" },
-          ...(scope !== "office" && scopeContext.caseIds ? { id: { in: scopeContext.caseIds } } : {})
-        },
-        select: { createdAt: true }
-      });
-      const buckets = { "0_30": 0, "31_60": 0, "61_90": 0, "90_PLUS": 0 };
-      for (const row of rows) {
-        const age = Math.floor((now.getTime() - row.createdAt.getTime()) / 86_400_000);
-        if (age <= 30) buckets["0_30"] += 1;
-        else if (age <= 60) buckets["31_60"] += 1;
-        else if (age <= 90) buckets["61_90"] += 1;
-        else buckets["90_PLUS"] += 1;
-      }
-      const points = [
-        { label: "0_30", value: buckets["0_30"] },
-        { label: "31_60", value: buckets["31_60"] },
-        { label: "61_90", value: buckets["61_90"] },
-        { label: "90_PLUS", value: buckets["90_PLUS"] }
-      ];
-      const redaction = redactSmallGroups(points);
-      chartByKey.set("caseAgingBuckets", finalizeChart({
-        key: "caseAgingBuckets",
-        title: "Case aging buckets",
-        points: redaction.points,
-        redacted: redaction.redacted
-      }));
-    }
-
-    if (rules.some((r) => r.key === "overdueTrajectory")) {
-      const now = new Date();
-      const days = buildDaySeries(startDate, now);
-      const overdueRows = await tx.task.findMany({
-        where: {
-          ...taskWhere,
-          dueAt: { gte: startDate, lt: now },
-          status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }
-        },
-        select: { dueAt: true }
-      });
-      const dueByDay = new Map<string, number>();
-      for (const row of overdueRows) {
-        if (!row.dueAt) continue;
-        const key = isoDay(row.dueAt);
-        dueByDay.set(key, (dueByDay.get(key) ?? 0) + 1);
-      }
-      const points = days.map((day) => ({ label: day, value: dueByDay.get(day) ?? 0 }));
-      const redaction = redactSmallGroups(points);
-      chartByKey.set("overdueTrajectory", finalizeChart({
-        key: "overdueTrajectory",
-        title: "Overdue trajectory",
-        points: redaction.points,
-        redacted: redaction.redacted
-      }));
-    }
-
-    if (rules.some((r) => r.key === "dsoCollectionLag")) {
-      const rows = await queryDsoCollectionLagReport(
-        tx,
-        actor.firmId,
-        { dateFrom: startDate.toISOString() },
-        { caseIds: scope === "office" ? null : scopeContext.caseIds }
-      );
-      const points = rows.map((row) => ({
-        label: row.month,
-        value: Math.round(Number(row.avgCollectionDays)),
-        secondaryValue: Number(row.paidInvoices)
-      }));
-      chartByKey.set("dsoCollectionLag", finalizeChart({
-        key: "dsoCollectionLag",
-        title: "DSO collection lag",
+        title: "Revenue, profit, and expenses",
+        series: [{ key: "revenue" }, { key: "profit" }, { key: "expenses" }],
         points,
-        redacted: false
-      }));
-    }
-
-    if (rules.some((r) => r.key === "invoiceVoidTrend")) {
-      const rows = await queryInvoiceVoidTrendReport(
-        tx,
-        actor.firmId,
-        { dateFrom: startDate.toISOString() },
-        { caseIds: scope === "office" ? null : scopeContext.caseIds }
-      );
-      const points = rows.map((row) => ({
-        label: row.month,
-        value: Number(row.voidCount),
-        secondaryValue: Math.round(Number(row.voidAmount))
-      }));
-      chartByKey.set("invoiceVoidTrend", finalizeChart({
-        key: "invoiceVoidTrend",
-        title: "Invoice void trend",
-        points,
-        redacted: false
+        redacted: false,
+        valueFormat: "currency"
       }));
     }
 

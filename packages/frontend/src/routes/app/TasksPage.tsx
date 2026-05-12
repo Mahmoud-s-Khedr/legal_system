@@ -50,7 +50,7 @@ export function TasksPage() {
     defaultSortBy: "dueAt",
     defaultSortDir: "asc",
     defaultLimit: 20,
-    filterKeys: ["status"]
+    filterKeys: ["status", "overdue", "open", "from", "to", "assignedToId"]
   });
 
   const tasksQuery = useQuery({

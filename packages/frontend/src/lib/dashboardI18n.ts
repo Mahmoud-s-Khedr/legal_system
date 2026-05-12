@@ -35,6 +35,22 @@ export function localizeChartDescription(t: TFunction, chartKey: DashboardChartK
   return t(`dashboard.analytics.charts.${chartKey}.description`);
 }
 
+export function localizeDashboardSeriesLabel(
+  t: TFunction,
+  chartKey: DashboardChartKind,
+  seriesKey: string
+) {
+  const translated = t(`dashboard.analytics.series.${chartKey}.${seriesKey}`, {
+    defaultValue: ""
+  });
+
+  if (translated) {
+    return translated;
+  }
+
+  return titleFallback(normalizeToken(seriesKey));
+}
+
 export function localizeDashboardChartLabel(
   t: TFunction,
   chartKey: DashboardChartKind,
@@ -51,7 +67,7 @@ export function localizeDashboardChartLabel(
     tasksTrend: `dashboard.analytics.enums.taskStatus.${token}`,
     hearingsTrend: `dashboard.analytics.enums.hearingOutcome.${token}`,
     riskBuckets: `dashboard.analytics.enums.riskBucket.${token}`,
-    financeTrend: `dashboard.analytics.enums.invoiceStatus.${token}`,
+    financeTrend: `dashboard.analytics.enums.month.${token}`,
     caseAgingBuckets: `dashboard.analytics.enums.caseAging.${token}`,
     overdueTrajectory: `dashboard.analytics.enums.month.${token}`,
     dsoCollectionLag: `dashboard.analytics.enums.month.${token}`,

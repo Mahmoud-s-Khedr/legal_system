@@ -26,6 +26,7 @@ import {
   localizeChartDescription,
   localizeChartTitle,
   localizeDashboardChartLabel,
+  localizeDashboardSeriesLabel,
   localizePriorityCardLabel,
   localizeRangeLabel,
   localizeScopeLabel
@@ -36,6 +37,7 @@ import {
   PageHeader,
   SectionCard,
   StatCard,
+  formatCurrency,
   formatDateTime
 } from "./ui";
 import { StatCardSkeleton, SectionCardSkeleton } from "../../components/shared/Skeleton";
@@ -50,12 +52,32 @@ function getGreetingKey(): "night" | "morning" | "afternoon" | "evening" {
 }
 
 function chartIsLine(chart: DashboardChartDto) {
-  return (
-    chart.key === "tasksTrend" ||
-    chart.key === "overdueTrajectory" ||
-    chart.key === "dsoCollectionLag" ||
-    chart.key === "invoiceVoidTrend"
-  );
+  return chart.key === "financeTrend";
+}
+
+function seriesColor(seriesKey: string, index: number) {
+  const palette: Record<string, string> = {
+    count: "#0f766e",
+    completed: "#0f766e",
+    overdue: "#dc2626",
+    revenue: "#0f766e",
+    profit: "#2563eb",
+    expenses: "#f59e0b",
+    avgCollectionDays: "#2563eb",
+    paidInvoices: "#14b8a6",
+    voidCount: "#ea580c",
+    voidAmount: "#991b1b"
+  };
+
+  return palette[seriesKey] ?? ["#0f766e", "#2563eb", "#f59e0b", "#dc2626"][index % 4];
+}
+
+function formatChartMetric(chart: DashboardChartDto, value: number) {
+  if (chart.valueFormat === "currency") {
+    return formatCurrency(value);
+  }
+
+  return String(value);
 }
 
 export function DashboardPage() {
@@ -80,7 +102,7 @@ export function DashboardPage() {
   const summary = summaryQuery.data;
   const analytics = analyticsQuery.data;
   const greeting = t(`greeting.${getGreetingKey()}`);
-  const charts = useMemo(() => (analytics?.charts ?? []).slice(0, 4), [analytics?.charts]);
+  const charts = useMemo(() => analytics?.charts ?? [], [analytics?.charts]);
 
   return (
     <div className="space-y-6">
@@ -188,34 +210,53 @@ export function DashboardPage() {
                           <LineChart data={chart.points} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="label" tickFormatter={(label) => localizeDashboardChartLabel(t, chart.key, String(label))} />
-                            <YAxis allowDecimals={false} />
+                            <YAxis
+                              allowDecimals={chart.valueFormat !== "currency"}
+                              tickFormatter={(value) => formatChartMetric(chart, Number(value))}
+                            />
                             <Tooltip
-                              formatter={(value) => [value, t("dashboard.analytics.table.count")]}
+                              formatter={(value, name) => [
+                                formatChartMetric(chart, Number(value)),
+                                String(name)
+                              ]}
                               labelFormatter={(label) => localizeDashboardChartLabel(t, chart.key, String(label))}
                             />
                             <Legend />
-                            <Line type="monotone" dataKey="value" name={t("dashboard.analytics.table.count")} stroke="#0f766e" strokeWidth={2} />
-                            {chart.points.some((point) => typeof point.secondaryValue === "number") ? (
+                            {chart.series.map((series, index) => (
                               <Line
+                                key={`${chart.key}-${series.key}`}
                                 type="monotone"
-                                dataKey="secondaryValue"
-                                name={t("dashboard.analytics.table.secondaryValue")}
-                                stroke="#dc2626"
+                                dataKey={`values.${series.key}`}
+                                name={localizeDashboardSeriesLabel(t, chart.key, series.key)}
+                                stroke={seriesColor(series.key, index)}
                                 strokeWidth={2}
                               />
-                            ) : null}
+                            ))}
                           </LineChart>
                         ) : (
                           <BarChart data={chart.points} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="label" tickFormatter={(label) => localizeDashboardChartLabel(t, chart.key, String(label))} />
-                            <YAxis allowDecimals={false} />
+                            <YAxis
+                              allowDecimals={chart.valueFormat !== "currency"}
+                              tickFormatter={(value) => formatChartMetric(chart, Number(value))}
+                            />
                             <Tooltip
-                              formatter={(value) => [value, t("dashboard.analytics.table.count")]}
+                              formatter={(value, name) => [
+                                formatChartMetric(chart, Number(value)),
+                                String(name)
+                              ]}
                               labelFormatter={(label) => localizeDashboardChartLabel(t, chart.key, String(label))}
                             />
                             <Legend />
-                            <Bar dataKey="value" name={t("dashboard.analytics.table.count")} fill="#0f766e" />
+                            {chart.series.map((series, index) => (
+                              <Bar
+                                key={`${chart.key}-${series.key}`}
+                                dataKey={`values.${series.key}`}
+                                name={localizeDashboardSeriesLabel(t, chart.key, series.key)}
+                                fill={seriesColor(series.key, index)}
+                              />
+                            ))}
                           </BarChart>
                         )}
                       </ResponsiveContainer>
@@ -226,14 +267,22 @@ export function DashboardPage() {
                         <thead>
                           <tr className="text-slate-500">
                             <th className="py-1 text-start">{t("dashboard.analytics.table.label")}</th>
-                            <th className="py-1 text-end">{t("dashboard.analytics.table.value")}</th>
+                            {chart.series.map((series) => (
+                              <th className="py-1 text-end" key={`${chart.key}-${series.key}`}>
+                                {localizeDashboardSeriesLabel(t, chart.key, series.key)}
+                              </th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody>
                           {chart.points.map((point) => (
                             <tr key={`${chart.key}-${point.label}`}>
                               <td className="py-1 text-slate-700">{localizeDashboardChartLabel(t, chart.key, point.label)}</td>
-                              <td className="py-1 text-end font-semibold text-slate-900">{point.value}</td>
+                              {chart.series.map((series) => (
+                                <td className="py-1 text-end font-semibold text-slate-900" key={`${chart.key}-${point.label}-${series.key}`}>
+                                  {formatChartMetric(chart, point.values[series.key] ?? 0)}
+                                </td>
+                              ))}
                             </tr>
                           ))}
                         </tbody>
@@ -257,9 +306,13 @@ export function DashboardPage() {
           </>
         ) : (
           (summary?.priorityCards ?? []).map((card) => (
-            <a key={card.key} href={card.href ?? "/app/dashboard"}>
+            <Link
+              className="block transition hover:-translate-y-0.5"
+              key={card.key}
+              to={card.href ?? "/app/dashboard"}
+            >
               <StatCard label={localizePriorityCardLabel(t, card.key)} value={card.value} />
-            </a>
+            </Link>
           ))
         )}
       </div>
@@ -272,20 +325,19 @@ export function DashboardPage() {
           onRetry={() => void summaryQuery.refetch()}
         />
       ) : summaryQuery.isLoading ? (
-        <div className="grid gap-4 xl:grid-cols-3">
-          <SectionCardSkeleton />
+        <div className="grid gap-4 xl:grid-cols-2">
           <SectionCardSkeleton />
           <SectionCardSkeleton />
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-3">
-          <SectionCard title={t("dashboard.analytics.sections.workQueue.title")} description={t("dashboard.analytics.sections.workQueue.description")}>
-            {!summary?.myWork.length ? (
-              <EmptyState title={t("dashboard.analytics.sections.workQueue.emptyTitle")} description={t("dashboard.analytics.sections.workQueue.emptyDescription")} />
+        <div className="grid gap-4 xl:grid-cols-2">
+          <SectionCard title={t("dashboard.analytics.sections.upcomingTasks.title")} description={t("dashboard.analytics.sections.upcomingTasks.description")}>
+            {!summary?.upcomingTasks.length ? (
+              <EmptyState title={t("dashboard.analytics.sections.upcomingTasks.emptyTitle")} description={t("dashboard.analytics.sections.upcomingTasks.emptyDescription")} />
             ) : (
               <div className="space-y-3">
-                {summary.myWork.map((item) => (
-                  <a key={`${item.type}-${item.id}`} href={item.href}>
+                {summary.upcomingTasks.map((item) => (
+                  <Link key={`${item.type}-${item.id}`} to={item.href}>
                     <article className="rounded-2xl border border-slate-200 p-4 transition hover:border-accent">
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-semibold">{item.title}</p>
@@ -298,39 +350,32 @@ export function DashboardPage() {
                         <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.dueAt)}</p>
                       ) : null}
                     </article>
-                  </a>
+                  </Link>
                 ))}
               </div>
             )}
           </SectionCard>
 
-          <SectionCard title={t("dashboard.analytics.sections.activity.title")} description={t("dashboard.analytics.sections.activity.description")}>
-            {!summary?.recentActivity.length ? (
-              <EmptyState title={t("dashboard.analytics.sections.activity.emptyTitle")} description={t("dashboard.analytics.sections.activity.emptyDescription")} />
+          <SectionCard title={t("dashboard.analytics.sections.upcomingSessions.title")} description={t("dashboard.analytics.sections.upcomingSessions.description")}>
+            {!summary?.upcomingSessions.length ? (
+              <EmptyState title={t("dashboard.analytics.sections.upcomingSessions.emptyTitle")} description={t("dashboard.analytics.sections.upcomingSessions.emptyDescription")} />
             ) : (
               <div className="space-y-3">
-                {summary.recentActivity.map((item) => (
-                  <article className="rounded-2xl border border-slate-200 p-4" key={item.id}>
-                    <p className="font-semibold">{item.title}</p>
-                    <p className="mt-1 text-sm text-slate-600">{item.subtitle}</p>
-                    <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.createdAt)}</p>
-                  </article>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard title={t("dashboard.analytics.sections.widgets.title")} description={t("dashboard.analytics.sections.widgets.description")}>
-            {!summary?.widgets.length ? (
-              <EmptyState title={t("dashboard.analytics.sections.widgets.emptyTitle")} description={t("dashboard.analytics.sections.widgets.emptyDescription")} />
-            ) : (
-              <div className="space-y-3">
-                {summary.widgets.map((widget) => (
-                  <article className="rounded-2xl border border-slate-200 p-4" key={widget.key}>
-                    <p className="font-semibold">{widget.title}</p>
-                    {widget.description ? <p className="mt-1 text-sm text-slate-600">{widget.description}</p> : null}
-                    <p className="mt-1 text-xs text-slate-500">{t("dashboard.analytics.sections.widgets.keyPrefix")}: {widget.key}</p>
-                  </article>
+                {summary.upcomingSessions.map((item) => (
+                  <Link key={`${item.type}-${item.id}`} to={item.href}>
+                    <article className="rounded-2xl border border-slate-200 p-4 transition hover:border-accent">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold">{item.title}</p>
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold uppercase text-slate-600">
+                          {item.priority}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-600">{item.subtitle}</p>
+                      {item.dueAt ? (
+                        <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.dueAt)}</p>
+                      ) : null}
+                    </article>
+                  </Link>
                 ))}
               </div>
             )}
