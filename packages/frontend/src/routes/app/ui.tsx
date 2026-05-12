@@ -653,18 +653,6 @@ export function Field({
           disabled={disabled}
         />
       )}
-      {isDateField ? (
-        <input
-          className="sr-only"
-          id={`${fieldId}-required-proxy`}
-          tabIndex={-1}
-          readOnly
-          value={isBlurCommit ? draftValue : value}
-          required={required && !disabled}
-          disabled={disabled}
-          aria-hidden="true"
-        />
-      ) : null}
       {hint ? (
         <p className="text-xs text-slate-500" id={hintId}>
           {hint}

@@ -795,7 +795,11 @@
       "day": "Jour"
     },
     "conflictWarning": "Ce juriste a déjà une audience autour de ce créneau.",
-    "searchPlaceholder": "Rechercher des audiences"
+    "searchPlaceholder": "Rechercher des audiences",
+    "validation": {
+      "sessionDatetimeRequired": "La date et l'heure de l'audience sont obligatoires.",
+      "nextSessionAfterCurrent": "L'audience suivante doit être après la date et l'heure de l'audience actuelle."
+    }
   },
   "tasks": {
     "eyebrow": "Exécution",

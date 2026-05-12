@@ -18,6 +18,7 @@ import type { AppEnv } from "../../config/env.js";
 import { dispatchNotification } from "../notifications/notification.service.js";
 import {
   createHearingRecord,
+  findFollowUpHearingByParentId,
   findFirmUserNameById,
   findFirmUserNamesByIds,
   findFirmUsersByName,
@@ -89,6 +90,74 @@ async function syncEvent(
   }
 ) {
   await upsertHearingEvent(tx, hearing);
+}
+
+function throwNextSessionValidationError(): never {
+  throw appError("Next session must be later than session date and time.", 422, {
+    code: "VALIDATION_ERROR",
+    details: {
+      issues: [
+        {
+          path: "nextSessionAt",
+          code: "custom",
+          message: "Next session must be later than session date and time.",
+          messageKey: "VALIDATION_INVALID_VALUE"
+        }
+      ]
+    }
+  });
+}
+
+function parseAndValidateNextSessionAt(
+  sessionDatetime: Date,
+  nextSessionAtValue: string | null | undefined
+): Date | null {
+  const nextSessionAt = nextSessionAtValue ? new Date(nextSessionAtValue) : null;
+  if (nextSessionAt && nextSessionAt.getTime() <= sessionDatetime.getTime()) {
+    throwNextSessionValidationError();
+  }
+  return nextSessionAt;
+}
+
+function shouldAutoCreateFollowUp(nextSessionAt: Date | null) {
+  return nextSessionAt !== null;
+}
+
+async function upsertFollowUpSessionIfNeeded(
+  tx: Prisma.TransactionClient,
+  source: HearingRecord
+): Promise<void> {
+  if (!shouldAutoCreateFollowUp(source.nextSessionAt)) {
+    return;
+  }
+
+  const followUpAt = source.nextSessionAt as Date;
+  const existingFollowUp = await findFollowUpHearingByParentId(tx, source.id);
+
+  if (existingFollowUp) {
+    const updatedFollowUp = await updateHearingRecordById(tx, existingFollowUp.id, {
+      caseId: source.caseId,
+      parentSessionId: source.id,
+      assignedLawyerId: source.assignedLawyerId ?? null,
+      sessionDatetime: followUpAt,
+      nextSessionAt: null,
+      outcome: null,
+      notes: null
+    });
+    await syncEvent(tx, updatedFollowUp);
+    return;
+  }
+
+  const createdFollowUp = await createHearingRecord(tx, {
+    caseId: source.caseId,
+    parentSessionId: source.id,
+    assignedLawyerId: source.assignedLawyerId ?? null,
+    sessionDatetime: followUpAt,
+    nextSessionAt: null,
+    outcome: null,
+    notes: null
+  });
+  await syncEvent(tx, createdFollowUp);
 }
 
 export async function listHearings(
@@ -221,6 +290,7 @@ export async function createHearing(
     await assertValidHearingOutcome(tx, actor.firmId, payload.outcome);
 
     const sessionDatetime = new Date(payload.sessionDatetime);
+    const nextSessionAt = parseAndValidateNextSessionAt(sessionDatetime, payload.nextSessionAt);
 
     if (payload.assignedLawyerId) {
       const conflictIds = await checkConflictInTx(tx, actor.firmId, payload.assignedLawyerId, sessionDatetime);
@@ -233,12 +303,13 @@ export async function createHearing(
       caseId: payload.caseId,
       assignedLawyerId: payload.assignedLawyerId ?? null,
       sessionDatetime,
-      nextSessionAt: payload.nextSessionAt ? new Date(payload.nextSessionAt) : null,
+      nextSessionAt,
       outcome: payload.outcome ?? null,
       notes: payload.notes ?? null
     });
 
     await syncEvent(tx, hearing);
+    await upsertFollowUpSessionIfNeeded(tx, hearing);
 
     await writeAuditLog(tx, audit, {
       action: "hearings.create",
@@ -279,6 +350,7 @@ export async function updateHearing(
     await assertValidHearingOutcome(tx, actor.firmId, payload.outcome);
 
     const sessionDatetime = new Date(payload.sessionDatetime);
+    const nextSessionAt = parseAndValidateNextSessionAt(sessionDatetime, payload.nextSessionAt);
 
     if (payload.assignedLawyerId) {
       const conflictIds = await checkConflictInTx(tx, actor.firmId, payload.assignedLawyerId, sessionDatetime, hearingId);
@@ -291,12 +363,13 @@ export async function updateHearing(
       caseId: payload.caseId,
       assignedLawyerId: payload.assignedLawyerId ?? null,
       sessionDatetime,
-      nextSessionAt: payload.nextSessionAt ? new Date(payload.nextSessionAt) : null,
+      nextSessionAt,
       outcome: payload.outcome ?? null,
       notes: payload.notes ?? null
     });
 
     await syncEvent(tx, hearing);
+    await upsertFollowUpSessionIfNeeded(tx, hearing);
 
     await writeAuditLog(tx, audit, {
       action: "hearings.update",

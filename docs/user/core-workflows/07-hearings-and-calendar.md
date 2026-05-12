@@ -51,15 +51,15 @@ After a court hearing, update the session record with the outcome. This keeps th
 
 ---
 
-## Scheduling the Next Session After a Postponement
+## Scheduling the Next Session
 
-When the outcome is **POSTPONED**, ELMS prompts you to enter the next hearing date immediately so that the follow-up session is created and reminders are set.
+When you enter a **Next Session Date**, ELMS creates (or updates) a linked follow-up hearing automatically.
 
-1. After selecting **POSTPONED** as the outcome, a **Next Session Date** field appears.
-2. Enter the date and time of the next hearing.
+1. Enter a **Next Session Date** while creating or updating a hearing.
+2. The date/time must be later than the current session date/time.
 3. Click **Save**.
 
-ELMS automatically creates a new session entry for the next date and schedules reminders for it.
+ELMS automatically creates (or updates) a linked follow-up session entry for that date and schedules reminders for it.
 
 ---
 
@@ -97,4 +97,3 @@ You can see upcoming hearings in two places:
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

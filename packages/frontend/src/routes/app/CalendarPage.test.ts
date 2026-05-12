@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDayEventLayout,
   buildIsoForDroppedDate,
+  eventTopOffsetPx,
   eventTypeLabel,
   normalizeCreateHearing,
   normalizeCreateTask,
@@ -63,5 +65,54 @@ describe("CalendarPage helpers", () => {
     const offset = nowIndicatorOffsetPx();
     expect(offset).toBeGreaterThanOrEqual(0);
     expect(offset).toBeLessThanOrEqual(24 * 56);
+  });
+
+  it("keeps event top aligned to scheduled hour", () => {
+    expect(eventTopOffsetPx("2026-04-21T09:00:00")).toBe(
+      9 * 56
+    );
+    expect(eventTopOffsetPx("2026-04-21T09:30:00")).toBe(
+      9.5 * 56
+    );
+  });
+
+  it("uses slot-relative offsets for timeline layout", () => {
+    const layout = buildDayEventLayout([
+      {
+        id: "first",
+        at: "2026-04-21T10:00:00",
+        durationMinutes: 60
+      }
+    ] as never);
+
+    expect(layout[0]?.top).toBe(10 * 56);
+  });
+
+  it("assigns overlapping events into side-by-side lanes", () => {
+    const layout = buildDayEventLayout([
+      {
+        id: "a",
+        at: "2026-04-21T09:00:00.000Z",
+        durationMinutes: 60
+      },
+      {
+        id: "b",
+        at: "2026-04-21T09:30:00.000Z",
+        durationMinutes: 60
+      },
+      {
+        id: "c",
+        at: "2026-04-21T11:00:00.000Z",
+        durationMinutes: 30
+      }
+    ] as never);
+
+    const a = layout.find((item) => item.event.id === "a");
+    const b = layout.find((item) => item.event.id === "b");
+    const c = layout.find((item) => item.event.id === "c");
+    expect(a?.laneCount).toBe(2);
+    expect(b?.laneCount).toBe(2);
+    expect(a?.laneIndex).not.toBe(b?.laneIndex);
+    expect(c?.laneCount).toBe(1);
   });
 });

@@ -15,8 +15,13 @@ import { apiFetch } from "../../lib/api";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
-import { resolveFormValidationError } from "../../lib/formValidation";
+import {
+  validateLaterDateTimeField,
+  resolveFormValidationError,
+  validateRequiredDateTimeField
+} from "../../lib/formValidation";
 import { pickFieldError } from "../../lib/validationErrors";
+import { useToastStore } from "../../store/toastStore";
 import {
   Field,
   FormExitActions,
@@ -40,6 +45,7 @@ function normalizePayload(form: CreateHearingDto): CreateHearingDto {
 
 export function HearingCreatePage() {
   const { t } = useTranslation("app");
+  const addToast = useToastStore((state) => state.addToast);
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { caseId?: string };
   const queryClient = useQueryClient();
@@ -197,7 +203,27 @@ export function HearingCreatePage() {
             event.preventDefault();
             setSubmitError(null);
             setFieldErrors({});
-            if (!isValidDateTimeInput(form.sessionDatetime)) {
+            const clientValidation = validateRequiredDateTimeField(
+              form.sessionDatetime,
+              "sessionDatetime",
+              t("hearings.validation.sessionDatetimeRequired")
+            );
+            if (!clientValidation.isValid) {
+              setSubmitError(clientValidation.message);
+              setFieldErrors(clientValidation.fieldErrors);
+              addToast(clientValidation.message ?? t("errors.fallback"), "error");
+              return;
+            }
+            const nextSessionValidation = validateLaterDateTimeField(
+              form.sessionDatetime,
+              form.nextSessionAt,
+              "nextSessionAt",
+              t("hearings.validation.nextSessionAfterCurrent")
+            );
+            if (!nextSessionValidation.isValid) {
+              setSubmitError(nextSessionValidation.message);
+              setFieldErrors(nextSessionValidation.fieldErrors);
+              addToast(nextSessionValidation.message ?? t("errors.fallback"), "error");
               return;
             }
             createMutation.mutate(form);

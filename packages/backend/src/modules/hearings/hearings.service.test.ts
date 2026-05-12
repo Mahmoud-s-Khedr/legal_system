@@ -4,6 +4,9 @@ import { makeSessionUser } from "../../test-utils/session-user.js";
 const mockTx = {
   case: {
     findFirst: vi.fn()
+  },
+  lookupOption: {
+    findFirst: vi.fn()
   }
 };
 
@@ -11,6 +14,7 @@ const inTenantTransaction = vi.fn(
   (_firmId: string, run: (tx: typeof mockTx) => Promise<unknown>) => run(mockTx)
 );
 const findHearingConflicts = vi.fn();
+const findFollowUpHearingByParentId = vi.fn();
 const createHearingRecord = vi.fn();
 const updateHearingRecordById = vi.fn();
 const getFirmHearingRowByIdOrThrow = vi.fn();
@@ -26,6 +30,7 @@ vi.mock("../../repositories/hearings/hearings.repository.js", () => ({
   findFirmUserNameById: vi.fn(),
   findFirmUserNamesByIds: vi.fn(),
   findFirmUsersByName: vi.fn(),
+  findFollowUpHearingByParentId,
   findHearingConflicts,
   getFirmHearingByIdOrThrow: vi.fn(),
   getFirmHearingRowByIdOrThrow,
@@ -78,7 +83,9 @@ function makeHearingRecord(overrides: Partial<Record<string, unknown>> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockTx.case.findFirst.mockResolvedValue({ id: "case-1" });
+  mockTx.lookupOption.findFirst.mockResolvedValue({ id: "lookup-1" });
   findHearingConflicts.mockResolvedValue([]);
+  findFollowUpHearingByParentId.mockResolvedValue(null);
   getFirmHearingRowByIdOrThrow.mockResolvedValue({
     id: "hearing-1",
     sessionDatetime: new Date("2026-03-20T10:00:00.000Z")
@@ -236,5 +243,207 @@ describe("create/update hearing case guards", () => {
       { caseTitle: "Case B" },
       { entityType: "CaseSession", entityId: "hearing-1" }
     );
+  });
+
+  it("rejects create when nextSessionAt is not later than sessionDatetime", async () => {
+    await expect(
+      createHearing(
+        {} as never,
+        actor,
+        {
+          caseId: "case-1",
+          sessionDatetime: "2026-03-22T10:00:00.000Z",
+          assignedLawyerId: null,
+          nextSessionAt: "2026-03-22T10:00:00.000Z",
+          outcome: "POSTPONED",
+          notes: null
+        },
+        audit
+      )
+    ).rejects.toThrow("Next session must be later than session date and time.");
+
+    expect(createHearingRecord).not.toHaveBeenCalled();
+  });
+
+  it("creates follow-up hearing when nextSessionAt is provided", async () => {
+    createHearingRecord
+      .mockResolvedValueOnce(
+        makeHearingRecord({
+          id: "hearing-1",
+          assignedLawyerId: "user-2",
+          sessionDatetime: new Date("2026-03-22T10:00:00.000Z"),
+          nextSessionAt: new Date("2026-04-05T10:00:00.000Z"),
+          outcome: "ADJOURNED"
+        })
+      )
+      .mockResolvedValueOnce(
+        makeHearingRecord({
+          id: "hearing-follow-up",
+          parentSessionId: "hearing-1",
+          sessionDatetime: new Date("2026-04-05T10:00:00.000Z"),
+          nextSessionAt: null,
+          outcome: null
+        })
+      );
+
+    await createHearing(
+      {} as never,
+      actor,
+      {
+        caseId: "case-1",
+        sessionDatetime: "2026-03-22T10:00:00.000Z",
+        assignedLawyerId: "user-2",
+        nextSessionAt: "2026-04-05T10:00:00.000Z",
+        outcome: "ADJOURNED",
+        notes: null
+      },
+      audit
+    );
+
+    expect(findFollowUpHearingByParentId).toHaveBeenCalledWith(mockTx, "hearing-1");
+    expect(createHearingRecord).toHaveBeenCalledTimes(2);
+    expect(createHearingRecord).toHaveBeenNthCalledWith(
+      2,
+      mockTx,
+      expect.objectContaining({
+        caseId: "case-1",
+        parentSessionId: "hearing-1",
+        assignedLawyerId: "user-2",
+        outcome: null
+      })
+    );
+  });
+
+  it("updates existing follow-up hearing instead of creating duplicate", async () => {
+    getFirmHearingRowByIdOrThrow.mockResolvedValue({
+      id: "hearing-1",
+      sessionDatetime: new Date("2026-03-20T10:00:00.000Z"),
+      assignedLawyerId: "user-old"
+    });
+    updateHearingRecordById
+      .mockResolvedValueOnce(
+        makeHearingRecord({
+          id: "hearing-1",
+          caseId: "case-1",
+          assignedLawyerId: "user-new",
+          sessionDatetime: new Date("2026-03-22T10:00:00.000Z"),
+          nextSessionAt: new Date("2026-04-10T10:00:00.000Z"),
+          outcome: "ADJOURNED"
+        })
+      )
+      .mockResolvedValueOnce(
+        makeHearingRecord({
+          id: "hearing-follow-up",
+          parentSessionId: "hearing-1",
+          sessionDatetime: new Date("2026-04-10T10:00:00.000Z"),
+          outcome: null,
+          nextSessionAt: null
+        })
+      );
+    findFollowUpHearingByParentId.mockResolvedValueOnce(
+      makeHearingRecord({
+        id: "hearing-follow-up",
+        parentSessionId: "hearing-1",
+        sessionDatetime: new Date("2026-04-01T10:00:00.000Z")
+      })
+    );
+
+    await updateHearing(
+      {} as never,
+      actor,
+      "hearing-1",
+      {
+        caseId: "case-1",
+        sessionDatetime: "2026-03-22T10:00:00.000Z",
+        assignedLawyerId: "user-new",
+        nextSessionAt: "2026-04-10T10:00:00.000Z",
+        outcome: "ADJOURNED",
+        notes: null
+      },
+      audit
+    );
+
+    expect(createHearingRecord).toHaveBeenCalledTimes(0);
+    expect(updateHearingRecordById).toHaveBeenNthCalledWith(
+      2,
+      mockTx,
+      "hearing-follow-up",
+      expect.objectContaining({
+        parentSessionId: "hearing-1",
+        assignedLawyerId: "user-new"
+      })
+    );
+  });
+
+  it("does not auto-create follow-up when nextSessionAt is missing", async () => {
+    createHearingRecord.mockResolvedValue(
+      makeHearingRecord({
+        id: "hearing-1",
+        nextSessionAt: null,
+        outcome: "ADJOURNED"
+      })
+    );
+
+    await createHearing(
+      {} as never,
+      actor,
+      {
+        caseId: "case-1",
+        sessionDatetime: "2026-03-22T10:00:00.000Z",
+        assignedLawyerId: null,
+        nextSessionAt: null,
+        outcome: "ADJOURNED",
+        notes: null
+      },
+      audit
+    );
+
+    expect(findFollowUpHearingByParentId).not.toHaveBeenCalled();
+    expect(createHearingRecord).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows create when conflict probe returns no active hearings (deleted-only scenario)", async () => {
+    findHearingConflicts.mockResolvedValueOnce([]);
+
+    await expect(
+      createHearing(
+        {} as never,
+        actor,
+        {
+          caseId: "case-1",
+          sessionDatetime: "2026-03-22T10:00:00.000Z",
+          assignedLawyerId: "user-2",
+          nextSessionAt: null,
+          outcome: null,
+          notes: null
+        },
+        audit
+      )
+    ).resolves.toBeTruthy();
+
+    expect(createHearingRecord).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows update when conflict probe returns no active hearings (deleted-only scenario)", async () => {
+    findHearingConflicts.mockResolvedValueOnce([]);
+
+    await expect(
+      updateHearing(
+        {} as never,
+        actor,
+        "hearing-1",
+        {
+          caseId: "case-1",
+          sessionDatetime: "2026-03-22T10:00:00.000Z",
+          assignedLawyerId: "user-2",
+          nextSessionAt: null,
+          outcome: null,
+          notes: null
+        },
+        audit
+      )
+    ).resolves.toBeTruthy();
+
+    expect(updateHearingRecordById).toHaveBeenCalledTimes(1);
   });
 });

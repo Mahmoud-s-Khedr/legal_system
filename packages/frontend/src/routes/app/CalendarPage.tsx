@@ -79,6 +79,7 @@ import {
   type CalendarView
 } from "./hearingCalendar";
 
+// Must match --calendar-slot-height in styles.css (56px by default).
 const SLOT_HEIGHT = 56;
 const DAY_NAMES_START_SUNDAY = [
   "Sun",
@@ -254,6 +255,99 @@ function eventLink(event: CalendarEvent) {
 export function nowIndicatorOffsetPx() {
   const now = new Date();
   return (now.getHours() + now.getMinutes() / 60) * SLOT_HEIGHT;
+}
+
+export function eventTopOffsetPx(at: string) {
+  const value = new Date(at);
+  // Offsets are relative to the .calendar-time-day origin (below timeline header).
+  return (value.getHours() + value.getMinutes() / 60) * SLOT_HEIGHT;
+}
+
+export type EventLayout = {
+  event: CalendarEvent;
+  top: number;
+  height: number;
+  laneIndex: number;
+  laneCount: number;
+};
+
+export function buildDayEventLayout(dayEvents: CalendarEvent[]): EventLayout[] {
+  const sortedEvents = [...dayEvents].sort((left, right) => {
+    const startDelta = new Date(left.at).getTime() - new Date(right.at).getTime();
+    if (startDelta !== 0) return startDelta;
+    const durationDelta = right.durationMinutes - left.durationMinutes;
+    if (durationDelta !== 0) return durationDelta;
+    return left.id.localeCompare(right.id);
+  });
+
+  type WorkingEvent = {
+    event: CalendarEvent;
+    startMs: number;
+    endMs: number;
+    laneIndex: number;
+    laneCount: number;
+  };
+
+  const activeColumns: Array<{ endMs: number }> = [];
+  const groups: WorkingEvent[][] = [];
+  let currentGroup: WorkingEvent[] = [];
+  let currentGroupEnd = -Infinity;
+
+  for (const event of sortedEvents) {
+    const startMs = new Date(event.at).getTime();
+    const endMs = startMs + Math.max(event.durationMinutes, 1) * 60_000;
+
+    if (currentGroup.length > 0 && startMs >= currentGroupEnd) {
+      groups.push(currentGroup);
+      currentGroup = [];
+      activeColumns.length = 0;
+      currentGroupEnd = -Infinity;
+    }
+
+    for (let index = 0; index < activeColumns.length; index += 1) {
+      if (activeColumns[index] && activeColumns[index].endMs <= startMs) {
+        activeColumns[index] = { endMs: -Infinity };
+      }
+    }
+
+    let laneIndex = activeColumns.findIndex((entry) => entry.endMs === -Infinity);
+    if (laneIndex === -1) {
+      laneIndex = activeColumns.length;
+      activeColumns.push({ endMs });
+    } else {
+      activeColumns[laneIndex] = { endMs };
+    }
+
+    currentGroup.push({
+      event,
+      startMs,
+      endMs,
+      laneIndex,
+      laneCount: 1
+    });
+    currentGroupEnd = Math.max(currentGroupEnd, endMs);
+  }
+
+  if (currentGroup.length > 0) {
+    groups.push(currentGroup);
+  }
+
+  const layout: EventLayout[] = [];
+  for (const group of groups) {
+    const laneCount =
+      Math.max(...group.map((entry) => entry.laneIndex), 0) + 1;
+    for (const entry of group) {
+      layout.push({
+        event: entry.event,
+        top: eventTopOffsetPx(entry.event.at),
+        height: Math.max((entry.event.durationMinutes / 60) * SLOT_HEIGHT, 30),
+        laneIndex: entry.laneIndex,
+        laneCount
+      });
+    }
+  }
+
+  return layout;
 }
 
 export function normalizeCreateTask(form: CreateTaskDto) {
@@ -1025,28 +1119,29 @@ export function CalendarPage() {
                             {isSameDay(day, new Date()) ? (
                               <div
                                 className="calendar-now-indicator"
-                                style={{ top: nowIndicatorOffsetPx() + 40 }}
+                                style={{
+                                  // Top is relative to .calendar-time-day, so no header offset.
+                                  top: nowIndicatorOffsetPx()
+                                }}
                               />
                             ) : null}
 
-                            {dayEvents.map((eventItem) => {
-                              const at = new Date(eventItem.at);
-                              const top =
-                                (at.getHours() + at.getMinutes() / 60) *
-                                SLOT_HEIGHT;
-                              const height = Math.max(
-                                (eventItem.durationMinutes / 60) * SLOT_HEIGHT,
-                                30
-                              );
-
+                            {buildDayEventLayout(dayEvents).map((layoutItem) => {
+                              const laneWidth = 100 / layoutItem.laneCount;
+                              const left = laneWidth * layoutItem.laneIndex;
                               return (
                                 <div
-                                  key={eventItem.id}
+                                  key={layoutItem.event.id}
                                   className="calendar-time-event"
-                                  style={{ top: top + 40, height }}
+                                  style={{
+                                    top: layoutItem.top,
+                                    height: layoutItem.height,
+                                    left: `calc(${left}% + 2px)`,
+                                    width: `calc(${laneWidth}% - 4px)`
+                                  }}
                                 >
                                   <CalendarEventPill
-                                    event={eventItem}
+                                    event={layoutItem.event}
                                     onOpen={openEventDetail}
                                   />
                                 </div>

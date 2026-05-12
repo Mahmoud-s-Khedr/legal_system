@@ -176,4 +176,27 @@ describe("Field date commit behavior", () => {
 
     expect(submissions).toEqual(["2026-05-01T09:10"]);
   });
+
+  it("renders required date field error when provided", () => {
+    const view = render(
+      <Field
+        id="required-hearing-datetime"
+        label="Session datetime"
+        value=""
+        onChange={vi.fn()}
+        type="datetime-local"
+        required
+        error="Session date and time is required."
+      />
+    );
+
+    const input = view.querySelector(
+      "[data-testid='required-hearing-datetime']"
+    ) as HTMLInputElement;
+    expect(input.getAttribute("aria-required")).toBe("true");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(
+      view.textContent?.includes("Session date and time is required.")
+    ).toBe(true);
+  });
 });

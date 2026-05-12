@@ -928,33 +928,77 @@ export async function searchLibrary(
     article_id: string | null; article_number: string | null; article_body: string | null;
     rank: number;
   }>>`
+    WITH ranked AS (
+      SELECT
+        d.id,
+        d.type,
+        d.title,
+        d.summary,
+        d.scope,
+        d."categoryId" AS "categoryId",
+        la.id AS article_id,
+        la."articleNumber" AS article_number,
+        la.body AS article_body,
+        ts_rank(
+          to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,'')),
+          websearch_to_tsquery('simple', ${normalizedQuery})
+        ) AS rank,
+        CASE
+          WHEN lower(coalesce(d.title, '')) = lower(${normalizedQuery}) THEN 300
+          WHEN lower(coalesce(la."articleNumber", '')) = lower(${normalizedQuery}) THEN 260
+          WHEN lower(coalesce(d.title, '')) LIKE lower(${`${normalizedQuery}%`}) THEN 220
+          WHEN lower(coalesce(la."articleNumber", '')) LIKE lower(${`${normalizedQuery}%`}) THEN 200
+          WHEN lower(coalesce(d.title, '')) LIKE lower(${`%${normalizedQuery}%`}) THEN 160
+          WHEN lower(coalesce(la."articleNumber", '')) LIKE lower(${`%${normalizedQuery}%`}) THEN 150
+          ELSE 0
+        END AS boost,
+        ROW_NUMBER() OVER (
+          PARTITION BY d.id, coalesce(la.id, d.id)
+          ORDER BY
+            CASE
+              WHEN lower(coalesce(d.title, '')) = lower(${normalizedQuery}) THEN 300
+              WHEN lower(coalesce(la."articleNumber", '')) = lower(${normalizedQuery}) THEN 260
+              WHEN lower(coalesce(d.title, '')) LIKE lower(${`${normalizedQuery}%`}) THEN 220
+              WHEN lower(coalesce(la."articleNumber", '')) LIKE lower(${`${normalizedQuery}%`}) THEN 200
+              WHEN lower(coalesce(d.title, '')) LIKE lower(${`%${normalizedQuery}%`}) THEN 160
+              WHEN lower(coalesce(la."articleNumber", '')) LIKE lower(${`%${normalizedQuery}%`}) THEN 150
+              ELSE 0
+            END DESC,
+            ts_rank(
+              to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,'')),
+              websearch_to_tsquery('simple', ${normalizedQuery})
+            ) DESC,
+            d.id ASC
+        ) AS dedupe_rank
+      FROM "LibraryDocument" d
+      LEFT JOIN "LegislationArticle" la ON la."documentId" = d.id
+      WHERE d."deletedAt" IS NULL
+        AND (d.scope = 'SYSTEM' OR d."firmId" = ${actor.firmId}::uuid)
+        AND (
+          to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,''))
+          @@ websearch_to_tsquery('simple', ${normalizedQuery})
+          OR lower(coalesce(d.title, '')) LIKE lower(${`%${normalizedQuery}%`})
+          OR lower(coalesce(la."articleNumber", '')) LIKE lower(${`%${normalizedQuery}%`})
+        )
+        ${filter.type ? Prisma.sql`AND d.type = ${filter.type}` : Prisma.empty}
+        ${filter.typeId ? Prisma.sql`AND d."typeId" = ${filter.typeId}::uuid` : Prisma.empty}
+        ${filter.scope ? Prisma.sql`AND d.scope = ${filter.scope}` : Prisma.empty}
+        ${filter.categoryId ? Prisma.sql`AND d."categoryId" = ${filter.categoryId}::uuid` : Prisma.empty}
+    )
     SELECT
-      d.id,
-      d.type,
-      d.title,
-      d.summary,
-      d.scope,
-      d."categoryId" AS "categoryId",
-      la.id AS article_id,
-      la."articleNumber" AS article_number,
-      la.body AS article_body,
-      ts_rank(
-        to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,'')),
-        websearch_to_tsquery('simple', ${normalizedQuery})
-      ) AS rank
-    FROM "LibraryDocument" d
-    LEFT JOIN "LegislationArticle" la ON la."documentId" = d.id
-    WHERE d."deletedAt" IS NULL
-      AND (d.scope = 'SYSTEM' OR d."firmId" = ${actor.firmId}::uuid)
-      AND (
-        to_tsvector('simple', coalesce(d.title,'') || ' ' || coalesce(d."contentText",'') || ' ' || coalesce(la.body,''))
-        @@ websearch_to_tsquery('simple', ${normalizedQuery})
-      )
-      ${filter.type ? Prisma.sql`AND d.type = ${filter.type}` : Prisma.empty}
-      ${filter.typeId ? Prisma.sql`AND d."typeId" = ${filter.typeId}::uuid` : Prisma.empty}
-      ${filter.scope ? Prisma.sql`AND d.scope = ${filter.scope}` : Prisma.empty}
-      ${filter.categoryId ? Prisma.sql`AND d."categoryId" = ${filter.categoryId}::uuid` : Prisma.empty}
-    ORDER BY rank DESC
+      id,
+      type,
+      title,
+      summary,
+      scope,
+      "categoryId",
+      article_id,
+      article_number,
+      article_body,
+      rank
+    FROM ranked
+    WHERE dedupe_rank = 1
+    ORDER BY boost DESC, rank DESC, title ASC, id ASC
     LIMIT ${limit}
   `;
 

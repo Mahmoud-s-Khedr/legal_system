@@ -45,6 +45,7 @@
   --calendar-event-task: #2563eb;
   --calendar-event-invoice: #d97706;
   --calendar-now-line: #ef4444;
+  --calendar-slot-height: 56px;
 
   /* Layout shell */
   --shell-max-width: 1920px;
@@ -463,7 +464,7 @@ textarea {
 }
 
 .calendar-time-slot {
-  height: 56px;
+  height: var(--calendar-slot-height);
   border-bottom: 1px solid var(--calendar-grid-border);
   background: var(--calendar-slot-bg);
   transition: background var(--transition-fast);
@@ -485,7 +486,6 @@ textarea {
 
 .calendar-time-event {
   position: absolute;
-  inset-inline: 6px;
   z-index: 2;
 }
 

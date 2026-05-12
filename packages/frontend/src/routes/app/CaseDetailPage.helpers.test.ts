@@ -3,7 +3,9 @@ import {
   EMPTY_COURT,
   buildCaseHearingsUrl,
   caseTabs,
-  pickActiveCourt
+  pickActiveCourt,
+  validateAssignmentForm,
+  validatePartyForm
 } from "./CaseDetailPage";
 
 describe("CaseDetailPage helpers", () => {
@@ -31,5 +33,23 @@ describe("CaseDetailPage helpers", () => {
     expect(buildCaseHearingsUrl("case id/with space", 3, 20)).toBe(
       "/api/hearings?caseId=case%20id%2Fwith%20space&page=3&limit=20"
     );
+  });
+
+  it("validates party form required fields", () => {
+    const t = (key: string) => key;
+    expect(
+      validatePartyForm({ name: "", partyType: "OPPONENT", clientId: undefined }, t)
+    ).toMatchObject({ name: "errors.validation.issue.required" });
+    expect(
+      validatePartyForm({ name: "Client", partyType: "CLIENT", clientId: "" }, t)
+    ).toMatchObject({ clientId: "errors.validation.issue.required" });
+  });
+
+  it("validates assignment required user", () => {
+    const t = (key: string) => key;
+    expect(validateAssignmentForm({ userId: "" }, t)).toMatchObject({
+      userId: "errors.validation.issue.required"
+    });
+    expect(validateAssignmentForm({ userId: "user-1" }, t)).toEqual({});
   });
 });

@@ -515,6 +515,7 @@ model CaseSession {
   id                   String         @id @default(uuid()) @db.Uuid
   caseId               String         @db.Uuid
   caseCourtId          String?        @db.Uuid
+  parentSessionId      String?        @db.Uuid
   assignedLawyerId     String?        @db.Uuid
   sessionDatetime      DateTime
   nextSessionAt        DateTime?
@@ -526,12 +527,16 @@ model CaseSession {
   updatedAt            DateTime       @updatedAt
   case                 Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
   caseCourt            CaseCourt?     @relation(fields: [caseCourtId], references: [id], onDelete: SetNull)
+  parentSession        CaseSession?   @relation("CaseSessionFollowUp", fields: [parentSessionId], references: [id], onDelete: SetNull)
+  followUpSession      CaseSession?   @relation("CaseSessionFollowUp")
   event                Event?
 
   @@index([caseId, sessionDatetime])
   @@index([assignedLawyerId, sessionDatetime])
   @@index([caseId, createdAt])
   @@index([sessionDatetime])
+  @@index([parentSessionId])
+  @@unique([parentSessionId])
 }
 
 model PowerOfAttorney {

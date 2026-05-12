@@ -129,4 +129,138 @@ test.describe("date input responsiveness", () => {
     await expect.poll(() => postBody).not.toBeNull();
     expect(postBody?.sessionDatetime).toBe(new Date(selectedLocal).toISOString());
   });
+
+  test("hearing create blocks submit with inline and toast errors when datetime is cleared", async ({ page }) => {
+    await login(page);
+
+    let postCalls = 0;
+
+    await page.route("**/api/hearings", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      postCalls += 1;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Should not submit" })
+      });
+    });
+
+    await page.goto("/app/hearings/new");
+
+    const caseSelect = page.getByLabel(/case|القضية|dossier/i);
+    const caseOptionsCount = await caseSelect.locator("option").count();
+    test.skip(caseOptionsCount < 2, "Requires at least one existing case");
+    await caseSelect.selectOption({ index: 1 });
+
+    await page.getByLabel(/session datetime|موعد الجلسة|date et heure/i).fill("");
+    await page.getByRole("button", { name: /schedule hearing|جدولة جلسة|planifier une audience/i }).click();
+
+    const validationMessage =
+      /Session date and time is required|موعد الجلسة مطلوب|La date et l'heure de l'audience sont obligatoires/i;
+    await expect(page.getByText(validationMessage).first()).toBeVisible();
+    await expect.poll(async () => await page.getByText(validationMessage).count()).toBeGreaterThan(1);
+    expect(postCalls).toBe(0);
+  });
+
+  test("hearing edit blocks submit with inline and toast errors when datetime is cleared", async ({ page }) => {
+    await login(page);
+
+    const hearingId = "11111111-1111-1111-1111-111111111111";
+    const caseId = "22222222-2222-2222-2222-222222222222";
+    let putCalls = 0;
+
+    await page.route(`**/api/hearings/${hearingId}`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: hearingId,
+            caseId,
+            caseTitle: "Mock Case",
+            assignedLawyerId: null,
+            assignedLawyerName: null,
+            sessionDatetime: new Date("2026-04-30T14:05").toISOString(),
+            nextSessionAt: null,
+            outcome: null,
+            notes: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })
+        });
+        return;
+      }
+
+      if (route.request().method() === "PUT") {
+        putCalls += 1;
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "Should not submit" })
+        });
+        return;
+      }
+
+      await route.continue();
+    });
+
+    await page.route("**/api/cases", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [
+            {
+              id: caseId,
+              title: "Mock Case",
+              caseNumber: "MC-1",
+              status: "ACTIVE"
+            }
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 20
+        })
+      });
+    });
+
+    await page.route("**/api/users", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [],
+          total: 0,
+          page: 1,
+          pageSize: 20
+        })
+      });
+    });
+
+    await page.route("**/api/lookups/HearingOutcome", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [],
+          total: 0,
+          page: 1,
+          pageSize: 20
+        })
+      });
+    });
+
+    await page.goto(`/app/hearings/${hearingId}/edit`);
+    await page.getByLabel(/session datetime|موعد الجلسة|date et heure/i).fill("");
+    await page.getByRole("button", { name: /save changes|حفظ التعديلات|enregistrer/i }).click();
+
+    const validationMessage =
+      /Session date and time is required|موعد الجلسة مطلوب|La date et l'heure de l'audience sont obligatoires/i;
+    await expect(page.getByText(validationMessage).first()).toBeVisible();
+    await expect.poll(async () => await page.getByText(validationMessage).count()).toBeGreaterThan(1);
+    expect(putCalls).toBe(0);
+  });
 });

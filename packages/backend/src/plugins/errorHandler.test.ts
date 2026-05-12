@@ -6,6 +6,7 @@ const captureBackendException = vi.fn();
 vi.mock("../monitoring/sentry.js", () => ({ captureBackendException }));
 
 const { registerErrorHandler } = await import("./errorHandler.js");
+const { appError } = await import("../errors/appError.js");
 
 type RegisteredErrorHandler = (
   error: unknown,
@@ -356,6 +357,42 @@ describe("registerErrorHandler", () => {
     expect(replyState.payload).toEqual({ message: "Unsupported Media Type" });
     expect(request.log.error).not.toHaveBeenCalled();
     expect(captureBackendException.mock.calls.length).toBe(priorCapturedCalls);
+  });
+
+  it("maps AppError validation payload with issues", () => {
+    const { handler, request, reply, replyState } = setup();
+    const invokeHandler = handler as RegisteredErrorHandler;
+
+    invokeHandler(
+      appError("Please review next session.", 422, {
+        code: "VALIDATION_ERROR",
+        details: {
+          issues: [
+            {
+              path: "nextSessionAt",
+              code: "custom",
+              message: "Next session must be later than session date and time."
+            }
+          ]
+        }
+      }),
+      request,
+      reply
+    );
+
+    expect(replyState.statusCode).toBe(422);
+    expect(replyState.payload).toEqual({
+      message: "Please review next session.",
+      messageKey: "VALIDATION_SUMMARY",
+      code: "VALIDATION_ERROR",
+      issues: [
+        {
+          path: "nextSessionAt",
+          code: "custom",
+          message: "Next session must be later than session date and time."
+        }
+      ]
+    });
   });
 
   it("sanitizes unknown server errors", () => {

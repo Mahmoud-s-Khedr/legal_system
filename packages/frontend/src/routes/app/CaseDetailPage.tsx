@@ -26,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
+import { resolveFormValidationError } from "../../lib/formValidation";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
 import {
   toLocalizedLocationOptions,
@@ -34,6 +35,7 @@ import {
   withLegacyLocationOption
 } from "../../lib/locationLookups";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { pickFieldError } from "../../lib/validationErrors";
 import { EnumBadge } from "../../components/shared/EnumBadge";
 import {
   DataTable,
@@ -91,6 +93,31 @@ export function buildCaseHearingsUrl(caseId: string, page: number, limit: number
   return `/api/hearings?caseId=${encodeURIComponent(caseId)}&page=${page}&limit=${limit}`;
 }
 
+export function validatePartyForm(
+  form: Pick<CreateCasePartyDto, "name" | "partyType" | "clientId">,
+  t: (key: string) => string
+) {
+  const errors: Record<string, string> = {};
+  if (!form.name.trim()) {
+    errors.name = t("errors.validation.issue.required");
+  }
+  if (form.partyType === "CLIENT" && !form.clientId?.trim()) {
+    errors.clientId = t("errors.validation.issue.required");
+  }
+  return errors;
+}
+
+export function validateAssignmentForm(
+  form: Pick<CreateCaseAssignmentDto, "userId">,
+  t: (key: string) => string
+) {
+  const errors: Record<string, string> = {};
+  if (!form.userId.trim()) {
+    errors.userId = t("errors.validation.issue.required");
+  }
+  return errors;
+}
+
 export function CaseDetailPage() {
   const { t } = useTranslation("app");
   const feedback = useMutationFeedback();
@@ -116,6 +143,18 @@ export function CaseDetailPage() {
       roleOnCase: CaseRoleOnCase.LEAD
     }
   );
+  const [partyFormError, setPartyFormError] = useState<string | null>(null);
+  const [partyFieldErrors, setPartyFieldErrors] = useState<Record<string, string>>(
+    {}
+  );
+  const [editPartyFormError, setEditPartyFormError] = useState<string | null>(null);
+  const [editPartyFieldErrors, setEditPartyFieldErrors] = useState<
+    Record<string, string>
+  >({});
+  const [assignmentFormError, setAssignmentFormError] = useState<string | null>(null);
+  const [assignmentFieldErrors, setAssignmentFieldErrors] = useState<
+    Record<string, string>
+  >({});
   const [courtFormResetToken] = useState(0);
   const [showInlineHearingForm, setShowInlineHearingForm] = useState(false);
   const [showInlineTaskForm, setShowInlineTaskForm] = useState(false);
@@ -170,10 +209,17 @@ export function CaseDetailPage() {
       }),
     onSuccess: async () => {
       setPartyForm({ name: "", role: defaultPartyRole, partyType: "OPPONENT" });
+      setPartyFormError(null);
+      setPartyFieldErrors({});
       setEditingParty(null);
       feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+    onError: (error) => {
+      const resolved = resolveFormValidationError(error, t("errors.fallback"));
+      setPartyFormError(resolved.message);
+      setPartyFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -185,9 +231,16 @@ export function CaseDetailPage() {
       }),
     onSuccess: async () => {
       setEditingParty(null);
+      setEditPartyFormError(null);
+      setEditPartyFieldErrors({});
       feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+    onError: (error) => {
+      const resolved = resolveFormValidationError(error, t("errors.fallback"));
+      setEditPartyFormError(resolved.message);
+      setEditPartyFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -209,12 +262,19 @@ export function CaseDetailPage() {
       }),
     onSuccess: async () => {
       feedback.success("messages.saved");
+      setAssignmentFormError(null);
+      setAssignmentFieldErrors({});
       setAssignmentForm({
         userId: "",
         roleOnCase: CaseRoleOnCase.LEAD
       });
       await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
       await queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+    onError: (error) => {
+      const resolved = resolveFormValidationError(error, t("errors.fallback"));
+      setAssignmentFormError(resolved.message);
+      setAssignmentFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -569,6 +629,7 @@ export function CaseDetailPage() {
                   courtTypeOptions={courtTypeOptions}
                   court={editingCourt}
                   isPending={updateCourtMutation.isPending}
+                  submitError={updateCourtMutation.isError ? updateCourtMutation.error : null}
                   onCancel={() => setEditingCourt(null)}
                   onSubmit={(payload) =>
                     updateCourtMutation.mutate({
@@ -578,16 +639,6 @@ export function CaseDetailPage() {
                   }
                   t={t}
                 />
-                {updateCourtMutation.isError ? (
-                  <div className="mt-3">
-                    <FormAlert
-                      message={
-                        (updateCourtMutation.error as Error)?.message ??
-                        t("errors.fallback")
-                      }
-                    />
-                  </div>
-                ) : null}
               </SectionCard>
             ) : (
               <SectionCard
@@ -599,19 +650,10 @@ export function CaseDetailPage() {
                   courtTypeOptions={courtTypeOptions}
                   isPending={addCourtMutation.isPending}
                   resetToken={courtFormResetToken}
+                  submitError={addCourtMutation.isError ? addCourtMutation.error : null}
                   onSubmit={(payload) => addCourtMutation.mutate(payload)}
                   t={t}
                 />
-                {addCourtMutation.isError ? (
-                  <div className="mt-3">
-                    <FormAlert
-                      message={
-                        (addCourtMutation.error as Error)?.message ??
-                        t("errors.fallback")
-                      }
-                    />
-                  </div>
-                ) : null}
               </SectionCard>
             )}
           </div>
@@ -663,6 +705,8 @@ export function CaseDetailPage() {
                               className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
                               onClick={() => {
                                 setEditingParty(party);
+                                setEditPartyFormError(null);
+                                setEditPartyFieldErrors({});
                                 setEditPartyForm({
                                   name: party.name,
                                   role: party.role,
@@ -710,6 +754,14 @@ export function CaseDetailPage() {
                   className="space-y-4"
                   onSubmit={(event) => {
                     event.preventDefault();
+                    const clientErrors = validatePartyForm(editPartyForm, t);
+                    if (Object.keys(clientErrors).length > 0) {
+                      setEditPartyFieldErrors(clientErrors);
+                      setEditPartyFormError(t("errors.validation.summary"));
+                      return;
+                    }
+                    setEditPartyFormError(null);
+                    setEditPartyFieldErrors({});
                     updatePartyMutation.mutate({
                       partyId: editingParty.id,
                       payload: editPartyForm
@@ -738,7 +790,7 @@ export function CaseDetailPage() {
                   {editPartyForm.partyType === "CLIENT" ? (
                     <SelectField
                       label={t("labels.client")}
-                      onChange={(value) =>
+                      onChange={(value) => {
                         setEditPartyForm({
                           ...editPartyForm,
                           clientId: value,
@@ -746,18 +798,24 @@ export function CaseDetailPage() {
                             clientsQuery.data?.items.find(
                               (client) => client.id === value
                             )?.name ?? editPartyForm.name
-                        })
-                      }
+                        });
+                        setEditPartyFieldErrors((prev) => ({ ...prev, clientId: "" }));
+                      }}
                       options={clientOptions}
                       value={editPartyForm.clientId ?? ""}
+                      error={
+                        pickFieldError(editPartyFieldErrors, ["clientId"]) ?? undefined
+                      }
                     />
                   ) : null}
                   <Field
                     label={t("labels.name")}
-                    onChange={(value) =>
-                      setEditPartyForm({ ...editPartyForm, name: value })
-                    }
+                    onChange={(value) => {
+                      setEditPartyForm({ ...editPartyForm, name: value });
+                      setEditPartyFieldErrors((prev) => ({ ...prev, name: "" }));
+                    }}
                     value={editPartyForm.name}
+                    error={pickFieldError(editPartyFieldErrors, ["name"]) ?? undefined}
                   />
                   <SelectField
                     label={t("labels.role")}
@@ -767,12 +825,9 @@ export function CaseDetailPage() {
                     options={partyRoleOptions}
                     value={editPartyForm.role}
                   />
-                  {updatePartyMutation.isError ? (
+                  {editPartyFormError ? (
                     <FormAlert
-                      message={
-                        (updatePartyMutation.error as Error)?.message ??
-                        t("errors.fallback")
-                      }
+                      message={editPartyFormError}
                     />
                   ) : null}
                   <div className="flex gap-2">
@@ -781,7 +836,11 @@ export function CaseDetailPage() {
                     </PrimaryButton>
                     <button
                       className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-                      onClick={() => setEditingParty(null)}
+                      onClick={() => {
+                        setEditingParty(null);
+                        setEditPartyFormError(null);
+                        setEditPartyFieldErrors({});
+                      }}
                       type="button"
                     >
                       {t("actions.cancel")}
@@ -798,12 +857,20 @@ export function CaseDetailPage() {
                   className="space-y-4"
                   onSubmit={(event) => {
                     event.preventDefault();
+                    const clientErrors = validatePartyForm(partyForm, t);
+                    if (Object.keys(clientErrors).length > 0) {
+                      setPartyFieldErrors(clientErrors);
+                      setPartyFormError(t("errors.validation.summary"));
+                      return;
+                    }
+                    setPartyFormError(null);
+                    setPartyFieldErrors({});
                     addPartyMutation.mutate(partyForm);
                   }}
                 >
                   <SelectField
                     label={t("labels.partyType")}
-                    onChange={(value) =>
+                    onChange={(value) => {
                       setPartyForm({
                         ...partyForm,
                         partyType: value as CasePartyType,
@@ -811,8 +878,9 @@ export function CaseDetailPage() {
                           value === "CLIENT"
                             ? (partyForm.clientId ?? "")
                             : undefined
-                      })
-                    }
+                      });
+                      setPartyFieldErrors((prev) => ({ ...prev, clientId: "", name: "" }));
+                    }}
                     options={[
                       { value: "CLIENT", label: t("partyTypes.CLIENT") },
                       { value: "OPPONENT", label: t("partyTypes.OPPONENT") },
@@ -823,7 +891,7 @@ export function CaseDetailPage() {
                   {partyForm.partyType === "CLIENT" ? (
                     <SelectField
                       label={t("labels.client")}
-                      onChange={(value) =>
+                      onChange={(value) => {
                         setPartyForm({
                           ...partyForm,
                           clientId: value,
@@ -831,18 +899,22 @@ export function CaseDetailPage() {
                             clientsQuery.data?.items.find(
                               (client) => client.id === value
                             )?.name ?? partyForm.name
-                        })
-                      }
+                        });
+                        setPartyFieldErrors((prev) => ({ ...prev, clientId: "" }));
+                      }}
                       options={clientOptions}
                       value={partyForm.clientId ?? ""}
+                      error={pickFieldError(partyFieldErrors, ["clientId"]) ?? undefined}
                     />
                   ) : null}
                   <Field
                     label={t("labels.name")}
-                    onChange={(value) =>
-                      setPartyForm({ ...partyForm, name: value })
-                    }
+                    onChange={(value) => {
+                      setPartyForm({ ...partyForm, name: value });
+                      setPartyFieldErrors((prev) => ({ ...prev, name: "" }));
+                    }}
                     value={partyForm.name}
+                    error={pickFieldError(partyFieldErrors, ["name"]) ?? undefined}
                   />
                   <SelectField
                     label={t("labels.role")}
@@ -852,12 +924,9 @@ export function CaseDetailPage() {
                     options={partyRoleOptions}
                     value={partyForm.role}
                   />
-                  {addPartyMutation.isError ? (
+                  {partyFormError ? (
                     <FormAlert
-                      message={
-                        (addPartyMutation.error as Error)?.message ??
-                        t("errors.fallback")
-                      }
+                      message={partyFormError}
                     />
                   ) : null}
                   <PrimaryButton
@@ -924,14 +993,23 @@ export function CaseDetailPage() {
               className="space-y-4"
               onSubmit={(event) => {
                 event.preventDefault();
+                const requiredErrors = validateAssignmentForm(assignmentForm, t);
+                if (Object.keys(requiredErrors).length > 0) {
+                  setAssignmentFieldErrors(requiredErrors);
+                  setAssignmentFormError(t("errors.validation.summary"));
+                  return;
+                }
+                setAssignmentFormError(null);
+                setAssignmentFieldErrors({});
                 addAssignmentMutation.mutate(assignmentForm);
               }}
             >
               <SelectField
                 label={t("labels.user")}
-                onChange={(value) =>
-                  setAssignmentForm({ ...assignmentForm, userId: value })
-                }
+                onChange={(value) => {
+                  setAssignmentForm({ ...assignmentForm, userId: value });
+                  setAssignmentFieldErrors((prev) => ({ ...prev, userId: "" }));
+                }}
                 options={[
                   { value: "", label: t("labels.selectUser") },
                   ...(usersQuery.data?.items ?? []).map((user) => ({
@@ -940,6 +1018,7 @@ export function CaseDetailPage() {
                   }))
                 ]}
                 value={assignmentForm.userId}
+                error={pickFieldError(assignmentFieldErrors, ["userId"]) ?? undefined}
               />
               <SelectField
                 label={t("labels.role")}
@@ -958,12 +1037,9 @@ export function CaseDetailPage() {
               <PrimaryButton type="submit">
                 {t("actions.assignLawyer")}
               </PrimaryButton>
-              {addAssignmentMutation.isError ? (
+              {assignmentFormError ? (
                 <FormAlert
-                  message={
-                    (addAssignmentMutation.error as Error)?.message ??
-                    t("errors.fallback")
-                  }
+                  message={assignmentFormError}
                 />
               ) : null}
             </form>
@@ -1139,7 +1215,10 @@ function Detail({ label, value }: { label: string; value: string | null }) {
 }
 
 type CourtFormErrors = Partial<
-  Record<"governorateValue" | "cityValue" | "courtLevel" | "startedAt" | "endedAt", string>
+  Record<
+    "courtName" | "governorateValue" | "cityValue" | "courtLevel" | "startedAt" | "endedAt",
+    string
+  >
 >;
 
 function validateCourtDates({
@@ -1175,6 +1254,7 @@ function CourtAddForm({
   courtTypeOptions,
   isPending,
   resetToken,
+  submitError,
   onSubmit,
   t
 }: {
@@ -1182,6 +1262,7 @@ function CourtAddForm({
   courtTypeOptions: { value: string; label: string }[];
   isPending: boolean;
   resetToken: number;
+  submitError: unknown;
   onSubmit: (payload: CreateCaseCourtDto) => void;
   t: (key: string) => string;
 }) {
@@ -1204,6 +1285,21 @@ function CourtAddForm({
       setFieldErrors({});
     }
   }, [resetToken]);
+
+  useEffect(() => {
+    if (!submitError) return;
+    const resolved = resolveFormValidationError(submitError, t("errors.fallback"));
+    const nextErrors: CourtFormErrors = {
+      courtName: pickFieldError(resolved.fieldErrors, ["courtName"]) ?? undefined,
+      governorateValue:
+        pickFieldError(resolved.fieldErrors, ["governorateValue"]) ?? undefined,
+      cityValue: pickFieldError(resolved.fieldErrors, ["cityValue"]) ?? undefined,
+      courtLevel: pickFieldError(resolved.fieldErrors, ["courtLevel"]) ?? undefined,
+      startedAt: pickFieldError(resolved.fieldErrors, ["startedAt"]) ?? undefined
+    };
+    setFieldErrors(nextErrors);
+    setValidationMessage(resolved.message);
+  }, [submitError, t]);
 
   return (
     <form
@@ -1228,6 +1324,15 @@ function CourtAddForm({
         onSubmit(form);
       }}
     >
+      <Field
+        label={t("labels.courtName")}
+        onChange={(v) => {
+          setForm({ ...form, courtName: v });
+          setFieldErrors((prev) => ({ ...prev, courtName: undefined }));
+        }}
+        value={form.courtName ?? ""}
+        error={fieldErrors.courtName}
+      />
       <SelectField
         label={t("labels.governorate")}
         onChange={(v) => {
@@ -1298,6 +1403,7 @@ function CourtEditForm({
   courtLevelOptions,
   courtTypeOptions,
   isPending,
+  submitError,
   onCancel,
   onSubmit,
   t
@@ -1306,6 +1412,7 @@ function CourtEditForm({
   courtLevelOptions: { value: string; label: string }[];
   courtTypeOptions: { value: string; label: string }[];
   isPending: boolean;
+  submitError: unknown;
   onCancel: () => void;
   onSubmit: (payload: UpdateCaseCourtDto) => void;
   t: (key: string) => string;
@@ -1336,6 +1443,22 @@ function CourtEditForm({
     toLocalizedLocationOptions(cityQuery.data?.items, language),
     form.cityValue
   );
+
+  useEffect(() => {
+    if (!submitError) return;
+    const resolved = resolveFormValidationError(submitError, t("errors.fallback"));
+    const nextErrors: CourtFormErrors = {
+      courtName: pickFieldError(resolved.fieldErrors, ["courtName"]) ?? undefined,
+      governorateValue:
+        pickFieldError(resolved.fieldErrors, ["governorateValue"]) ?? undefined,
+      cityValue: pickFieldError(resolved.fieldErrors, ["cityValue"]) ?? undefined,
+      courtLevel: pickFieldError(resolved.fieldErrors, ["courtLevel"]) ?? undefined,
+      startedAt: pickFieldError(resolved.fieldErrors, ["startedAt"]) ?? undefined,
+      endedAt: pickFieldError(resolved.fieldErrors, ["endedAt"]) ?? undefined
+    };
+    setFieldErrors(nextErrors);
+    setValidationMessage(resolved.message);
+  }, [submitError, t]);
 
   return (
     <form
@@ -1372,6 +1495,15 @@ function CourtEditForm({
         });
       }}
     >
+      <Field
+        label={t("labels.courtName")}
+        onChange={(v) => {
+          setForm({ ...form, courtName: v });
+          setFieldErrors((prev) => ({ ...prev, courtName: undefined }));
+        }}
+        value={form.courtName ?? ""}
+        error={fieldErrors.courtName}
+      />
       <SelectField
         label={t("labels.governorate")}
         onChange={(v) => {

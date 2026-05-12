@@ -806,7 +806,11 @@
       "day": "يوم"
     },
     "conflictWarning": "يوجد تعارض زمني للمحامي المحدد حول هذا الموعد.",
-    "searchPlaceholder": "ابحث في الجلسات"
+    "searchPlaceholder": "ابحث في الجلسات",
+    "validation": {
+      "sessionDatetimeRequired": "موعد الجلسة مطلوب.",
+      "nextSessionAfterCurrent": "يجب أن يكون موعد الجلسة التالية بعد موعد الجلسة الحالية."
+    }
   },
   "calendar": {
     "title": "التقويم الموحد",

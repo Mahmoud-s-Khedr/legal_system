@@ -737,7 +737,11 @@
       "day": "Day"
     },
     "conflictWarning": "This lawyer already has a hearing around the selected time.",
-    "searchPlaceholder": "Search hearings"
+    "searchPlaceholder": "Search hearings",
+    "validation": {
+      "sessionDatetimeRequired": "Session date and time is required.",
+      "nextSessionAfterCurrent": "Next session must be later than the current session date and time."
+    }
   },
   "calendar": {
     "title": "Unified Calendar",

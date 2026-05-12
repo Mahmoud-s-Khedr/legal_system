@@ -335,6 +335,18 @@ export function registerErrorHandler(app: FastifyInstance) {
     }
 
     if (isAppError(error) && error.statusCode < 500) {
+      if (error.code === "VALIDATION_ERROR") {
+        const details =
+          typeof error.details === "object" && error.details !== null
+            ? (error.details as Record<string, unknown>)
+            : {};
+        return reply.status(error.statusCode).send({
+          message: error.message,
+          messageKey: "VALIDATION_SUMMARY",
+          code: "VALIDATION_ERROR",
+          ...details
+        });
+      }
       return reply.status(error.statusCode).send({ message: error.message });
     }
 

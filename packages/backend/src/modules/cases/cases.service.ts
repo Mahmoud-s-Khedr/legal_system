@@ -300,45 +300,138 @@ async function assertActiveLookupOption(
   }
 }
 
-async function resolveCityCourtName(
+async function resolveLookupLabel(
+  tx: Prisma.TransactionClient,
+  firmId: string,
+  entity: string,
+  value: string | null | undefined
+): Promise<string | null> {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+  const option = await tx.lookupOption.findFirst({
+    where: {
+      entity,
+      key: normalized,
+      isActive: true,
+      OR: [{ firmId: null }, { firmId }]
+    },
+    select: { labelAr: true, labelEn: true, labelFr: true, key: true }
+  });
+  if (!option) return normalized;
+  return (
+    option.labelAr?.trim() ||
+    option.labelEn?.trim() ||
+    option.labelFr?.trim() ||
+    option.key
+  );
+}
+
+async function resolveGovernorateCityParts(
   tx: Prisma.TransactionClient,
   governorateValue: string | null | undefined,
   cityValue: string | null | undefined
-): Promise<string | null> {
+): Promise<{ governorateLabel: string | null; cityLabel: string | null }> {
   const city = cityValue?.trim();
-  if (!city) return null;
   const governorate = governorateValue?.trim();
-  if (!governorate) {
+
+  if (city && !governorate) {
     throw appError("Governorate is required when city is provided", 422);
   }
-
-  const governorateRow = await tx.governorateLookup.findFirst({
-    where: {
-      isActive: true,
-      OR: [
-        { key: { equals: governorate, mode: "insensitive" } },
-        { labelAr: governorate }
-      ]
-    },
-    select: { id: true }
-  });
-  if (!governorateRow) {
-    throw appError(`Invalid governorate "${governorate}"`, 422);
+  if (!governorate && !city) {
+    return { governorateLabel: null, cityLabel: null };
   }
 
-  const cityRow = await tx.cityLookup.findFirst({
-    where: {
-      governorateId: governorateRow.id,
-      isActive: true,
-      OR: [{ key: { equals: city, mode: "insensitive" } }, { labelAr: city }]
-    },
-    select: { labelAr: true }
-  });
-  if (!cityRow) {
-    throw appError(`Invalid city "${city}" for governorate "${governorate}"`, 422);
+  let governorateRow:
+    | { id: string; labelAr: string; labelEn: string; labelFr: string; key: string }
+    | null = null;
+  if (governorate) {
+    governorateRow = await tx.governorateLookup.findFirst({
+      where: {
+        isActive: true,
+        OR: [
+          { key: { equals: governorate, mode: "insensitive" } },
+          { labelAr: governorate },
+          { labelEn: governorate },
+          { labelFr: governorate }
+        ]
+      },
+      select: { id: true, key: true, labelAr: true, labelEn: true, labelFr: true }
+    });
+    if (!governorateRow) {
+      throw appError(`Invalid governorate "${governorate}"`, 422);
+    }
   }
 
-  return cityRow.labelAr;
+  let cityLabel: string | null = null;
+  if (city && governorateRow) {
+    const cityRow = await tx.cityLookup.findFirst({
+      where: {
+        governorateId: governorateRow.id,
+        isActive: true,
+        OR: [
+          { key: { equals: city, mode: "insensitive" } },
+          { labelAr: city },
+          { labelEn: city },
+          { labelFr: city }
+        ]
+      },
+      select: { labelAr: true, labelEn: true, labelFr: true, key: true }
+    });
+    if (!cityRow) {
+      throw appError(`Invalid city "${city}" for governorate "${governorate}"`, 422);
+    }
+    cityLabel =
+      cityRow.labelAr?.trim() ||
+      cityRow.labelEn?.trim() ||
+      cityRow.labelFr?.trim() ||
+      cityRow.key;
+  }
+
+  const governorateLabel = governorateRow
+    ? governorateRow.labelAr?.trim() ||
+      governorateRow.labelEn?.trim() ||
+      governorateRow.labelFr?.trim() ||
+      governorateRow.key
+    : null;
+
+  return { governorateLabel, cityLabel };
+}
+
+async function buildAutoCourtName(
+  tx: Prisma.TransactionClient,
+  firmId: string,
+  payload: Pick<
+    CreateCaseCourtDto,
+    "governorateValue" | "cityValue" | "courtType" | "courtLevel"
+  >
+): Promise<string> {
+  const { governorateLabel, cityLabel } = await resolveGovernorateCityParts(
+    tx,
+    payload.governorateValue,
+    payload.cityValue
+  );
+  const courtTypeLabel = await resolveLookupLabel(
+    tx,
+    firmId,
+    "CourtType",
+    payload.courtType
+  );
+  const courtLevelLabel = await resolveLookupLabel(
+    tx,
+    firmId,
+    "CourtLevel",
+    payload.courtLevel
+  );
+
+  const parts = [governorateLabel, cityLabel, courtTypeLabel, courtLevelLabel]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part));
+
+  if (!parts.length) {
+    throw appError("Court city or court name is required", 422);
+  }
+
+  return Array.from(new Set(parts)).join(" - ");
 }
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -1222,13 +1315,15 @@ export async function addCaseCourt(
       );
     }
 
-    const resolvedCourtNameFromCity = await resolveCityCourtName(
-      tx,
-      payload.governorateValue,
-      payload.cityValue
-    );
     const fallbackCourtName = payload.courtName?.trim() ?? "";
-    const courtName = resolvedCourtNameFromCity ?? fallbackCourtName;
+    const courtName =
+      fallbackCourtName ||
+      (await buildAutoCourtName(tx, actor.firmId, {
+        governorateValue: payload.governorateValue,
+        cityValue: payload.cityValue,
+        courtType: payload.courtType,
+        courtLevel: payload.courtLevel
+      }));
     if (!courtName) {
       throw appError("Court city or court name is required", 422);
     }
@@ -1290,13 +1385,15 @@ export async function updateCaseCourt(
       );
     }
 
-    const resolvedCourtNameFromCity = await resolveCityCourtName(
-      tx,
-      payload.governorateValue,
-      payload.cityValue
-    );
     const fallbackCourtName = payload.courtName?.trim() ?? "";
-    const courtName = resolvedCourtNameFromCity ?? fallbackCourtName;
+    const courtName =
+      fallbackCourtName ||
+      (await buildAutoCourtName(tx, actor.firmId, {
+        governorateValue: payload.governorateValue,
+        cityValue: payload.cityValue,
+        courtType: payload.courtType,
+        courtLevel: payload.courtLevel
+      }));
     if (!courtName) {
       throw appError("Court city or court name is required", 422);
     }

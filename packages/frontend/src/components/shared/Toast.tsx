@@ -22,13 +22,13 @@ export function ToastContainer() {
 
   return (
     <div
-      className="fixed top-6 z-50 flex w-full flex-col items-center gap-2 px-4 start-0"
+      className="pointer-events-none fixed top-6 z-50 flex w-full flex-col items-center gap-2 px-4 start-0"
       aria-live="polite"
       aria-atomic="false"
     >
       {toasts.map((toast) => (
         <div
-          className={`flex items-center gap-3 rounded-2xl px-5 py-3 text-sm font-semibold shadow-elevated ${
+          className={`pointer-events-auto flex items-center gap-3 rounded-2xl px-5 py-3 text-sm font-semibold shadow-elevated ${
             toast.exiting ? "animate-toast-exit" : "animate-toast-enter"
           } ${VARIANT_CLASSES[toast.variant]}`}
           key={toast.id}

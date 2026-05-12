@@ -21,6 +21,7 @@ export async function findHearingConflicts(
   return tx.caseSession.findMany({
     where: {
       assignedLawyerId,
+      deletedAt: null,
       case: { firmId, deletedAt: null },
       ...(excludeId ? { id: { not: excludeId } } : {}),
       sessionDatetime: { gte: start, lte: end }
@@ -168,6 +169,7 @@ export async function createHearingRecord(
   tx: RepositoryTx,
   payload: {
     caseId: string;
+    parentSessionId?: string | null;
     assignedLawyerId: string | null;
     sessionDatetime: Date;
     nextSessionAt: Date | null;
@@ -186,6 +188,7 @@ export async function updateHearingRecordById(
   hearingId: string,
   payload: {
     caseId: string;
+    parentSessionId?: string | null;
     assignedLawyerId: string | null;
     sessionDatetime: Date;
     nextSessionAt: Date | null;
@@ -208,6 +211,16 @@ export async function updateHearingOutcomeById(
   return tx.caseSession.update({
     where: { id: hearingId },
     data: { outcome },
+    include: hearingInclude
+  });
+}
+
+export async function findFollowUpHearingByParentId(
+  tx: RepositoryTx,
+  parentSessionId: string
+): Promise<HearingRecord | null> {
+  return tx.caseSession.findFirst({
+    where: { parentSessionId, deletedAt: null },
     include: hearingInclude
   });
 }

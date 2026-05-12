@@ -14,7 +14,8 @@ const {
   getFirmHearingRowByIdOrThrow,
   createHearingRecord,
   updateHearingRecordById,
-  updateHearingOutcomeById
+  updateHearingOutcomeById,
+  findFollowUpHearingByParentId
 } = await import("./hearings.repository.js");
 
 function createTx() {
@@ -22,6 +23,7 @@ function createTx() {
     caseSession: {
       findMany: vi.fn(),
       count: vi.fn(),
+      findFirst: vi.fn(),
       findFirstOrThrow: vi.fn(),
       create: vi.fn(),
       update: vi.fn()
@@ -52,6 +54,11 @@ describe("hearings.repository", () => {
     expect(result).toEqual([{ id: "h-1" }]);
     expect(tx.caseSession.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: { not: "exclude-id" } }) })
+    );
+    expect(tx.caseSession.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ deletedAt: null })
+      })
     );
   });
 
@@ -106,6 +113,7 @@ describe("hearings.repository", () => {
     const record = { id: "h-1", case: { id: "c-1" } };
 
     tx.caseSession.findFirstOrThrow.mockResolvedValue(record);
+    tx.caseSession.findFirst.mockResolvedValue(record);
     tx.caseSession.create.mockResolvedValue(record);
     tx.caseSession.update.mockResolvedValue(record);
 
@@ -135,5 +143,6 @@ describe("hearings.repository", () => {
     ).toEqual(record);
 
     expect(await updateHearingOutcomeById(tx as never, "h-1", null)).toEqual(record);
+    expect(await findFollowUpHearingByParentId(tx as never, "h-1")).toEqual(record);
   });
 });

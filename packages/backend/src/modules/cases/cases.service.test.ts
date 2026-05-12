@@ -36,6 +36,8 @@ const mockCourt = {
 const mockAuditLog = { create: vi.fn() };
 const mockClient = { findFirstOrThrow: vi.fn(), findMany: vi.fn() };
 const mockLookupOption = { findFirst: vi.fn() };
+const mockGovernorateLookup = { findFirst: vi.fn() };
+const mockCityLookup = { findFirst: vi.fn() };
 const dispatchNotification = vi.fn();
 
 const mockPrisma = {
@@ -46,7 +48,9 @@ const mockPrisma = {
   caseCourt: mockCourt,
   auditLog: mockAuditLog,
   client: mockClient,
-  lookupOption: mockLookupOption
+  lookupOption: mockLookupOption,
+  governorateLookup: mockGovernorateLookup,
+  cityLookup: mockCityLookup
 };
 
 vi.mock("../../db/prisma.js", () => ({ prisma: mockPrisma }));
@@ -121,6 +125,19 @@ beforeEach(() => {
   mockClient.findMany.mockResolvedValue([]);
   mockParty.findMany.mockResolvedValue([]);
   mockLookupOption.findFirst.mockResolvedValue({ id: "role-1" });
+  mockGovernorateLookup.findFirst.mockResolvedValue({
+    id: "gov-1",
+    key: "cairo",
+    labelAr: "القاهرة",
+    labelEn: "Cairo",
+    labelFr: "Le Caire"
+  });
+  mockCityLookup.findFirst.mockResolvedValue({
+    key: "fifteen-may",
+    labelAr: "15 مايو",
+    labelEn: "15 May",
+    labelFr: "15 Mai"
+  });
   mockCaseDb.findFirstOrThrow.mockResolvedValue(makeCaseRecord());
 });
 
@@ -610,6 +627,70 @@ describe("court progression", () => {
     expect(mockCourt.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ stageOrder: 3 })
+      })
+    );
+  });
+
+  it("builds court name from governorate/city/type/level when name is omitted", async () => {
+    mockLookupOption.findFirst.mockImplementation(async (args: { where: { entity: string; key: string } }) => {
+      if (args.where.entity === "CourtType") {
+        return {
+          id: "type",
+          key: "CIVIL",
+          labelAr: "محكمة مدنية",
+          labelEn: "Civil Court",
+          labelFr: "Tribunal civil"
+        };
+      }
+      if (args.where.entity === "CourtLevel") {
+        return {
+          id: "level",
+          key: "PARTIAL",
+          labelAr: "جزئي",
+          labelEn: "Partial",
+          labelFr: "Partiel"
+        };
+      }
+      return { id: "role-1" };
+    });
+    mockCourt.aggregate.mockResolvedValue({ _max: { stageOrder: 0 } });
+    mockCourt.create.mockResolvedValue({
+      id: "court-3",
+      caseId: "case-1",
+      courtName: "القاهرة - 15 مايو - محكمة مدنية - جزئي",
+      courtLevel: "PARTIAL",
+      courtType: "CIVIL",
+      governorateValue: "cairo",
+      cityValue: "fifteen-may",
+      circuit: null,
+      stageOrder: 1,
+      startedAt: now,
+      endedAt: null,
+      isActive: true,
+      notes: null,
+      createdAt: now,
+      updatedAt: now
+    });
+
+    const result = await addCaseCourt(
+      actor,
+      "case-1",
+      {
+        courtName: "",
+        governorateValue: "cairo",
+        cityValue: "fifteen-may",
+        courtType: "CIVIL",
+        courtLevel: "PARTIAL"
+      } as never,
+      audit
+    );
+
+    expect(result.courtName).toBe("القاهرة - 15 مايو - محكمة مدنية - جزئي");
+    expect(mockCourt.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          courtName: "القاهرة - 15 مايو - محكمة مدنية - جزئي"
+        })
       })
     );
   });

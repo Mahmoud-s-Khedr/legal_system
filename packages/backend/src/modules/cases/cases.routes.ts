@@ -63,8 +63,14 @@ const caseAssignmentSchema = z.object({
   roleOnCase: z.nativeEnum(CaseRoleOnCase)
 });
 
+const optionalTrimmedBodyString = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}, z.string().optional());
+
 const caseCourtSchema = z.object({
-  courtName: z.string().min(1).optional(),
+  courtName: optionalTrimmedBodyString,
   courtLevel: z.string().min(1),
   courtType: z.string().nullable().optional(),
   governorateValue: z.string().nullable().optional(),
@@ -76,7 +82,7 @@ const caseCourtSchema = z.object({
 });
 
 const caseCourtUpdateSchema = z.object({
-  courtName: z.string().min(1).optional(),
+  courtName: optionalTrimmedBodyString,
   courtLevel: z.string().min(1),
   courtType: z.string().nullable().optional(),
   governorateValue: z.string().nullable().optional(),
