@@ -140,7 +140,7 @@ export function InvoiceDetailPage() {
 
   const canIssue = invoice.status === InvoiceStatus.DRAFT;
   const canEdit = invoice.status === InvoiceStatus.DRAFT;
-  const canDelete = invoice.status === InvoiceStatus.DRAFT;
+  const canDelete = true;
   const canVoid = invoice.status !== InvoiceStatus.VOID;
   const canPay =
     invoice.status === InvoiceStatus.ISSUED ||

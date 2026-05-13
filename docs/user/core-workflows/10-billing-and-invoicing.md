@@ -51,7 +51,7 @@ Once an invoice is ready to send, issue it to make it official.
 5. Click **Confirm**.
 
 > [!NOTE]
-> Issuing an invoice locks most of its fields. If you need to make changes after issuing, you must void the invoice and create a new one.
+> Issuing an invoice locks most of its fields. You can still delete an invoice at any status, and ELMS will automatically reverse any payment/credit effects before removal to keep balances consistent.
 
 ---
 
@@ -146,4 +146,3 @@ Generate a summary of your firm's financial activity over any date range.
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

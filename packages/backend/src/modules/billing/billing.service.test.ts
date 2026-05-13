@@ -379,10 +379,77 @@ describe("deleteInvoice", () => {
     expect(mockInvoice.delete).toHaveBeenCalledWith({ where: { id: "inv-1" } });
   });
 
-  it("rejects deleting a non-DRAFT invoice", async () => {
-    mockInvoice.findFirstOrThrow.mockResolvedValue(makeInvoiceRecord({ status: "ISSUED" }));
+  it("deletes a PAID invoice and reverses overpayment and applied credit", async () => {
+    mockInvoice.findFirstOrThrow.mockResolvedValue(
+      makeInvoiceRecord({
+        status: "PAID",
+        clientId: "client-1",
+        payments: [{ amount: new Decimal("1400.00") }],
+        creditApplications: [
+          {
+            id: "app-1",
+            amount: new Decimal("1100.00"),
+            paymentId: "pay-1",
+            createdAt: now
+          },
+          {
+            id: "app-2",
+            amount: new Decimal("50.00"),
+            paymentId: null,
+            createdAt: now
+          }
+        ]
+      })
+    );
+    mockInvoice.delete = vi.fn().mockResolvedValue({});
+    mockClientCreditBalance.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 });
 
-    await expect(deleteInvoice(actor, "inv-1", audit)).rejects.toThrow("Only DRAFT invoices can be deleted");
+    await expect(deleteInvoice(actor, "inv-1", audit)).resolves.not.toThrow();
+
+    expect(mockClientCreditBalance.updateMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          firmId: "firm-1",
+          clientId: "client-1",
+          availableAmount: { gte: new Decimal("300.00") }
+        })
+      })
+    );
+    expect(mockClientCreditBalance.updateMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { firmId: "firm-1", clientId: "client-1" }
+      })
+    );
+    expect(mockClientCreditEntry.create).toHaveBeenCalledTimes(2);
+    expect(mockInvoice.delete).toHaveBeenCalledWith({ where: { id: "inv-1" } });
+  });
+
+  it("fails deletion when overpayment reversal cannot be covered by current balance", async () => {
+    mockInvoice.findFirstOrThrow.mockResolvedValue(
+      makeInvoiceRecord({
+        status: "PAID",
+        clientId: "client-1",
+        payments: [{ amount: new Decimal("1400.00") }],
+        creditApplications: [
+          {
+            id: "app-1",
+            amount: new Decimal("1100.00"),
+            paymentId: "pay-1",
+            createdAt: now
+          }
+        ]
+      })
+    );
+    mockClientCreditBalance.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(deleteInvoice(actor, "inv-1", audit)).rejects.toThrow(
+      "Cannot delete invoice because the client credit balance no longer covers overpayment reversal"
+    );
+    expect(mockInvoice.delete).not.toHaveBeenCalled();
   });
 });
 

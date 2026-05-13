@@ -441,10 +441,76 @@ export async function voidInvoice(actor: SessionUser, id: string, audit: AuditCo
 
 export async function deleteInvoice(actor: SessionUser, id: string, audit: AuditContext): Promise<void> {
   return inTenantTransaction(actor.firmId, async (tx) => {
-    const existing = await getFirmInvoiceRowByIdOrThrow(tx, actor.firmId, id);
-    if (existing.status !== "DRAFT") throw appError("Only DRAFT invoices can be deleted", 422);
+    const existing = await getFirmInvoiceByIdOrThrow(tx, actor.firmId, id);
+    const reversalNote = `Invoice deletion reversal for ${existing.invoiceNumber}`;
+    const appliedClientCreditAmount = existing.creditApplications
+      .filter((application) => application.paymentId === null)
+      .reduce((sum, application) => sum.add(application.amount), new Decimal(0));
+    const appliedFromPaymentsAmount = existing.creditApplications
+      .filter((application) => application.paymentId !== null)
+      .reduce((sum, application) => sum.add(application.amount), new Decimal(0));
+    const paymentTotalAmount = existing.payments.reduce(
+      (sum, payment) => sum.add(payment.amount),
+      new Decimal(0)
+    );
+    const overpaymentCreditAmount = Decimal.max(
+      paymentTotalAmount.sub(appliedFromPaymentsAmount),
+      new Decimal(0)
+    );
+
+    if (existing.clientId) {
+      if (overpaymentCreditAmount.gt(0)) {
+        const decremented = await decrementClientCreditBalance(
+          tx,
+          actor.firmId,
+          existing.clientId,
+          overpaymentCreditAmount
+        );
+        if (!decremented) {
+          throw appError(
+            "Cannot delete invoice because the client credit balance no longer covers overpayment reversal",
+            422
+          );
+        }
+        await createClientCreditEntry(tx, {
+          firmId: actor.firmId,
+          clientId: existing.clientId,
+          invoiceId: id,
+          type: "INVOICE_DELETE_REVERSAL_OVERPAYMENT",
+          amount: overpaymentCreditAmount.neg(),
+          note: reversalNote
+        });
+      }
+
+      if (appliedClientCreditAmount.gt(0)) {
+        await incrementClientCreditBalance(
+          tx,
+          actor.firmId,
+          existing.clientId,
+          appliedClientCreditAmount
+        );
+        await createClientCreditEntry(tx, {
+          firmId: actor.firmId,
+          clientId: existing.clientId,
+          invoiceId: id,
+          type: "INVOICE_DELETE_REVERSAL_APPLIED_CREDIT",
+          amount: appliedClientCreditAmount,
+          note: reversalNote
+        });
+      }
+    }
+
     await deleteInvoiceById(tx, id, actor.firmId);
-    await writeAuditLog(tx, audit, { action: "invoice.deleted", entityType: "Invoice", entityId: id });
+    await writeAuditLog(tx, audit, {
+      action: "invoice.deleted",
+      entityType: "Invoice",
+      entityId: id,
+      newData: {
+        statusAtDelete: existing.status,
+        overpaymentCreditReversed: overpaymentCreditAmount.toFixed(2),
+        appliedCreditReversed: appliedClientCreditAmount.toFixed(2)
+      }
+    });
   });
 }
 
