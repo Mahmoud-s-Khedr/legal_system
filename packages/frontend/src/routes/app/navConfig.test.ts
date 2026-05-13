@@ -3,13 +3,19 @@ import { CalendarDays, Scale } from "lucide-react";
 import { buildSidebarNavSections, navConfig } from "./navConfig";
 
 describe("buildSidebarNavSections", () => {
-  it("hides protected navigation with no permissions", () => {
+  it("shows only non-protected navigation with no permissions", () => {
     const sections = buildSidebarNavSections({
       t: (key) => key,
       permissions: []
     });
 
-    expect(sections).toEqual([]);
+    expect(sections).toEqual([
+      {
+        id: "tools",
+        label: "nav.groups.tools",
+        items: [{ id: "ppoPortal", label: "nav.ppoPortal", to: "/app/integrations/ppo", icon: navConfig.find((item) => item.id === "ppoPortal")!.icon }]
+      }
+    ]);
   });
 
   it("filters and orders permission-gated sections", () => {
@@ -25,8 +31,7 @@ describe("buildSidebarNavSections", () => {
         "invoices:read",
         "expenses:read",
         "reports:read",
-        "users:read",
-        "integrations:google_calendar:manage"
+        "users:read"
       ]
     });
 

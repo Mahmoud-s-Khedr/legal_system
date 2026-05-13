@@ -47,7 +47,6 @@ const ALL_PERMISSIONS = [
   "expenses:read",
   "expenses:update",
   "expenses:delete",
-  "integrations:google_calendar:manage",
   "reports:read",
   "research:use",
   "templates:create",

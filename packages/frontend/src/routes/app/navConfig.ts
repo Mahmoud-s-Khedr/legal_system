@@ -108,8 +108,7 @@ export const navConfig: NavConfigItem[] = [
     to: "/app/integrations/ppo",
     icon: Landmark,
     group: "tools",
-    order: 240,
-    requiredPermission: "integrations:google_calendar:manage"
+    order: 240
   },
   {
     id: "users",

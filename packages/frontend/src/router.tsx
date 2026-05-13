@@ -683,11 +683,7 @@ const reportBuilderRoute = createRoute({
 const ppoPortalRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/integrations/ppo",
-  component: () => (
-    <PermissionGate permission="integrations:google_calendar:manage">
-      <PpoPortalPage />
-    </PermissionGate>
-  )
+  component: PpoPortalPage
 });
 
 // Research
