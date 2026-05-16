@@ -1311,6 +1311,7 @@
     "void": "Void",
     "status": "Status",
     "searchPlaceholder": "Search by invoice number or client",
+    "expenseSearchPlaceholder": "Search by expense category, description, or case",
     "deleteExpenseConfirm": "Delete this expense?",
     "invalidTaxAmount": "Tax amount must be a valid non-negative number.",
     "invalidDiscountAmount": "Discount amount must be a valid non-negative number.",

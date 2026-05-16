@@ -1322,6 +1322,7 @@
     "void": "إلغاء",
     "status": "الحالة",
     "searchPlaceholder": "ابحث برقم الفاتورة أو الموكل",
+    "expenseSearchPlaceholder": "ابحث بالفئة أو الوصف أو القضية",
     "deleteExpenseConfirm": "هل تريد حذف هذا المصروف؟",
     "invalidTaxAmount": "يجب أن تكون قيمة الضريبة رقمًا صالحًا غير سالب.",
     "invalidDiscountAmount": "يجب أن تكون قيمة الخصم رقمًا صالحًا غير سالب.",

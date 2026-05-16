@@ -15,6 +15,7 @@ import {
   ErrorState,
   FormAlert,
   SectionCard,
+  SelectField,
   TableBody,
   TableCell,
   TableHead,
@@ -25,6 +26,8 @@ import {
 } from "../../routes/app/ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useToastStore } from "../../store/toastStore";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
+import { confirmAction } from "../../lib/dialog";
 
 export function CaseBillingTab({ caseId }: { caseId: string }) {
   const { t } = useTranslation("app");
@@ -34,6 +37,7 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
   const expenses = useExpenses({ caseId });
   const createExpense = useCreateExpense();
   const deleteExpense = useDeleteExpense();
+  const expenseCategoryQuery = useLocalizedLookupOptions("ExpenseCategory");
 
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [category, setCategory] = useState("");
@@ -56,7 +60,7 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
       setDescription("");
       setShowExpenseForm(false);
     } catch (error) {
-      setFormError((error as Error)?.message ?? "Request failed");
+      setFormError((error as Error)?.message || t("errors.fallback"));
     }
   }
 
@@ -200,14 +204,15 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
           >
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-medium">
-                  {t("billing.category")}
-                </label>
-                <input
+                <SelectField
+                  label={t("billing.category")}
                   required
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={setCategory}
+                  options={[
+                    { value: "", label: t("actions.select") },
+                    ...expenseCategoryQuery.options
+                  ]}
                 />
               </div>
               <div>
@@ -287,7 +292,7 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
               <TableBody>
                 {expenses.data.items.map((exp) => (
                   <TableRow key={exp.id}>
-                    <TableCell>{exp.category}</TableCell>
+                    <TableCell>{expenseCategoryQuery.getLabel(exp.category)}</TableCell>
                     <TableCell>{exp.description ?? "—"}</TableCell>
                     <TableCell align="end">
                       {formatCurrency(exp.amount)}
@@ -296,6 +301,15 @@ export function CaseBillingTab({ caseId }: { caseId: string }) {
                       <button
                         onClick={() => {
                           void (async () => {
+                            const approved = await confirmAction({
+                              content: t(
+                                "billing.deleteExpenseConfirm",
+                                "Delete this expense?"
+                              )
+                            });
+                            if (!approved) {
+                              return;
+                            }
                             try {
                               await deleteExpense.mutateAsync(exp.id);
                             } catch (error) {

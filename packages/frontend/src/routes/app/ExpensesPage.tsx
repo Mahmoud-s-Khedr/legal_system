@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { CaseListResponseDto } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
 import { toCaseSelectOption } from "../../lib/caseOptions";
+import { useLocalizedLookupOptions } from "../../lib/lookups";
 import {
   useExpenses,
   useCreateExpense,
@@ -70,8 +71,23 @@ export function ExpensesPage() {
     queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=200")
   });
   const caseOptions = useMemo(() => {
-    return (casesQuery.data?.items ?? []).map((c) => toCaseSelectOption(t, c));
+    return [
+      { value: "", label: t("labels.none") },
+      ...(casesQuery.data?.items ?? []).map((c) => toCaseSelectOption(t, c))
+    ];
   }, [casesQuery.data, t]);
+  const expenseCategoryQuery = useLocalizedLookupOptions("ExpenseCategory");
+  const expenseCategoryOptions = useMemo(
+    () => [
+      { value: "", label: t("actions.select") },
+      ...expenseCategoryQuery.options
+    ],
+    [expenseCategoryQuery.options, t]
+  );
+  const expenseCategoryFilterOptions = useMemo(
+    () => [{ value: "", label: t("labels.all") }, ...expenseCategoryQuery.options],
+    [expenseCategoryQuery.options, t]
+  );
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -134,14 +150,12 @@ export function ExpensesPage() {
           <form onSubmit={(e) => void handleCreate(e)} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium">
-                  {t("billing.category")}
-                </label>
-                <input
+                <SelectField
+                  label={t("billing.category")}
                   required
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={setCategory}
+                  options={expenseCategoryOptions}
                 />
               </div>
               <div>
@@ -204,13 +218,13 @@ export function ExpensesPage() {
             label={t("labels.search")}
             value={table.state.q}
             onChange={table.setQ}
-            placeholder={t("billing.searchPlaceholder")}
+            placeholder={t("billing.expenseSearchPlaceholder")}
           />
-          <Field
+          <SelectField
             label={t("billing.category")}
             value={table.state.filters.category ?? ""}
             onChange={(value) => table.setFilter("category", value)}
-            placeholder={t("billing.category")}
+            options={expenseCategoryFilterOptions}
           />
         </TableToolbar>
         {isLoading && (
@@ -268,12 +282,25 @@ export function ExpensesPage() {
                         <td colSpan={5} className="px-3 py-2">
                           <form onSubmit={(e) => void handleUpdate(e)} className="flex flex-wrap items-end gap-2 py-1">
                             <div>
-                              <label className="block text-xs font-medium">{t("billing.category")}</label>
-                              <input required className="mt-1 rounded-xl border border-slate-200 px-2 py-1 text-sm" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
+                              <SelectField
+                                label={t("billing.category")}
+                                required
+                                value={editCategory}
+                                onChange={setEditCategory}
+                                options={expenseCategoryOptions}
+                              />
                             </div>
                             <div>
                               <label className="block text-xs font-medium">{t("billing.amount")}</label>
                               <input required type="number" min="0.01" step="0.01" className="mt-1 w-28 rounded-xl border border-slate-200 px-2 py-1 text-sm" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+                            </div>
+                            <div>
+                              <SelectField
+                                label={`${t("labels.case")} (${t("labels.optional")})`}
+                                value={editCaseId}
+                                onChange={setEditCaseId}
+                                options={caseOptions}
+                              />
                             </div>
                             <div className="flex-1">
                               <label className="block text-xs font-medium">{t("billing.description")}</label>
@@ -286,7 +313,7 @@ export function ExpensesPage() {
                         </td>
                       ) : (
                         <>
-                          <TableCell>{exp.category}</TableCell>
+                          <TableCell>{expenseCategoryQuery.getLabel(exp.category)}</TableCell>
                           <TableCell>{exp.description ?? "—"}</TableCell>
                           <TableCell>{exp.caseTitle ?? "—"}</TableCell>
                           <TableCell align="end">

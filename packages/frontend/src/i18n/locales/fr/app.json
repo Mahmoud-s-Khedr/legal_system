@@ -1299,6 +1299,7 @@
     "status": "Statut",
     "invoiceNumber": "N° facture",
     "searchPlaceholder": "Rechercher par numéro de facture ou client",
+    "expenseSearchPlaceholder": "Rechercher par catégorie, description ou dossier",
     "deleteExpenseConfirm": "Supprimer cette dépense ?",
     "invalidTaxAmount": "Le montant de la taxe doit être un nombre valide non négatif.",
     "invalidDiscountAmount": "Le montant de la remise doit être un nombre valide non négatif.",
