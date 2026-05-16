@@ -643,7 +643,14 @@ export async function applyInvoiceCredit(
       throw appError("No available credit for this client", 422);
     }
 
-    const amountToApply = Decimal.min(requestedAmount, remaining, balance.availableAmount);
+    if (requestedAmount.gt(balance.availableAmount)) {
+      throw appError("Credit amount cannot exceed available client credit", 422);
+    }
+    if (requestedAmount.gt(remaining)) {
+      throw appError("Credit amount cannot exceed invoice remaining balance", 422);
+    }
+
+    const amountToApply = requestedAmount;
     if (!amountToApply.gt(0)) {
       throw appError("No credit can be applied", 422);
     }

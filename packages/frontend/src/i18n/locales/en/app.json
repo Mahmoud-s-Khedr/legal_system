@@ -1321,7 +1321,12 @@
     "applyCredit": "Apply credit",
     "availableClientCredit": "Available client credit",
     "creditAmount": "Credit amount",
-    "creditMaxHint": "Max available"
+    "creditMaxHint": "Max available",
+    "creditAmountPositive": "Credit amount must be greater than zero.",
+    "creditExceedsAvailable": "Credit amount cannot exceed available client credit.",
+    "creditExceedsRemaining": "Credit amount cannot exceed invoice remaining balance.",
+    "appliedCredit": "Applied Credit",
+    "creditAppliedEntry": "Credit applied"
   },
   "reports": {
     "title": "Reports",

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { InvoiceStatus, type InvoiceDto } from "@elms/shared";
-import { canRecordPayment, getRemainingInvoiceAmount } from "./InvoicesPage";
+import {
+  canRecordPayment,
+  getInvoiceStatusLabel,
+  getRemainingInvoiceAmount
+} from "./InvoicesPage";
 
 describe("InvoicesPage helpers", () => {
   it("allows payment action only for issued and partially paid invoices", () => {
@@ -24,5 +28,13 @@ describe("InvoicesPage helpers", () => {
 
     expect(getRemainingInvoiceAmount(partialInvoice)).toBe("250.00");
     expect(getRemainingInvoiceAmount(overPaidInvoice)).toBe("0.00");
+  });
+
+  it("uses enum localization key for invoice status labels", () => {
+    const t = ((key: string) =>
+      key === "enums.InvoiceStatus.PAID" ? "Paid Localized" : key) as never;
+
+    expect(getInvoiceStatusLabel(t, InvoiceStatus.PAID)).toBe("Paid Localized");
+    expect(getInvoiceStatusLabel(t, InvoiceStatus.VOID)).toBe("VOID");
   });
 });

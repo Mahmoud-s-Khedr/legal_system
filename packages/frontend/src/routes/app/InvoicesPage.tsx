@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   InvoiceStatus,
@@ -10,6 +11,7 @@ import {
 import { apiFetch } from "../../lib/api";
 import { useInvoices } from "../../lib/billing";
 import { useTableQueryState } from "../../lib/tableQueryState";
+import { getEnumLabel } from "../../lib/enumLabel";
 import {
   DataTable,
   EmptyState,
@@ -51,6 +53,13 @@ export function getRemainingInvoiceAmount(invoice: InvoiceDto) {
       0
     ) ?? 0;
   return Math.max(total - paid - credits, 0).toFixed(2);
+}
+
+export function getInvoiceStatusLabel(
+  t: TFunction<"app">,
+  status: InvoiceStatus
+) {
+  return getEnumLabel(t, "InvoiceStatus", status);
 }
 
 export function InvoicesPage() {
@@ -143,7 +152,7 @@ export function InvoicesPage() {
               { value: "", label: t("labels.all") },
               ...Object.values(InvoiceStatus).map((v) => ({
                 value: v,
-                label: v
+                label: getInvoiceStatusLabel(t, v)
               }))
             ]}
           />
@@ -195,7 +204,7 @@ export function InvoicesPage() {
                 {
                   key: "status",
                   label: t("labels.status"),
-                  render: (item) => item.status
+                  render: (item) => getInvoiceStatusLabel(t, item.status)
                 },
                 {
                   key: "total",
@@ -274,7 +283,7 @@ export function InvoicesPage() {
                                   : "bg-blue-100 text-blue-800"
                             }`}
                           >
-                            {invoice.status}
+                            {getInvoiceStatusLabel(t, invoice.status)}
                           </span>
                         </TableCell>
                         <TableCell align="end">

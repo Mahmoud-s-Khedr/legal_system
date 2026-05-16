@@ -86,6 +86,7 @@ const {
   voidInvoice,
   deleteInvoice,
   addPayment,
+  applyInvoiceCredit,
   listExpenses,
   createExpense,
   deleteExpense,
@@ -563,6 +564,108 @@ describe("addPayment", () => {
       })
     );
     expect(result.status).toBe("PAID");
+  });
+});
+
+describe("applyInvoiceCredit", () => {
+  it("rejects when requested amount exceeds available client credit", async () => {
+    mockInvoice.findFirstOrThrow.mockResolvedValue(
+      makeInvoiceRecord({
+        status: "ISSUED",
+        clientId: "client-1",
+        totalAmount: new Decimal("1000.00")
+      })
+    );
+    mockPayment.findMany.mockResolvedValue([]);
+    mockInvoiceCreditApplication.findMany.mockResolvedValue([]);
+    mockClientCreditBalance.findUnique.mockResolvedValue({
+      availableAmount: new Decimal("50.00")
+    });
+
+    await expect(
+      applyInvoiceCredit(actor, "inv-1", { amount: "100.00" }, audit)
+    ).rejects.toThrow("Credit amount cannot exceed available client credit");
+  });
+
+  it("rejects when requested amount exceeds remaining invoice balance", async () => {
+    mockInvoice.findFirstOrThrow.mockResolvedValue(
+      makeInvoiceRecord({
+        status: "ISSUED",
+        clientId: "client-1",
+        totalAmount: new Decimal("1000.00")
+      })
+    );
+    mockPayment.findMany.mockResolvedValue([{ amount: new Decimal("850.00") }]);
+    mockInvoiceCreditApplication.findMany.mockResolvedValue([]);
+    mockClientCreditBalance.findUnique.mockResolvedValue({
+      availableAmount: new Decimal("500.00")
+    });
+
+    await expect(
+      applyInvoiceCredit(actor, "inv-1", { amount: "200.00" }, audit)
+    ).rejects.toThrow("Credit amount cannot exceed invoice remaining balance");
+  });
+
+  it("applies credit when requested amount is within available and remaining limits", async () => {
+    mockInvoice.findFirstOrThrow.mockResolvedValue(
+      makeInvoiceRecord({
+        status: "ISSUED",
+        clientId: "client-1",
+        totalAmount: new Decimal("1000.00")
+      })
+    );
+    mockPayment.findMany.mockResolvedValue([]);
+    mockInvoiceCreditApplication.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ amount: new Decimal("200.00") }]);
+    mockClientCreditBalance.findUnique.mockResolvedValue({
+      availableAmount: new Decimal("500.00")
+    });
+    mockClientCreditBalance.updateMany.mockResolvedValue({ count: 1 });
+    mockInvoiceCreditApplication.create.mockResolvedValue({});
+    mockClientCreditEntry.create.mockResolvedValue({});
+    mockInvoice.update.mockResolvedValue(
+      makeInvoiceRecord({
+        status: "PARTIALLY_PAID",
+        clientId: "client-1",
+        creditApplications: [
+          {
+            id: "ca-1",
+            amount: new Decimal("200.00"),
+            paymentId: null,
+            createdAt: now
+          }
+        ]
+      })
+    );
+
+    const result = await applyInvoiceCredit(
+      actor,
+      "inv-1",
+      { amount: "200.00" },
+      audit
+    );
+
+    expect(mockClientCreditBalance.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          firmId: "firm-1",
+          clientId: "client-1",
+          availableAmount: expect.any(Object)
+        })
+      })
+    );
+    expect(mockInvoiceCreditApplication.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          firmId: "firm-1",
+          invoiceId: "inv-1",
+          clientId: "client-1",
+          amount: new Decimal("200.00")
+        })
+      })
+    );
+    expect(result.status).toBe("PARTIALLY_PAID");
   });
 });
 

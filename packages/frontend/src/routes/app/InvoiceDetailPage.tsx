@@ -48,6 +48,35 @@ function parsePositiveInteger(value: string): number | null {
   return quantity;
 }
 
+export function getAppliedCreditAmount(invoice: InvoiceDtoLike) {
+  return invoice.creditApplications.reduce(
+    (sum, app) => sum + Number(app.amount),
+    0
+  );
+}
+
+export function getTotalPaidAmount(invoice: InvoiceDtoLike) {
+  return invoice.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+}
+
+export function getOutstandingAmount(invoice: InvoiceDtoLike) {
+  const total = Number(invoice.totalAmount);
+  const paid = getTotalPaidAmount(invoice);
+  const credits = getAppliedCreditAmount(invoice);
+  return Math.max(total - paid - credits, 0);
+}
+
+type InvoiceDtoLike = Pick<
+  InvoiceStatusSnapshot,
+  "totalAmount" | "payments" | "creditApplications"
+>;
+
+type InvoiceStatusSnapshot = {
+  totalAmount: string;
+  payments: Array<{ amount: string }>;
+  creditApplications: Array<{ amount: string; createdAt: string; id: string }>;
+};
+
 export function InvoiceDetailPage() {
   const { invoiceId } = useParams({ from: "/app/invoices/$invoiceId" });
   const navigate = useNavigate();
@@ -105,6 +134,33 @@ export function InvoiceDetailPage() {
   async function handleApplyCredit(e: React.FormEvent) {
     e.preventDefault();
     setCreditError("");
+    const requestedAmount = Number(creditAmount);
+    if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+      setCreditError(
+        t("billing.creditAmountPositive", "Credit amount must be greater than zero.")
+      );
+      return;
+    }
+    const availableCredit = Number(creditBalance.data?.availableAmount ?? 0);
+    if (requestedAmount > availableCredit) {
+      setCreditError(
+        t(
+          "billing.creditExceedsAvailable",
+          "Credit amount cannot exceed available client credit."
+        )
+      );
+      return;
+    }
+    const remainingAmount = getOutstandingAmount(currentInvoice);
+    if (requestedAmount > remainingAmount) {
+      setCreditError(
+        t(
+          "billing.creditExceedsRemaining",
+          "Credit amount cannot exceed invoice remaining balance."
+        )
+      );
+      return;
+    }
     try {
       await applyCredit.mutateAsync({ amount: creditAmount });
       addToast(t("messages.creditApplied", "Credit applied"), "success");
@@ -119,6 +175,9 @@ export function InvoiceDetailPage() {
   if (!invoice)
     return <p className="p-8 text-red-500">{t("errors.notFound")}</p>;
   const currentInvoice = invoice;
+  const totalPaidAmount = getTotalPaidAmount(currentInvoice);
+  const appliedCreditAmount = getAppliedCreditAmount(currentInvoice);
+  const outstandingAmount = getOutstandingAmount(currentInvoice);
 
   async function handleAddPayment(e: React.FormEvent) {
     e.preventDefault();
@@ -558,22 +617,17 @@ export function InvoiceDetailPage() {
           { label: t("billing.total"), value: currentInvoice.totalAmount },
           {
             label: t("billing.totalPaid"),
-            value: currentInvoice.payments.reduce(
-              (sum, p) => sum + Number(p.amount),
-              0
-            ),
+            value: totalPaidAmount,
             highlight: "text-emerald-600"
           },
           {
+            label: t("billing.appliedCredit", "Applied Credit"),
+            value: appliedCreditAmount,
+            highlight: "text-indigo-600"
+          },
+          {
             label: t("billing.outstanding"),
-            value: Math.max(
-              0,
-              Number(currentInvoice.totalAmount) -
-                currentInvoice.payments.reduce(
-                  (sum, p) => sum + Number(p.amount),
-                  0
-                )
-            ),
+            value: outstandingAmount,
             highlight: "text-red-600"
           }
         ].map(({ label, value, highlight }) => (
@@ -649,6 +703,25 @@ export function InvoiceDetailPage() {
           </div>
         )}
 
+        {currentInvoice.creditApplications.length > 0 ? (
+          <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
+            <p className="text-sm font-medium text-slate-700">
+              {t("billing.appliedCredit", "Applied Credit")}
+            </p>
+            {currentInvoice.creditApplications.map((application) => (
+              <div key={application.id} className="flex justify-between text-sm">
+                <span>
+                  <bdi>{t("billing.creditAppliedEntry", "Credit applied")}</bdi> &bull;{" "}
+                  <bdi>{formatDate(application.createdAt)}</bdi>
+                </span>
+                <span className="font-semibold text-indigo-700">
+                  <bdi>-{formatCurrency(application.amount)}</bdi>
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         {showPaymentForm && (
           <form
             onSubmit={(e) => void handleAddPayment(e)}
@@ -669,11 +742,7 @@ export function InvoiceDetailPage() {
                   onChange={(e) => setPaymentAmount(e.target.value)}
                 />
                 {Number(paymentAmount) >
-                  Number(currentInvoice.totalAmount) -
-                    currentInvoice.payments.reduce(
-                      (sum, p) => sum + Number(p.amount),
-                      0
-                    ) && invoice.clientId ? (
+                  outstandingAmount && invoice.clientId ? (
                   <p className="mt-2 text-xs text-sky-700 bg-sky-50 p-2 rounded-lg border border-sky-100">
                     {t(
                       "billing.overpaymentNote",

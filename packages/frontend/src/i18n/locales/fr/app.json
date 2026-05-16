@@ -1309,7 +1309,12 @@
     "applyCredit": "Appliquer un crédit",
     "availableClientCredit": "Crédit client disponible",
     "creditAmount": "Montant du crédit",
-    "creditMaxHint": "Maximum disponible"
+    "creditMaxHint": "Maximum disponible",
+    "creditAmountPositive": "Le montant du crédit doit être supérieur à zéro.",
+    "creditExceedsAvailable": "Le montant du crédit ne peut pas dépasser le crédit client disponible.",
+    "creditExceedsRemaining": "Le montant du crédit ne peut pas dépasser le solde restant de la facture.",
+    "appliedCredit": "Crédit appliqué",
+    "creditAppliedEntry": "Crédit appliqué"
   },
   "reports": {
     "title": "Rapports",

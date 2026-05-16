@@ -1332,7 +1332,12 @@
     "applyCredit": "تطبيق رصيد",
     "availableClientCredit": "رصيد الموكل المتاح",
     "creditAmount": "مبلغ الرصيد",
-    "creditMaxHint": "الحد الأقصى المتاح"
+    "creditMaxHint": "الحد الأقصى المتاح",
+    "creditAmountPositive": "يجب أن يكون مبلغ الرصيد أكبر من صفر.",
+    "creditExceedsAvailable": "لا يمكن أن يتجاوز مبلغ الرصيد الرصيد المتاح للموكل.",
+    "creditExceedsRemaining": "لا يمكن أن يتجاوز مبلغ الرصيد الرصيد المتبقي في الفاتورة.",
+    "appliedCredit": "الرصيد المطبق",
+    "creditAppliedEntry": "تم تطبيق رصيد"
   },
   "reports": {
     "title": "التقارير",
