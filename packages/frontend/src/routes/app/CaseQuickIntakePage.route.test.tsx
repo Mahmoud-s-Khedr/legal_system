@@ -361,6 +361,76 @@ describe("CaseQuickIntakePage route behavior", () => {
     expect(createCaseMutateAsyncMock).not.toHaveBeenCalled();
   });
 
+  it("shows app-level validation for invalid inline-client email", async () => {
+    const view = render(<CaseQuickIntakePage />);
+    const switchButton = Array.from(view.querySelectorAll("button")).find(
+      (button) => button.textContent === "quickIntake.createClientInline"
+    );
+    act(() => {
+      switchButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const clientNameInput = view.querySelector(
+      'input[aria-label="labels.name"]'
+    ) as HTMLInputElement | null;
+    const typeSelect = view.querySelector(
+      'select[aria-label="labels.type"]'
+    ) as HTMLSelectElement | null;
+    const emailInput = view.querySelector(
+      'input[aria-label="labels.email"]'
+    ) as HTMLInputElement | null;
+    const titleInput = view.querySelector(
+      'input[aria-label="labels.caseTitle"]'
+    ) as HTMLInputElement | null;
+    const caseNumberInput = view.querySelector(
+      'input[aria-label="labels.caseNumber"]'
+    ) as HTMLInputElement | null;
+    const form = view.querySelector("form");
+
+    act(() => {
+      if (clientNameInput) setInputValue(clientNameInput, "New Client");
+      if (typeSelect) setSelectValue(typeSelect, ClientType.INDIVIDUAL);
+      if (emailInput) setInputValue(emailInput, "invalid-email");
+      if (titleInput) setInputValue(titleInput, "Case E");
+      if (caseNumberInput) setInputValue(caseNumberInput, "2026/006");
+    });
+
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(view.textContent).toContain("errors.validation.issue.invalidEmail");
+    expect(createClientMutateAsyncMock).not.toHaveBeenCalled();
+    expect(createCaseMutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects negative judicial year before submitting", async () => {
+    const view = render(<CaseQuickIntakePage />);
+    const titleInput = view.querySelector(
+      'input[aria-label="labels.caseTitle"]'
+    ) as HTMLInputElement | null;
+    const caseNumberInput = view.querySelector(
+      'input[aria-label="labels.caseNumber"]'
+    ) as HTMLInputElement | null;
+    const judicialYearInput = view.querySelector(
+      'input[aria-label="labels.judicialYear"]'
+    ) as HTMLInputElement | null;
+    const form = view.querySelector("form");
+
+    act(() => {
+      if (titleInput) setInputValue(titleInput, "Case Neg Year");
+      if (caseNumberInput) setInputValue(caseNumberInput, "2026/007");
+      if (judicialYearInput) setInputValue(judicialYearInput, "-1");
+    });
+
+    await act(async () => {
+      form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(view.textContent).toContain("quickIntake.validation.judicialYearNonNegative");
+    expect(createCaseMutateAsyncMock).not.toHaveBeenCalled();
+  });
+
   it("keeps optional sections hidden until the toggle is used", () => {
     const view = render(<CaseQuickIntakePage />);
     expect(view.querySelector('select[aria-label="labels.governorate"]')).toBeNull();

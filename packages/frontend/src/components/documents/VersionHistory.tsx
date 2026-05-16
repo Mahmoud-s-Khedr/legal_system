@@ -4,7 +4,6 @@ import type { DocumentDto, DocumentVersionDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFormFetch } from "../../lib/api";
 import { formatDateTime } from "../../routes/app/ui";
-import { useToastStore } from "../../store/toastStore";
 
 const ACCEPTED_TYPES = ".pdf,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif";
 
@@ -18,7 +17,6 @@ export function VersionHistory({
   onVersionUploaded
 }: VersionHistoryProps) {
   const { t } = useTranslation("app");
-  const addToast = useToastStore((state) => state.addToast);
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
 
@@ -79,16 +77,7 @@ export function VersionHistory({
           className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
           disabled={uploadMutation.isPending}
           onClick={() => {
-            void (async () => {
-              try {
-                await uploadMutation.mutateAsync();
-              } catch (error) {
-                addToast(
-                  (error as Error)?.message ?? t("errors.fallback"),
-                  "error"
-                );
-              }
-            })();
+            void uploadMutation.mutateAsync().catch(() => undefined);
           }}
           type="button"
         >

@@ -137,7 +137,7 @@ describe("PdfViewer", () => {
     expect(view.querySelector("iframe")).not.toBeNull();
   });
 
-  it("shows controlled error and does not use native fallback in desktop runtime", async () => {
+  it("uses native fallback in desktop runtime when PDF.js fails", async () => {
     vi.stubEnv("VITE_DESKTOP_SHELL", "true");
     Object.defineProperty(window, "navigator", {
       value: { ...window.navigator, userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
@@ -153,12 +153,11 @@ describe("PdfViewer", () => {
 
     await flushAsyncWork();
 
-    expect(view.querySelector("object")).toBeNull();
-    expect(view.querySelector("iframe")).toBeNull();
-    expect(view.textContent).toContain("pdf load failed");
+    expect(view.querySelector("object")).not.toBeNull();
+    expect(view.querySelector("iframe")).not.toBeNull();
   });
 
-  it("shows error when loaded PDF reports zero pages", async () => {
+  it("uses native fallback when loaded PDF reports zero pages", async () => {
     vi.stubEnv("VITE_DESKTOP_SHELL", "true");
     Object.defineProperty(window, "navigator", {
       value: { ...window.navigator, userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
@@ -177,9 +176,8 @@ describe("PdfViewer", () => {
 
     await flushAsyncWork();
 
-    expect(view.textContent).toContain("PDF has no pages");
-    expect(view.querySelector("object")).toBeNull();
-    expect(view.querySelector("iframe")).toBeNull();
+    expect(view.querySelector("object")).not.toBeNull();
+    expect(view.querySelector("iframe")).not.toBeNull();
   });
 
   it("shows page count and supports page jump", async () => {

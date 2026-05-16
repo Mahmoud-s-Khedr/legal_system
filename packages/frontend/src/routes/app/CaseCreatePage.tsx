@@ -111,6 +111,15 @@ export function CaseCreatePage() {
             }
             setValidationMessage(null);
             setFieldErrors({});
+            if (form.judicialYear != null && form.judicialYear < 0) {
+              const message = t(
+                "quickIntake.validation.judicialYearNonNegative",
+                "Judicial year must be zero or greater."
+              );
+              setFieldErrors({ judicialYear: message });
+              setValidationMessage(message);
+              return;
+            }
             void (async () => {
               try {
                 await createMutation.mutateAsync(form);
@@ -148,12 +157,35 @@ export function CaseCreatePage() {
             value={form.caseNumber}
             error={pickFieldError(fieldErrors, ["caseNumber"]) ?? undefined}
           />
-          <Field
-            label={t("labels.internalRef")}
-            onChange={(value) => setForm({ ...form, internalRef: value || null })}
-            value={form.internalRef ?? ""}
-            error={pickFieldError(fieldErrors, ["internalRef"]) ?? undefined}
-          />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field
+              label={t("labels.judicialYear")}
+              type="number"
+              value={
+                form.judicialYear === null || form.judicialYear === undefined
+                  ? ""
+                  : String(form.judicialYear)
+              }
+              onChange={(value) => {
+                if (value.trim() === "") {
+                  setForm({ ...form, judicialYear: null });
+                  return;
+                }
+                const parsed = Number.parseInt(value, 10);
+                setForm({
+                  ...form,
+                  judicialYear: Number.isNaN(parsed) ? null : parsed
+                });
+              }}
+              error={pickFieldError(fieldErrors, ["judicialYear"]) ?? undefined}
+            />
+            <Field
+              label={t("labels.internalRef")}
+              onChange={(value) => setForm({ ...form, internalRef: value || null })}
+              value={form.internalRef ?? ""}
+              error={pickFieldError(fieldErrors, ["internalRef"]) ?? undefined}
+            />
+          </div>
           <SelectField
             label={t("labels.caseType")}
             onChange={(value) => setForm({ ...form, type: value })}

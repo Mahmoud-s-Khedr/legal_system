@@ -21,9 +21,8 @@ type PdfDocumentHandle = {
 export function PdfViewer({ blob }: PdfViewerProps) {
   const { t } = useTranslation("app");
   const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
-  const isWindowsRuntime =
-    typeof navigator !== "undefined" && /windows/i.test(navigator.userAgent);
-  const canUseNativeViewerFallback = !isDesktopShell || !isWindowsRuntime;
+  const canUseNativeViewerFallback =
+    typeof URL !== "undefined" && typeof URL.createObjectURL === "function";
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLElement>>(new Map());
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -112,6 +111,7 @@ export function PdfViewer({ blob }: PdfViewerProps) {
         try {
           loadedPdf = await loadingTask.promise;
         } catch {
+          console.warn("[pdf-preview] worker load failed; retrying without worker");
           // Fallback path for desktop runtimes where workers are blocked/unstable.
           pdfjsLib.GlobalWorkerOptions.workerSrc = "";
           loadingTask = pdfjsLib.getDocument(baseLoadingOptions as unknown as object) as unknown as {
@@ -135,6 +135,11 @@ export function PdfViewer({ blob }: PdfViewerProps) {
         setVisiblePages(initialPages);
       } catch (err) {
         if (!cancelled) {
+          console.warn("[pdf-preview] load failed", {
+            reason: "load",
+            message: err instanceof Error ? err.message : String(err),
+            isDesktopShell
+          });
           setError(err instanceof Error ? err.message : t("documents.pdfRenderFailed"));
           if (canUseNativeViewerFallback) {
             setUseNativeViewer(true);
@@ -278,6 +283,10 @@ export function PdfViewer({ blob }: PdfViewerProps) {
           setFirstRenderedHeight((prev) => prev ?? viewport.height);
         } catch {
           if (!cancelled) {
+            console.warn("[pdf-preview] render failed", {
+              reason: "render",
+              pageNumber
+            });
             setError(t("documents.pdfRenderFailed"));
             if (canUseNativeViewerFallback) {
               setUseNativeViewer(true);
@@ -344,7 +353,21 @@ export function PdfViewer({ blob }: PdfViewerProps) {
   }
 
   if (error) {
-    return <p className="text-sm text-red-600">{error}</p>;
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-red-600">{error}</p>
+        {nativeUrl ? (
+          <a
+            className="inline-flex rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
+            href={nativeUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("actions.downloadDocument")}
+          </a>
+        ) : null}
+      </div>
+    );
   }
 
   return (

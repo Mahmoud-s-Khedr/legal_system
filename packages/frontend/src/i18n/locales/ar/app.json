@@ -734,7 +734,8 @@
     },
     "validation": {
       "clientRequired": "يرجى اختيار موكل.",
-      "caseRequired": "عنوان القضية ورقمها ونوعها حقول مطلوبة."
+      "caseRequired": "عنوان القضية ورقمها ونوعها حقول مطلوبة.",
+      "judicialYearNonNegative": "يجب أن تكون السنة القضائية أكبر من أو تساوي 0."
     }
   },
   "lookups": {

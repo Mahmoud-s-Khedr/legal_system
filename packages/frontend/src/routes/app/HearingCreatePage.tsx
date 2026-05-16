@@ -176,6 +176,7 @@ export function HearingCreatePage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["hearings"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      addToast(t("messages.saved"), "success");
       allowNextNavigation();
       void navigate({ to: "/app/hearings" });
     },

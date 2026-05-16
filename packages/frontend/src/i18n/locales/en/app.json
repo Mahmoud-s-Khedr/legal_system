@@ -731,7 +731,8 @@
     },
     "validation": {
       "clientRequired": "Please select a client.",
-      "caseRequired": "Case title, number, and type are required."
+      "caseRequired": "Case title, number, and type are required.",
+      "judicialYearNonNegative": "Judicial year must be 0 or greater."
     }
   },
   "hearings": {

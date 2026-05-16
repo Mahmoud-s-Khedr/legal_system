@@ -731,7 +731,8 @@
     },
     "validation": {
       "clientRequired": "Veuillez sélectionner un client.",
-      "caseRequired": "Le titre, le numéro et le type du dossier sont obligatoires."
+      "caseRequired": "Le titre, le numéro et le type du dossier sont obligatoires.",
+      "judicialYearNonNegative": "L'année judiciaire doit être supérieure ou égale à 0."
     }
   },
   "lookups": {

@@ -8,6 +8,7 @@ const requirePermission = vi.fn((permission: string) => `perm:${permission}`);
 const listCases = vi.fn();
 const addCaseParty = vi.fn();
 const reorderCaseCourts = vi.fn();
+const createCase = vi.fn();
 
 vi.mock("../../middleware/requireAuth.js", () => ({
   requireAuth: "auth-guard"
@@ -30,7 +31,7 @@ vi.mock("./cases.service.js", () => ({
   addCaseCourt: vi.fn(),
   addCaseParty,
   changeCaseStatus: vi.fn(),
-  createCase: vi.fn(),
+  createCase,
   deleteCase: vi.fn(),
   getCase: vi.fn(),
   listCaseAssignments: vi.fn(),
@@ -113,6 +114,30 @@ describe("registerCaseRoutes", () => {
       limit: 7
     });
     expect(result).toEqual({ items: [], total: 0, page: 3, pageSize: 7 });
+  });
+
+  it("rejects negative judicialYear on create before calling service", async () => {
+    const app = createApp();
+    const actor = makeSessionUser({ permissions: ["cases:create"] });
+
+    await registerCaseRoutes(app as never);
+    const createHandler = findRouteHandler(app.post.mock.calls, "/api/cases");
+    expect(createHandler).toBeDefined();
+
+    await expect(
+      createHandler!({
+        sessionUser: actor,
+        body: {
+          clientId: "ab3bb1a8-b6a0-43a8-90aa-eeb5f126f303",
+          title: "Case",
+          caseNumber: "2026/008",
+          judicialYear: -1,
+          type: "CIVIL"
+        }
+      })
+    ).rejects.toThrow();
+
+    expect(createCase).not.toHaveBeenCalled();
   });
 
   it("forwards one-character query for case search", async () => {

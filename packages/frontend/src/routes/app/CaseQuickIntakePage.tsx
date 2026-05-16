@@ -167,6 +167,11 @@ function validatePhone(value: string) {
   return isValidPhoneNumber(normalized) ? null : PHONE_ERROR;
 }
 
+function isValidEmail(value: string) {
+  if (!value.trim()) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 function emptyCourt(): DraftCourt {
   return {
     id: makeId("court"),
@@ -784,6 +789,33 @@ export function CaseQuickIntakePage() {
       return;
     }
 
+    const nextFieldErrors: Record<string, string> = {};
+    if (
+      !retryContext &&
+      clientMode === "new" &&
+      !isValidEmail(clientForm.email ?? "")
+    ) {
+      nextFieldErrors.email = t(
+        "errors.validation.issue.invalidEmail",
+        "Enter a valid email address."
+      );
+    }
+    if (
+      !retryContext &&
+      caseForm.judicialYear != null &&
+      caseForm.judicialYear < 0
+    ) {
+      nextFieldErrors.judicialYear = t(
+        "quickIntake.validation.judicialYearNonNegative",
+        "Judicial year must be zero or greater."
+      );
+    }
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setValidationMessage(Object.values(nextFieldErrors)[0] ?? t("errors.fallback"));
+      return;
+    }
+
     const shouldAttemptSection = (section: SubmitSection) =>
       !retryContext || retryContext.failedSections.includes(section);
 
@@ -1018,7 +1050,7 @@ export function CaseQuickIntakePage() {
           </Link>
         }
       />
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-4" noValidate onSubmit={handleSubmit}>
         <SectionCard
           title={t("quickIntake.clientStepTitle")}
           description={t("quickIntake.clientStepHelp")}
