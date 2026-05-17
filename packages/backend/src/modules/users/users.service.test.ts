@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import bcrypt from "bcryptjs";
-import { EditionKey } from "@elms/shared";
+import { EditionKey, Language } from "@elms/shared";
 import { makeSessionUser } from "../../test-utils/session-user.js";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -8,6 +8,7 @@ import { makeSessionUser } from "../../test-utils/session-user.js";
 const mockUser = {
   count: vi.fn(),
   findMany: vi.fn(),
+  findFirst: vi.fn(),
   findFirstOrThrow: vi.fn(),
   create: vi.fn(),
   update: vi.fn()
@@ -56,6 +57,7 @@ vi.mock("../auth/sessionUser.js", () => ({
 }));
 
 const { listUsers, createLocalUser, changeOwnPassword, adminSetPassword } = await import("./users.service.js");
+const { writeAuditLog } = await import("../../services/audit.service.js");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -145,6 +147,7 @@ describe("listUsers", () => {
 
 describe("createLocalUser", () => {
   it("hashes password with bcrypt cost 12", async () => {
+    mockUser.findFirst.mockResolvedValue(null);
     mockUser.create.mockResolvedValue(makeUserRecord());
 
     await createLocalUser(actor, { email: "new@elms.test", fullName: "New User", password: "P@ssw0rd!", roleId: "role-1" }, audit);
@@ -153,6 +156,7 @@ describe("createLocalUser", () => {
   });
 
   it("creates user with ACTIVE status", async () => {
+    mockUser.findFirst.mockResolvedValue(null);
     mockUser.create.mockResolvedValue(makeUserRecord());
 
     await createLocalUser(actor, { email: "new@elms.test", fullName: "New User", password: "P@ssw0rd!", roleId: "role-1" }, audit);
@@ -160,6 +164,124 @@ describe("createLocalUser", () => {
     expect(mockUser.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ firmId: "firm-1", status: "ACTIVE" })
+      })
+    );
+  });
+
+  it("restores soft-deleted user with same email instead of creating a new row", async () => {
+    const deletedAt = new Date("2026-02-01T00:00:00.000Z");
+    mockUser.findFirst.mockResolvedValue(
+      makeUserRecord({
+        id: "user-deleted",
+        email: "reused@elms.test",
+        fullName: "Old Name",
+        roleId: "role-old",
+        status: "SUSPENDED",
+        deletedAt
+      })
+    );
+    mockUser.update.mockResolvedValue(
+      makeUserRecord({
+        id: "user-deleted",
+        email: "reused@elms.test",
+        fullName: "New Name",
+        roleId: "role-2",
+        status: "ACTIVE",
+        deletedAt: null
+      })
+    );
+
+    const result = await createLocalUser(
+      actor,
+      {
+        email: "reused@elms.test",
+        fullName: "New Name",
+        password: "P@ssw0rd!",
+        roleId: "role-2",
+        preferredLanguage: Language.EN
+      },
+      audit
+    );
+
+    expect(mockUser.create).not.toHaveBeenCalled();
+    expect(mockUser.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "user-deleted" },
+        data: expect.objectContaining({
+          fullName: "New Name",
+          roleId: "role-2",
+          status: "ACTIVE",
+          deletedAt: null
+        })
+      })
+    );
+    expect(result.id).toBe("user-deleted");
+    expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
+      expect.anything(),
+      audit,
+      expect.objectContaining({
+        action: "users.restore",
+        entityType: "User",
+        entityId: "user-deleted"
+      })
+    );
+  });
+
+  it("rejects create when active user already exists with same email", async () => {
+    mockUser.findFirst.mockResolvedValue(
+      makeUserRecord({
+        id: "user-existing",
+        email: "existing@elms.test",
+        deletedAt: null
+      })
+    );
+
+    await expect(
+      createLocalUser(
+        actor,
+        {
+          email: "existing@elms.test",
+          fullName: "New User",
+          password: "P@ssw0rd!",
+          roleId: "role-1",
+          preferredLanguage: Language.AR
+        },
+        audit
+      )
+    ).rejects.toThrow("Resource already exists");
+
+    expect(mockUser.create).not.toHaveBeenCalled();
+    expect(mockUser.update).not.toHaveBeenCalled();
+  });
+
+  it("writes users.create audit action for true new rows", async () => {
+    mockUser.findFirst.mockResolvedValue(null);
+    mockUser.create.mockResolvedValue(
+      makeUserRecord({
+        id: "user-new",
+        email: "fresh@elms.test"
+      })
+    );
+
+    await createLocalUser(
+      actor,
+      {
+        email: "fresh@elms.test",
+        fullName: "Fresh User",
+        password: "P@ssw0rd!",
+        roleId: "role-1",
+        preferredLanguage: Language.AR
+      },
+      audit
+    );
+
+    expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
+      expect.anything(),
+      audit,
+      expect.objectContaining({
+        action: "users.create",
+        entityType: "User",
+        entityId: "user-new"
       })
     );
   });

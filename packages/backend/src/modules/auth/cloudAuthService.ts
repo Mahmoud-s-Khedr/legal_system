@@ -13,10 +13,14 @@ import {
 } from "../../config/constants.js";
 import { prisma } from "../../db/prisma.js";
 import { ensureSystemSecurityModel } from "../../security/bootstrap.js";
+import { appError } from "../../errors/appError.js";
 import type { AuthService } from "./auth.types.js";
 import { toSessionUser, userWithRoleInclude } from "./sessionUser.js";
 
 export function createCloudAuthService(app: FastifyInstance, env: AppEnv): AuthService {
+  const ACCOUNT_SUSPENDED_MESSAGE =
+    "Your account is suspended. Contact your firm administrator.";
+  const ACCOUNT_SUSPENDED_CODE = "ACCOUNT_SUSPENDED";
   const redis = new Redis(env.REDIS_URL, {
     lazyConnect: true,
     maxRetriesPerRequest: 1
@@ -183,16 +187,27 @@ export function createCloudAuthService(app: FastifyInstance, env: AppEnv): AuthS
         where: {
           email: payload.email,
           deletedAt: null
+        },
+        select: {
+          id: true,
+          passwordHash: true,
+          status: true
         }
       });
 
       if (!user?.passwordHash) {
-        throw new Error("Invalid email or password");
+        throw appError("Invalid email or password", 401);
       }
 
       const matches = await bcrypt.compare(payload.password, user.passwordHash);
       if (!matches) {
-        throw new Error("Invalid email or password");
+        throw appError("Invalid email or password", 401);
+      }
+
+      if (user.status === UserStatus.SUSPENDED) {
+        throw appError(ACCOUNT_SUSPENDED_MESSAGE, 403, {
+          code: ACCOUNT_SUSPENDED_CODE
+        });
       }
 
       const tokenBundle = await issueTokens(user.id);

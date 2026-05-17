@@ -56,14 +56,16 @@ export function TemplateCreatePage() {
         >
           <Field
             label={t("labels.name")}
-            onChange={(v) => setForm({ ...form, name: v })}
+            onChange={(v) => setForm((current) => ({ ...current, name: v }))}
             required
             value={form.name}
           />
           <SelectField
             label={t("labels.language")}
             value={form.language ?? "AR"}
-            onChange={(v) => setForm({ ...form, language: v })}
+            onChange={(v) =>
+              setForm((current) => ({ ...current, language: v }))
+            }
             options={LANGUAGES.map((l) => ({ value: l, label: l }))}
           />
           <div>
@@ -77,7 +79,7 @@ export function TemplateCreatePage() {
               value={form.body}
               language={form.language ?? "AR"}
               onChange={(body) => {
-                setForm({ ...form, body });
+                setForm((current) => ({ ...current, body }));
                 if (validationError) {
                   setValidationError(null);
                 }

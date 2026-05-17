@@ -230,10 +230,20 @@ async function parseErrorPayload(response: Response) {
   const message =
     typeof normalizedPayload === "object" &&
     normalizedPayload !== null &&
-    "message" in normalizedPayload &&
-    typeof (normalizedPayload as { message?: unknown }).message === "string" &&
-    (normalizedPayload as { message: string }).message.trim().length > 0
-      ? (normalizedPayload as { message: string }).message
+    (
+      ("message" in normalizedPayload &&
+        typeof (normalizedPayload as { message?: unknown }).message === "string" &&
+        (normalizedPayload as { message: string }).message.trim().length > 0) ||
+      ("error" in normalizedPayload &&
+        typeof (normalizedPayload as { error?: unknown }).error === "string" &&
+        (normalizedPayload as { error: string }).error.trim().length > 0)
+    )
+      ? (
+          (typeof (normalizedPayload as { message?: unknown }).message === "string" &&
+          (normalizedPayload as { message: string }).message.trim().length > 0
+            ? (normalizedPayload as { message: string }).message
+            : (normalizedPayload as { error: string }).error)
+        )
       : "Request failed";
 
   throw new ApiError(message, response.status, normalizedPayload);

@@ -26,6 +26,14 @@
         "tooBig": "يجب ألا تتجاوز القيمة {{maximum}}.",
         "invalidValue": "القيمة المدخلة غير صالحة."
       }
+    },
+    "backend": {
+      "validationFailed": "يرجى مراجعة الحقول المميزة ثم إعادة المحاولة.",
+      "duplicateEmail": "هذا البريد الإلكتروني مستخدم بالفعل.",
+      "duplicateRoleKey": "مفتاح الدور هذا موجود بالفعل.",
+      "invalidRole": "الدور المحدد غير صالح.",
+      "systemRoleProtected": "الأدوار النظامية محمية ولا يمكن تعديلها.",
+      "roleInUse": "لا يمكن حذف هذا الدور ما دام هناك مستخدمون مرتبطون به."
     }
   },
   "greeting": {
@@ -802,7 +810,11 @@
     "systemRolesHelp": "الأدوار المدمجة — للقراءة فقط.",
     "deleteConfirm": "هل تريد حذف هذا الدور؟ لا يمكن التراجع إذا كان هناك مستخدمون مكلفون إليه.",
     "systemRoleEdit": "لا يمكن تعديل الأدوار النظامية",
-    "systemRoleEditHelp": "يمكن تعديل الأدوار المخصصة فقط."
+    "systemRoleEditHelp": "يمكن تعديل الأدوار المخصصة فقط.",
+    "roleKeyPlaceholder": "my_custom_role",
+    "validation": {
+      "permissionRequired": "اختر صلاحية واحدة على الأقل."
+    }
   },
   "hearings": {
     "eyebrow": "تقويم الجلسات",
@@ -888,7 +900,10 @@
     "cloudOnly": "الإنشاء المباشر غير متاح في الوضع السحابي",
     "cloudOnlyHelp": "استخدم قسم الدعوات لإضافة مستخدمين في النشر السحابي.",
     "seatLimitReached": "تم الوصول إلى الحد الأقصى لعدد المستخدمين في هذا الإصدار.",
-    "searchPlaceholder": "ابحث في المستخدمين"
+    "searchPlaceholder": "ابحث في المستخدمين",
+    "validation": {
+      "generic": "يرجى مراجعة الحقول المميزة ثم إعادة المحاولة."
+    }
   },
   "invitations": {
     "eyebrow": "الانضمام السحابي",
@@ -1226,6 +1241,21 @@
       "TAX_CARD": "بطاقة ضريبية",
       "CLIENT_ID_COMMERCIAL_REGISTER": "هوية موكل / سجل تجاري"
     },
+    "LibraryDocumentType": {
+      "LEGISLATION": "تشريع",
+      "REGULATION": "لائحة",
+      "JUDGMENT": "حكم قضائي",
+      "CIRCULAR": "منشور",
+      "ARTICLE": "مقالة",
+      "OTHER": "أخرى",
+      "PRACTICE_GUIDE": "دليل عملي",
+      "COMMENTARY": "تعليق قانوني"
+    },
+    "LegislationStatus": {
+      "ACTIVE": "نشط",
+      "AMENDED": "معدل",
+      "REPEALED": "ملغي"
+    },
     "ExtractionStatus": {
       "PENDING": "في الانتظار",
       "PROCESSING": "جارٍ المعالجة",
@@ -1419,6 +1449,7 @@
     "new": "نموذج جديد",
     "list": "مكتبة النماذج",
     "system": "نظام",
+    "use": "استخدام النموذج",
     "confirmDelete": "تأكيد الحذف",
     "createTitle": "إنشاء نموذج",
     "createHelp": "اكتب نص النموذج باستخدام متغيرات مثل {{caseName}} و{{clientName}} و{{courtName}} و{{hearingDate}} و{{today}}.",
@@ -1428,7 +1459,7 @@
     "bodyHelp": "المتاح: {{caseName}}, {{caseNumber}}, {{clientName}}, {{clientNameAr}}, {{courtName}}, {{courtLevel}}, {{hearingDate}}, {{today}}, {{todayEn}}",
     "save": "حفظ النموذج",
     "preview": "معاينة",
-    "previewHelp": "الصق معرّف القضية لمعاينة النموذج بعد استبدال المتغيرات.",
+    "previewHelp": "اختر قضية لمعاينة النموذج بعد استبدال المتغيرات.",
     "render": "معاينة",
     "exportAfterSave": "احفظ القالب أولاً لتفعيل خيارات التصدير.",
     "insertPlaceholder": "إدراج متغير",
@@ -1554,6 +1585,8 @@
     "fileDownloadStarted": "بدأ التنزيل.",
     "fileSavedTo": "تم الحفظ في {{path}}.",
     "fileSaveFailed": "فشل التنزيل.",
+    "passwordResetSuccessfully": "تمت إعادة تعيين كلمة المرور بنجاح.",
+    "passwordChangedSuccessfully": "تم تغيير كلمة المرور بنجاح.",
     "backupCompleted": "اكتمل النسخ الاحتياطي.",
     "editionChangedSuccessfully": "تم تغيير النسخة بنجاح."
   },

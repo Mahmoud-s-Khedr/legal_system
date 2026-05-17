@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -97,6 +97,7 @@ export function TemplateRichEditor({
 }: Props) {
   const { t } = useTranslation("app");
   const dir = getTemplateDirection(language);
+  const latestExternalValueRef = useRef(normalizeTemplateHtml(value));
 
   const placeholders = useMemo(
     () =>
@@ -127,9 +128,17 @@ export function TemplateRichEditor({
       }
     },
     onUpdate: ({ editor: nextEditor }) => {
-      onChange(normalizeTemplateHtml(nextEditor.getHTML()));
+      const next = normalizeTemplateHtml(nextEditor.getHTML());
+      if (next === latestExternalValueRef.current) {
+        return;
+      }
+      onChange(next);
     }
   });
+
+  useEffect(() => {
+    latestExternalValueRef.current = normalizeTemplateHtml(value);
+  }, [value]);
 
   useEffect(() => {
     if (!editor) {

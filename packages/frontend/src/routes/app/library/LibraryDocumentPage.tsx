@@ -11,6 +11,7 @@ import { FilePreview } from "../../../components/documents/FilePreview";
 import { saveBlobToDownloads } from "../../../lib/desktopDownloads";
 import { showErrorDialog } from "../../../lib/dialog";
 import { isArabicLanguage } from "../../../lib/language";
+import { getEnumLabel } from "../../../lib/enumLabel";
 import { useToastStore } from "../../../store/toastStore";
 import {
   EmptyState,
@@ -239,7 +240,7 @@ export function LibraryDocumentPage() {
     <div className="space-y-6">
       <PageHeader
         description={description ?? ""}
-        eyebrow={doc.type}
+        eyebrow={getEnumLabel(t, "LibraryDocumentType", doc.type)}
         title={title}
         actions={
           <Link
@@ -266,7 +267,7 @@ export function LibraryDocumentPage() {
         )}
         {doc.status && (
           <span className="rounded-full bg-accentSoft px-3 py-1 text-accent">
-            {doc.status}
+            {getEnumLabel(t, "LegislationStatus", doc.status)}
           </span>
         )}
       </div>

@@ -26,6 +26,14 @@
         "tooBig": "La valeur doit être au plus {{maximum}}.",
         "invalidValue": "Valeur invalide."
       }
+    },
+    "backend": {
+      "validationFailed": "Veuillez vérifier les champs mis en évidence puis réessayer.",
+      "duplicateEmail": "Cette adresse e-mail est déjà utilisée.",
+      "duplicateRoleKey": "Cette clé de rôle existe déjà.",
+      "invalidRole": "Le rôle sélectionné est invalide.",
+      "systemRoleProtected": "Les rôles système sont protégés et ne peuvent pas être modifiés.",
+      "roleInUse": "Ce rôle ne peut pas être supprimé tant que des utilisateurs y sont assignés."
     }
   },
   "greeting": {
@@ -791,7 +799,11 @@
     "systemRolesHelp": "Rôles intégrés — en lecture seule.",
     "deleteConfirm": "Supprimer ce rôle ? Cette action est irréversible si des utilisateurs lui sont assignés.",
     "systemRoleEdit": "Les rôles système ne peuvent pas être modifiés",
-    "systemRoleEditHelp": "Seuls les rôles personnalisés du cabinet peuvent être modifiés."
+    "systemRoleEditHelp": "Seuls les rôles personnalisés du cabinet peuvent être modifiés.",
+    "roleKeyPlaceholder": "my_custom_role",
+    "validation": {
+      "permissionRequired": "Sélectionnez au moins une permission."
+    }
   },
   "hearings": {
     "eyebrow": "Calendrier d'audience",
@@ -865,7 +877,10 @@
     "cloudOnly": "Création directe désactivée en mode cloud",
     "cloudOnlyHelp": "Utilisez la section Invitations pour l'onboarding cloud.",
     "searchPlaceholder": "Rechercher des utilisateurs",
-    "seatLimitReached": "Limite d'utilisateurs atteinte pour ce plan."
+    "seatLimitReached": "Limite d'utilisateurs atteinte pour ce plan.",
+    "validation": {
+      "generic": "Veuillez vérifier les champs mis en évidence puis réessayer."
+    }
   },
   "invitations": {
     "eyebrow": "Onboarding cloud",
@@ -1203,6 +1218,21 @@
       "TAX_CARD": "Carte fiscale",
       "CLIENT_ID_COMMERCIAL_REGISTER": "Pièce d’identité client / registre du commerce"
     },
+    "LibraryDocumentType": {
+      "LEGISLATION": "Législation",
+      "REGULATION": "Règlement",
+      "JUDGMENT": "Jugement",
+      "CIRCULAR": "Circulaire",
+      "ARTICLE": "Article",
+      "OTHER": "Autre",
+      "PRACTICE_GUIDE": "Guide pratique",
+      "COMMENTARY": "Commentaire"
+    },
+    "LegislationStatus": {
+      "ACTIVE": "Actif",
+      "AMENDED": "Modifié",
+      "REPEALED": "Abrogé"
+    },
     "ExtractionStatus": {
       "PENDING": "En attente",
       "PROCESSING": "En traitement",
@@ -1396,6 +1426,7 @@
     "new": "Nouveau modèle",
     "list": "Bibliothèque de modèles",
     "system": "Système",
+    "use": "Utiliser le modèle",
     "confirmDelete": "Confirmer la suppression",
     "createTitle": "Créer un modèle",
     "createHelp": "Rédigez le corps du modèle avec les variables {{caseName}}, {{clientName}}, {{courtName}}, {{hearingDate}}, {{today}}.",
@@ -1405,7 +1436,7 @@
     "bodyHelp": "Disponible : {{caseName}}, {{caseNumber}}, {{clientName}}, {{clientNameAr}}, {{courtName}}, {{courtLevel}}, {{hearingDate}}, {{today}}, {{todayEn}}",
     "save": "Enregistrer le modèle",
     "preview": "Aperçu",
-    "previewHelp": "Collez un ID de dossier pour prévisualiser la substitution.",
+    "previewHelp": "Sélectionnez un dossier pour prévisualiser la substitution.",
     "render": "Aperçu",
     "exportAfterSave": "Enregistrez d'abord le modèle pour activer les actions d'export.",
     "insertPlaceholder": "Insérer un placeholder",
@@ -1501,6 +1532,8 @@
     "fileDownloadStarted": "Téléchargement démarré.",
     "fileSavedTo": "Enregistré dans {{path}}.",
     "fileSaveFailed": "Échec du téléchargement.",
+    "passwordResetSuccessfully": "Mot de passe réinitialisé avec succès.",
+    "passwordChangedSuccessfully": "Mot de passe modifié avec succès.",
     "backupCompleted": "Sauvegarde terminée.",
     "saved": "Enregistré avec succès.",
     "editionChangedSuccessfully": "Édition modifiée avec succès."

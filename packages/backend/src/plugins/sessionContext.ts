@@ -1,6 +1,7 @@
 import { AuthMode, type AccessTokenClaims } from "@elms/shared";
 import type { VerifyOptions } from "@fastify/jwt";
 import type { FastifyInstance } from "fastify";
+import { UserStatus } from "@prisma/client";
 import { ACCESS_COOKIE, LOCAL_SESSION_COOKIE, LOCAL_SESSION_HEADER } from "../config/constants.js";
 import type { AppEnv } from "../config/env.js";
 import { prisma } from "../db/prisma.js";
@@ -31,7 +32,11 @@ async function resolveSessionUser(
     }
 
     const user = await getUserWithRoleAndPermissions(prisma, session.userId);
-    return user ? toSessionUser(user) : null;
+    if (!user || user.deletedAt !== null || user.status !== UserStatus.ACTIVE) {
+      localSessionStore.destroy(sessionIdFromCookie ?? sessionIdFromHeader);
+      return null;
+    }
+    return toSessionUser(user);
   }
 
   const accessToken = cookies[ACCESS_COOKIE];
@@ -45,7 +50,10 @@ async function resolveSessionUser(
       allowedIss: env.COOKIE_DOMAIN
     } satisfies Partial<VerifyOptions>);
     const user = await getUserWithRoleAndPermissions(prisma, claims.sub);
-    return user ? toSessionUser(user) : null;
+    if (!user || user.deletedAt !== null || user.status !== UserStatus.ACTIVE) {
+      return null;
+    }
+    return toSessionUser(user);
   } catch {
     return null;
   }

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiDownload, apiFetch } from "./api";
+import { ApiError, apiDownload, apiFetch } from "./api";
 import { saveBlobToDownloads } from "./desktopDownloads";
 
 export interface TemplateDto {
@@ -33,6 +33,8 @@ export interface RenderResultDto {
 }
 
 export type TemplateExportMode = "template" | "rendered";
+export type DeleteTemplateOutcome = "deleted" | "missing";
+type DeleteTemplateSuccessResponse = { success: true };
 
 export function useTemplates() {
   return useQuery({
@@ -80,7 +82,22 @@ export function useUpdateTemplate(id: string) {
 export function useDeleteTemplate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => apiFetch<void>(`/api/templates/${id}`, { method: "DELETE" }),
+    mutationFn: async (id: string): Promise<DeleteTemplateOutcome> => {
+      try {
+        const response = await apiFetch<DeleteTemplateSuccessResponse>(`/api/templates/${id}`, { method: "DELETE" });
+        if (!response.success) {
+          throw new Error("Template delete did not return success.");
+        }
+        return "deleted";
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          // Backend remains authoritative with 404 for already-missing rows,
+          // but the UI should converge to backend state without a false failure.
+          return "missing";
+        }
+        throw error;
+      }
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] })
   });
 }

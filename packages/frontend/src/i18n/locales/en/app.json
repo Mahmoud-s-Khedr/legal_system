@@ -26,6 +26,14 @@
         "tooBig": "Value must be at most {{maximum}}.",
         "invalidValue": "Invalid value."
       }
+    },
+    "backend": {
+      "validationFailed": "Please review the highlighted fields and try again.",
+      "duplicateEmail": "This email is already in use.",
+      "duplicateRoleKey": "This role key already exists.",
+      "invalidRole": "The selected role is invalid.",
+      "systemRoleProtected": "System roles are protected and cannot be modified.",
+      "roleInUse": "This role cannot be deleted while users are assigned to it."
     }
   },
   "greeting": {
@@ -819,7 +827,10 @@
     "cloudOnly": "Direct creation is disabled in cloud mode",
     "cloudOnlyHelp": "Use the Invitations section to onboard users in cloud deployments.",
     "searchPlaceholder": "Search users",
-    "seatLimitReached": "Seat limit reached for this plan."
+    "seatLimitReached": "Seat limit reached for this plan.",
+    "validation": {
+      "generic": "Please review the highlighted fields and try again."
+    }
   },
   "invitations": {
     "eyebrow": "Cloud onboarding",
@@ -1045,7 +1056,11 @@
     "systemRolesHelp": "Built-in roles — read-only.",
     "deleteConfirm": "Delete this role? This cannot be undone if users are assigned.",
     "systemRoleEdit": "System roles cannot be edited",
-    "systemRoleEditHelp": "Only custom firm roles can be modified."
+    "systemRoleEditHelp": "Only custom firm roles can be modified.",
+    "roleKeyPlaceholder": "my_custom_role",
+    "validation": {
+      "permissionRequired": "Select at least one permission."
+    }
   },
   "placeholders": {
     "documents": "Document intake and filing workflows land in the next selected phase.",
@@ -1214,6 +1229,21 @@
       "PROOF_OF_PAYMENT_RECEIPTS": "Proof of Payment / Receipts",
       "TAX_CARD": "Tax Card",
       "CLIENT_ID_COMMERCIAL_REGISTER": "Client ID / Commercial Register"
+    },
+    "LibraryDocumentType": {
+      "LEGISLATION": "Legislation",
+      "REGULATION": "Regulation",
+      "JUDGMENT": "Judgment",
+      "CIRCULAR": "Circular",
+      "ARTICLE": "Article",
+      "OTHER": "Other",
+      "PRACTICE_GUIDE": "Practice Guide",
+      "COMMENTARY": "Commentary"
+    },
+    "LegislationStatus": {
+      "ACTIVE": "Active",
+      "AMENDED": "Amended",
+      "REPEALED": "Repealed"
     },
     "ExtractionStatus": {
       "PENDING": "Pending",
@@ -1408,6 +1438,7 @@
     "new": "New Template",
     "list": "Template library",
     "system": "System",
+    "use": "Use template",
     "confirmDelete": "Confirm delete",
     "createTitle": "Create template",
     "createHelp": "Write the template body using {{caseName}}, {{clientName}}, {{courtName}}, {{hearingDate}}, {{today}} placeholders.",
@@ -1417,7 +1448,7 @@
     "bodyHelp": "Available: {{caseName}}, {{caseNumber}}, {{clientName}}, {{clientNameAr}}, {{courtName}}, {{courtLevel}}, {{hearingDate}}, {{today}}, {{todayEn}}",
     "save": "Save template",
     "preview": "Preview",
-    "previewHelp": "Paste a case ID to preview the substitution output.",
+    "previewHelp": "Select a case to preview the substitution output.",
     "render": "Preview",
     "exportAfterSave": "Save the template first to enable export actions.",
     "insertPlaceholder": "Insert placeholder",
@@ -1514,6 +1545,8 @@
     "fileDownloadStarted": "Download started.",
     "fileSavedTo": "Saved to {{path}}.",
     "fileSaveFailed": "Download failed.",
+    "passwordResetSuccessfully": "Password reset successfully.",
+    "passwordChangedSuccessfully": "Password changed successfully.",
     "backupCompleted": "Backup completed.",
     "editionChangedSuccessfully": "Edition changed successfully."
   },

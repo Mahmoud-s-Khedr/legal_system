@@ -59,6 +59,25 @@ describe("apiDownload", () => {
     });
   });
 
+  it("uses error payload when message key is absent", async () => {
+    vi.resetModules();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: "Not Found",
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: vi.fn().mockResolvedValue({ error: "Template not found or is a system template" })
+    } satisfies Partial<Response>);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { apiFetch } = await import("./api");
+
+    await expect(apiFetch("/api/templates/missing", { method: "DELETE" })).rejects.toMatchObject({
+      status: 404,
+      message: "Template not found or is a system template"
+    });
+  });
+
   it("localizes validation issues with interpolation params", async () => {
     vi.resetModules();
     const fetchMock = vi.fn().mockResolvedValue({

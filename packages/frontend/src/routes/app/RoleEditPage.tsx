@@ -4,8 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RoleDto, UpdateRoleDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { resolveFormValidationError } from "../../lib/formValidation";
 import { pickFieldError } from "../../lib/validationErrors";
+import {
+  localizeUserRoleApiErrorMessage,
+  localizeUserRoleFormError
+} from "../../lib/userRoleErrorLocalization";
 import {
   EmptyState,
   ErrorState,
@@ -53,7 +56,7 @@ export function RoleEditPage() {
       void navigate({ to: "/app/settings/roles" });
     },
     onError: (err: unknown) => {
-      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      const resolved = localizeUserRoleFormError(t, err, t("errors.fallback"));
       setError(resolved.message);
       setFieldErrors(resolved.fieldErrors);
     }
@@ -65,14 +68,16 @@ export function RoleEditPage() {
 
   if (roleQuery.isError) {
     return (
-      <ErrorState
-        title={t("errors.title")}
-        description={
-          (roleQuery.error as Error)?.message ?? t("errors.fallback")
-        }
-        retryLabel={t("errors.reload")}
-        onRetry={() => void roleQuery.refetch()}
-      />
+        <ErrorState
+          title={t("errors.title")}
+          description={localizeUserRoleApiErrorMessage(
+            t,
+            roleQuery.error,
+            t("errors.fallback")
+          )}
+          retryLabel={t("errors.reload")}
+          onRetry={() => void roleQuery.refetch()}
+        />
     );
   }
 

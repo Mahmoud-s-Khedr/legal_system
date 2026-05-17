@@ -25,7 +25,7 @@ const updateTemplateSchema = z.object({
   body: z.string().min(1).optional()
 });
 
-const idParamsSchema = z.object({ id: z.string().min(1) });
+const idParamsSchema = z.object({ id: z.string().uuid() });
 
 export async function registerTemplateRoutes(app: FastifyInstance) {
   app.get(
@@ -91,7 +91,7 @@ export async function registerTemplateRoutes(app: FastifyInstance) {
         return reply.status(404).send({ error: "Template not found or is a system template" });
       }
 
-      return reply.status(204).send();
+      return reply.status(200).send({ success: true });
     }
   );
 

@@ -100,4 +100,30 @@ describe("LoginPage connectivity messaging", () => {
     expect(view.textContent).toContain("Retry after startup completes.");
     expect(navigateMock).not.toHaveBeenCalled();
   });
+
+  it("shows localized suspended-account message when backend returns ACCOUNT_SUSPENDED", async () => {
+    loginMock.mockRejectedValue(
+      new ApiError("Account suspended", 403, {
+        code: "ACCOUNT_SUSPENDED"
+      })
+    );
+
+    const view = render(<LoginPage />);
+    const emailInput = view.querySelector<HTMLInputElement>("#login-email");
+    const passwordInput = view.querySelector<HTMLInputElement>("#login-password");
+    const submitButton = view.querySelector<HTMLButtonElement>("button[type='submit']");
+
+    await act(async () => {
+      emailInput!.value = "suspended@example.com";
+      emailInput!.dispatchEvent(new Event("input", { bubbles: true }));
+      passwordInput!.value = "password";
+      passwordInput!.dispatchEvent(new Event("input", { bubbles: true }));
+      submitButton!.click();
+    });
+
+    expect(view.textContent).toContain(
+      "Your account is suspended. Contact your firm administrator."
+    );
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
 });

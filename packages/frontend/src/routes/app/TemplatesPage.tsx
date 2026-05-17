@@ -1,14 +1,39 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { CaseListResponseDto } from "@elms/shared";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { useTemplates, useDeleteTemplate } from "../../lib/templates";
-import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
+import { apiFetch } from "../../lib/api";
+import { toCaseSelectOption } from "../../lib/caseOptions";
+import {
+  exportTemplateDocx,
+  useTemplates,
+  useDeleteTemplate
+} from "../../lib/templates";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  SectionCard,
+  SelectField
+} from "./ui";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useToastStore } from "../../store/toastStore";
+import { formatFileSaveSuccessMessage } from "../../lib/fileSaveFeedback";
+import { confirmAction } from "../../lib/dialog";
 
 export function TemplatesPage() {
   const { t } = useTranslation("app");
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(
+    null
+  );
+  const deletingTemplateRef = useRef<Set<string>>(new Set());
+  const [useCaseByTemplate, setUseCaseByTemplate] = useState<
+    Record<string, string>
+  >({});
+  const [exportingTemplateId, setExportingTemplateId] = useState<string | null>(
+    null
+  );
   const addToast = useToastStore((state) => state.addToast);
 
   const {
@@ -19,6 +44,63 @@ export function TemplatesPage() {
     refetch
   } = useTemplates();
   const deleteMutation = useDeleteTemplate();
+  const casesQuery = useQuery({
+    queryKey: ["cases", "template-list-use"],
+    queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=200")
+  });
+
+  const caseOptions = [
+    { value: "", label: t("labels.selectCase") },
+    ...(casesQuery.data?.items ?? []).map((caseItem) =>
+      toCaseSelectOption(t, caseItem)
+    )
+  ];
+
+  async function requestDeleteConfirmation() {
+    try {
+      return await confirmAction({
+        title: t("actions.confirmDelete"),
+        content: t("actions.deleteConfirmMessage"),
+        okButtonProps: { danger: true }
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message.trim().toLowerCase() : "";
+      const isPatternFailure = message.includes(
+        "the string did not match the expected pattern"
+      );
+      if (isPatternFailure) {
+        return confirmAction({
+          title: t("actions.confirmDelete"),
+          content: t("actions.deleteConfirmMessage"),
+          okButtonProps: { danger: true }
+        });
+      }
+      throw error;
+    }
+  }
+
+  async function handleDeleteTemplate(templateId: string) {
+    if (deletingTemplateRef.current.has(templateId)) {
+      return;
+    }
+
+    const approved = await requestDeleteConfirmation();
+
+    if (!approved || deletingTemplateRef.current.has(templateId)) {
+      return;
+    }
+
+    deletingTemplateRef.current.add(templateId);
+    setDeletingTemplateId(templateId);
+    void deleteMutation
+      .mutateAsync(templateId)
+      .catch(() => {})
+      .finally(() => {
+        deletingTemplateRef.current.delete(templateId);
+        setDeletingTemplateId(null);
+      });
+  }
 
   return (
     <div className="space-y-6">
@@ -72,6 +154,56 @@ export function TemplatesPage() {
                 <div className="flex items-center gap-2">
                   {!tpl.isSystem && (
                     <>
+                      <div className="min-w-64">
+                        <SelectField
+                          label={t("labels.case")}
+                          value={useCaseByTemplate[tpl.id] ?? ""}
+                          onChange={(value) =>
+                            setUseCaseByTemplate((current) => ({
+                              ...current,
+                              [tpl.id]: value
+                            }))
+                          }
+                          options={caseOptions}
+                          hint={
+                            casesQuery.isError
+                              ? (casesQuery.error as Error)?.message ??
+                                t("errors.fallback")
+                              : undefined
+                          }
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const caseId = useCaseByTemplate[tpl.id] ?? "";
+                          if (!caseId) {
+                            addToast(
+                              t("templates.validation.caseIdRequired"),
+                              "error"
+                            );
+                            return;
+                          }
+                          setExportingTemplateId(tpl.id);
+                          void exportTemplateDocx(tpl.id, "rendered", caseId)
+                            .then((savedPath) =>
+                              addToast(
+                                formatFileSaveSuccessMessage(t, savedPath),
+                                "success"
+                              )
+                            )
+                            .catch((error) =>
+                              addToast((error as Error).message, "error")
+                            )
+                            .finally(() => setExportingTemplateId(null));
+                        }}
+                        disabled={exportingTemplateId === tpl.id}
+                        className="rounded-xl bg-accent px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        {exportingTemplateId === tpl.id
+                          ? t("labels.loading")
+                          : t("templates.use")}
+                      </button>
                       <Link
                         to="/app/templates/$templateId/edit"
                         params={{ templateId: tpl.id }}
@@ -80,29 +212,11 @@ export function TemplatesPage() {
                         {t("actions.edit")}
                       </Link>
                       <button
-                        onClick={() => {
-                          if (deleting === tpl.id) {
-                            void deleteMutation
-                              .mutateAsync(tpl.id)
-                              .then(() => setDeleting(null))
-                              .catch((error) => {
-                                setDeleting(null);
-                                addToast(
-                                  (error as Error)?.message ??
-                                    t("errors.fallback"),
-                                  "error"
-                                );
-                              });
-                          } else {
-                            setDeleting(tpl.id);
-                          }
-                        }}
-                        disabled={deleteMutation.isPending}
+                        onClick={() => void handleDeleteTemplate(tpl.id)}
+                        disabled={deletingTemplateId === tpl.id}
                         className="rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
                       >
-                        {deleting === tpl.id
-                          ? t("templates.confirmDelete")
-                          : t("actions.delete")}
+                        {t("actions.delete")}
                       </button>
                     </>
                   )}

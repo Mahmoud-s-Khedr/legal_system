@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Upload, FileText, XCircle, Loader2, CheckCircle2 } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   PrimaryButton,
   SelectField
 } from "../ui";
+import { getEnumLabel } from "../../../lib/enumLabel";
 
 interface LibraryType {
   id: string;
@@ -69,6 +70,7 @@ function makeFileId() {
 export function LibraryUploadPage() {
   const { t, i18n } = useTranslation("app");
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [files, setFiles] = useState<SelectedLibraryFile[]>([]);
@@ -145,7 +147,6 @@ export function LibraryUploadPage() {
   const metadataIssues = useMemo(() => {
     const issues: string[] = [];
     if (!form.typeId) issues.push(t("library.validationTypeRequired"));
-    if (!form.categoryId) issues.push(t("library.validationCategoryRequired"));
     if (form.typeCode === "LEGISLATION" && form.lawYear.trim() && Number.isNaN(Number(form.lawYear))) {
       issues.push(t("library.validationLawYearInvalid"));
     }
@@ -157,7 +158,6 @@ export function LibraryUploadPage() {
     !isUploading &&
     !categoriesQuery.isLoading &&
     !categoriesQuery.isError &&
-    flatCategories.length > 0 &&
     metadataIssues.length === 0;
 
   function getStatusLabel(status: UploadQueueStatus) {
@@ -247,7 +247,10 @@ export function LibraryUploadPage() {
     }
 
     setSummary(uploadSummary);
-    if (uploadSummary.failedCount === 0) resetUploadFlow();
+    if (uploadSummary.failedCount === 0) {
+      resetUploadFlow();
+      void navigate({ to: "/app/library" });
+    }
     setIsUploading(false);
   }
 
@@ -290,6 +293,9 @@ export function LibraryUploadPage() {
                   <span className="font-medium text-slate-800">{entry.file.name}</span>
                   {state ? <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs">{getStatusLabel(state.status)}</span> : null}
                   <button type="button" className="ms-auto text-xs text-red-600" onClick={() => removeFile(entry.id)}>{t("documents.removeFile")}</button>
+                  {state?.status === "failed" && state.error ? (
+                    <p className="basis-full text-xs text-red-700">{state.error}</p>
+                  ) : null}
                 </div>
               );
             })}
@@ -335,7 +341,17 @@ export function LibraryUploadPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="block space-y-1"><span className="text-sm font-semibold">{t("library.lawNumber")}</span><input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent" type="text" value={form.lawNumber} onChange={(e) => setForm({ ...form, lawNumber: e.target.value })} /></label>
             <label className="block space-y-1"><span className="text-sm font-semibold">{t("library.lawYear")}</span><input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-accent" type="number" value={form.lawYear} onChange={(e) => setForm({ ...form, lawYear: e.target.value })} /></label>
-            <SelectField label={t("library.legislationStatus")} value={form.legislationStatus} onChange={(value) => setForm({ ...form, legislationStatus: value })} options={LEGISLATION_STATUSES.map((status) => ({ value: status, label: status }))} />
+            <SelectField
+              label={t("library.legislationStatus")}
+              value={form.legislationStatus}
+              onChange={(value) =>
+                setForm({ ...form, legislationStatus: value })
+              }
+              options={LEGISLATION_STATUSES.map((status) => ({
+                value: status,
+                label: getEnumLabel(t, "LegislationStatus", status)
+              }))}
+            />
           </div>
         ) : null}
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -345,6 +361,13 @@ export function LibraryUploadPage() {
       </SectionCard>
 
       <SectionCard title={t("library.uploadStep4")}>
+        {metadataIssues.length ? (
+          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {metadataIssues.map((issue) => (
+              <p key={issue}>{issue}</p>
+            ))}
+          </div>
+        ) : null}
         <PrimaryButton disabled={!canSubmit} onClick={() => void uploadFiles("all")}>{isUploading ? <><Loader2 className="size-4 animate-spin" />{t("library.uploading")}</> : <><Upload className="size-4" />{t("library.upload")}</>}</PrimaryButton>
       </SectionCard>
 

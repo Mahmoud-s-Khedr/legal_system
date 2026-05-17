@@ -60,6 +60,8 @@ export function LoginPage() {
         });
         setError(t("backendConnection.loginUnreachable"));
         setIsBackendUnreachable(true);
+      } else if (code === "ACCOUNT_SUSPENDED") {
+        setError(t("accountSuspended"));
       } else {
         setError((submitError as Error).message);
       }

@@ -54,7 +54,7 @@ vi.mock("../ui", () => ({
   selectLabelFilter: () => true
 }));
 
-const { LibrarySearchPage } = await import("./LibrarySearchPage");
+const { LibrarySearchPage, normalizeSearchResult } = await import("./LibrarySearchPage");
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -104,6 +104,24 @@ beforeEach(() => {
 });
 
 describe("LibrarySearchPage", () => {
+  it("normalizes legacy backend payload to compatible search result shape", () => {
+    const normalized = normalizeSearchResult({
+      id: "doc-1",
+      title: "Document 1",
+      type: "LEGISLATION",
+      summary: "legacy summary"
+    });
+
+    expect(normalized).toEqual({
+      id: "doc-1",
+      documentId: "doc-1",
+      kind: "document",
+      title: "Document 1",
+      type: "LEGISLATION",
+      snippet: "legacy summary"
+    });
+  });
+
   it("enables query for one-character submitted input", () => {
     const view = render();
     const input = view.querySelector(
@@ -146,5 +164,14 @@ describe("LibrarySearchPage", () => {
       enabled?: boolean;
     };
     expect(lastCall.enabled).toBe(false);
+  });
+
+  it("uses expanded desktop layout for dominant search input", () => {
+    const view = render();
+    const form = view.querySelector("form");
+    const input = view.querySelector('input[type="search"]');
+
+    expect(form?.className).toContain("lg:grid-cols-[minmax(0,1fr)_260px_auto]");
+    expect(input?.className).toContain("lg:min-w-[520px]");
   });
 });

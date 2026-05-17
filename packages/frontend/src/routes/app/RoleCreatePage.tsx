@@ -4,8 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreateRoleDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
-import { resolveFormValidationError } from "../../lib/formValidation";
 import { pickFieldError } from "../../lib/validationErrors";
+import { localizeUserRoleFormError } from "../../lib/userRoleErrorLocalization";
 import { Field, FormExitActions, PageHeader, SectionCard } from "./ui";
 import { PermissionChecklist } from "../../components/shared/PermissionChecklist";
 
@@ -31,7 +31,7 @@ export function RoleCreatePage() {
       void navigate({ to: "/app/settings/roles" });
     },
     onError: (err: unknown) => {
-      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      const resolved = localizeUserRoleFormError(t, err, t("errors.fallback"));
       setError(resolved.message);
       setFieldErrors(resolved.fieldErrors);
     }
@@ -49,7 +49,7 @@ export function RoleCreatePage() {
         onSubmit={(e) => {
           e.preventDefault();
           if (permissions.length === 0) {
-            setError("Select at least one permission.");
+            setError(t("roles.validation.permissionRequired"));
             return;
           }
           setError(null);
@@ -71,7 +71,7 @@ export function RoleCreatePage() {
               onChange={(v) =>
                 setForm({ ...form, key: v.toLowerCase().replace(/\s+/g, "_") })
               }
-              placeholder="my_custom_role"
+              placeholder={t("roles.roleKeyPlaceholder")}
               required
               error={pickFieldError(fieldErrors, ["key"]) ?? undefined}
               value={form.key}

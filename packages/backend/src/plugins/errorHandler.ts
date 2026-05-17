@@ -347,7 +347,10 @@ export function registerErrorHandler(app: FastifyInstance) {
           ...details
         });
       }
-      return reply.status(error.statusCode).send({ message: error.message });
+      return reply.status(error.statusCode).send({
+        message: error.message,
+        ...(error.code ? { code: error.code } : {})
+      });
     }
 
     if (

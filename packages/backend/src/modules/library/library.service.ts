@@ -904,8 +904,11 @@ export async function unlinkDocumentFromCase(actor: SessionUser, referenceId: st
 
 export interface LibrarySearchResult {
   id: string;
+  documentId: string;
+  kind: "document" | "article";
   type: string;
   title: string;
+  snippet: string | null;
   summary: string | null;
   scope: string;
   categoryId: string | null;
@@ -1004,8 +1007,11 @@ export async function searchLibrary(
 
   return results.map((r) => ({
     id: r.id,
+    documentId: r.id,
+    kind: r.article_id ? "article" : "document",
     type: r.type,
     title: r.title,
+    snippet: r.article_body ?? r.summary,
     summary: r.summary,
     scope: r.scope,
     categoryId: r.categoryId,

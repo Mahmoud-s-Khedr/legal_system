@@ -110,4 +110,57 @@ describe("library search route", () => {
       20
     );
   });
+
+  it("returns compatibility fields from backend search payload", async () => {
+    const app = {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      storage: {
+        put: vi.fn(),
+        delete: vi.fn(),
+        get: vi.fn(),
+        getSignedUrl: vi.fn(),
+        supportsSignedUrls: false
+      }
+    };
+
+    await registerLibraryRoutes(
+      app as never,
+      { OCR_BACKEND: "tesseract" } as never
+    );
+
+    const searchCall = app.get.mock.calls.find(
+      (call) => call[0] === "/api/library/search"
+    );
+    const handler = searchCall?.[2] as ((request: unknown) => Promise<unknown>) | undefined;
+    const actor = makeSessionUser({ permissions: ["library:read"] });
+
+    searchLibrary.mockResolvedValueOnce([
+      {
+        id: "doc-1",
+        documentId: "doc-1",
+        kind: "document",
+        type: "LEGISLATION",
+        title: "Law",
+        snippet: "summary",
+        summary: "summary",
+        scope: "FIRM",
+        categoryId: null
+      }
+    ]);
+
+    const response = await handler!({
+      query: { q: "law" },
+      sessionUser: actor
+    }) as { results: Array<Record<string, unknown>> };
+
+    expect(response.results[0]).toMatchObject({
+      id: "doc-1",
+      documentId: "doc-1",
+      kind: "document",
+      snippet: "summary"
+    });
+  });
 });

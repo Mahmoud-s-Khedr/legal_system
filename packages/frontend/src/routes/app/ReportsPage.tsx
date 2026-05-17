@@ -51,6 +51,8 @@ import type {
 } from "../../lib/reports";
 import { parseReportListResponse } from "../../lib/reports";
 import { forwardRef } from "react";
+import { getEnumLabel } from "../../lib/enumLabel";
+import type { TFunction } from "i18next";
 
 type ReportViewMode = "table" | "graph";
 
@@ -69,6 +71,13 @@ export function buildReportOptions(
     { value: "cashflow-monthly", label: t("reports.cashflowMonthly") },
     { value: "ar-aging", label: t("reports.arAging") }
   ];
+}
+
+export function resolveReportCaseStatusLabel(
+  t: TFunction<"app">,
+  status: string
+) {
+  return getEnumLabel(t, "CaseStatus", status);
 }
 
 export function buildReportSortOptions(
@@ -506,6 +515,15 @@ function ReportTable({
 }) {
   const { t } = useTranslation("app");
   const hearingOutcomesQuery = useLocalizedLookupOptions("HearingOutcome");
+  const getCaseStatusLabel = (status: string) => resolveReportCaseStatusLabel(t, status);
+  const getHearingOutcomeLabel = (outcome: string | null | undefined) => {
+    if (!outcome) return "—";
+    const lookupLabel = hearingOutcomesQuery.getLabel(outcome);
+    if (lookupLabel && lookupLabel !== outcome) {
+      return lookupLabel;
+    }
+    return getEnumLabel(t, "HearingOutcome", outcome);
+  };
 
   if (reportType === "case-status") {
     const rows = data as CaseStatusRow[];
@@ -518,7 +536,7 @@ function ReportTable({
               className="rounded-2xl border border-slate-200 bg-white p-4"
             >
               <p className="text-xs text-slate-500">{t("labels.status")}</p>
-              <p className="font-semibold">{r.status}</p>
+              <p className="font-semibold">{getCaseStatusLabel(r.status)}</p>
               <p className="mt-2 text-xs text-slate-500">
                 {t("reports.count")}
               </p>
@@ -541,7 +559,7 @@ function ReportTable({
             <tbody>
               {rows.map((r) => (
                 <tr key={r.status} className="border-b border-slate-50">
-                  <td className="px-3 py-2">{r.status}</td>
+                  <td className="px-3 py-2">{getCaseStatusLabel(r.status)}</td>
                   <td className="px-3 py-2 text-end font-semibold">
                     {r.count}
                   </td>
@@ -566,7 +584,7 @@ function ReportTable({
             >
               <p className="text-xs text-slate-500">{t("labels.outcome")}</p>
               <p className="font-semibold">
-                {r.outcome ? hearingOutcomesQuery.getLabel(r.outcome) : "—"}
+                {getHearingOutcomeLabel(r.outcome)}
               </p>
               <p className="mt-2 text-xs text-slate-500">
                 {t("reports.count")}
@@ -591,7 +609,7 @@ function ReportTable({
               {rows.map((r, i) => (
                 <tr key={i} className="border-b border-slate-50">
                   <td className="px-3 py-2">
-                    {r.outcome ? hearingOutcomesQuery.getLabel(r.outcome) : "—"}
+                    {getHearingOutcomeLabel(r.outcome)}
                   </td>
                   <td className="px-3 py-2 text-end font-semibold">
                     {r.count}

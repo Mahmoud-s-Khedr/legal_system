@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { AuthMode, EditionKey } from "@elms/shared";
+import { UserStatus } from "@prisma/client";
 import { loadEnv } from "../../config/env.js";
 
 const mockPrisma = {
@@ -10,10 +11,14 @@ const mockPrisma = {
   role: {
     findFirst: vi.fn(),
     create: vi.fn()
+  },
+  user: {
+    findFirst: vi.fn()
   }
 };
 
 const bcryptHash = vi.fn();
+const bcryptCompare = vi.fn();
 const ensureSystemSecurityModel = vi.fn();
 const getUserWithRoleAndPermissions = vi.fn();
 const toSessionUser = vi.fn();
@@ -21,7 +26,7 @@ const localSessionCreate = vi.fn();
 
 vi.mock("../../db/prisma.js", () => ({ prisma: mockPrisma }));
 vi.mock("../../security/bootstrap.js", () => ({ ensureSystemSecurityModel }));
-vi.mock("bcryptjs", () => ({ default: { hash: bcryptHash } }));
+vi.mock("bcryptjs", () => ({ default: { hash: bcryptHash, compare: bcryptCompare } }));
 vi.mock("./sessionUser.js", () => ({ getUserWithRoleAndPermissions, toSessionUser }));
 vi.mock("./localSessionStore.js", () => ({ localSessionStore: { create: localSessionCreate, destroy: vi.fn() } }));
 
@@ -31,9 +36,39 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockPrisma.role.findFirst.mockResolvedValue({ id: "role-admin" });
   bcryptHash.mockResolvedValue("hash");
+  bcryptCompare.mockResolvedValue(true);
   localSessionCreate.mockReturnValue("session-1");
   toSessionUser.mockReturnValue({ id: "user-1", firmId: "firm-1" });
   getUserWithRoleAndPermissions.mockResolvedValue({ id: "user-1", firmId: "firm-1" });
+});
+
+describe("local auth login", () => {
+  it("rejects suspended users with explicit account status error", async () => {
+    const authService = createLocalAuthService({} as never);
+    mockPrisma.user.findFirst.mockResolvedValueOnce({
+      id: "user-2",
+      passwordHash: "hash",
+      status: UserStatus.SUSPENDED
+    });
+
+    await expect(
+      authService.login({ email: "suspended@elms.local", password: "secret123" })
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: "ACCOUNT_SUSPENDED"
+    });
+  });
+
+  it("rejects invalid credentials", async () => {
+    const authService = createLocalAuthService({} as never);
+    mockPrisma.user.findFirst.mockResolvedValueOnce(null);
+
+    await expect(
+      authService.login({ email: "unknown@elms.local", password: "secret123" })
+    ).rejects.toMatchObject({
+      statusCode: 401
+    });
+  });
 });
 
 describe("loadEnv", () => {

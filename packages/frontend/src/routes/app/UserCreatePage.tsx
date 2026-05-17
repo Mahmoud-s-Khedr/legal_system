@@ -10,9 +10,12 @@ import {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { resolveFormValidationError } from "../../lib/formValidation";
 import { useAuthBootstrap } from "../../store/authStore";
 import { pickFieldError } from "../../lib/validationErrors";
+import {
+  localizeUserRoleApiErrorMessage,
+  localizeUserRoleFormError
+} from "../../lib/userRoleErrorLocalization";
 import {
   EmptyState,
   ErrorState,
@@ -56,11 +59,8 @@ export function UserCreatePage() {
       void navigate({ to: "/app/users" });
     },
     onError: (err: unknown) => {
-      const resolved = resolveFormValidationError(err, t("errors.fallback"));
-      const message = resolved.message.toLowerCase().includes("seat limit")
-        ? t("users.seatLimitReached")
-        : resolved.message;
-      setSubmitError(message);
+      const resolved = localizeUserRoleFormError(t, err, t("errors.fallback"));
+      setSubmitError(resolved.message);
       setFieldErrors(resolved.fieldErrors);
     }
   });
@@ -98,9 +98,11 @@ export function UserCreatePage() {
         {rolesQuery.isError ? (
           <ErrorState
             title={t("errors.title")}
-            description={
-              (rolesQuery.error as Error)?.message ?? t("errors.fallback")
-            }
+            description={localizeUserRoleApiErrorMessage(
+              t,
+              rolesQuery.error,
+              t("errors.fallback")
+            )}
             retryLabel={t("errors.reload")}
             onRetry={() => void rolesQuery.refetch()}
           />

@@ -6,6 +6,7 @@ import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useToastStore } from "../../store/toastStore";
+import { localizeUserRoleApiErrorMessage } from "../../lib/userRoleErrorLocalization";
 import { EmptyState, ErrorState, PageHeader, SectionCard } from "./ui";
 
 export function RoleSettingsPage() {
@@ -25,7 +26,10 @@ export function RoleSettingsPage() {
       await queryClient.invalidateQueries({ queryKey: ["roles"] });
     },
     onError: (error: Error) => {
-      addToast(error.message || t("errors.fallback"), "error");
+      addToast(
+        localizeUserRoleApiErrorMessage(t, error, t("errors.fallback")),
+        "error"
+      );
     }
   });
 
@@ -55,9 +59,11 @@ export function RoleSettingsPage() {
       {rolesQuery.isError ? (
         <ErrorState
           title={t("errors.title")}
-          description={
-            (rolesQuery.error as Error)?.message ?? t("errors.fallback")
-          }
+          description={localizeUserRoleApiErrorMessage(
+            t,
+            rolesQuery.error,
+            t("errors.fallback")
+          )}
           retryLabel={t("errors.reload")}
           onRetry={() => void rolesQuery.refetch()}
         />

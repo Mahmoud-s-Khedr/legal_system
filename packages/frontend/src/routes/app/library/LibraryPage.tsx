@@ -13,6 +13,7 @@ import {
 import { apiFetch } from "../../../lib/api";
 import { useHasPermission } from "../../../store/authStore";
 import { isArabicLanguage } from "../../../lib/language";
+import { getEnumLabel } from "../../../lib/enumLabel";
 import { EmptyState, ErrorState, PageHeader, SectionCard } from "../ui";
 
 interface CategoryNode {
@@ -306,7 +307,7 @@ export function LibraryPage() {
                   <div className="min-w-0">
                     <p className="font-semibold leading-snug">{doc.title}</p>
                     <p className="mt-1 text-sm text-slate-500">
-                      {doc.type}
+                      {getEnumLabel(t, "LibraryDocumentType", doc.type)}
                       {doc.category
                         ? ` · ${localizeCategoryName(doc.category)}`
                         : ""}

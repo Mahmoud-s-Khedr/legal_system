@@ -16,6 +16,10 @@ function httpError(message: string, statusCode: number) {
   return appError(message, statusCode);
 }
 
+const ACCOUNT_SUSPENDED_MESSAGE =
+  "Your account is suspended. Contact your firm administrator.";
+const ACCOUNT_SUSPENDED_CODE = "ACCOUNT_SUSPENDED";
+
 function isP2002Error(error: unknown): boolean {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     return error.code === "P2002";
@@ -122,7 +126,7 @@ export function createLocalAuthService(_env: AppEnv): AuthService {
     async login(payload: LoginDto) {
       const candidate = await prisma.user.findFirst({
         where: { email: payload.email, deletedAt: null },
-        select: { id: true, passwordHash: true }
+        select: { id: true, passwordHash: true, status: true }
       });
 
       if (!candidate?.passwordHash) {
@@ -132,6 +136,12 @@ export function createLocalAuthService(_env: AppEnv): AuthService {
       const isValid = await bcrypt.compare(payload.password, candidate.passwordHash);
       if (!isValid) {
         throw httpError("Invalid email or password", 401);
+      }
+
+      if (candidate.status === UserStatus.SUSPENDED) {
+        throw appError(ACCOUNT_SUSPENDED_MESSAGE, 403, {
+          code: ACCOUNT_SUSPENDED_CODE
+        });
       }
 
       const user = await getUserWithRoleAndPermissions(prisma, candidate.id);

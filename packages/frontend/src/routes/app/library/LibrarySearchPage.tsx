@@ -6,14 +6,36 @@ import { Select } from "antd";
 import { Search, BookOpen } from "lucide-react";
 import { apiFetch } from "../../../lib/api";
 import { EmptyState, ErrorState, PageHeader, selectLabelFilter } from "../ui";
+import { getEnumLabel } from "../../../lib/enumLabel";
 
 interface SearchResult {
   id: string;
+  documentId: string;
+  kind: "document" | "article";
   title: string;
   type: string;
   snippet: string | null;
-  kind: "document" | "article";
-  documentId: string;
+}
+
+type LegacySearchResult = {
+  id: string;
+  title: string;
+  type: string;
+  summary?: string | null;
+  snippet?: string | null;
+  documentId?: string;
+  kind?: "document" | "article";
+};
+
+export function normalizeSearchResult(value: LegacySearchResult): SearchResult {
+  return {
+    id: value.id,
+    documentId: value.documentId ?? value.id,
+    kind: value.kind ?? "document",
+    title: value.title,
+    type: value.type,
+    snippet: value.snippet ?? value.summary ?? null
+  };
 }
 
 interface LibraryType {
@@ -41,7 +63,7 @@ export function LibrarySearchPage() {
     queryFn: () => {
       const params = new URLSearchParams({ q: submitted });
       if (typeFilter) params.set("typeId", typeFilter);
-      return apiFetch<{ results: SearchResult[] }>(`/api/library/search?${params.toString()}`);
+      return apiFetch<{ results: LegacySearchResult[] }>(`/api/library/search?${params.toString()}`);
     }
   });
 
@@ -64,10 +86,20 @@ export function LibrarySearchPage() {
         title={t("library.searchTitle")}
       />
 
-      <form className="flex gap-3" onSubmit={handleSearch}>
-        <div className="relative flex-1">
+      <form
+        className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_260px_auto] lg:items-end"
+        onSubmit={handleSearch}
+      >
+        <div className="relative min-w-0">
           <Search aria-hidden="true" className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input aria-label={t("library.searchPlaceholder")} className="w-full rounded-2xl border border-slate-200 bg-white py-3 ps-9 pe-4 text-sm outline-none focus:border-accent" placeholder={t("library.searchPlaceholder")} type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input
+            aria-label={t("library.searchPlaceholder")}
+            className="w-full rounded-2xl border border-slate-200 bg-white py-3 ps-9 pe-4 text-sm outline-none focus:border-accent lg:min-w-[520px]"
+            placeholder={t("library.searchPlaceholder")}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
         <Select
           aria-label={t("library.filterByType")}
@@ -89,7 +121,13 @@ export function LibrarySearchPage() {
           optionFilterProp="label"
           classNames={{ popup: { root: "elms-select-dropdown" } }}
         />
-        <button className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" disabled={!query.trim()} type="submit">{t("actions.search")}</button>
+        <button
+          className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 lg:whitespace-nowrap"
+          disabled={!query.trim()}
+          type="submit"
+        >
+          {t("actions.search")}
+        </button>
       </form>
 
       {searchQuery.isLoading && <p className="text-sm text-slate-500">{t("common.loading")}</p>}
@@ -104,16 +142,21 @@ export function LibrarySearchPage() {
       {searchQuery.data?.results && !searchQuery.isError && searchQuery.data.results.length > 0 && (
         <div className="space-y-3">
           <p className="text-sm text-slate-500">{t("library.resultsCount", { count: searchQuery.data.results.length })}</p>
-          {searchQuery.data.results.map((result) => (
+          {searchQuery.data.results.map((rawResult) => {
+            const result = normalizeSearchResult(rawResult);
+            return (
             <Link className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-accent" key={`${result.kind}-${result.id}`} params={{ documentId: result.documentId }} to="/app/library/documents/$documentId">
               <BookOpen aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-accent" />
               <div className="min-w-0">
                 <p className="font-semibold">{result.title}</p>
-                <p className="mt-0.5 text-xs font-medium text-accent">{result.type}</p>
+                <p className="mt-0.5 text-xs font-medium text-accent">
+                  {getEnumLabel(t, "LibraryDocumentType", result.type)}
+                </p>
                 {result.snippet && <p className="mt-1 text-sm text-slate-600 line-clamp-2">{result.snippet}</p>}
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -99,6 +99,39 @@ export async function createFirmUser(
   });
 }
 
+export async function findFirmUserByEmailIncludingDeleted(
+  tx: RepositoryTx,
+  firmId: string,
+  email: string
+): Promise<User | null> {
+  return tx.user.findFirst({
+    where: {
+      firmId,
+      email
+    }
+  });
+}
+
+export async function restoreFirmUserById(
+  tx: RepositoryTx,
+  userId: string,
+  payload: CreateLocalUserDto,
+  passwordHash: string
+): Promise<UserWithRole> {
+  return tx.user.update({
+    where: { id: userId },
+    data: {
+      roleId: payload.roleId,
+      fullName: payload.fullName,
+      passwordHash,
+      preferredLanguage: (payload.preferredLanguage as Language | undefined) ?? Language.AR,
+      status: UserStatus.ACTIVE,
+      deletedAt: null
+    },
+    include: userWithRoleInclude
+  });
+}
+
 export async function updateFirmUserById(
   tx: RepositoryTx,
   userId: string,

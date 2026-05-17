@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { CaseListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { toCaseSelectOption } from "../../lib/caseOptions";
 import {
   exportTemplateDocx,
   type TemplateDto,
@@ -10,6 +12,7 @@ import {
 } from "../../lib/templates";
 import {
   EmptyState,
+  ErrorState,
   Field,
   FormExitActions,
   PageHeader,
@@ -35,9 +38,19 @@ export function TemplateEditPage() {
   const qc = useQueryClient();
   const addToast = useToastStore((state) => state.addToast);
 
-  const { data: tpl, isLoading } = useQuery({
+  const {
+    data: tpl,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useQuery({
     queryKey: ["templates", templateId],
     queryFn: () => apiFetch<TemplateDto>(`/api/templates/${templateId}`)
+  });
+  const casesQuery = useQuery({
+    queryKey: ["cases", "template-preview"],
+    queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=200")
   });
 
   const [form, setForm] = useState<UpdateTemplateDto>({});
@@ -72,6 +85,17 @@ export function TemplateEditPage() {
     return <p className="p-6 text-sm text-slate-500">{t("labels.loading")}</p>;
   }
 
+  if (!isLoading && isError) {
+    return (
+      <ErrorState
+        title={t("errors.title")}
+        description={(error as Error)?.message ?? t("errors.fallback")}
+        retryLabel={t("errors.reload")}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
   if (!tpl) {
     return <EmptyState title={t("errors.notFound")} description="" />;
   }
@@ -99,7 +123,7 @@ export function TemplateEditPage() {
         >
           <Field
             label={t("labels.name")}
-            onChange={(v) => setForm({ ...form, name: v })}
+            onChange={(v) => setForm((current) => ({ ...current, name: v }))}
             required
             value={form.name ?? ""}
             disabled={tpl.isSystem}
@@ -107,7 +131,9 @@ export function TemplateEditPage() {
           <SelectField
             label={t("labels.language")}
             value={form.language ?? "AR"}
-            onChange={(v) => setForm({ ...form, language: v })}
+            onChange={(v) =>
+              setForm((current) => ({ ...current, language: v }))
+            }
             options={LANGUAGES.map((l) => ({ value: l, label: l }))}
             disabled={tpl.isSystem}
           />
@@ -122,7 +148,7 @@ export function TemplateEditPage() {
               value={form.body ?? ""}
               language={form.language ?? "AR"}
               onChange={(body) => {
-                setForm({ ...form, body });
+                setForm((current) => ({ ...current, body }));
                 if (validationError) {
                   setValidationError(null);
                 }
@@ -156,11 +182,21 @@ export function TemplateEditPage() {
       >
         <div className="flex items-end gap-3">
           <div className="flex-1">
-            <Field
-              label={t("labels.caseId")}
-              placeholder={t("labels.caseIdPlaceholder")}
+            <SelectField
+              label={t("labels.case")}
               value={renderCaseId}
               onChange={setRenderCaseId}
+              options={[
+                { value: "", label: t("labels.selectCase") },
+                ...(casesQuery.data?.items ?? []).map((caseItem) =>
+                  toCaseSelectOption(t, caseItem)
+                )
+              ]}
+              hint={
+                casesQuery.isError
+                  ? (casesQuery.error as Error)?.message ?? t("errors.fallback")
+                  : undefined
+              }
             />
           </div>
           <button

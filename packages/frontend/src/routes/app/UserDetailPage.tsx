@@ -13,9 +13,13 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
 import { getEnumLabel } from "../../lib/enumLabel";
-import { resolveFormValidationError } from "../../lib/formValidation";
 import { useAuthBootstrap } from "../../store/authStore";
+import { useToastStore } from "../../store/toastStore";
 import { pickFieldError } from "../../lib/validationErrors";
+import {
+  localizeUserRoleApiErrorMessage,
+  localizeUserRoleFormError
+} from "../../lib/userRoleErrorLocalization";
 import {
   EmptyState,
   Field,
@@ -39,6 +43,7 @@ export function UserDetailPage() {
   const { user: currentUser } = useAuthBootstrap();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const addToast = useToastStore((state) => state.addToast);
   const canUpdateUsers =
     currentUser?.permissions.includes("users:update") ?? false;
   const canDeleteUsers =
@@ -67,6 +72,8 @@ export function UserDetailPage() {
   const [passwordForm, setPasswordForm] = useState<AdminSetPasswordDto>({
     newPassword: ""
   });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!userQuery.data) {
@@ -94,7 +101,7 @@ export function UserDetailPage() {
       void navigate({ to: "/app/users" });
     },
     onError: (err: unknown) => {
-      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      const resolved = localizeUserRoleFormError(t, err, t("errors.fallback"));
       setUpdateError(resolved.message);
       setFieldErrors(resolved.fieldErrors);
     }
@@ -120,6 +127,14 @@ export function UserDetailPage() {
       }),
     onSuccess: () => {
       setPasswordForm({ newPassword: "" });
+      setPasswordError(null);
+      setPasswordFieldErrors({});
+      addToast(t("messages.passwordResetSuccessfully"), "success");
+    },
+    onError: (err: unknown) => {
+      const resolved = localizeUserRoleFormError(t, err, t("errors.fallback"));
+      setPasswordError(resolved.message);
+      setPasswordFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -275,12 +290,20 @@ export function UserDetailPage() {
           {updateError ? <p className="text-sm text-red-600">{updateError}</p> : null}
           {statusMutation.error ? (
             <p className="text-sm text-red-600">
-              {(statusMutation.error as Error).message}
+              {localizeUserRoleApiErrorMessage(
+                t,
+                statusMutation.error,
+                t("errors.fallback")
+              )}
             </p>
           ) : null}
           {deleteMutation.error ? (
             <p className="text-sm text-red-600">
-              {(deleteMutation.error as Error).message}
+              {localizeUserRoleApiErrorMessage(
+                t,
+                deleteMutation.error,
+                t("errors.fallback")
+              )}
             </p>
           ) : null}
         </form>
@@ -295,6 +318,8 @@ export function UserDetailPage() {
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
+              setPasswordError(null);
+              setPasswordFieldErrors({});
               passwordMutation.mutate(passwordForm);
             }}
           >
@@ -303,14 +328,15 @@ export function UserDetailPage() {
               label={t("users.newPassword")}
               onChange={(value) => setPasswordForm({ newPassword: value })}
               type="password"
+              error={pickFieldError(passwordFieldErrors, ["newPassword"]) ?? undefined}
               value={passwordForm.newPassword}
             />
             <PrimaryButton type="submit">
               {t("users.resetPassword")}
             </PrimaryButton>
-            {passwordMutation.error ? (
+            {passwordError ? (
               <p className="text-sm text-red-600">
-                {(passwordMutation.error as Error).message}
+                {passwordError}
               </p>
             ) : null}
           </form>

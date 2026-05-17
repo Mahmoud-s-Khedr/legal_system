@@ -4,7 +4,8 @@ import {
   buildReportExportMeta,
   buildReportOptions,
   buildReportSortOptions,
-  pickReportSort
+  pickReportSort,
+  resolveReportCaseStatusLabel
 } from "./ReportsPage";
 
 describe("ReportsPage helpers", () => {
@@ -68,5 +69,19 @@ describe("ReportsPage helpers", () => {
     const meta = buildLitigationSheetExportMeta();
     expect(meta.requestPath).toBe("/api/reports/litigation-sheet/export");
     expect(meta.fallbackFilename).toBe("litigation-sheet.xlsx");
+  });
+
+  it("localizes case status labels via enum translations with fallback", () => {
+    const translated = resolveReportCaseStatusLabel(
+      ((key: string) => (key === "enums.CaseStatus.ACTIVE" ? "Active (Localized)" : key)) as never,
+      "ACTIVE"
+    );
+    const fallback = resolveReportCaseStatusLabel(
+      ((key: string) => key) as never,
+      "UNKNOWN_STATUS"
+    );
+
+    expect(translated).toBe("Active (Localized)");
+    expect(fallback).toBe("UNKNOWN_STATUS");
   });
 });

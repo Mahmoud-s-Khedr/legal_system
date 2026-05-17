@@ -4,10 +4,11 @@ import { AuthMode } from "@elms/shared";
 const getUserWithRoleAndPermissions = vi.fn();
 const toSessionUser = vi.fn();
 const localResolve = vi.fn();
+const localDestroy = vi.fn();
 
 vi.mock("../db/prisma.js", () => ({ prisma: { tag: "prisma" } }));
 vi.mock("../modules/auth/localSessionStore.js", () => ({
-  localSessionStore: { resolve: localResolve }
+  localSessionStore: { resolve: localResolve, destroy: localDestroy }
 }));
 vi.mock("../modules/auth/sessionUser.js", () => ({
   getUserWithRoleAndPermissions,
@@ -28,7 +29,12 @@ describe("registerSessionContext", () => {
     const app = { addHook, decorateRequest, jwt: { verify: vi.fn() } };
 
     localResolve.mockReturnValueOnce({ userId: "u1" });
-    getUserWithRoleAndPermissions.mockResolvedValueOnce({ id: "u1", firmId: "f1" });
+    getUserWithRoleAndPermissions.mockResolvedValueOnce({
+      id: "u1",
+      firmId: "f1",
+      status: "ACTIVE",
+      deletedAt: null
+    });
 
     registerSessionContext(app as never, { AUTH_MODE: AuthMode.LOCAL } as never);
 
@@ -45,7 +51,12 @@ describe("registerSessionContext", () => {
     expect(request).toHaveProperty("sessionUser", { id: "u1", firmId: "f1" });
 
     localResolve.mockReturnValueOnce({ userId: "u2" });
-    getUserWithRoleAndPermissions.mockResolvedValueOnce({ id: "u2", firmId: "f2" });
+    getUserWithRoleAndPermissions.mockResolvedValueOnce({
+      id: "u2",
+      firmId: "f2",
+      status: "ACTIVE",
+      deletedAt: null
+    });
 
     await hook(
       {
@@ -67,8 +78,31 @@ describe("registerSessionContext", () => {
     registerSessionContext(app as never, { AUTH_MODE: AuthMode.LOCAL } as never);
     const hook = addHook.mock.calls[0]?.[1] as ((request: unknown) => Promise<void>);
 
-    const request = { cookies: { localSession: "sid" }, headers: {} };
+    const request = { cookies: { elms_local_session: "sid" }, headers: {} };
     await hook(request as never);
+    expect(request).toHaveProperty("sessionUser", null);
+    expect(localDestroy).toHaveBeenCalledWith("sid");
+  });
+
+  it("invalidates local session when user is suspended", async () => {
+    const addHook = vi.fn();
+    const app = { addHook, decorateRequest: vi.fn(), jwt: { verify: vi.fn() } };
+
+    localResolve.mockReturnValueOnce({ userId: "u-suspended" });
+    getUserWithRoleAndPermissions.mockResolvedValueOnce({
+      id: "u-suspended",
+      firmId: "f1",
+      status: "SUSPENDED",
+      deletedAt: null
+    });
+
+    registerSessionContext(app as never, { AUTH_MODE: AuthMode.LOCAL } as never);
+    const hook = addHook.mock.calls[0]?.[1] as ((request: unknown) => Promise<void>);
+    const request = { cookies: { elms_local_session: "sid-local" }, headers: {} };
+
+    await hook(request as never);
+
+    expect(localDestroy).toHaveBeenCalledWith("sid-local");
     expect(request).toHaveProperty("sessionUser", null);
   });
 
@@ -77,7 +111,12 @@ describe("registerSessionContext", () => {
     const addHook = vi.fn();
     const app = { addHook, decorateRequest: vi.fn(), jwt: { verify } };
 
-    getUserWithRoleAndPermissions.mockResolvedValueOnce({ id: "u3", firmId: "f3" });
+    getUserWithRoleAndPermissions.mockResolvedValueOnce({
+      id: "u3",
+      firmId: "f3",
+      status: "ACTIVE",
+      deletedAt: null
+    });
 
     registerSessionContext(
       app as never,
@@ -118,5 +157,30 @@ describe("registerSessionContext", () => {
     const invalid = { cookies: { elms_access_token: "bad" }, headers: {} };
     await hook(invalid as never);
     expect(invalid).toHaveProperty("sessionUser", null);
+  });
+
+  it("treats suspended cloud user as anonymous", async () => {
+    const verify = vi.fn().mockResolvedValue({ sub: "u3" });
+    const addHook = vi.fn();
+    const app = { addHook, decorateRequest: vi.fn(), jwt: { verify } };
+
+    getUserWithRoleAndPermissions.mockResolvedValueOnce({
+      id: "u3",
+      firmId: "f3",
+      status: "SUSPENDED",
+      deletedAt: null
+    });
+
+    registerSessionContext(
+      app as never,
+      {
+        AUTH_MODE: AuthMode.CLOUD,
+        COOKIE_DOMAIN: "localhost"
+      } as never
+    );
+    const hook = addHook.mock.calls[0]?.[1] as ((request: unknown) => Promise<void>);
+    const request = { cookies: { elms_access_token: "jwt" }, headers: {} };
+    await hook(request as never);
+    expect(request).toHaveProperty("sessionUser", null);
   });
 });

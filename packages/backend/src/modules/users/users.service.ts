@@ -17,9 +17,11 @@ import { appError } from "../../errors/appError.js";
 import { inTenantTransaction } from "../../repositories/unitOfWork.js";
 import {
   createFirmUser,
+  findFirmUserByEmailIncludingDeleted,
   getFirmActiveUserByIdOrThrow,
   getFirmActiveUserRowByIdOrThrow,
   listFirmUsers,
+  restoreFirmUserById,
   softDeleteUserById,
   updateFirmUserById,
   updateFirmUserStatusById,
@@ -97,7 +99,47 @@ export async function createLocalUser(
   return inTenantTransaction(actor.firmId, async (tx) => {
     await assertCanCreateLocalUser(tx, actor);
 
+    const existingByEmail = await findFirmUserByEmailIncludingDeleted(
+      tx,
+      actor.firmId,
+      payload.email
+    );
+    if (existingByEmail && existingByEmail.deletedAt === null) {
+      throw httpError("Resource already exists", 409);
+    }
+
     const passwordHash = await bcrypt.hash(payload.password, 12);
+    if (existingByEmail?.deletedAt) {
+      const restored = await restoreFirmUserById(
+        tx,
+        existingByEmail.id,
+        payload,
+        passwordHash
+      );
+
+      await writeAuditLog(tx, audit, {
+        action: "users.restore",
+        entityType: "User",
+        entityId: restored.id,
+        oldData: {
+          email: existingByEmail.email,
+          fullName: existingByEmail.fullName,
+          roleId: existingByEmail.roleId,
+          status: existingByEmail.status,
+          deletedAt: existingByEmail.deletedAt.toISOString()
+        },
+        newData: {
+          email: restored.email,
+          fullName: restored.fullName,
+          roleId: restored.roleId,
+          status: restored.status,
+          deletedAt: null
+        }
+      });
+
+      return mapUser(restored);
+    }
+
     const user = await createFirmUser(tx, actor.firmId, payload, passwordHash);
 
     await writeAuditLog(tx, audit, {

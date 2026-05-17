@@ -418,6 +418,10 @@ describe("SettingsPage route behavior", () => {
     expect(mutateAsyncCalls.length).toBeGreaterThanOrEqual(6);
     expect(mutateAsyncCalls).toContainEqual(["/tmp/backups/a.zip"]);
     expect(addToastMock).toHaveBeenCalledWith(
+      "messages.saved",
+      "success"
+    );
+    expect(addToastMock).toHaveBeenCalledWith(
       "settings.downloadFolderUpdatedTo",
       "success"
     );

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import bcrypt from "bcryptjs";
+import { UserStatus } from "@prisma/client";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "../../config/constants.js";
 
 const ensureSystemSecurityModel = vi.fn();
@@ -154,7 +155,11 @@ describe("cloudAuthService", () => {
     const app = buildApp();
     const service = createCloudAuthService(app as never, env as never);
 
-    mockPrisma.user.findFirst.mockResolvedValue({ id: "u-1", passwordHash: "hash" });
+    mockPrisma.user.findFirst.mockResolvedValue({
+      id: "u-1",
+      passwordHash: "hash",
+      status: UserStatus.ACTIVE
+    });
     const loggedIn = await service.login({ email: "user@test.com", password: "pass" });
     expect(loggedIn.session.user?.id).toBe("u-1");
 
@@ -177,11 +182,33 @@ describe("cloudAuthService", () => {
     const app = buildApp();
     const service = createCloudAuthService(app as never, env as never);
 
-    mockPrisma.user.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "u-1", passwordHash: "hash" });
+    mockPrisma.user.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: "u-1",
+        passwordHash: "hash",
+        status: UserStatus.ACTIVE
+      });
 
     await expect(service.login({ email: "x", password: "x" })).rejects.toThrow("Invalid email or password");
 
     vi.mocked(bcrypt.compare).mockResolvedValueOnce(false as never);
     await expect(service.login({ email: "x", password: "x" })).rejects.toThrow("Invalid email or password");
+  });
+
+  it("rejects suspended user login with ACCOUNT_SUSPENDED", async () => {
+    const app = buildApp();
+    const service = createCloudAuthService(app as never, env as never);
+
+    mockPrisma.user.findFirst.mockResolvedValueOnce({
+      id: "u-1",
+      passwordHash: "hash",
+      status: UserStatus.SUSPENDED
+    });
+
+    await expect(service.login({ email: "x", password: "x" })).rejects.toMatchObject({
+      statusCode: 403,
+      code: "ACCOUNT_SUSPENDED"
+    });
   });
 });

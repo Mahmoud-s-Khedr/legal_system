@@ -37,6 +37,8 @@ import { getEnumLabel } from "../../lib/enumLabel";
 import { useAuthBootstrap } from "../../store/authStore";
 import { useToastStore } from "../../store/toastStore";
 import { useMutationFeedback } from "../../lib/feedback";
+import { resolveFormValidationError } from "../../lib/formValidation";
+import { pickFieldError } from "../../lib/validationErrors";
 import {
   Badge,
   EmptyState,
@@ -141,6 +143,10 @@ export function SettingsPage() {
     currentPassword: "",
     newPassword: ""
   });
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileFieldErrors, setProfileFieldErrors] = useState<Record<string, string>>({});
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState<Record<string, string>>({});
   const [activationKey, setActivationKey] = useState("");
   const [editionChangeTarget, setEditionChangeTarget] = useState<EditionKey>(
     EditionKey.SOLO_OFFLINE
@@ -204,8 +210,16 @@ export function SettingsPage() {
         body: JSON.stringify(payload)
       }),
     onSuccess: async () => {
+      setProfileError(null);
+      setProfileFieldErrors({});
+      feedback.success("messages.saved");
       await queryClient.invalidateQueries({ queryKey: ["user", user?.id] });
       await refreshSession();
+    },
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setProfileError(resolved.message);
+      setProfileFieldErrors(resolved.fieldErrors);
     }
   });
 
@@ -220,6 +234,14 @@ export function SettingsPage() {
         currentPassword: "",
         newPassword: ""
       });
+      setPasswordError(null);
+      setPasswordFieldErrors({});
+      feedback.success("messages.passwordChangedSuccessfully");
+    },
+    onError: (err: unknown) => {
+      const resolved = resolveFormValidationError(err, t("errors.fallback"));
+      setPasswordError(resolved.message);
+      setPasswordFieldErrors(resolved.fieldErrors);
     }
   });
   const chooseDownloadDirectoryMutation = useMutation({
@@ -925,6 +947,8 @@ export function SettingsPage() {
               if (!selfQuery.data) {
                 return;
               }
+              setProfileError(null);
+              setProfileFieldErrors({});
 
               updateProfileMutation.mutate({
                 fullName: profileForm.fullName,
@@ -940,6 +964,7 @@ export function SettingsPage() {
               onChange={(value) =>
                 setProfileForm({ ...profileForm, fullName: value })
               }
+              error={pickFieldError(profileFieldErrors, ["fullName"]) ?? undefined}
               value={profileForm.fullName}
             />
             <Field
@@ -949,6 +974,7 @@ export function SettingsPage() {
                 setProfileForm({ ...profileForm, email: value })
               }
               type="email"
+              error={pickFieldError(profileFieldErrors, ["email"]) ?? undefined}
               value={profileForm.email}
             />
             <SelectField
@@ -959,6 +985,7 @@ export function SettingsPage() {
                   preferredLanguage: value as Language
                 })
               }
+              error={pickFieldError(profileFieldErrors, ["preferredLanguage"]) ?? undefined}
               options={Object.values(Language).map((value) => ({
                 value: value as string,
                 label: getEnumLabel(t, "Language", value as string)
@@ -968,9 +995,9 @@ export function SettingsPage() {
             <PrimaryButton type="submit">
               {t("actions.saveChanges")}
             </PrimaryButton>
-            {updateProfileMutation.error ? (
+            {profileError ? (
               <p className="text-sm text-red-600">
-                {(updateProfileMutation.error as Error).message}
+                {profileError}
               </p>
             ) : null}
           </form>
@@ -983,6 +1010,8 @@ export function SettingsPage() {
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
+              setPasswordError(null);
+              setPasswordFieldErrors({});
               changePasswordMutation.mutate(passwordForm);
             }}
           >
@@ -993,6 +1022,7 @@ export function SettingsPage() {
                 setPasswordForm({ ...passwordForm, currentPassword: value })
               }
               type="password"
+              error={pickFieldError(passwordFieldErrors, ["currentPassword"]) ?? undefined}
               value={passwordForm.currentPassword}
             />
             <Field
@@ -1002,14 +1032,15 @@ export function SettingsPage() {
                 setPasswordForm({ ...passwordForm, newPassword: value })
               }
               type="password"
+              error={pickFieldError(passwordFieldErrors, ["newPassword"]) ?? undefined}
               value={passwordForm.newPassword}
             />
             <PrimaryButton type="submit">
               {t("settings.changePassword")}
             </PrimaryButton>
-            {changePasswordMutation.error ? (
+            {passwordError ? (
               <p className="text-sm text-red-600">
-                {(changePasswordMutation.error as Error).message}
+                {passwordError}
               </p>
             ) : null}
           </form>
