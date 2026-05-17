@@ -522,7 +522,7 @@ function ReportTable({
     if (lookupLabel && lookupLabel !== outcome) {
       return lookupLabel;
     }
-    return getEnumLabel(t, "HearingOutcome", outcome);
+    return outcome;
   };
 
   if (reportType === "case-status") {
