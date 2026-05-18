@@ -13,7 +13,7 @@ All backend routes are under `/api/*`.
 
 ELMS uses cookie-based auth.
 
-- Cloud mode (`AUTH_MODE=cloud`): access + refresh token cookies.
+- Cloud mode (`AUTH_MODE=cloud`): `Archived Reference` (deprecated/non-operational in current runtime); historical access + refresh token cookie design.
 - Local mode (`AUTH_MODE=local`): local session cookie.
 
 Cookie constants are defined in `packages/backend/src/config/constants.ts`.
@@ -25,7 +25,7 @@ Swagger UI is available in non-production environments at `/docs` on the backend
 ## Health Check
 
 - `GET /api/health`
-- Returns overall status plus checks for database and (cloud mode) Redis/queue depth.
+- Returns overall status plus checks for database; cloud Redis/queue semantics are archived reference while cloud mode is non-operational.
 
 ## Route Groups (Registered in `createApp`)
 

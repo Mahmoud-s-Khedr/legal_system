@@ -1,19 +1,29 @@
 # ELMS — Electronic Legal Management System
 
-Monorepo for a legal practice management system with desktop-first workflows and archived cloud deployment assets.
+Monorepo for a legal practice management system with a desktop/local runtime as the active production path.
 
-## What is implemented
+## Runtime status (as of May 18, 2026)
+
+- `Implemented`: Desktop/local runtime (`AUTH_MODE=local`) and Tauri packaging.
+- `Archived Reference`: Cloud deployment assets under `archive/cloud/**`.
+- `Planned`: Re-activating operational cloud auth/runtime.
+
+Backend code currently forces local auth service even if `AUTH_MODE=cloud` is configured (deprecated/non-operational):
+- `packages/backend/src/config/env.ts`
+- `packages/backend/src/modules/auth/createAuthService.ts`
+
+## What is implemented in active runtime
 
 Based on current code (`packages/backend/src/app.ts`, `packages/frontend/src/router.tsx`, `packages/backend/prisma/schema.prisma`):
 
-- Authentication: cloud and local modes (`/api/auth/*`)
-- Firm/user/role/invitation management
+- Authentication and sessions through active local auth service (`/api/auth/*`)
+- Firm/user/role/invitation modules and permissions
 - Clients, cases, hearings, tasks
 - Documents upload + OCR + search
 - Billing (invoices + expenses)
 - Notifications (in-app/email/SMS/desktop channel paths)
 - Reports, templates, lookups
-- Law library and AI research backend modules
+- Law library and AI research modules
 - Client portal routes (`/api/portal*` and `/portal/*`)
 - Desktop app packaging via Tauri (`apps/desktop`)
 
@@ -39,17 +49,17 @@ scripts/
 - Node.js 22+
 - pnpm 10.x
 - PostgreSQL (required for backend runtime)
-- Redis (required for cloud auth mode and queue-backed flows)
 - Rust/Cargo (desktop build only)
+- Redis (`Archived Reference`: previously used for cloud auth and queue-backed cloud flows)
 
-## Local development
+## Local development (active)
 
 ```bash
 pnpm install
 cp .env.example .env
 pnpm prisma:generate
 pnpm --filter @elms/backend prisma migrate dev
-pnpm seed:dev:cloud
+pnpm seed:dev
 pnpm dev:desktop
 ```
 
@@ -59,7 +69,6 @@ Seed options:
 - `ELMS_SEED_INCLUDE_INTEGRATIONS=true|false` (default `true`)
 
 Useful alternatives:
-
 - `pnpm dev:desktop` (backend local mode + frontend desktop host)
 - `pnpm dev:tauri` (run desktop shell)
 
@@ -84,7 +93,6 @@ Useful alternatives:
 - User docs index: [docs/user/index.md](docs/user/index.md)
 - Documentation truth map: [docs/_inventory/source-of-truth.md](docs/_inventory/source-of-truth.md)
 
-admin@elms.local
 ## Source of truth
 
 Use the following as canonical references when updating docs:
@@ -93,5 +101,6 @@ Use the following as canonical references when updating docs:
 - `packages/frontend/src/router.tsx`
 - `packages/backend/prisma/schema.prisma`
 - `packages/backend/src/config/env.ts`
+- `packages/backend/src/modules/auth/createAuthService.ts`
 - `package.json` + workspace `package.json` files
 - `.github/workflows/*`

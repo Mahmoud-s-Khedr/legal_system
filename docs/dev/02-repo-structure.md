@@ -92,7 +92,7 @@ Node.js utility scripts that are invoked from package `scripts` fields. Includes
 ## Repo Boundaries
 
 - Keep root files limited to workspace/tooling entrypoints (`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`, lint/format config, README).
-- Put planning, review, and temporary markdown notes under `docs/notes/`.
+- Keep temporary planning/review notes outside the published `docs/` tree unless they are promoted to maintained documentation.
 - Put documentation media/assets under `docs/assets/` rather than repo root.
 - Keep archived/non-active deployment artifacts under `archive/` only.
 - Keep executable automation under `scripts/` and product code under `apps/` or `packages/`.

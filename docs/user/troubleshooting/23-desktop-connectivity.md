@@ -114,10 +114,10 @@ The desktop app is designed to work fully offline. The following features are av
 The desktop edition stores all data locally on your computer. There is **no cloud sync** — this is by design for the offline desktop model.
 
 - Data you enter in the desktop app stays on that computer.
-- If you need to access your data from multiple devices or locations, use the **cloud edition** instead.
+- If you need multi-device access today, use a shared desktop-hosted deployment approach approved by your IT/provider; the previous cloud edition flow is currently non-operational.
 
 > [!NOTE]
-> If you need to move to the cloud edition, contact your ELMS provider. They can assist with migrating data from the desktop to the cloud.
+> `Archived Reference`: earlier cloud migration guidance exists in historical docs, but active runtime support is desktop/local-first until cloud runtime is re-enabled.
 
 ---
 

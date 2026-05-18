@@ -129,7 +129,7 @@ Every major technology choice in ELMS was made deliberately. This document recor
 
 **Vite dev server speed.** Vite uses native ES modules for development, providing near-instant hot module replacement. The Arabic-first UI has many components; fast HMR meaningfully improves developer productivity. Vite 7's build uses Rolldown (Rust-based) for production bundles, improving build times further.
 
-**Simplified deployment.** In cloud mode, Nginx serves Vite's `dist/` output as static files. There is no Node.js process to manage for the frontend. This reduces the Docker container count and eliminates SSR-related failure modes.
+**Simplified deployment (`Archived Reference` for cloud runtime).** In the former cloud topology, Nginx served Vite's `dist/` output as static files. There was no Node.js process to manage for the frontend. This reduced Docker container count and eliminated SSR-related failure modes.
 
 **TanStack Router alignment.** TanStack Router is designed for SPAs. Its file-based routing, loader system, and devtools all assume client-side navigation. Next.js's App Router has its own routing conventions that conflict with TanStack Router.
 
@@ -178,4 +178,3 @@ Every major technology choice in ELMS was made deliberately. This document recor
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

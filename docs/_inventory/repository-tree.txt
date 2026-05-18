@@ -1,7 +1,5 @@
 ./
-.claude/
-├── settings.json
-└── settings.local.json
+.desktop-deploy-tmp/
 .github/
 ├── workflows/
 │   ├── build-dummy-desktop.yml
@@ -11,7 +9,46 @@
 │   ├── ci.yml
 │   └── release-desktop.yml
 └── pull_request_template.md
+.husky/
+├── _/
+│   ├── .gitignore
+│   ├── applypatch-msg
+│   ├── commit-msg
+│   ├── h
+│   ├── husky.sh
+│   ├── post-applypatch
+│   ├── post-checkout
+│   ├── post-commit
+│   ├── post-merge
+│   ├── post-rewrite
+│   ├── pre-applypatch
+│   ├── pre-auto-gc
+│   ├── pre-commit
+│   ├── pre-merge-commit
+│   ├── pre-push
+│   ├── pre-rebase
+│   └── prepare-commit-msg
+└── pre-commit
+.lighthouseci/
+├── assertion-results.json
+├── lhr-1778625802610.html
+├── lhr-1778625802610.json
+└── links.json
 .logs/
+├── performance/
+│   ├── api-baseline.summary.json
+│   ├── auth.summary.json
+│   ├── billing-credit.summary.json
+│   ├── cases-write-update.summary.json
+│   ├── document-upload.summary.json
+│   ├── hearings-events.summary.json
+│   ├── import-preview.summary.json
+│   ├── library-search.summary.json
+│   ├── notifications.summary.json
+│   ├── portal-auth-read.summary.json
+│   ├── research.summary.json
+│   └── search-global.summary.json
+├── desktop-linux-package-appimage--deb--rpm.log
 └── desktop-linux-package-deb--rpm.log
 apps/
 └── desktop/
@@ -444,6 +481,7 @@ apps/
     │       └── .layout.env
     ├── scripts/
     │   ├── cargo-runner.mjs
+    │   ├── cleanup-stale-postgres-dev.mjs
     │   ├── frontend-desktop-dev.mjs
     │   ├── frontend-dummy-dev.mjs
     │   ├── prepare-desktop-build.mjs
@@ -483,6 +521,7 @@ apps/
     │   │   └── public.pem
     │   ├── src/
     │   │   ├── backend_connection.rs
+    │   │   ├── desktop_backup.rs
     │   │   ├── desktop_downloads.rs
     │   │   ├── external_links.rs
     │   │   ├── main.rs
@@ -546,7 +585,9 @@ docs/
 │   ├── 06-technology-differentiation.md
 │   ├── 07-scalability-and-security.md
 │   ├── 08-product-roadmap.md
-│   └── 09-competitive-positioning.md
+│   ├── 09-competitive-positioning.md
+│   ├── 10-analytics-rationalization-phase1.md
+│   └── 11-analytics-metric-contracts-phase1.md
 ├── dev/
 │   ├── 01-getting-started.md
 │   ├── 02-repo-structure.md
@@ -561,12 +602,10 @@ docs/
 │   ├── 11-desktop-build.md
 │   ├── 12-i18n.md
 │   ├── 13-repo-structure-audit.md
+│   ├── 14-windows-build-and-startup-flow.md
 │   ├── build-process-review-2026-03-24.md
-│   └── internet-required-features.md
-├── notes/
-│   ├── NeededFeaturesList.md
-│   ├── temp-licence.md
-│   └── temp-wincpp.md
+│   ├── internet-required-features.md
+│   └── linux-packaging-fedora-follow-up.md
 └── user/
     ├── admin/
     │   ├── 18-firm-settings.md
@@ -600,7 +639,18 @@ docs/
     └── index.md
 packages/
 ├── backend/
+│   ├── .desktop-deploy-tmp/
+│   │   ├── 1776089651642-165801/
+│   │   ├── 1776089969679-178329/
+│   │   ├── 1776127065515-579492/
+│   │   └── 1777890601316-55732/
 │   ├── .logs/
+│   ├── assets/
+│   │   └── fonts/
+│   │       ├── Cairo-Bold.ttf
+│   │       ├── Cairo-Regular.ttf
+│   │       ├── Cairo-Variable.ttf
+│   │       └── LiberationSans-Regular.ttf
 │   ├── prisma/
 │   │   ├── migrations/
 │   │   │   ├── 0001_initial/
@@ -627,14 +677,59 @@ packages/
 │   │   │   │   └── migration.sql
 │   │   │   ├── 0012_table_query_indexes/
 │   │   │   │   └── migration.sql
-│   │   │   └── 0013_pending_edition_key/
+│   │   │   ├── 0013_pending_edition_key/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0014_case_legal_reference_dedup/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0015_notification_targets/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0016_tenant_rls_backfill/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0017_case_party_rework/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0018_document_hybrid_search/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0019_document_task_link/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0020_drop_case_internal_reference/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0021_billing_credit_and_issued_at/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0022_internal_ref_and_soft_deletes/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0023_docx_preview_pipeline/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0024_party_role_lookup_refresh/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0025_split_party_roles_slash_labels/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0026_hearing_outcome_lookup/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0027_egypt_locations_lookup/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0028_case_court_city_type/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0029_courts_lookup_canonicalization/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0030_lookup_system_dedup_and_unique/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0031_legal_category_document_type/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0032_library_doc_types/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0033_assignment_notification_types/
+│   │   │   │   └── migration.sql
+│   │   │   ├── 0034_case_session_follow_up_link/
+│   │   │   │   └── migration.sql
+│   │   │   └── 0035_unaccent_regdictionary_schema_qualify/
 │   │   │       └── migration.sql
 │   │   ├── migration_lock.toml
 │   │   ├── schema.prisma
 │   │   └── seed.ts
 │   ├── scripts/
 │   │   ├── build-desktop.mjs
-│   │   └── dev-local.mjs
+│   │   ├── dev-local.mjs
+│   │   └── seed-coverage-audit.ts
 │   ├── src/
 │   │   ├── config/
 │   │   │   ├── constants.ts
@@ -643,39 +738,61 @@ packages/
 │   │   │   ├── embedded-pg.ts
 │   │   │   ├── prisma.ts
 │   │   │   └── tenant.ts
+│   │   ├── errors/
+│   │   │   └── appError.ts
 │   │   ├── jobs/
+│   │   │   ├── docxPreviewDispatcher.ts
+│   │   │   ├── docxPreviewQueue.ts
+│   │   │   ├── docxPreviewWorker.ts
 │   │   │   ├── extractionDispatcher.ts
 │   │   │   ├── extractionQueue.ts
 │   │   │   ├── extractionWorker.ts
 │   │   │   ├── libraryExtractionDispatcher.ts
 │   │   │   ├── libraryExtractionQueue.ts
 │   │   │   ├── libraryExtractionWorker.ts
+│   │   │   ├── runDocxPreview.test.ts
+│   │   │   ├── runDocxPreview.ts
+│   │   │   ├── runExtraction.test.ts
 │   │   │   ├── runExtraction.ts
+│   │   │   ├── runLibraryExtraction.test.ts
 │   │   │   └── runLibraryExtraction.ts
 │   │   ├── middleware/
+│   │   │   ├── firmLifecycleWriteGuard.test.ts
 │   │   │   ├── firmLifecycleWriteGuard.ts
+│   │   │   ├── injectTenant.test.ts
 │   │   │   ├── injectTenant.ts
+│   │   │   ├── licenseAccessGuard.test.ts
 │   │   │   ├── licenseAccessGuard.ts
+│   │   │   ├── requireAuth.test.ts
 │   │   │   ├── requireAuth.ts
+│   │   │   ├── requireEditionFeature.test.ts
 │   │   │   ├── requireEditionFeature.ts
+│   │   │   ├── requirePermission.test.ts
 │   │   │   └── requirePermission.ts
 │   │   ├── modules/
 │   │   │   ├── auth/
+│   │   │   │   ├── auth.routes.test.ts
 │   │   │   │   ├── auth.routes.ts
 │   │   │   │   ├── auth.test.ts
 │   │   │   │   ├── auth.types.ts
+│   │   │   │   ├── cloudAuthService.test.ts
 │   │   │   │   ├── cloudAuthService.ts
+│   │   │   │   ├── createAuthService.test.ts
 │   │   │   │   ├── createAuthService.ts
+│   │   │   │   ├── inviteToken.test.ts
 │   │   │   │   ├── inviteToken.ts
 │   │   │   │   ├── localAuthService.ts
+│   │   │   │   ├── localSessionStore.test.ts
 │   │   │   │   ├── localSessionStore.ts
 │   │   │   │   └── sessionUser.ts
 │   │   │   ├── billing/
+│   │   │   │   ├── billing.routes.test.ts
 │   │   │   │   ├── billing.routes.ts
 │   │   │   │   ├── billing.service.test.ts
 │   │   │   │   ├── billing.service.ts
 │   │   │   │   └── invoice.pdf.ts
 │   │   │   ├── cases/
+│   │   │   │   ├── cases.routes.test.ts
 │   │   │   │   ├── cases.routes.ts
 │   │   │   │   ├── cases.service.test.ts
 │   │   │   │   └── cases.service.ts
@@ -685,20 +802,31 @@ packages/
 │   │   │   │   ├── clients.service.test.ts
 │   │   │   │   └── clients.service.ts
 │   │   │   ├── dashboard/
+│   │   │   │   ├── dashboard.registry.ts
+│   │   │   │   ├── dashboard.routes.test.ts
 │   │   │   │   ├── dashboard.routes.ts
+│   │   │   │   ├── dashboard.service.test.ts
 │   │   │   │   └── dashboard.service.ts
 │   │   │   ├── documents/
 │   │   │   │   ├── ocr/
+│   │   │   │   │   ├── EmbeddedImageOcr.test.ts
+│   │   │   │   │   ├── EmbeddedImageOcr.ts
 │   │   │   │   │   ├── GoogleVisionAdapter.ts
 │   │   │   │   │   ├── IOcrAdapter.ts
+│   │   │   │   │   ├── TesseractAdapter.test.ts
 │   │   │   │   │   └── TesseractAdapter.ts
+│   │   │   │   ├── documents.routes.preview.test.ts
 │   │   │   │   ├── documents.routes.ts
+│   │   │   │   ├── documents.routes.upload.test.ts
 │   │   │   │   ├── documents.service.test.ts
 │   │   │   │   ├── documents.service.ts
+│   │   │   │   ├── search.routes.test.ts
 │   │   │   │   ├── search.routes.ts
+│   │   │   │   ├── search.service.test.ts
 │   │   │   │   └── search.service.ts
 │   │   │   ├── editions/
 │   │   │   │   ├── editionPolicy.ts
+│   │   │   │   ├── license.routes.test.ts
 │   │   │   │   ├── license.routes.ts
 │   │   │   │   ├── license.service.test.ts
 │   │   │   │   ├── license.service.ts
@@ -707,30 +835,45 @@ packages/
 │   │   │   │   ├── lifecycle.service.ts
 │   │   │   │   └── trialDates.ts
 │   │   │   ├── firms/
+│   │   │   │   ├── firms.routes.test.ts
 │   │   │   │   ├── firms.routes.ts
 │   │   │   │   ├── firms.service.test.ts
 │   │   │   │   └── firms.service.ts
 │   │   │   ├── hearings/
+│   │   │   │   ├── hearings.routes.test.ts
 │   │   │   │   ├── hearings.routes.ts
 │   │   │   │   ├── hearings.service.test.ts
 │   │   │   │   └── hearings.service.ts
 │   │   │   ├── import/
+│   │   │   │   ├── import.routes.test.ts
 │   │   │   │   ├── import.routes.ts
+│   │   │   │   ├── import.service.test.ts
 │   │   │   │   └── import.service.ts
 │   │   │   ├── integrations/
+│   │   │   │   ├── google-calendar.routes.test.ts
 │   │   │   │   ├── google-calendar.routes.ts
 │   │   │   │   └── googleCalendar.service.ts
 │   │   │   ├── invitations/
+│   │   │   │   ├── invitations.routes.test.ts
 │   │   │   │   ├── invitations.routes.ts
 │   │   │   │   ├── invitations.service.test.ts
 │   │   │   │   └── invitations.service.ts
 │   │   │   ├── library/
+│   │   │   │   ├── library.routes.search.test.ts
 │   │   │   │   ├── library.routes.ts
 │   │   │   │   ├── library.routes.upload.test.ts
+│   │   │   │   ├── library.service.test.ts
 │   │   │   │   └── library.service.ts
+│   │   │   ├── locations/
+│   │   │   │   ├── locations.routes.test.ts
+│   │   │   │   ├── locations.routes.ts
+│   │   │   │   └── locations.service.ts
 │   │   │   ├── lookups/
+│   │   │   │   ├── lookups.routes.test.ts
 │   │   │   │   ├── lookups.routes.ts
-│   │   │   │   └── lookups.service.ts
+│   │   │   │   ├── lookups.service.test.ts
+│   │   │   │   ├── lookups.service.ts
+│   │   │   │   └── lookups.types.ts
 │   │   │   ├── notifications/
 │   │   │   │   ├── channels/
 │   │   │   │   │   ├── desktopOs.ts
@@ -739,88 +882,1292 @@ packages/
 │   │   │   │   │   └── sms.ts
 │   │   │   │   ├── notification.service.test.ts
 │   │   │   │   ├── notification.service.ts
+│   │   │   │   ├── notifications.routes.test.ts
 │   │   │   │   ├── notifications.routes.ts
 │   │   │   │   └── reminder.scheduler.ts
 │   │   │   ├── portal/
+│   │   │   │   ├── portal-auth.routes.test.ts
 │   │   │   │   ├── portal-auth.routes.ts
+│   │   │   │   ├── portal.routes.test.ts
 │   │   │   │   ├── portal.routes.ts
 │   │   │   │   └── portal.test.ts
 │   │   │   ├── powers/
+│   │   │   │   ├── powers.routes.test.ts
 │   │   │   │   ├── powers.routes.ts
+│   │   │   │   ├── powers.service.test.ts
 │   │   │   │   └── powers.service.ts
 │   │   │   ├── reports/
 │   │   │   │   ├── custom-reports.service.test.ts
 │   │   │   │   ├── custom-reports.service.ts
+│   │   │   │   ├── report.export.test.ts
 │   │   │   │   ├── report.export.ts
+│   │   │   │   ├── reports.routes.test.ts
 │   │   │   │   ├── reports.routes.ts
 │   │   │   │   ├── reports.service.test.ts
 │   │   │   │   └── reports.service.ts
 │   │   │   ├── research/
 │   │   │   │   ├── ai.provider.ts
+│   │   │   │   ├── research.routes.test.ts
 │   │   │   │   ├── research.routes.ts
 │   │   │   │   ├── research.service.test.ts
 │   │   │   │   ├── research.service.ts
 │   │   │   │   └── retrieval.service.ts
 │   │   │   ├── roles/
+│   │   │   │   ├── roles.routes.test.ts
 │   │   │   │   ├── roles.routes.ts
+│   │   │   │   ├── roles.service.test.ts
 │   │   │   │   └── roles.service.ts
+│   │   │   ├── search/
+│   │   │   │   ├── globalSearch.routes.test.ts
+│   │   │   │   ├── globalSearch.routes.ts
+│   │   │   │   ├── globalSearch.service.test.ts
+│   │   │   │   └── globalSearch.service.ts
 │   │   │   ├── tasks/
+│   │   │   │   ├── tasks.routes.test.ts
 │   │   │   │   ├── tasks.routes.ts
+│   │   │   │   ├── tasks.service.test.ts
 │   │   │   │   └── tasks.service.ts
 │   │   │   ├── templates/
+│   │   │   │   ├── templates.routes.test.ts
 │   │   │   │   ├── templates.routes.ts
+│   │   │   │   ├── templates.service.test.ts
 │   │   │   │   └── templates.service.ts
 │   │   │   └── users/
+│   │   │       ├── users.routes.test.ts
 │   │   │       ├── users.routes.ts
 │   │   │       ├── users.service.test.ts
 │   │   │       └── users.service.ts
 │   │   ├── monitoring/
+│   │   │   ├── performance.ts
 │   │   │   └── sentry.ts
 │   │   ├── plugins/
+│   │   │   ├── auth.test.ts
 │   │   │   ├── auth.ts
+│   │   │   ├── cookie.test.ts
 │   │   │   ├── cookie.ts
+│   │   │   ├── cors.test.ts
 │   │   │   ├── cors.ts
 │   │   │   ├── errorHandler.test.ts
 │   │   │   ├── errorHandler.ts
+│   │   │   ├── multipart.test.ts
 │   │   │   ├── multipart.ts
+│   │   │   ├── performance.ts
+│   │   │   ├── rateLimit.test.ts
 │   │   │   ├── rateLimit.ts
+│   │   │   ├── sessionContext.test.ts
 │   │   │   └── sessionContext.ts
+│   │   ├── repositories/
+│   │   │   ├── billing/
+│   │   │   │   └── billing.repository.ts
+│   │   │   ├── clients/
+│   │   │   │   └── clients.repository.ts
+│   │   │   ├── dashboard/
+│   │   │   │   └── dashboard.repository.ts
+│   │   │   ├── documents/
+│   │   │   │   └── search.repository.ts
+│   │   │   ├── editions/
+│   │   │   │   └── editions.repository.ts
+│   │   │   ├── firms/
+│   │   │   │   └── firms.repository.ts
+│   │   │   ├── hearings/
+│   │   │   │   ├── hearings.repository.test.ts
+│   │   │   │   └── hearings.repository.ts
+│   │   │   ├── integrations/
+│   │   │   │   └── googleCalendar.repository.ts
+│   │   │   ├── invitations/
+│   │   │   │   └── invitations.repository.ts
+│   │   │   ├── lookups/
+│   │   │   │   └── lookups.repository.ts
+│   │   │   ├── powers/
+│   │   │   │   └── powers.repository.ts
+│   │   │   ├── reports/
+│   │   │   │   ├── custom-reports.repository.ts
+│   │   │   │   ├── reports.repository.test.ts
+│   │   │   │   └── reports.repository.ts
+│   │   │   ├── research/
+│   │   │   │   └── research.repository.ts
+│   │   │   ├── roles/
+│   │   │   │   ├── roles.repository.test.ts
+│   │   │   │   └── roles.repository.ts
+│   │   │   ├── tasks/
+│   │   │   │   ├── tasks.repository.test.ts
+│   │   │   │   └── tasks.repository.ts
+│   │   │   ├── templates/
+│   │   │   │   └── templates.repository.ts
+│   │   │   ├── users/
+│   │   │   │   └── users.repository.ts
+│   │   │   ├── types.ts
+│   │   │   └── unitOfWork.ts
 │   │   ├── schemas/
 │   │   │   └── index.ts
 │   │   ├── security/
+│   │   │   ├── analyticsSeed.ts
+│   │   │   ├── bootstrap.test.ts
 │   │   │   ├── bootstrap.ts
 │   │   │   ├── devSeed.ts
+│   │   │   ├── egyptLocations.data.ts
 │   │   │   ├── librarySeed.ts
+│   │   │   ├── locationSeed.ts
+│   │   │   ├── lookupSeed.test.ts
 │   │   │   └── lookupSeed.ts
 │   │   ├── services/
 │   │   │   ├── audit.service.ts
 │   │   │   └── encryption.service.ts
 │   │   ├── storage/
+│   │   │   ├── index.test.ts
 │   │   │   ├── index.ts
 │   │   │   ├── IStorageAdapter.ts
+│   │   │   ├── LocalStorageAdapter.test.ts
 │   │   │   ├── LocalStorageAdapter.ts
+│   │   │   ├── R2StorageAdapter.test.ts
 │   │   │   └── R2StorageAdapter.ts
 │   │   ├── test-utils/
 │   │   │   └── session-user.ts
 │   │   ├── types/
-│   │   │   └── fastify.d.ts
+│   │   │   ├── fastify.d.ts
+│   │   │   └── html-to-docx.d.ts
 │   │   ├── utils/
 │   │   │   ├── arabic.ts
 │   │   │   ├── auditContext.ts
+│   │   │   ├── fuzzySearch.ts
 │   │   │   ├── pagination.test.ts
 │   │   │   ├── pagination.ts
 │   │   │   ├── passwordPolicy.ts
+│   │   │   ├── pdfFonts.test.ts
 │   │   │   ├── pdfFonts.ts
+│   │   │   ├── pdfPrinter.ts
 │   │   │   ├── tableQuery.ts
-│   │   │   └── tableSessionStore.ts
+│   │   │   ├── tableSessionStore.test.ts
+│   │   │   ├── tableSessionStore.ts
+│   │   │   └── upload.ts
+│   │   ├── app.test.ts
 │   │   ├── app.ts
 │   │   ├── index.ts
 │   │   └── server.ts
 │   ├── uploads/
+│   │   ├── 57a41343-b4a7-4808-bc40-82d0703891c3/
+│   │   │   └── c10d2e6d-ac45-456f-981e-49cea27ecfd1/
+│   │   │       ├── report-case-status__4_.pdf
+│   │   │       └── v2-backend_devops_100_production_problems.pdf
 │   │   ├── 8b41f742-4a89-421f-b5ee-28cd36eff95d/
-│   │   │   └── 0b4c1b68-436f-4279-a90e-c9d21f4c6de1/
-│   │   │       └── Mahmoud-Khedr-Software-Engineer-CV.pdf
+│   │   │   ├── 01589ab0-4d44-47ad-a1a7-2e2c5786d10a/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-19-28.png
+│   │   │   ├── 01e2734d-88bc-4544-9931-92316bbe7972/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-47.png
+│   │   │   ├── 0500be50-7a6d-4b5d-af57-e57a9e4d2d43/
+│   │   │   │   └── NADA_city_SRS.pdf
+│   │   │   ├── 090cd41c-de6e-4a32-8990-af8e6a98ef96/
+│   │   │   │   └── Databases-report.docx
+│   │   │   ├── 0b4c1b68-436f-4279-a90e-c9d21f4c6de1/
+│   │   │   │   └── Mahmoud-Khedr-Software-Engineer-CV.pdf
+│   │   │   ├── 0b9472fb-f30b-4753-b2a9-25351b1d5759/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-12-19.png
+│   │   │   ├── 0d857203-07c2-4dbb-84d0-fd911173ac10/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-20-49.png
+│   │   │   ├── 0f064f4f-6f65-441e-b84b-4ce36006878f/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-31.png
+│   │   │   ├── 0fd0fc46-61b1-4a11-8965-9effc46b4932/
+│   │   │   │   └── Screenshot_From_2026-04-12_15-02-09.png
+│   │   │   ├── 117af7a6-7057-412a-9e60-931efcc02f94/
+│   │   │   │   └── 2025_state_of_ai_assisted_software_development.pdf
+│   │   │   ├── 12a73d2e-8070-4139-9293-fa23b0cb43a6/
+│   │   │   │   └── Screenshot_From_2026-04-13_23-01-07.png
+│   │   │   ├── 1349da61-beaf-470c-a99e-798162dec6d8/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-59-38.png
+│   │   │   ├── 150cf4f5-daed-4c8c-9134-6c8832af38f0/
+│   │   │   │   └── Screenshot_From_2026-04-14_02-26-45.png
+│   │   │   ├── 15b420ef-f8b7-43e1-aba1-99c92cfd7826/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-02-13.png
+│   │   │   ├── 167816a2-f837-4929-a74c-777ee3feb4c1/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-19-37.png
+│   │   │   ├── 1bceaa2c-b199-4300-bfef-985c36b5e5a6/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-12-19.png
+│   │   │   ├── 1c38b6a9-4827-407f-a89e-84a1449928ce/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-30-39.png
+│   │   │   ├── 1e4841a0-51f3-4366-b6ec-504e2d92688f/
+│   │   │   │   └── Screenshot_From_2026-04-14_02-26-45.png
+│   │   │   ├── 1e5b1156-6dc7-4263-8496-b665488d967b/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-25-40.png
+│   │   │   ├── 1e7157ca-0e39-45ac-a0e7-4461e3513943/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-30-39.png
+│   │   │   ├── 27ab8e96-5c2c-4a26-a497-1905b7988384/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-24-49.png
+│   │   │   ├── 2c1eb38c-5134-4ac7-8add-a39eed1d0e48/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-47.png
+│   │   │   ├── 2e0b02ea-97a4-48fe-bd3d-4ff193844a4b/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-02-13.png
+│   │   │   ├── 2e46ebd4-7e78-4559-ba1a-cab904178417/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-59-34.png
+│   │   │   ├── 2e512840-cf58-4efc-9f0b-8171be09567a/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-19-28.png
+│   │   │   ├── 2ee7df87-bde9-4562-8edb-52f2d64d3666/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-12-52.png
+│   │   │   ├── 2f4462f2-c721-4d6e-9ae4-15dbf3f07988/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-12-52.png
+│   │   │   ├── 300524fd-4f20-49da-8c68-58936d5ca866/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-24-49.png
+│   │   │   ├── 32caa6a3-afe0-4053-97f3-e9b5cd91965d/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-30-39.png
+│   │   │   ├── 36cba4b8-dd78-4e21-98d1-ef870fe96aa9/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-15-18.png
+│   │   │   ├── 3a73db63-2c16-4c46-b5da-b9ce8d7b0675/
+│   │   │   │   └── Screenshot_From_2026-04-25_04-08-01.png
+│   │   │   ├── 3b70bdb6-dddf-4e9f-b947-d1755b6f3db5/
+│   │   │   │   └── Screenshot_From_2026-04-13_23-01-07.png
+│   │   │   ├── 3cfaec2a-187f-405a-be46-ccb99a903d39/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-19-42.png
+│   │   │   ├── 3dd8929e-7dbc-4adf-836d-f8c904910a20/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-12-52.png
+│   │   │   ├── 3e3eabd9-b436-45a9-84d9-7afe80498843/
+│   │   │   │   └── Screenshot_From_2026-05-01_17-29-57.png
+│   │   │   ├── 3ebb92bc-064b-429f-be1a-97291b6018db/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-12-52.png
+│   │   │   ├── 40b6521b-3e92-44db-99a7-7134bf6aa44a/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-00-24.png
+│   │   │   ├── 416aaf78-d47f-4d45-aa16-f59f0f1fd2a2/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-30-39.png
+│   │   │   ├── 431d488f-f36e-4678-af83-4b3834fbf38b/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-19-28.png
+│   │   │   ├── 44e76278-fa78-423e-8e9c-ad34a61fd495/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-02-13.png
+│   │   │   ├── 4ff4bd32-5b53-44b6-97e0-92cfb18e433b/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-31.png
+│   │   │   ├── 5059a766-a244-4fe6-8fcc-9e29d9739f07/
+│   │   │   │   └── G0btsP8XkAAvRbW.jpg
+│   │   │   ├── 5226011b-edfe-4c4b-b540-d3bbae21fe8c/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-15-18.png
+│   │   │   ├── 5518addc-6057-40a4-8f13-dda9f260d043/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-24-49.png
+│   │   │   ├── 574f998f-ac67-469e-8fa3-c97a9b53afbd/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-25-40.png
+│   │   │   ├── 59956f44-528c-4d16-a0b3-310b4d1c8064/
+│   │   │   │   └── Mahmoud-Khedr-CV.docx
+│   │   │   ├── 5b35bdbc-c564-4909-81dd-817af7dfd7aa/
+│   │   │   │   └── Screenshot_From_2026-04-13_23-01-07.png
+│   │   │   ├── 5c6501fa-b1fe-4ca2-ba88-2729a73b1005/
+│   │   │   │   └── Screenshot_From_2026-04-11_23-58-21.png
+│   │   │   ├── 5ef8f5dc-a038-4450-877c-b93e003bcfd6/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-02-13.png
+│   │   │   ├── 5f4599c8-7f85-4370-82c4-4b9f3dd267a8/
+│   │   │   │   └── Mahmoud-Khedr-CV.docx.pdf
+│   │   │   ├── 5f47f7ab-7246-43a0-82e6-9e6fae576702/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-25-40.png
+│   │   │   ├── 62fd422a-eae9-4303-8e76-adaa1f7876d9/
+│   │   │   │   └── Screenshot_From_2026-05-01_16-53-33.png
+│   │   │   ├── 638b527b-4b79-491e-a738-d7ce0b29b381/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-31.png
+│   │   │   ├── 68c551b1-63a5-4f69-8415-44efa06bd5ff/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-24-49.png
+│   │   │   ├── 691a2866-6d4f-472b-976e-20dae723ddc9/
+│   │   │   │   └── Databases-report.docx
+│   │   │   ├── 6cfdf348-da72-4147-9271-8b8ca267c4f0/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-15-16.png
+│   │   │   ├── 6d563b0e-f41e-4777-89a6-6886c72bdd90/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-59-34.png
+│   │   │   ├── 6ea4291e-1eda-4f01-b72d-146946cc57c0/
+│   │   │   │   ├── preview.pdf
+│   │   │   │   └── Training_1_Table_of_Contents.docx
+│   │   │   ├── 780ebad1-d162-4e50-976d-04f0bb83d097/
+│   │   │   │   └── Screenshot_From_2026-04-13_23-01-07.png
+│   │   │   ├── 793200cd-9675-4909-baac-f93a2a7b5103/
+│   │   │   │   └── Screenshot_From_2026-04-13_23-01-07.png
+│   │   │   ├── 871de75a-369b-40fe-bcae-6b3385330d39/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-00-24.png
+│   │   │   ├── 873b9d17-71fc-47bf-87cb-4a5460f73ed2/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-31.png
+│   │   │   ├── 87e64a5b-b436-43eb-8bb1-76b19612b4cd/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-31.png
+│   │   │   ├── 8b4ce68f-fccf-4a6b-833b-7b70397f3e21/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-20-49.png
+│   │   │   ├── 8d31a7a7-c85d-4a69-ba44-a1d4f7811a0e/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-15-16.png
+│   │   │   ├── 90dd2630-8d43-4f27-9567-f555e8036b2d/
+│   │   │   │   └── Screenshot_From_2026-04-11_23-58-21.png
+│   │   │   ├── 95bdd4c9-6290-4c77-aaeb-efcc59cfcf1e/
+│   │   │   │   └── Screenshot_From_2026-04-13_23-01-07.png
+│   │   │   ├── 9884bca4-dbeb-4b7f-9f1d-014aa2f112ff/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-24-49.png
+│   │   │   ├── 9934b238-4082-47d5-bd20-4df179d3cae3/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-15-18.png
+│   │   │   ├── 9bc3757a-2a87-481c-9d98-d376f542ed2f/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-20-49.png
+│   │   │   ├── 9cb97ae3-ab44-4cf3-8e1f-88dbb98a50fe/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-19-42.png
+│   │   │   ├── 9cfd992e-cd20-4f8c-bb28-020aae83e14e/
+│   │   │   │   └── Screenshot_From_2026-04-13_23-01-07.png
+│   │   │   ├── 9d7c2943-1bbc-46ec-93ad-37be78ba7a2b/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-20-49.png
+│   │   │   ├── 9f3883e1-60d1-4498-9fcb-9566c97612ed/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-25-40.png
+│   │   │   ├── a19ade06-669a-4c82-aaee-4f7cf76365d2/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-24-49.png
+│   │   │   ├── a4f6482e-379f-46cd-9dbf-c8fd0529ebe9/
+│   │   │   │   └── Screenshot_From_2026-04-11_23-58-46.png
+│   │   │   ├── a700c1fe-81c1-4cba-b358-4a7071bfcb16/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-47.png
+│   │   │   ├── a95ca6a6-e0f2-416c-b851-d3fcb5910eeb/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-30-39.png
+│   │   │   ├── a9e23aee-922c-4ed8-8535-0284ee91ed7d/
+│   │   │   │   └── Screenshot_From_2026-04-13_22-47-46.png
+│   │   │   ├── aab77468-d726-4982-bdd8-58e9fc76d59b/
+│   │   │   │   └── Screenshot_From_2026-04-14_02-26-45.png
+│   │   │   ├── ab43a7c6-5ca4-438a-8d4b-8626d2995941/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-19-28.png
+│   │   │   ├── ab65ff58-beb8-4f34-96b2-ce11458b7f9a/
+│   │   │   │   └── Screenshot_From_2026-05-01_16-56-42.png
+│   │   │   ├── ad893458-e8de-4ae6-88ef-04c326a1442a/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-20-49.png
+│   │   │   ├── aee3d3b7-9e3d-4e98-9f19-f8052815f213/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-25-40.png
+│   │   │   ├── b2126ec8-1604-421a-871c-593c0a8e9e1e/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-19-28.png
+│   │   │   ├── b260d38d-6da3-49cf-ba0d-2422aee2e400/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-31.png
+│   │   │   ├── ba9cb614-4bd6-4438-b102-04a7074c81f0/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-30-39.png
+│   │   │   ├── bb1b7787-98fa-43ff-8bd2-dd58ea21b164/
+│   │   │   │   └── 2025_state_of_ai_assisted_software_development.pdf
+│   │   │   ├── bc203243-dca7-4a0c-9456-8803975f2042/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-20-49.png
+│   │   │   ├── bd9abcdc-f41d-46ee-a98b-2f422721314c/
+│   │   │   │   └── Screenshot_From_2026-04-12_15-02-09.png
+│   │   │   ├── bf7fcf25-1f18-4c7b-8626-ff01df44e256/
+│   │   │   │   └── Screenshot_From_2026-04-12_15-02-09.png
+│   │   │   ├── c02799ed-ff93-4c54-9a09-fb0537c1b314/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-02-13.png
+│   │   │   ├── c70dda0f-6c80-439d-916f-62766746928d/
+│   │   │   │   └── 1748365384555.jpg
+│   │   │   ├── cacb91f9-78f7-4b26-8e51-05f67b08f00d/
+│   │   │   │   └── Screenshot_From_2026-05-01_00-54-03.png
+│   │   │   ├── ccac84a8-efc1-424d-9310-64566c04123a/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-24-49.png
+│   │   │   ├── cd150dfa-5410-403e-99ef-3738292db324/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-19-37.png
+│   │   │   ├── cd1aefd0-bdba-44ee-a356-e585618e071e/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-19-28.png
+│   │   │   ├── cd94936c-0bdb-475d-87c5-a37815c48be0/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-47.png
+│   │   │   ├── d0170fe7-9205-4a7a-a275-1d46685d0284/
+│   │   │   │   └── Screenshot_From_2026-04-14_00-59-38.png
+│   │   │   ├── d0af22b6-117f-47d5-9e12-ac853b5d4fcc/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-31.png
+│   │   │   ├── d28de85d-fefa-4323-9512-d2dc742f8008/
+│   │   │   │   └── Screenshot_From_2026-04-14_02-26-45.png
+│   │   │   ├── d3384976-f460-4c55-bd26-a0a8d0069c37/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-25-40.png
+│   │   │   ├── d6cbfde6-ebec-4ffd-99b2-799e2b1be57d/
+│   │   │   │   └── Screenshot_From_2026-04-14_02-26-45.png
+│   │   │   ├── d7940d4e-2fd2-4cea-9e8f-891341f32e8d/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-19-28.png
+│   │   │   ├── d8261974-c923-4ad5-8b22-48fc64183fbe/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-15-18.png
+│   │   │   ├── d91d8864-8ded-4cfc-87c4-8bc0a0ee9466/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-47.png
+│   │   │   ├── dc983513-e542-4a31-a8e9-4299e2adf9c0/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-30-39.png
+│   │   │   ├── df923d00-1374-4df3-bf07-66666f42445e/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-15-18.png
+│   │   │   ├── dfa981d6-3482-4fe8-802e-c81b160e480f/
+│   │   │   │   └── Screenshot_From_2026-04-11_23-58-46.png
+│   │   │   ├── e0d4dc52-feb4-486d-8f28-596972662668/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-20-49.png
+│   │   │   ├── e1ff8c77-0131-429a-92ea-f85c0bce908a/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-00-24.png
+│   │   │   ├── e92b5267-87a5-47d3-9d08-b5fbe05d4724/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-25-40.png
+│   │   │   ├── e95ee549-384a-458c-8c22-e433c0eaffe7/
+│   │   │   │   └── Screenshot_From_2026-04-13_22-47-46.png
+│   │   │   ├── ea724131-9208-4f1b-9923-a758e4ee11ff/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-00-24.png
+│   │   │   ├── f7c1e00f-ea49-4240-a0fa-b70114926d63/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-19-28.png
+│   │   │   ├── fa89a750-b954-425b-97bd-49aa0ab50fbb/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-12-52.png
+│   │   │   ├── fc691238-256f-4dca-a899-a1266c4ce3f0/
+│   │   │   │   └── Screenshot_From_2026-04-14_01-15-18.png
+│   │   │   ├── fcfe4d61-9fec-4376-b7f6-c3d6f3742be8/
+│   │   │   │   └── Screenshot_From_2026-04-12_16-34-47.png
+│   │   │   └── fd9a45fd-4d9b-48c7-a50a-1d2cdcbabe74/
+│   │   │       └── Screenshot_From_2026-04-14_01-15-18.png
+│   │   ├── 8f4a6dd5-52b7-4b7c-93e5-2e5285d7009d/
+│   │   │   ├── 0251a474-868b-4da3-a457-1312f3e5a5bd/
+│   │   │   │   └── doc_0251a474.txt
+│   │   │   ├── 0286159e-7346-49dc-bb75-20d8514d7187/
+│   │   │   │   └── doc_0286159e.txt
+│   │   │   ├── 028ccc95-677d-4e98-a1fa-10aa93ddc404/
+│   │   │   │   └── load-test-1777743081818-vu8fk.pdf
+│   │   │   ├── 02db70bf-0d7c-4408-8fc6-a1c46159d4d4/
+│   │   │   │   └── load-test-1777743082452-dcw4d.pdf
+│   │   │   ├── 0512eaab-dd6f-4ff1-a316-6dd55184ef27/
+│   │   │   │   └── doc_0512eaab.txt
+│   │   │   ├── 052058f4-0749-4a4b-a18b-528ad84a30c3/
+│   │   │   │   └── load-test-1777743073832-d2r29.pdf
+│   │   │   ├── 05d05e6f-7b1b-4de2-9632-21c7d8feb0b7/
+│   │   │   │   └── doc_05d05e6f.txt
+│   │   │   ├── 068bd72b-1412-4819-b625-ae15dc691e1d/
+│   │   │   │   └── doc_068bd72b.txt
+│   │   │   ├── 06ae2ad7-635c-4414-987a-fb5b5422b6b0/
+│   │   │   │   └── load-test-1777743088541-fei7z.pdf
+│   │   │   ├── 07403ea7-0820-4bf1-a38a-b28e00dd4cc7/
+│   │   │   │   └── load-test-1777743063521-1pa78.pdf
+│   │   │   ├── 0768b149-a639-45fc-9fee-c614a74af930/
+│   │   │   │   └── load-test-1777743046012-08zrt.pdf
+│   │   │   ├── 079abfdf-5a9c-4162-b1e5-896794ec9a79/
+│   │   │   │   └── load-test-1777743085881-hf99r.pdf
+│   │   │   ├── 07da44b6-4f00-450d-99e2-e723a361efbb/
+│   │   │   │   └── load-test-1777743051334-bngeu.pdf
+│   │   │   ├── 07f16492-ffb6-40b0-b962-8fb4060e51b1/
+│   │   │   │   └── doc_07f16492.txt
+│   │   │   ├── 08fee034-25ce-4966-afb1-8028315ed59e/
+│   │   │   │   └── doc_08fee034.txt
+│   │   │   ├── 0a1b2a76-9052-47d6-88b9-a581101d174f/
+│   │   │   │   └── doc_0a1b2a76.txt
+│   │   │   ├── 0ab6411f-a138-4f23-adfd-8e6db1f5dad8/
+│   │   │   │   └── doc_0ab6411f.txt
+│   │   │   ├── 0baea857-30d5-4fec-b693-e0b33542e3c5/
+│   │   │   │   └── doc_0baea857.txt
+│   │   │   ├── 0bc71277-3750-4952-adf7-5b6ebf5a1d1e/
+│   │   │   │   └── load-test-1777743025549-1nfw6.pdf
+│   │   │   ├── 0e8fb4ca-fe79-4a52-9c75-e58154ea6092/
+│   │   │   │   └── load-test-1777743073685-fki0d.pdf
+│   │   │   ├── 0ee7d5c7-2eec-4ab1-9219-e26e79e80e8c/
+│   │   │   │   └── load-test-1777743072442-c1znw.pdf
+│   │   │   ├── 0f750b5a-d594-4327-8acc-ca530535ed65/
+│   │   │   │   └── load-test-1777743060536-oqwvz.pdf
+│   │   │   ├── 0fe22e84-cc96-4f0a-97a6-c0dd234bdd62/
+│   │   │   │   └── doc_0fe22e84.txt
+│   │   │   ├── 10916657-4245-4552-9961-e5143bc0f29b/
+│   │   │   │   └── load-test-1777743029615-4v5zt.pdf
+│   │   │   ├── 1124e20d-0fab-4716-9723-c2f2babeda92/
+│   │   │   │   └── doc_1124e20d.txt
+│   │   │   ├── 11320e00-0a96-417b-88fa-3954f5959bf3/
+│   │   │   │   └── doc_11320e00.txt
+│   │   │   ├── 12607345-7820-4208-8147-d63558b7c757/
+│   │   │   │   └── doc_12607345.txt
+│   │   │   ├── 12900a38-63aa-4530-9b44-bb098c1ae045/
+│   │   │   │   └── doc_12900a38.txt
+│   │   │   ├── 1304b307-ee11-46c8-b439-89c48ba9cde5/
+│   │   │   │   └── load-test-1777743062142-1dhgw.pdf
+│   │   │   ├── 13a4d36e-21f7-4060-bf19-83e7fb5bcbc2/
+│   │   │   │   └── doc_13a4d36e.txt
+│   │   │   ├── 14688035-94bc-479c-9350-c5d47aef4046/
+│   │   │   │   └── load-test-1777743055405-86lur.pdf
+│   │   │   ├── 1468b945-f38f-48e2-bacd-3888187a83dd/
+│   │   │   │   └── load-test-1777743045873-nvli0.pdf
+│   │   │   ├── 14cfcbf2-e2ef-4316-9031-8fda8367c455/
+│   │   │   │   └── doc_14cfcbf2.txt
+│   │   │   ├── 14e172be-a6bb-4e30-9e4c-f6dae950eb5b/
+│   │   │   │   └── doc_14e172be.txt
+│   │   │   ├── 151a9b1a-d9db-4f94-9aaa-8bd1326792ea/
+│   │   │   │   └── doc_151a9b1a.txt
+│   │   │   ├── 15de2c33-06d3-4067-b87b-2b642b15e31a/
+│   │   │   │   └── load-test-1777743082903-n3u76.pdf
+│   │   │   ├── 15e7b1cb-14e1-48e3-ad95-9bacca959dea/
+│   │   │   │   └── load-test-1777743067737-jg86u.pdf
+│   │   │   ├── 161b6da3-331b-436b-95ed-b4be40bc9c7d/
+│   │   │   │   └── doc_161b6da3.txt
+│   │   │   ├── 170a95c9-d9fd-442e-9800-f0e1d2021083/
+│   │   │   │   └── load-test-1777743035713-sayll.pdf
+│   │   │   ├── 171a2512-ed05-4d53-be7f-c8fc18f440cf/
+│   │   │   │   └── doc_171a2512.txt
+│   │   │   ├── 171e7ba2-7cdc-41ad-8c0a-3474c8fe818c/
+│   │   │   │   └── load-test-1777743080707-l5sjo.pdf
+│   │   │   ├── 1762922e-ea4a-4143-a709-9e945766f275/
+│   │   │   │   └── doc_1762922e.txt
+│   │   │   ├── 183b61ae-4027-4d41-ab49-30d21fb8662c/
+│   │   │   │   └── load-test-1777743023953-i6hc8.pdf
+│   │   │   ├── 18fc8ce6-7b83-4eb4-9e67-06d71c8762ae/
+│   │   │   │   └── load-test-1777743074332-8obwe.pdf
+│   │   │   ├── 19601cbf-fd1c-40be-b503-9146bed17060/
+│   │   │   │   └── scan-20260502-222833.pdf
+│   │   │   ├── 19924d04-34d3-4652-8886-e0f881e0c0ea/
+│   │   │   │   └── load-test-1777743080565-3coxk.pdf
+│   │   │   ├── 19cef921-a492-4be1-90c5-86aa1a1af1d0/
+│   │   │   │   └── doc_19cef921.txt
+│   │   │   ├── 1a2b761a-57d5-4ac9-884b-2f72c625332e/
+│   │   │   │   └── doc_1a2b761a.txt
+│   │   │   ├── 1b162ed2-418b-41f4-a5d2-4ed8641f599e/
+│   │   │   │   └── doc_1b162ed2.txt
+│   │   │   ├── 1b8c2b94-66bc-423e-9cbd-c2628675a28b/
+│   │   │   │   └── doc_1b8c2b94.txt
+│   │   │   ├── 1beaf972-6b9e-456c-9a7d-d1c1d3ec1d37/
+│   │   │   │   └── load-test-1777743055552-n1fsv.pdf
+│   │   │   ├── 1bf6fc50-d4e3-45af-a1b9-68ff96f69c19/
+│   │   │   │   └── doc_1bf6fc50.txt
+│   │   │   ├── 1c5c2400-805f-4827-b4c2-64b450a93e4e/
+│   │   │   │   └── load-test-1777743050379-upgdg.pdf
+│   │   │   ├── 1db46324-ca87-4c2d-8171-285c245df28d/
+│   │   │   │   └── load-test-1777743059466-3j83i.pdf
+│   │   │   ├── 1dd05ea5-b205-4adf-bcde-a5a2ad1d573c/
+│   │   │   │   └── load-test-1777743081355-kswzx.pdf
+│   │   │   ├── 1de9e1ae-e0ea-46e8-b24e-c84ead6f24cf/
+│   │   │   │   └── load-test-1777743079176-cyze3.pdf
+│   │   │   ├── 1e198e47-1f60-48bf-b3fc-b14d94262e0f/
+│   │   │   │   └── doc_1e198e47.txt
+│   │   │   ├── 1e45e31e-978c-49ee-887e-92ebfd894a05/
+│   │   │   │   └── load-test-1777743078038-ovafw.pdf
+│   │   │   ├── 1e83938e-e941-4d0c-9fb7-20e039a97645/
+│   │   │   │   └── doc_1e83938e.txt
+│   │   │   ├── 1e96fc24-db7d-4aa6-8ec0-8b9b5d4cbc4b/
+│   │   │   │   └── load-test-1777743091414-iim2s.pdf
+│   │   │   ├── 206afacc-2925-47af-b248-b4e4868e73db/
+│   │   │   │   └── doc_206afacc.txt
+│   │   │   ├── 216e994d-c1d1-4489-aa37-8c91736f6425/
+│   │   │   │   └── load-test-1777743042577-0h5ep.pdf
+│   │   │   ├── 21b83328-0dc3-42a1-a2f3-ef9121262136/
+│   │   │   │   └── doc_21b83328.txt
+│   │   │   ├── 22219672-7f30-4380-b3a7-3867685fc901/
+│   │   │   │   └── doc_22219672.txt
+│   │   │   ├── 22bbcfda-8381-4a30-8ae2-069aa8ccba8a/
+│   │   │   │   └── doc_22bbcfda.txt
+│   │   │   ├── 22dfba73-7adb-40c2-bde4-06cc50b91237/
+│   │   │   │   └── load-test-1777743066630-do24y.pdf
+│   │   │   ├── 242b9876-9de4-4ea7-8d94-52acee7044e4/
+│   │   │   │   └── load-test-1777743060247-jofcl.pdf
+│   │   │   ├── 24cb4ef3-1aea-4cc1-83ab-92de53a7bdab/
+│   │   │   │   └── load-test-1777743056806-qsnk5.pdf
+│   │   │   ├── 259af792-3f41-4428-b1d7-581b195fd4fa/
+│   │   │   │   └── load-test-1777743061640-um30u.pdf
+│   │   │   ├── 269269c0-02de-4fe3-861b-ae99135a39bf/
+│   │   │   │   └── load-test-1777743080421-fwrfg.pdf
+│   │   │   ├── 275083e3-e52e-4247-8a72-42a9de85e9c6/
+│   │   │   │   └── load-test-1777743069003-9mqrm.pdf
+│   │   │   ├── 27c530cc-f60b-41eb-b5c4-e9970adf858e/
+│   │   │   │   └── load-test-1777743080857-33ak6.pdf
+│   │   │   ├── 28708610-5035-402f-a356-efa104c19777/
+│   │   │   │   └── doc_28708610.txt
+│   │   │   ├── 2943adff-00cc-4ab5-a04c-2d36a7b83d8a/
+│   │   │   │   └── doc_2943adff.txt
+│   │   │   ├── 299bef79-4e00-4d1d-b922-ffee611eae05/
+│   │   │   │   └── load-test-1777743065557-nf6r6.pdf
+│   │   │   ├── 2ab358c3-756e-4094-aa73-8dd4cd2c2912/
+│   │   │   │   └── doc_2ab358c3.txt
+│   │   │   ├── 2b129e60-9144-4a6a-90b0-e5d453410f60/
+│   │   │   │   └── doc_2b129e60.txt
+│   │   │   ├── 2b82134b-cc8f-4e10-83c8-0a0870860fed/
+│   │   │   │   └── doc_2b82134b.txt
+│   │   │   ├── 2c3155e6-ca7d-4a83-b0b9-e2222e4369fd/
+│   │   │   │   └── doc_2c3155e6.txt
+│   │   │   ├── 2cb2a3fa-c60a-43f7-b489-10dcbe982d45/
+│   │   │   │   └── doc_2cb2a3fa.txt
+│   │   │   ├── 2db5feac-3217-412a-8384-3d30a95c0df5/
+│   │   │   │   └── load-test-1777743069770-bxs13.pdf
+│   │   │   ├── 2f3d826d-cb11-4638-a5d0-503ee58e40c6/
+│   │   │   │   └── doc_2f3d826d.txt
+│   │   │   ├── 2f86b949-5bdc-4648-85c7-8d5374c071fb/
+│   │   │   │   └── load-test-1777743070269-7rvk0.pdf
+│   │   │   ├── 2f916761-dd4e-4c2a-8f37-d1ca4e4a0a27/
+│   │   │   │   └── load-test-1777743049302-xh32m.pdf
+│   │   │   ├── 308ae582-9241-47c9-a30c-a27ef968bc9f/
+│   │   │   │   └── load-test-1777743044284-7j5df.pdf
+│   │   │   ├── 30d1cafd-1435-4ba8-85ca-cf3f855d033c/
+│   │   │   │   └── scan-20260502-222841.pdf
+│   │   │   ├── 320aa209-57d4-45a8-ba70-607dbb2b3e4d/
+│   │   │   │   └── doc_320aa209.txt
+│   │   │   ├── 3288c3ce-d49d-44e4-a090-856caf99cfba/
+│   │   │   │   └── load-test-1777743048347-v6o1z.pdf
+│   │   │   ├── 32927f0b-0ab2-4fd1-8dca-4a957b428c13/
+│   │   │   │   ├── preview.pdf
+│   │   │   │   └── Software_Project_Management_Sheet7.docx
+│   │   │   ├── 329e5d1d-9c97-4cc2-8fc7-9b916579e3dd/
+│   │   │   │   └── load-test-1777743093998-ow0je.pdf
+│   │   │   ├── 34ec6dc3-e34a-4551-8274-fb1f5342f41a/
+│   │   │   │   └── load-test-1777743084133-5lmtu.pdf
+│   │   │   ├── 34f89490-23b0-4a48-b572-f36e11d2a307/
+│   │   │   │   └── doc_34f89490.txt
+│   │   │   ├── 354b6b53-3c12-4432-a58a-83135b66848f/
+│   │   │   │   └── doc_354b6b53.txt
+│   │   │   ├── 35785e88-6051-4bf7-8fc0-263e5b2e23d9/
+│   │   │   │   └── doc_35785e88.txt
+│   │   │   ├── 36f7da8e-21de-42f8-90cd-9f3d442269ff/
+│   │   │   │   └── load-test-1777743067129-pet96.pdf
+│   │   │   ├── 37764985-514f-4238-b8e0-03745c23a9f7/
+│   │   │   │   └── doc_37764985.txt
+│   │   │   ├── 383d2123-b3d7-4f3c-8427-e8c7132755d6/
+│   │   │   │   └── load-test-1777743021921-phvs0.pdf
+│   │   │   ├── 3896faf3-e70b-4334-b39e-c24235eed723/
+│   │   │   │   └── doc_3896faf3.txt
+│   │   │   ├── 397817e3-9ed0-4afb-af41-649a5bb73873/
+│   │   │   │   └── doc_397817e3.txt
+│   │   │   ├── 39ae3965-a6c3-4eef-8c64-eddaf1a2d30f/
+│   │   │   │   └── load-test-1777743043842-s91eo.pdf
+│   │   │   ├── 39f58d8b-5876-409a-bb6f-1e7a369001d5/
+│   │   │   │   └── load-test-1777743072301-1ujhm.pdf
+│   │   │   ├── 3a48b802-df87-4418-9d02-97033e57c226/
+│   │   │   │   └── doc_3a48b802.txt
+│   │   │   ├── 3a52c2f5-2a91-45a1-8bc0-94eefc55698d/
+│   │   │   │   └── doc_3a52c2f5.txt
+│   │   │   ├── 3a640e96-3c25-4dea-abb2-80f70e76d115/
+│   │   │   │   └── load-test-1777743068519-ihjyh.pdf
+│   │   │   ├── 3bd65ad0-7190-4ef5-9c78-de3c50970ea7/
+│   │   │   │   └── doc_3bd65ad0.txt
+│   │   │   ├── 3d9eff69-6903-4d68-b9aa-53a8111e962d/
+│   │   │   │   └── doc_3d9eff69.txt
+│   │   │   ├── 3f255746-ecaf-44d2-b10f-c185e2cb4fdf/
+│   │   │   │   └── load-test-1777743088051-laczk.pdf
+│   │   │   ├── 4004c042-f7b1-4047-870e-1045be80fd56/
+│   │   │   │   └── doc_4004c042.txt
+│   │   │   ├── 4076e322-4c07-4ac4-b6f7-fbd336e65822/
+│   │   │   │   └── doc_4076e322.txt
+│   │   │   ├── 43f6c05f-0c84-4e41-ad80-7db17e117514/
+│   │   │   │   └── doc_43f6c05f.txt
+│   │   │   ├── 4525e4ce-6869-4ff4-b860-d275301a35d5/
+│   │   │   │   └── doc_4525e4ce.txt
+│   │   │   ├── 45c0a565-9ea6-447d-ba70-4cb1bc7b3e13/
+│   │   │   │   └── doc_45c0a565.txt
+│   │   │   ├── 466ff4f7-b88f-405a-b8ed-43710eb327cf/
+│   │   │   │   └── doc_466ff4f7.txt
+│   │   │   ├── 4698227b-349e-4b2b-a37c-a6191f275653/
+│   │   │   │   └── load-test-1777743076009-t5ga8.pdf
+│   │   │   ├── 469a1369-06ce-47ba-b742-334ec78aee88/
+│   │   │   │   └── load-test-1777743086960-e5mvy.pdf
+│   │   │   ├── 4a037a5f-3247-488f-a468-2f85f8442b49/
+│   │   │   │   └── doc_4a037a5f.txt
+│   │   │   ├── 4a079361-696c-418a-a106-b7fd3747b354/
+│   │   │   │   └── load-test-1777743075112-nd42b.pdf
+│   │   │   ├── 4a7a200d-00a6-4030-9992-00976a8d5f3b/
+│   │   │   │   └── doc_4a7a200d.txt
+│   │   │   ├── 4a94d9b0-8b41-4e37-8a9c-99e944d778dd/
+│   │   │   │   └── load-test-1777743054155-6h0sx.pdf
+│   │   │   ├── 4cfeba84-1dbf-40c3-beec-08badc495383/
+│   │   │   │   └── load-test-1777743060878-69qb9.pdf
+│   │   │   ├── 4d0451ab-02ac-4eba-b99d-79276f18d571/
+│   │   │   │   └── doc_4d0451ab.txt
+│   │   │   ├── 4d1b1ca1-b58f-4249-aa32-8af8ae1a34f4/
+│   │   │   │   └── doc_4d1b1ca1.txt
+│   │   │   ├── 4d54b445-c0f7-4a99-98ae-4994fa36b236/
+│   │   │   │   └── load-test-1777743045243-58pwi.pdf
+│   │   │   ├── 4e12cae6-8f4d-4b64-bfcf-5ed626372895/
+│   │   │   │   └── load-test-1777743074764-r1z8l.pdf
+│   │   │   ├── 4e492bd0-e335-4a06-bf79-9e84bbb12172/
+│   │   │   │   └── load-test-1777743048671-f418b.pdf
+│   │   │   ├── 4f356190-cda0-4f38-b45e-ff749f181a41/
+│   │   │   │   └── load-test-1777743083994-wjc8h.pdf
+│   │   │   ├── 506d59c5-e996-404b-b8ee-267ccb4602b9/
+│   │   │   │   └── load-test-1777743056042-2migd.pdf
+│   │   │   ├── 508cef79-3b55-48b5-a213-ce2f58fa8eff/
+│   │   │   │   └── load-test-1777743049935-au5y4.pdf
+│   │   │   ├── 50bf10a6-019b-49f0-b93b-249cb74fbf9e/
+│   │   │   │   └── load-test-1777743091024-3pjzh.pdf
+│   │   │   ├── 51135d4b-d306-4e1d-b81c-ada35220a219/
+│   │   │   │   └── doc_51135d4b.txt
+│   │   │   ├── 52142d76-b2d5-4013-8dac-b5f241c8eac7/
+│   │   │   │   └── doc_52142d76.txt
+│   │   │   ├── 524491b6-9607-4d9e-9b32-0d191cee5e4a/
+│   │   │   │   └── load-test-1777743064304-3u0hs.pdf
+│   │   │   ├── 527d2f2a-cbb3-4095-ac06-c4e281f783a1/
+│   │   │   │   └── load-test-1777743071039-1bfka.pdf
+│   │   │   ├── 52a28007-7da2-4706-9d6e-cb8fe7e05b59/
+│   │   │   │   └── doc_52a28007.txt
+│   │   │   ├── 52be015e-7744-4aa8-8b22-bf78225ed023/
+│   │   │   │   └── load-test-1777743078534-fdu6k.pdf
+│   │   │   ├── 53861f6b-4297-4c2c-b1ec-ab6ee0cf8335/
+│   │   │   │   └── load-test-1777743058508-auee8.pdf
+│   │   │   ├── 54799261-78d4-4174-9d12-a2967370fe96/
+│   │   │   │   └── doc_54799261.txt
+│   │   │   ├── 55402671-24c0-4cd0-8395-93bcb7683845/
+│   │   │   │   └── load-test-1777743070411-d2bpe.pdf
+│   │   │   ├── 5605316d-60de-4dc7-a7ec-9e4991c5a199/
+│   │   │   │   └── doc_5605316d.txt
+│   │   │   ├── 56baa701-a6b6-4c5e-b1cf-0b82492daaac/
+│   │   │   │   └── load-test-1777743058837-jmed8.pdf
+│   │   │   ├── 57b71ce5-54a9-4491-a420-a2f9a6d20380/
+│   │   │   │   └── load-test-1777743058074-9jbtk.pdf
+│   │   │   ├── 591423a4-0753-4118-ba75-04debb0f76af/
+│   │   │   │   └── load-test-1777743064600-1otk1.pdf
+│   │   │   ├── 596b99ae-526c-4f22-ac0b-5c5d803bb76e/
+│   │   │   │   └── doc_596b99ae.txt
+│   │   │   ├── 598d09dd-b8e1-4534-8703-fded928913c7/
+│   │   │   │   └── load-test-1777743037117-af8g0.pdf
+│   │   │   ├── 5ae4b995-8f9c-4a41-b155-56f7710b06a5/
+│   │   │   │   └── scan-20260502-222903.pdf
+│   │   │   ├── 5b5130dd-a6e5-4821-963c-2538d4391a9a/
+│   │   │   │   └── load-test-1777743090080-i6b11.pdf
+│   │   │   ├── 5b7ce156-4336-4d60-afcc-8df98566693a/
+│   │   │   │   └── load-test-1777743097117-lpwi7.pdf
+│   │   │   ├── 5bd0976b-74a6-48d4-a2b6-74adf6eded69/
+│   │   │   │   └── doc_5bd0976b.txt
+│   │   │   ├── 5be99898-e8e4-415d-89a9-258dc35034ed/
+│   │   │   │   └── doc_5be99898.txt
+│   │   │   ├── 5bf8f82b-3795-48f2-b468-0be95e31046f/
+│   │   │   │   └── doc_5bf8f82b.txt
+│   │   │   ├── 5c5903f0-2d3d-4c1c-9cd2-bead7a6ef061/
+│   │   │   │   └── load-test-1777743017849-rjcwz.pdf
+│   │   │   ├── 5d42c88e-8535-489d-a89e-8f1ea8f54a9f/
+│   │   │   │   └── doc_5d42c88e.txt
+│   │   │   ├── 5e350f8c-65e2-4d90-8943-b8e5e152d65f/
+│   │   │   │   └── load-test-1777743051966-uugno.pdf
+│   │   │   ├── 5e81fe1f-cdaf-49d6-b1bf-7a0e8b4b2e09/
+│   │   │   │   └── load-test-1777743075248-ouhyc.pdf
+│   │   │   ├── 5e8884f9-e538-439d-b5a0-a7c658a7a8bc/
+│   │   │   │   └── load-test-1777743011746-tlneh.pdf
+│   │   │   ├── 5f617bb0-140f-4989-ac89-93fc787fb3ff/
+│   │   │   │   └── load-test-1777743054004-87kmi.pdf
+│   │   │   ├── 5f6c4830-7fc6-4a2b-ad0a-27a6f76257d5/
+│   │   │   │   └── load-test-1777743062277-ijku1.pdf
+│   │   │   ├── 5fa74c77-8a7a-4d37-9dfa-96ba1db664b3/
+│   │   │   │   └── load-test-1777743082102-0hw7t.pdf
+│   │   │   ├── 608f8f21-99a8-46bf-92cc-f871df9877e7/
+│   │   │   │   └── doc_608f8f21.txt
+│   │   │   ├── 6098e322-fe6e-4100-91b1-8edb1e0d2cff/
+│   │   │   │   └── load-test-1777743028975-lbsw2.pdf
+│   │   │   ├── 60f5e0f3-0ffd-49c5-b803-0318b047c9cd/
+│   │   │   │   └── load-test-1777743040539-bq2n6.pdf
+│   │   │   ├── 612f697c-33a2-491a-9fbd-14de186b88fd/
+│   │   │   │   └── doc_612f697c.txt
+│   │   │   ├── 61f1bc48-4a41-4377-92d3-c10d0e0272c6/
+│   │   │   │   └── load-test-1777743092752-ex0xw.pdf
+│   │   │   ├── 62141c7e-3375-4033-a096-611b5538075f/
+│   │   │   │   └── doc_62141c7e.txt
+│   │   │   ├── 62c1dc2b-8ae6-4a76-a39a-35c19a5e8e7a/
+│   │   │   │   └── doc_62c1dc2b.txt
+│   │   │   ├── 63085374-cff8-4d3e-b7e1-2163e2b25990/
+│   │   │   │   └── doc_63085374.txt
+│   │   │   ├── 638b339b-1ab2-42de-b46e-ba0e91642396/
+│   │   │   │   └── doc_638b339b.txt
+│   │   │   ├── 642ee1f4-458f-401d-b614-d9f83478115c/
+│   │   │   │   └── doc_642ee1f4.txt
+│   │   │   ├── 6469ee6f-07fe-488d-99c3-d7f70260557e/
+│   │   │   │   └── doc_6469ee6f.txt
+│   │   │   ├── 65fb0499-4eff-4b5d-9019-c28b54c9f827/
+│   │   │   │   └── doc_65fb0499.txt
+│   │   │   ├── 66f96f36-38d3-4fbd-828b-d97e38d2ef73/
+│   │   │   │   └── load-test-1777743084934-idjtf.pdf
+│   │   │   ├── 67265e50-9274-403e-8542-e85b61b0b179/
+│   │   │   │   └── load-test-1777743090572-svnyu.pdf
+│   │   │   ├── 67ae89c8-18a1-405b-92d5-0542ce4fa13b/
+│   │   │   │   └── load-test-1777743074614-5anyp.pdf
+│   │   │   ├── 67e7e596-edc6-439d-8e80-74a208d2ce8d/
+│   │   │   │   └── load-test-1777743058222-ya9xg.pdf
+│   │   │   ├── 68d00a22-9c23-412c-afa0-d2fb730e7dac/
+│   │   │   │   └── load-test-1777743050080-4lwfk.pdf
+│   │   │   ├── 691edbeb-ca92-45c3-8963-704c64f1d019/
+│   │   │   │   └── load-test-1777743036152-4nm5n.pdf
+│   │   │   ├── 697840e8-fb39-4e08-b2fd-ec0e45d2277a/
+│   │   │   │   └── doc_697840e8.txt
+│   │   │   ├── 6a1a3303-3791-4843-9a88-85cc89ac86ff/
+│   │   │   │   └── doc_6a1a3303.txt
+│   │   │   ├── 6a2939ce-5b70-46d9-9bf9-53856ce1c115/
+│   │   │   │   └── doc_6a2939ce.txt
+│   │   │   ├── 6afdb297-5fda-4205-aa33-cf59390d1050/
+│   │   │   │   └── load-test-1777743099148-3pcyq.pdf
+│   │   │   ├── 6b9d9d6e-882a-4217-a472-725a257bc814/
+│   │   │   │   └── doc_6b9d9d6e.txt
+│   │   │   ├── 6bafa441-3692-4936-bead-d8813f876768/
+│   │   │   │   └── load-test-1777743095085-ze6pb.pdf
+│   │   │   ├── 6bcdead4-2d0e-4f77-a015-52447c24256d/
+│   │   │   │   └── doc_6bcdead4.txt
+│   │   │   ├── 6de66319-2922-45d4-b76f-c974c49dc21f/
+│   │   │   │   └── doc_6de66319.txt
+│   │   │   ├── 6decdb2a-5c48-4cb3-9234-aed8061e046a/
+│   │   │   │   └── doc_6decdb2a.txt
+│   │   │   ├── 6e4c708e-37d6-4e8f-84c2-8e255ab9a275/
+│   │   │   │   └── load-test-1777743044609-udxf3.pdf
+│   │   │   ├── 6faeab98-8dfc-4fc3-97fb-ff7e3596f070/
+│   │   │   │   └── doc_6faeab98.txt
+│   │   │   ├── 6fd227ce-183d-4760-bc2e-49ac9be6bdda/
+│   │   │   │   └── Ch4_CacheMemory__1_.pdf
+│   │   │   ├── 6fff6460-c2a1-4cc9-ae80-39ad4b50bed5/
+│   │   │   │   └── load-test-1777743079786-59556.pdf
+│   │   │   ├── 70092e3b-7905-45cf-91dd-fdecb60f7b3d/
+│   │   │   │   └── load-test-1777743075868-7dwpe.pdf
+│   │   │   ├── 706e7c54-2a10-44e4-8e61-d259070a9867/
+│   │   │   │   └── load-test-1777743064940-kqfl7.pdf
+│   │   │   ├── 70ba657c-f7df-4869-a724-3423ac83d2b3/
+│   │   │   │   └── doc_70ba657c.txt
+│   │   │   ├── 7172a86b-758a-47b2-a5e9-dac759f236ba/
+│   │   │   │   └── doc_7172a86b.txt
+│   │   │   ├── 71ba2b8e-3ef2-4b07-aeb7-46cf8aa42f52/
+│   │   │   │   └── load-test-1777743077291-jykij.pdf
+│   │   │   ├── 72e5cb7e-0cd6-4127-8bab-52fc2e51eadc/
+│   │   │   │   └── load-test-1777743077895-jy2y9.pdf
+│   │   │   ├── 72f33b3a-7455-492b-bad3-4185e841e7b1/
+│   │   │   │   └── load-test-1777743088690-4of4h.pdf
+│   │   │   ├── 746af372-84a7-4a35-8125-2584f35efa18/
+│   │   │   │   └── load-test-1777743092612-jnl0v.pdf
+│   │   │   ├── 749130ef-7cbb-4f9f-8deb-e67c13572a22/
+│   │   │   │   └── load-test-1777743096032-4wovb.pdf
+│   │   │   ├── 74baac04-178d-471f-815e-ee533dfbf9c6/
+│   │   │   │   └── load-test-1777743089471-wngmu.pdf
+│   │   │   ├── 754f41d2-2c3f-40d3-8559-11efeb05eaef/
+│   │   │   │   └── load-test-1777743063067-2gmlh.pdf
+│   │   │   ├── 75ea991f-e8fe-415f-bbda-4c15e7e41476/
+│   │   │   │   └── load-test-1777743047905-nk9t6.pdf
+│   │   │   ├── 768f30d2-c0f1-4858-a4f7-4cc91e08ffc9/
+│   │   │   │   └── load-test-1777743003547-72c3o.pdf
+│   │   │   ├── 76a837cb-52fe-4ae8-ae92-d8e4fdef3a4c/
+│   │   │   │   └── load-test-1777743036474-47uny.pdf
+│   │   │   ├── 77034693-b0bf-4a20-b9ce-717b25f77aef/
+│   │   │   │   └── doc_77034693.txt
+│   │   │   ├── 777b87d3-cb42-4fbe-9368-144c612480ac/
+│   │   │   │   └── load-test-1777743030053-9ra7y.pdf
+│   │   │   ├── 7791962e-129c-4d86-98cf-25347ca22368/
+│   │   │   │   └── load-test-1777743054772-ku1jz.pdf
+│   │   │   ├── 78e77b84-268d-46e1-8242-8f2354e367c7/
+│   │   │   │   └── doc_78e77b84.txt
+│   │   │   ├── 79364701-ca53-4c0a-b3bd-86e83f80257f/
+│   │   │   │   └── load-test-1777743037747-rxy6i.pdf
+│   │   │   ├── 79e8b37a-9acf-4783-8b1f-3990fbd08aee/
+│   │   │   │   └── doc_79e8b37a.txt
+│   │   │   ├── 7ae9760a-c009-411d-972c-fdf5b12cfde9/
+│   │   │   │   └── doc_7ae9760a.txt
+│   │   │   ├── 7c41f0c4-c2f2-4ed4-ba85-6fa5f140652c/
+│   │   │   │   └── doc_7c41f0c4.txt
+│   │   │   ├── 7d5d0c50-672b-4d6c-a783-5c9db89a8605/
+│   │   │   │   └── doc_7d5d0c50.txt
+│   │   │   ├── 7da269e9-cbc9-4a88-8daf-ba91d000fd49/
+│   │   │   │   └── load-test-1777743079928-i9wtv.pdf
+│   │   │   ├── 7dc3c7e3-8bc7-45cd-b73b-ea2cabb7b228/
+│   │   │   │   └── load-test-1777743072583-qt4bv.pdf
+│   │   │   ├── 7df93c7b-b910-4b12-a488-4ed1ca480063/
+│   │   │   │   └── load-test-1777743033679-m9d5q.pdf
+│   │   │   ├── 7e594401-7984-44bc-88c7-36d826e67cd6/
+│   │   │   │   └── load-test-1777743074473-ls0dd.pdf
+│   │   │   ├── 7ea0b875-1934-46dc-b258-f0ab8ca21b4a/
+│   │   │   │   └── doc_7ea0b875.txt
+│   │   │   ├── 7fbdad45-e3be-467b-b10a-6ffa16e4995c/
+│   │   │   │   └── load-test-1777743062910-wki57.pdf
+│   │   │   ├── 80345652-d9d3-4945-bea9-180dc7f79aa7/
+│   │   │   │   └── doc_80345652.txt
+│   │   │   ├── 809be820-8ddb-405c-951a-c4d42fe50d11/
+│   │   │   │   └── load-test-1777743052118-quyv5.pdf
+│   │   │   ├── 80a154c5-fde8-44a7-b74b-37acc1650fc5/
+│   │   │   │   └── load-test-1777743028021-71xr1.pdf
+│   │   │   ├── 80b7227b-54ab-4717-a7b1-1ca282e6334a/
+│   │   │   │   └── doc_80b7227b.txt
+│   │   │   ├── 82430ba7-a2e3-4aa9-99ca-3f6653203aaa/
+│   │   │   │   └── load-test-1777743073070-dn40d.pdf
+│   │   │   ├── 827506aa-01cb-4bd2-bc7c-964ca4b44f36/
+│   │   │   │   └── doc_827506aa.txt
+│   │   │   ├── 828573cc-fe70-4214-9b12-55a84ca6dcb0/
+│   │   │   │   └── load-test-1777743061037-gw99c.pdf
+│   │   │   ├── 831a4ad4-6885-4fdd-ac52-878953b0ac1f/
+│   │   │   │   └── load-test-1777743065098-ajn0v.pdf
+│   │   │   ├── 846b2895-6a34-4cb9-8bd2-c96e9dcf0e0b/
+│   │   │   │   └── doc_846b2895.txt
+│   │   │   ├── 84c8a52f-a0c6-43c9-a188-b889b236ebea/
+│   │   │   │   └── doc_84c8a52f.txt
+│   │   │   ├── 855d7988-e3cf-4444-b752-9ddf0415a9e6/
+│   │   │   │   └── doc_855d7988.txt
+│   │   │   ├── 8579965b-388e-4b03-a65a-733675adcb17/
+│   │   │   │   └── doc_8579965b.txt
+│   │   │   ├── 85eedfb1-17ab-4ef9-a51e-ad4e3ac95d13/
+│   │   │   │   └── load-test-1777743073974-swcj6.pdf
+│   │   │   ├── 86763c01-0bce-4b22-a2b1-460f1810675b/
+│   │   │   │   └── load-test-1777743073221-elmoa.pdf
+│   │   │   ├── 870cbfdf-043a-42c6-9e74-c675d5ca4134/
+│   │   │   │   └── doc_870cbfdf.txt
+│   │   │   ├── 874f30a2-44c9-4903-9745-ccd73cd4d829/
+│   │   │   │   └── doc_874f30a2.txt
+│   │   │   ├── 8878fb13-c1a3-4e26-acdb-9464e8706ad2/
+│   │   │   │   └── doc_8878fb13.txt
+│   │   │   ├── 88bcec88-8cde-4e3f-a7f0-6b091c96f862/
+│   │   │   │   └── doc_88bcec88.txt
+│   │   │   ├── 895019bf-35e8-44d9-b0ba-b3ce37d3006f/
+│   │   │   │   └── doc_895019bf.txt
+│   │   │   ├── 899549c9-279c-4786-8ecd-8128852659a4/
+│   │   │   │   └── doc_899549c9.txt
+│   │   │   ├── 89add6b6-ab7c-4945-933c-02a8bf04520d/
+│   │   │   │   └── load-test-1777743084486-4ikwe.pdf
+│   │   │   ├── 8a155ba0-f09d-43c2-a710-3c10acbf34bb/
+│   │   │   │   └── load-test-1777743061494-maxpq.pdf
+│   │   │   ├── 8a6ce0ac-ddad-49cb-9398-99b8e868a245/
+│   │   │   │   └── load-test-1777743081209-7cpp8.pdf
+│   │   │   ├── 8ac373b9-5885-4fbc-a325-588747e90123/
+│   │   │   │   └── doc_8ac373b9.txt
+│   │   │   ├── 8b23bf2b-d595-4222-981a-8a60b63e74b6/
+│   │   │   │   └── load-test-1777743096673-nwxph.pdf
+│   │   │   ├── 8c581af1-71a5-46eb-96e5-963a6fd38ad7/
+│   │   │   │   └── doc_8c581af1.txt
+│   │   │   ├── 8d7008fc-eebd-4df4-96ea-312f608ce79b/
+│   │   │   │   └── load-test-1777743098705-7rd74.pdf
+│   │   │   ├── 8d7ab0d3-5b54-4b6c-b889-e4f3fa076cd2/
+│   │   │   │   └── load-test-1777743031016-661l9.pdf
+│   │   │   ├── 8e2122c4-5dd8-4df9-8e5d-b1c65de82dee/
+│   │   │   │   └── load-test-1777743031646-384nb.pdf
+│   │   │   ├── 8f106bc3-b541-4f9b-a545-4711eafa1955/
+│   │   │   │   └── doc_8f106bc3.txt
+│   │   │   ├── 8f14a627-cc82-430e-a9c8-5feaae2ea924/
+│   │   │   │   └── doc_8f14a627.txt
+│   │   │   ├── 91172c82-afc0-4828-9dc8-17ba7db3e4cb/
+│   │   │   │   └── doc_91172c82.txt
+│   │   │   ├── 926c320e-59c6-404a-b1a2-5274c2a2bd28/
+│   │   │   │   └── load-test-1777743071189-fiqeq.pdf
+│   │   │   ├── 92c66e57-bed0-4dd6-8046-2fdc1c772edc/
+│   │   │   │   └── load-test-1777743032086-lpzee.pdf
+│   │   │   ├── 934c666d-1e3c-4b81-8920-ab461a1547ff/
+│   │   │   │   └── doc_934c666d.txt
+│   │   │   ├── 938fec9d-12ad-4984-b8b0-8953a7dc06a0/
+│   │   │   │   └── load-test-1777743066974-m8sft.pdf
+│   │   │   ├── 9426cac5-2311-429f-b32c-3c3cc6d942d8/
+│   │   │   │   └── load-test-1777743087446-gj58o.pdf
+│   │   │   ├── 946c4530-ae81-4a76-b3df-42a6e628a3ca/
+│   │   │   │   └── load-test-1777743053508-h1l7r.pdf
+│   │   │   ├── 949c271f-9387-47bd-a4e7-5b7a5291619f/
+│   │   │   │   └── load-test-1777743085421-2ko3h.pdf
+│   │   │   ├── 94a1c8cd-6dc4-4c51-9159-23fd97f85b26/
+│   │   │   │   └── load-test-1777743048048-whjaz.pdf
+│   │   │   ├── 94aa883b-05a2-42d6-9f52-68e55b3bb2db/
+│   │   │   │   └── doc_94aa883b.txt
+│   │   │   ├── 95bd5e1e-3885-4017-9e6b-5498e0f71fd0/
+│   │   │   │   └── doc_95bd5e1e.txt
+│   │   │   ├── 95e6bf3e-37c7-4238-9f31-be2f7bc4a7ab/
+│   │   │   │   └── load-test-1777743063672-tjf2d.pdf
+│   │   │   ├── 9667d446-2e24-46a9-9a1f-09859210a34b/
+│   │   │   │   └── load-test-1777743087297-8xjn6.pdf
+│   │   │   ├── 972343f0-1450-4cde-9274-621529ebcd2b/
+│   │   │   │   └── load-test-1777743079323-qju7d.pdf
+│   │   │   ├── 9796384a-6bde-4924-aa9a-6af0d5933534/
+│   │   │   │   └── load-test-1777743082738-kt5if.pdf
+│   │   │   ├── 9902399d-1113-4962-856c-4c48fa7e998b/
+│   │   │   │   └── load-test-1777743068377-z1ypd.pdf
+│   │   │   ├── 993ab3c8-ca78-4658-97a8-0f8a58842e64/
+│   │   │   │   └── load-test-1777743080070-kj9wz.pdf
+│   │   │   ├── 9a9e19d8-f073-4e41-9dd4-5346df9760d3/
+│   │   │   │   └── doc_9a9e19d8.txt
+│   │   │   ├── 9ac959bb-4ec4-4ab1-9bb3-b61e39e5b6a0/
+│   │   │   │   └── doc_9ac959bb.txt
+│   │   │   ├── 9ad5a810-7d5c-44c7-b9e5-b7114fb8873c/
+│   │   │   │   └── doc_9ad5a810.txt
+│   │   │   ├── 9c02549d-706d-475e-91aa-20f1034b44df/
+│   │   │   │   └── load-test-1777743051475-l1i8j.pdf
+│   │   │   ├── 9c4b8492-2de7-4d34-9acf-217912f0f2b1/
+│   │   │   │   └── doc_9c4b8492.txt
+│   │   │   ├── 9c71c733-d969-4fca-b049-763a6a9226db/
+│   │   │   │   └── load-test-1777743070699-05es8.pdf
+│   │   │   ├── 9d7d2305-85d8-49b1-ad8e-53fc8d5b3b75/
+│   │   │   │   └── load-test-1777743086026-68zby.pdf
+│   │   │   ├── 9de5221f-c790-4d0d-9426-0c4af8d33b24/
+│   │   │   │   └── load-test-1777743084768-2ok2w.pdf
+│   │   │   ├── 9edbd31f-a71d-4cb1-b2e9-d75f627d4935/
+│   │   │   │   └── load-test-1777743015815-13534.pdf
+│   │   │   ├── 9f27c4d6-98cd-439c-b710-9de0b1f6751d/
+│   │   │   │   └── load-test-1777743033048-gqk8m.pdf
+│   │   │   ├── 9fad29ec-7647-4ff4-8a79-2ba4f930e3cc/
+│   │   │   │   └── doc_9fad29ec.txt
+│   │   │   ├── 9ff8ef78-79cb-48c9-b560-d0703ab4a169/
+│   │   │   │   └── load-test-1777743034120-x4z4i.pdf
+│   │   │   ├── a062b5da-d854-4834-860d-8dc1035fcde2/
+│   │   │   │   └── doc_a062b5da.txt
+│   │   │   ├── a075847e-b9b5-4b01-9f64-044a1f486dce/
+│   │   │   │   └── load-test-1777743053366-9ebxg.pdf
+│   │   │   ├── a260b3e5-32e2-47cd-b5d7-7714e39b1922/
+│   │   │   │   └── doc_a260b3e5.txt
+│   │   │   ├── a45cc7ad-af5c-4bf9-adbb-25f96efb36e7/
+│   │   │   │   └── doc_a45cc7ad.txt
+│   │   │   ├── a497925d-6121-4a19-8d7f-af35d4f656be/
+│   │   │   │   └── load-test-1777743001473-jxhnh.pdf
+│   │   │   ├── a5c53b1c-d03a-4669-b68d-445ec1fbfa01/
+│   │   │   │   └── load-test-1777743013782-a8s1u.pdf
+│   │   │   ├── a7887b38-d045-4cd6-b689-dd41d0137a66/
+│   │   │   │   └── load-test-1777743066474-vo0li.pdf
+│   │   │   ├── a7b86070-de8a-4404-928b-bc93dca3859e/
+│   │   │   │   └── doc_a7b86070.txt
+│   │   │   ├── a7c3686b-dcf0-467b-a0c8-33a05e89351f/
+│   │   │   │   └── doc_a7c3686b.txt
+│   │   │   ├── a85f5370-4384-4800-abf9-5dfcc58232aa/
+│   │   │   │   └── load-test-1777743039148-uj21d.pdf
+│   │   │   ├── a8d6c691-361e-4cc0-bf43-1e62faeac78a/
+│   │   │   │   └── load-test-1777743093445-hx8en.pdf
+│   │   │   ├── a9a816fe-8e91-417f-a2ae-2456abf29b22/
+│   │   │   │   └── doc_a9a816fe.txt
+│   │   │   ├── aa03b86a-449c-46cd-9d5a-94f357be8e96/
+│   │   │   │   └── load-test-1777743021474-zqb7e.pdf
+│   │   │   ├── aa830b6d-25fe-481d-b9ae-2a2f16ed20ac/
+│   │   │   │   └── doc_aa830b6d.txt
+│   │   │   ├── ab2b37b5-78ce-42ed-ba7f-8de5c68c4ebb/
+│   │   │   │   └── load-test-1777743071801-a4gsn.pdf
+│   │   │   ├── abcb5821-bbf7-4790-9d45-75a68161c478/
+│   │   │   │   └── doc_abcb5821.txt
+│   │   │   ├── abd70cb4-f49b-4ef0-80bd-56da85b152d8/
+│   │   │   │   └── load-test-1777743075725-l1zut.pdf
+│   │   │   ├── ac5df5e6-f074-4267-b1f8-1a521cce2742/
+│   │   │   │   └── lec_6________________.pdf
+│   │   │   ├── acc72353-8f0f-46cd-a9ef-95bfd0571500/
+│   │   │   │   └── doc_acc72353.txt
+│   │   │   ├── ad4b6bfc-72ad-45dd-9aab-d9035297e277/
+│   │   │   │   └── doc_ad4b6bfc.txt
+│   │   │   ├── ae31dafc-3a66-4d0a-80bc-54188bcda1df/
+│   │   │   │   └── load-test-1777743054440-wje7a.pdf
+│   │   │   ├── ae6d04b3-2f58-43a1-8ae3-ff5dfa427775/
+│   │   │   │   └── doc_ae6d04b3.txt
+│   │   │   ├── af523598-141a-43da-946e-c51aad07499a/
+│   │   │   │   └── load-test-1777743094643-h12ee.pdf
+│   │   │   ├── af99b1d1-6b4b-4aa3-a4fa-d737c627e057/
+│   │   │   │   └── load-test-1777743085271-nzhh3.pdf
+│   │   │   ├── af9e487c-6eeb-4283-91cc-0c663dc6ff88/
+│   │   │   │   └── load-test-1777743077753-51bx7.pdf
+│   │   │   ├── b0761900-589f-487a-82dc-4aaa74aa3989/
+│   │   │   │   └── doc_b0761900.txt
+│   │   │   ├── b0d3d412-7df9-46f1-9b40-38666c5b2905/
+│   │   │   │   └── load-test-1777743058975-3r4gz.pdf
+│   │   │   ├── b243d60f-0522-4d0c-b727-fa2238fe6113/
+│   │   │   │   └── load-test-1777743078390-a4pan.pdf
+│   │   │   ├── b2b46829-0239-49bd-bcec-5023b628c4bc/
+│   │   │   │   └── load-test-1777743081474-5kl7e.pdf
+│   │   │   ├── b37c305e-faf1-43e9-8989-f200f76a578c/
+│   │   │   │   └── load-test-1777743038508-hzeid.pdf
+│   │   │   ├── b418470a-5445-4631-b510-8a162a436a69/
+│   │   │   │   └── load-test-1777743084633-mi2cd.pdf
+│   │   │   ├── b506aad7-f1db-48e4-8801-987851f0489c/
+│   │   │   │   └── load-test-1777743090722-natzx.pdf
+│   │   │   ├── b58f1f04-9e8d-4fd2-a58d-16aaa591c8e6/
+│   │   │   │   └── load-test-1777743086796-zvl91.pdf
+│   │   │   ├── b591cafc-6664-4ca6-b094-ffa94d57b77b/
+│   │   │   │   └── load-test-1777743052734-py65e.pdf
+│   │   │   ├── b6bbe32d-8820-4ee5-bbcd-24b774e83c7e/
+│   │   │   │   └── scan-20260502-221627.pdf
+│   │   │   ├── b70eb1c6-b82e-4485-841f-9f1e9cf583a4/
+│   │   │   │   └── load-test-1777743076504-8h6f6.pdf
+│   │   │   ├── b808eaa2-5c56-4787-b0b8-d1de60739e6b/
+│   │   │   │   └── scan-20260502-230950.pdf
+│   │   │   ├── b85e2924-d6d6-4b95-98b6-18b9fbfade8e/
+│   │   │   │   └── doc_b85e2924.txt
+│   │   │   ├── ba43039b-9d1c-4a3b-93cf-693cca30197d/
+│   │   │   │   └── load-test-1777743087908-8ndxf.pdf
+│   │   │   ├── bb62f46d-cdd1-47f7-843f-a4b6ca496d7d/
+│   │   │   │   └── load-test-1777743047270-pmo4z.pdf
+│   │   │   ├── bbca5e8e-2336-4351-a00d-f53f6fbc08bc/
+│   │   │   │   └── load-test-1777743093053-nkmgg.pdf
+│   │   │   ├── bc4b5a4d-9085-4c39-afb4-b564bf233523/
+│   │   │   │   └── doc_bc4b5a4d.txt
+│   │   │   ├── bc9ac740-5465-42fa-b212-0ce40fb87ad8/
+│   │   │   │   └── load-test-1777743095471-4eb0s.pdf
+│   │   │   ├── bca01f0c-91c6-4f09-a906-cd70d5b04785/
+│   │   │   │   └── doc_bca01f0c.txt
+│   │   │   ├── bcbcec6b-5ef9-42af-82a5-e3789ecbaf02/
+│   │   │   │   └── load-test-1777743035081-wnvrg.pdf
+│   │   │   ├── bcddeca8-833b-4bce-baf7-10012bf3e507/
+│   │   │   │   └── doc_bcddeca8.txt
+│   │   │   ├── bdd26b8e-2502-4aca-823c-76eb35d89783/
+│   │   │   │   └── load-test-1777743083387-3zorq.pdf
+│   │   │   ├── bec7a78a-7673-47c8-bd07-d9db8e8eda2a/
+│   │   │   │   └── load-test-1777743057584-3zcsk.pdf
+│   │   │   ├── bf07dab2-d0d3-4bf1-ada8-84519e9bc24d/
+│   │   │   │   └── doc_bf07dab2.txt
+│   │   │   ├── bf20813d-c412-4054-a823-ca33002cb7d2/
+│   │   │   │   └── doc_bf20813d.txt
+│   │   │   ├── bfb6eede-8b59-4320-b00e-4fb718ea17a9/
+│   │   │   │   └── doc_bfb6eede.txt
+│   │   │   ├── c0764333-f3ed-421b-ad9e-eb087a965d81/
+│   │   │   │   └── load-test-1777743078674-1ki6y.pdf
+│   │   │   ├── c0db832b-2138-4a2a-8201-8dada6800500/
+│   │   │   │   └── load-test-1777743077145-vykjh.pdf
+│   │   │   ├── c1239d6d-fe48-469f-ae50-cdcb47cb999c/
+│   │   │   │   └── load-test-1777743082601-vjzgw.pdf
+│   │   │   ├── c170a53f-e2dd-4a7e-9529-3b48b257ff55/
+│   │   │   │   └── load-test-1777743042253-mrdto.pdf
+│   │   │   ├── c1a1093c-c05a-4ba5-af5b-88e292168689/
+│   │   │   │   └── load-test-1777743041812-jxokh.pdf
+│   │   │   ├── c1bcc163-f4a1-4ec4-b2d9-4b7359fd0cfd/
+│   │   │   │   └── load-test-1777743068665-8kph0.pdf
+│   │   │   ├── c288d0e1-1c5c-49a0-a4fc-218efab36b39/
+│   │   │   │   └── doc_c288d0e1.txt
+│   │   │   ├── c310a611-8034-41ad-8c51-d7956e5ec316/
+│   │   │   │   └── load-test-1777743089937-29319.pdf
+│   │   │   ├── c362f1bf-c076-4f99-ab95-df6f3976a561/
+│   │   │   │   └── load-test-1777743040223-gbj8b.pdf
+│   │   │   ├── c3829a05-2d8c-452e-9ec3-6f961d5236f6/
+│   │   │   │   └── doc_c3829a05.txt
+│   │   │   ├── c39a0ca4-7c84-4ea9-be60-6c125fb1c1a5/
+│   │   │   │   └── load-test-1777743076796-8t1yq.pdf
+│   │   │   ├── c4c088aa-c77a-4074-b573-e2abfd8e7091/
+│   │   │   │   └── doc_c4c088aa.txt
+│   │   │   ├── c50340d8-0d8a-4f38-b71f-582b43454582/
+│   │   │   │   └── doc_c50340d8.txt
+│   │   │   ├── c5c6dd9b-566c-43c8-9190-357bddda3bd6/
+│   │   │   │   └── load-test-1777743083849-2mt5s.pdf
+│   │   │   ├── c69e9868-be60-4506-a18f-fe972e2c6e65/
+│   │   │   │   └── doc_c69e9868.txt
+│   │   │   ├── c720de82-178d-4660-bd96-442ddd58cfef/
+│   │   │   │   └── doc_c720de82.txt
+│   │   │   ├── c7233be4-716f-4a7d-adef-fc782ea9aca0/
+│   │   │   │   └── doc_c7233be4.txt
+│   │   │   ├── c7549c7a-91c1-444a-92c6-f886e69e722b/
+│   │   │   │   └── load-test-1777743052406-74tft.pdf
+│   │   │   ├── c7ff2fbc-402e-429d-87e1-b2ebfa13de29/
+│   │   │   │   └── load-test-1777743083240-n5lgq.pdf
+│   │   │   ├── c8bbfdda-6e90-4afc-a0b5-ba4a26df9d36/
+│   │   │   │   └── load-test-1777743069157-0axth.pdf
+│   │   │   ├── c8ed3758-32f7-4ad9-a085-ac31ce145734/
+│   │   │   │   └── load-test-1777743076363-zghko.pdf
+│   │   │   ├── c92ca24f-a377-4dd0-80c5-54ae5df57cda/
+│   │   │   │   └── load-test-1777743069624-y9lzl.pdf
+│   │   │   ├── c9a2cbde-3beb-47e3-a8e3-ea99d06dccb1/
+│   │   │   │   └── doc_c9a2cbde.txt
+│   │   │   ├── ca10b1d4-4fe7-4cb3-8b3d-d0c3728dfee7/
+│   │   │   │   └── load-test-1777743071654-27q44.pdf
+│   │   │   ├── cb1a5bb0-6e1b-491c-8efa-25fa8571414d/
+│   │   │   │   └── load-test-1777743056473-567yf.pdf
+│   │   │   ├── cc02ad6a-2393-4067-aedc-e25788a0f85a/
+│   │   │   │   └── load-test-1777743101179-i6gbc.pdf
+│   │   │   ├── cc4209f0-5685-40c0-b028-2edef5efd16b/
+│   │   │   │   └── load-test-1777743086513-d5axc.pdf
+│   │   │   ├── cc954a77-0534-40d6-8a03-65bbbf7b28a0/
+│   │   │   │   └── doc_cc954a77.txt
+│   │   │   ├── ce1bbe70-107f-418a-bf58-a36ad96f43b8/
+│   │   │   │   └── doc_ce1bbe70.txt
+│   │   │   ├── cf845777-4357-4f8a-a778-0d8054db8e87/
+│   │   │   │   └── load-test-1777743065704-abocl.pdf
+│   │   │   ├── cfbe08f3-4de7-4c32-8d46-5813fde18b03/
+│   │   │   │   └── doc_cfbe08f3.txt
+│   │   │   ├── cfec65ae-56fc-4eb5-b1a3-caa5b662534a/
+│   │   │   │   └── load-test-1777743009707-9tk30.pdf
+│   │   │   ├── d062bc4f-db47-4b6b-840b-708bf33569ef/
+│   │   │   │   └── load-test-1777743050702-j9o53.pdf
+│   │   │   ├── d0fb17ad-afa2-4fe1-9cf5-aa8ebac3b48b/
+│   │   │   │   └── doc_d0fb17ad.txt
+│   │   │   ├── d26f32af-c400-41c5-8044-8338947879f4/
+│   │   │   │   └── doc_d26f32af.txt
+│   │   │   ├── d342eb08-92a7-46e7-93f8-365d8c6306c5/
+│   │   │   │   └── doc_d342eb08.txt
+│   │   │   ├── d39b4642-9b2a-43a0-9fb7-d06fc99b0e21/
+│   │   │   │   └── load-test-1777743046315-dlmzo.pdf
+│   │   │   ├── d424b562-c961-4bfc-8f96-df6cc8c764a1/
+│   │   │   │   └── load-test-1777743056188-kjkwu.pdf
+│   │   │   ├── d5a640a0-8ea8-4f65-8730-8ad0bf2cb1f2/
+│   │   │   │   └── doc_d5a640a0.txt
+│   │   │   ├── d5c96a57-d10f-460e-bd7f-f4ba3d258864/
+│   │   │   │   └── doc_d5c96a57.txt
+│   │   │   ├── d5d8b6ce-5fbf-41a1-af89-55450c9e05fe/
+│   │   │   │   └── doc_d5d8b6ce.txt
+│   │   │   ├── d6af151f-5e6d-4979-9ec3-1959c6c6da65/
+│   │   │   │   └── doc_d6af151f.txt
+│   │   │   ├── d6b5b236-1f84-40e0-939f-5f797bc4953e/
+│   │   │   │   └── doc_d6b5b236.txt
+│   │   │   ├── d73f4dab-d58c-495a-868f-22712397ad13/
+│   │   │   │   └── load-test-1777743043213-tq7lv.pdf
+│   │   │   ├── d76d8ad2-ff5a-45cc-8fea-72b7edb8f76b/
+│   │   │   │   └── load-test-1777743038192-ldhb4.pdf
+│   │   │   ├── d8108f76-7243-48cc-b8b9-7599deeaa8d2/
+│   │   │   │   └── doc_d8108f76.txt
+│   │   │   ├── d8c02e43-4e78-42c8-9124-db27a4e57c90/
+│   │   │   │   └── doc_d8c02e43.txt
+│   │   │   ├── d92f338c-f24b-4093-802b-2b077ea3309e/
+│   │   │   │   └── load-test-1777743078826-6lump.pdf
+│   │   │   ├── d97e4f02-941e-47e5-8855-b32e73aeea5d/
+│   │   │   │   └── load-test-1777743046640-eunan.pdf
+│   │   │   ├── d9d60a6d-8584-47e6-9699-3afc6c6b05bf/
+│   │   │   │   └── load-test-1777743064172-v1y1u.pdf
+│   │   │   ├── db85ef9d-e2cf-4c62-95ef-af9c459a1051/
+│   │   │   │   └── load-test-1777743057437-g4ytb.pdf
+│   │   │   ├── db883adc-4520-4520-acd7-a8cd95fc40c0/
+│   │   │   │   └── doc_db883adc.txt
+│   │   │   ├── dc0b5fd7-1478-4384-abb2-19321d9e4a51/
+│   │   │   │   └── load-test-1777743059613-g8eur.pdf
+│   │   │   ├── dc510f69-85b4-4081-88b7-0ef0ee954273/
+│   │   │   │   └── load-test-1777743072732-g8v5i.pdf
+│   │   │   ├── dce44424-0d7e-46df-b20d-ba0167d4f566/
+│   │   │   │   └── load-test-1777743066204-t5exl.pdf
+│   │   │   ├── de2dfcd8-4da1-481b-8fc3-098a54fd2cd8/
+│   │   │   │   └── doc_de2dfcd8.txt
+│   │   │   ├── df314324-4e7e-47fe-ac54-92868159f362/
+│   │   │   │   └── load-test-1777743068236-x2r07.pdf
+│   │   │   ├── df39477c-bb9f-47eb-b9f3-fd1b36cc79a9/
+│   │   │   │   └── load-test-1777743060112-pfnxz.pdf
+│   │   │   ├── e0f431d3-c1b8-46d0-923b-13a3102a5919/
+│   │   │   │   └── doc_e0f431d3.txt
+│   │   │   ├── e132e6f1-1e78-4808-861e-8648ee01cf6a/
+│   │   │   │   └── load-test-1777743076645-r6o5e.pdf
+│   │   │   ├── e1d0da99-fac0-4b7e-a4b0-9043dfc8b8d8/
+│   │   │   │   └── load-test-1777743066334-4q3qr.pdf
+│   │   │   ├── e2e071a1-89bd-408b-96fb-5e85ec23da98/
+│   │   │   │   └── load-test-1777743062566-jh588.pdf
+│   │   │   ├── e35f7209-9e34-4e70-9167-d58126eb01d4/
+│   │   │   │   └── load-test-1777743089383-mdawc.pdf
+│   │   │   ├── e3844b2e-4dba-4ff8-8665-f31306c056d0/
+│   │   │   │   └── doc_e3844b2e.txt
+│   │   │   ├── e4b1afb6-8e91-4bc2-9285-d8d44b0e3ac3/
+│   │   │   │   └── load-test-1777743007676-nt9hc.pdf
+│   │   │   ├── e535308c-4f96-449e-8f79-4026359d60db/
+│   │   │   │   └── Screenshot_From_2026-05-02_16-37-33.png
+│   │   │   ├── e69349d3-c62e-47a6-9084-3eb607117f3e/
+│   │   │   │   └── doc_e69349d3.txt
+│   │   │   ├── e6bba7aa-0f09-41b7-b8ba-63b233842646/
+│   │   │   │   └── load-test-1777743041180-fbvgb.pdf
+│   │   │   ├── e89b0da9-1ed8-4976-84a0-1271ab7023df/
+│   │   │   │   └── doc_e89b0da9.txt
+│   │   │   ├── e8f02648-00f8-4193-89b3-8986b81e8608/
+│   │   │   │   └── doc_e8f02648.txt
+│   │   │   ├── e8f3a484-7941-45be-8a55-d1939995cbc0/
+│   │   │   │   └── load-test-1777743025988-xs29h.pdf
+│   │   │   ├── e910dc2f-730b-445d-bccf-b77323f802d8/
+│   │   │   │   └── doc_e910dc2f.txt
+│   │   │   ├── e94c5e8f-43b6-4fcd-b31b-f2b684aff7bb/
+│   │   │   │   └── doc_e94c5e8f.txt
+│   │   │   ├── ea1d98a7-855e-438c-8d45-bc5b6cf51ca7/
+│   │   │   │   └── doc_ea1d98a7.txt
+│   │   │   ├── eaa146b8-bbbc-441f-94a2-6b5f267e25af/
+│   │   │   │   └── load-test-1777743091966-7gz8e.pdf
+│   │   │   ├── eb805d7b-0362-45c4-a1a3-3f31605c3aba/
+│   │   │   │   └── doc_eb805d7b.txt
+│   │   │   ├── ebadac41-dee3-4c51-8235-ac8ce760d875/
+│   │   │   │   └── scan-20260502-231700.pdf
+│   │   │   ├── ec59c95c-0216-42e5-9af0-747b18e0c0a6/
+│   │   │   │   └── doc_ec59c95c.txt
+│   │   │   ├── ece0939a-4e9a-4a72-8d89-894307b31b1d/
+│   │   │   │   └── doc_ece0939a.txt
+│   │   │   ├── ed7f12ad-ee1e-4648-ade1-8633c1158f1f/
+│   │   │   │   └── doc_ed7f12ad.txt
+│   │   │   ├── edfcba01-684c-4ac6-9ad2-6cccb8a1c0f3/
+│   │   │   │   └── doc_edfcba01.txt
+│   │   │   ├── ee63b544-e4fe-43ef-9a62-02d47f8c6c24/
+│   │   │   │   └── load-test-1777743019885-a3arm.pdf
+│   │   │   ├── ee98a999-950c-4461-b2fe-424792d0ddc5/
+│   │   │   │   └── doc_ee98a999.txt
+│   │   │   ├── f01441ae-34f9-48d6-b159-4836ee8a2890/
+│   │   │   │   └── load-test-1777743043973-7bnti.pdf
+│   │   │   ├── f2419a43-95a8-49f7-a8e1-ffcfda8e297f/
+│   │   │   │   └── load-test-1777743088991-qrkjx.pdf
+│   │   │   ├── f27025b5-f4a3-4889-8327-b2c40a7b7156/
+│   │   │   │   └── doc_f27025b5.txt
+│   │   │   ├── f296bc0b-f65f-4878-bf5f-1b141d8bb29a/
+│   │   │   │   └── doc_f296bc0b.txt
+│   │   │   ├── f30692a5-4925-4195-92e4-8a2371aea5af/
+│   │   │   │   └── load-test-1777743086658-zhrcq.pdf
+│   │   │   ├── f401b584-b9d2-4b03-aded-7fd721f95878/
+│   │   │   │   └── load-test-1777743067590-cm11f.pdf
+│   │   │   ├── f525c376-e3b6-47d6-b336-51abb77aaa13/
+│   │   │   │   └── doc_f525c376.txt
+│   │   │   ├── f696dbd7-8f77-4ff0-80ad-072ce9ed0237/
+│   │   │   │   └── doc_f696dbd7.txt
+│   │   │   ├── f6e7f736-f892-4559-b837-167d9a3daff9/
+│   │   │   │   └── doc_f6e7f736.txt
+│   │   │   ├── f73c2d4c-1568-40c2-8346-bba16e63f270/
+│   │   │   │   └── scan-20260502-221615.pdf
+│   │   │   ├── f8c6c1a5-64ca-44b9-b0ce-d7175cdd1005/
+│   │   │   │   └── load-test-1777743039778-lilxg.pdf
+│   │   │   ├── f9298d70-11d4-4482-9a21-931180d373ce/
+│   │   │   │   └── doc_f9298d70.txt
+│   │   │   ├── fab58250-2cca-4344-9146-b7707c9b13c3/
+│   │   │   │   └── load-test-1777743070552-4ms3j.pdf
+│   │   │   ├── fabc1a94-ce36-4095-ac5f-182396e814a2/
+│   │   │   │   └── load-test-1777743081960-9r4g4.pdf
+│   │   │   ├── fb60d471-d509-4546-b89a-5e15065b1a11/
+│   │   │   │   └── load-test-1777743005594-b72aa.pdf
+│   │   │   ├── fc327ad5-30c6-442c-a810-600ddfae44e0/
+│   │   │   │   └── doc_fc327ad5.txt
+│   │   │   ├── fcf483e8-fa78-4236-9898-15b51f77d5f8/
+│   │   │   │   └── doc_fcf483e8.txt
+│   │   │   ├── fd8d1098-4dc7-4265-9245-4ef89f16af3f/
+│   │   │   │   └── doc_fd8d1098.txt
+│   │   │   ├── fda4a174-ebfc-4021-a35f-0db8ba982bce/
+│   │   │   │   └── load-test-1777743027582-genee.pdf
+│   │   │   ├── fe5f4f00-545a-474b-8afd-3a3aedc98ae5/
+│   │   │   │   └── load-test-1777743023514-qeq7x.pdf
+│   │   │   ├── ff6ca48a-bd57-4c78-bc9d-b6f8ee420ecd/
+│   │   │   │   └── doc_ff6ca48a.txt
+│   │   │   └── ff9e2d9a-21ae-44f3-829d-60d232cafef9/
+│   │   │       └── doc_ff9e2d9a.txt
+│   │   ├── dfd7138c-1492-495a-9e30-666a05e509ef/
+│   │   │   └── c6ea9b27-a78b-44bd-b328-ba4a0863b457/
+│   │   │       └── deployment_settings_1700x970.png
 │   │   └── library/
+│   │       ├── 57a41343-b4a7-4808-bc40-82d0703891c3/
+│   │       │   ├── 95c9f3cf-57bd-43c3-88ef-12e1c6ba73c8/
+│   │       │   │   └── Mahmoud-Khedr-DevOps-Engineer-Intern-CV.pdf
+│   │       │   └── b1aa3dc2-e09d-42e5-9da7-fffc4a1b2a43/
+│   │       │       └── Screenshot_From_2026-05-17_02-29-07.png
 │   │       └── 8b41f742-4a89-421f-b5ee-28cd36eff95d/
 │   │           └── a93d9158-4e16-4225-93da-4797be35e2ea/
 │   │               └── Object_Oriented_Analysis_and_Design_with_Applications_3rd_Edition.pdf
@@ -849,20 +2196,32 @@ packages/
 │   │   └── favicon.ico
 │   ├── scripts/
 │   │   ├── check-i18n-keys.mjs
+│   │   ├── check-lookup-localization.mjs
 │   │   └── check-tailwind-tokens.mjs
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── billing/
+│   │   │   │   ├── CaseBillingTab.test.tsx
 │   │   │   │   └── CaseBillingTab.tsx
 │   │   │   ├── documents/
 │   │   │   │   ├── DocumentList.test.ts
 │   │   │   │   ├── DocumentList.tsx
+│   │   │   │   ├── DocumentUploadForm.test.tsx
 │   │   │   │   ├── DocumentUploadForm.tsx
+│   │   │   │   ├── DocumentViewer.test.tsx
 │   │   │   │   ├── DocumentViewer.tsx
+│   │   │   │   ├── DocxViewer.test.ts
+│   │   │   │   ├── DocxViewer.tsx
 │   │   │   │   ├── ExtractionStatusBadge.tsx
+│   │   │   │   ├── FilePreview.test.tsx
+│   │   │   │   ├── FilePreview.tsx
+│   │   │   │   ├── filePreviewConfig.ts
+│   │   │   │   ├── PdfViewer.test.tsx
 │   │   │   │   ├── PdfViewer.tsx
+│   │   │   │   ├── uploadAcceptTypes.test.ts
 │   │   │   │   └── VersionHistory.tsx
 │   │   │   ├── library/
+│   │   │   │   ├── CaseLegalReferencesTab.test.tsx
 │   │   │   │   └── CaseLegalReferencesTab.tsx
 │   │   │   ├── navigation/
 │   │   │   │   ├── BackToTopButton.tsx
@@ -870,23 +2229,33 @@ packages/
 │   │   │   │   ├── shellFooterLinks.test.ts
 │   │   │   │   └── shellFooterLinks.ts
 │   │   │   ├── notifications/
+│   │   │   │   ├── NotificationBell.test.ts
 │   │   │   │   └── NotificationBell.tsx
 │   │   │   ├── search/
+│   │   │   │   ├── CommandPalette.test.tsx
 │   │   │   │   ├── CommandPalette.tsx
 │   │   │   │   ├── GlobalSearchBar.tsx
+│   │   │   │   ├── GlobalSearchResultCard.tsx
+│   │   │   │   ├── SearchResultCard.test.tsx
 │   │   │   │   └── SearchResultCard.tsx
 │   │   │   ├── shared/
 │   │   │   │   ├── AntdProvider.tsx
 │   │   │   │   ├── DesktopBootstrapGate.tsx
+│   │   │   │   ├── DirectionProvider.test.tsx
 │   │   │   │   ├── DirectionProvider.tsx
+│   │   │   │   ├── EnumBadge.test.ts
 │   │   │   │   ├── EnumBadge.tsx
 │   │   │   │   ├── LanguageSwitcher.tsx
+│   │   │   │   ├── PermissionChecklist.test.tsx
 │   │   │   │   ├── PermissionChecklist.tsx
 │   │   │   │   ├── PpoScreenshotEventBridge.tsx
 │   │   │   │   ├── Skeleton.tsx
+│   │   │   │   ├── Toast.test.tsx
 │   │   │   │   ├── Toast.tsx
 │   │   │   │   ├── useAccessibleOverlay.test.tsx
 │   │   │   │   └── useAccessibleOverlay.ts
+│   │   │   ├── templates/
+│   │   │   │   └── TemplateRichEditor.tsx
 │   │   │   ├── ErrorFallback.tsx
 │   │   │   ├── InlineEditField.tsx
 │   │   │   └── PermissionGate.tsx
@@ -901,14 +2270,22 @@ packages/
 │   │   │   │   └── fr/
 │   │   │   │       ├── app.json
 │   │   │   │       └── auth.json
+│   │   │   ├── index.test.ts
 │   │   │   ├── index.ts
 │   │   │   └── translationRegression.test.ts
 │   │   ├── lib/
 │   │   │   ├── api.test.ts
 │   │   │   ├── api.ts
 │   │   │   ├── billing.ts
+│   │   │   ├── caseOptions.test.ts
+│   │   │   ├── caseOptions.ts
+│   │   │   ├── dashboardI18n.test.ts
+│   │   │   ├── dashboardI18n.ts
 │   │   │   ├── dateInput.test.ts
 │   │   │   ├── dateInput.ts
+│   │   │   ├── desktopBackup.errorMapping.test.ts
+│   │   │   ├── desktopBackup.test.ts
+│   │   │   ├── desktopBackup.ts
 │   │   │   ├── desktopDownloads.test.ts
 │   │   │   ├── desktopDownloads.ts
 │   │   │   ├── developerContact.test.ts
@@ -920,18 +2297,34 @@ packages/
 │   │   │   ├── enumLabel.ts
 │   │   │   ├── externalLinks.ts
 │   │   │   ├── feedback.ts
+│   │   │   ├── fileSaveFeedback.ts
+│   │   │   ├── formValidation.test.ts
+│   │   │   ├── formValidation.ts
 │   │   │   ├── internetRestrictedUi.ts
+│   │   │   ├── language.ts
+│   │   │   ├── locationLookups.ts
+│   │   │   ├── lookupLabel.test.ts
+│   │   │   ├── lookupLabel.ts
 │   │   │   ├── lookups.ts
 │   │   │   ├── ppoPortal.test.ts
 │   │   │   ├── ppoPortal.ts
 │   │   │   ├── ppoScreenshotEvents.test.ts
 │   │   │   ├── ppoScreenshotEvents.ts
+│   │   │   ├── reports.test.ts
 │   │   │   ├── reports.ts
 │   │   │   ├── tableQueryState.test.tsx
 │   │   │   ├── tableQueryState.ts
+│   │   │   ├── templateEditor.test.ts
+│   │   │   ├── templateEditor.ts
 │   │   │   ├── templates.ts
+│   │   │   ├── uploadQueue.test.ts
+│   │   │   ├── uploadQueue.ts
+│   │   │   ├── userRoleErrorLocalization.test.ts
+│   │   │   ├── userRoleErrorLocalization.ts
 │   │   │   ├── useUnsavedChanges.test.tsx
-│   │   │   └── useUnsavedChanges.ts
+│   │   │   ├── useUnsavedChanges.ts
+│   │   │   ├── validationErrors.test.ts
+│   │   │   └── validationErrors.ts
 │   │   ├── pwa/
 │   │   │   ├── offlineBanner.tsx
 │   │   │   └── syncQueue.ts
@@ -939,46 +2332,65 @@ packages/
 │   │   │   ├── app/
 │   │   │   │   ├── library/
 │   │   │   │   │   ├── LibraryAdminPage.tsx
+│   │   │   │   │   ├── LibraryDocumentPage.test.tsx
 │   │   │   │   │   ├── LibraryDocumentPage.tsx
 │   │   │   │   │   ├── LibraryPage.tsx
+│   │   │   │   │   ├── LibrarySearchPage.test.tsx
 │   │   │   │   │   ├── LibrarySearchPage.tsx
 │   │   │   │   │   ├── LibraryUploadPage.test.tsx
 │   │   │   │   │   └── LibraryUploadPage.tsx
 │   │   │   │   ├── research/
 │   │   │   │   │   ├── ResearchPage.tsx
 │   │   │   │   │   └── ResearchSessionPage.tsx
+│   │   │   │   ├── AppLayout.test.tsx
 │   │   │   │   ├── AppLayout.tsx
 │   │   │   │   ├── breadcrumbs.test.ts
 │   │   │   │   ├── breadcrumbs.ts
 │   │   │   │   ├── calendarEvents.test.ts
 │   │   │   │   ├── calendarEvents.ts
+│   │   │   │   ├── CalendarPage.test.ts
 │   │   │   │   ├── CalendarPage.tsx
+│   │   │   │   ├── CaseCreatePage.test.tsx
 │   │   │   │   ├── CaseCreatePage.tsx
+│   │   │   │   ├── CaseDetailPage.helpers.test.ts
 │   │   │   │   ├── CaseDetailPage.tsx
+│   │   │   │   ├── CaseQuickIntakePage.route.test.tsx
 │   │   │   │   ├── CaseQuickIntakePage.test.ts
 │   │   │   │   ├── CaseQuickIntakePage.tsx
+│   │   │   │   ├── CasesPage.test.tsx
 │   │   │   │   ├── CasesPage.tsx
 │   │   │   │   ├── ClientCreatePage.tsx
 │   │   │   │   ├── ClientDetailPage.tsx
 │   │   │   │   ├── ClientEditPage.tsx
+│   │   │   │   ├── ClientsPage.test.tsx
 │   │   │   │   ├── ClientsPage.tsx
+│   │   │   │   ├── DashboardPage.test.tsx
 │   │   │   │   ├── DashboardPage.tsx
+│   │   │   │   ├── DocumentDetailPage.test.tsx
+│   │   │   │   ├── DocumentDetailPage.tsx
 │   │   │   │   ├── DocumentsPage.tsx
 │   │   │   │   ├── DocumentUploadPage.tsx
+│   │   │   │   ├── ExpensesPage.test.tsx
 │   │   │   │   ├── ExpensesPage.tsx
 │   │   │   │   ├── formExitActions.test.tsx
+│   │   │   │   ├── formSaveNavigation.test.ts
 │   │   │   │   ├── hearingCalendar.test.ts
 │   │   │   │   ├── hearingCalendar.ts
 │   │   │   │   ├── HearingCreatePage.tsx
 │   │   │   │   ├── HearingEditPage.tsx
 │   │   │   │   ├── HearingsPage.tsx
+│   │   │   │   ├── ImportPage.test.tsx
 │   │   │   │   ├── ImportPage.tsx
 │   │   │   │   ├── InlineHearingForm.tsx
 │   │   │   │   ├── InlineTaskForm.tsx
 │   │   │   │   ├── InvitationCreatePage.tsx
 │   │   │   │   ├── InvitationsPage.tsx
+│   │   │   │   ├── InvoiceCreatePage.test.tsx
 │   │   │   │   ├── InvoiceCreatePage.tsx
+│   │   │   │   ├── InvoiceDetailPage.test.ts
 │   │   │   │   ├── InvoiceDetailPage.tsx
+│   │   │   │   ├── InvoicesPage.route.test.tsx
+│   │   │   │   ├── InvoicesPage.test.ts
 │   │   │   │   ├── InvoicesPage.tsx
 │   │   │   │   ├── LookupSettingsDetailPage.tsx
 │   │   │   │   ├── LookupSettingsPage.tsx
@@ -991,11 +2403,20 @@ packages/
 │   │   │   │   ├── ReportBuilderPage.tsx
 │   │   │   │   ├── reportExport.test.ts
 │   │   │   │   ├── reportExport.ts
+│   │   │   │   ├── reportGraph.test.ts
+│   │   │   │   ├── reportGraph.ts
+│   │   │   │   ├── reportGraphExport.test.ts
+│   │   │   │   ├── reportGraphExport.ts
+│   │   │   │   ├── ReportsPage.route.test.tsx
+│   │   │   │   ├── ReportsPage.test.ts
 │   │   │   │   ├── ReportsPage.tsx
 │   │   │   │   ├── RoleCreatePage.tsx
 │   │   │   │   ├── RoleEditPage.tsx
 │   │   │   │   ├── RoleSettingsPage.tsx
+│   │   │   │   ├── SearchPage.test.tsx
 │   │   │   │   ├── SearchPage.tsx
+│   │   │   │   ├── SettingsPage.route.test.tsx
+│   │   │   │   ├── SettingsPage.test.ts
 │   │   │   │   ├── SettingsPage.tsx
 │   │   │   │   ├── SidebarNav.test.ts
 │   │   │   │   ├── SidebarNav.tsx
@@ -1003,17 +2424,23 @@ packages/
 │   │   │   │   ├── TaskDetailPage.tsx
 │   │   │   │   ├── TasksPage.tsx
 │   │   │   │   ├── TemplateCreatePage.tsx
+│   │   │   │   ├── TemplateEditPage.test.ts
 │   │   │   │   ├── TemplateEditPage.tsx
+│   │   │   │   ├── TemplatesPage.test.tsx
 │   │   │   │   ├── TemplatesPage.tsx
+│   │   │   │   ├── ui.dateCommit.test.tsx
 │   │   │   │   ├── ui.test.tsx
 │   │   │   │   ├── ui.tsx
 │   │   │   │   ├── UserCreatePage.tsx
 │   │   │   │   ├── UserDetailPage.tsx
+│   │   │   │   ├── UserRoleLocalization.test.ts
 │   │   │   │   └── UsersPage.tsx
 │   │   │   ├── auth/
 │   │   │   │   ├── AuthShell.tsx
 │   │   │   │   ├── BackendConnectionPage.tsx
+│   │   │   │   ├── LoginPage.test.tsx
 │   │   │   │   ├── LoginPage.tsx
+│   │   │   │   ├── SetupPage.test.tsx
 │   │   │   │   └── SetupPage.tsx
 │   │   │   ├── portal/
 │   │   │   │   ├── PortalCasePage.tsx
@@ -1022,15 +2449,24 @@ packages/
 │   │   │   │   └── PortalLoginPage.tsx
 │   │   │   ├── public/
 │   │   │   │   └── AboutPage.tsx
-│   │   │   └── contactIntegration.test.tsx
+│   │   │   ├── billingRoutes.ts
+│   │   │   ├── caseRoutes.ts
+│   │   │   ├── clientRoutes.ts
+│   │   │   ├── contactIntegration.test.tsx
+│   │   │   ├── documentRoutes.ts
+│   │   │   ├── portalRoutes.ts
+│   │   │   ├── settingsRoutes.ts
+│   │   │   └── userRoutes.ts
 │   │   ├── store/
+│   │   │   ├── authStore.language.test.ts
 │   │   │   ├── authStore.ts
 │   │   │   ├── portalAuthStore.ts
 │   │   │   └── toastStore.ts
 │   │   ├── fonts.css
 │   │   ├── main.tsx
 │   │   ├── router.tsx
-│   │   └── styles.css
+│   │   ├── styles.css
+│   │   └── styles.templateEditor.test.ts
 │   ├── index.html
 │   ├── package.json
 │   ├── postcss.config.cjs
@@ -1050,9 +2486,11 @@ packages/
     │   │   ├── firms.ts
     │   │   ├── hearings.ts
     │   │   ├── invitations.ts
+    │   │   ├── locations.ts
     │   │   ├── lookups.ts
     │   │   ├── notifications.ts
     │   │   ├── powers.ts
+    │   │   ├── reports.ts
     │   │   ├── roles.ts
     │   │   ├── tasks.ts
     │   │   └── users.ts
@@ -1062,6 +2500,9 @@ packages/
     │   ├── types/
     │   │   ├── auth.ts
     │   │   └── common.ts
+    │   ├── utils/
+    │   │   ├── text.test.ts
+    │   │   └── text.ts
     │   └── index.ts
     ├── package.json
     ├── tsconfig.json
@@ -1071,6 +2512,9 @@ scripts/
 │   ├── structure-audit.mjs
 │   ├── structure-check.mjs
 │   └── verify-docs-truth.mjs
+├── perf/
+│   ├── check-no-regression.mjs
+│   └── run-baselines.mjs
 ├── bundle-linux-deps.sh
 ├── bundle-macos-deps.sh
 ├── bundle-windows-deps.ps1
@@ -1084,6 +2528,7 @@ scripts/
 ├── package-desktop-linux.sh
 ├── package-desktop-windows-cross.sh
 ├── release-desktop-local.sh
+├── schema-runtime-usage-audit.ts
 ├── smoke-windows-runtime.ps1
 ├── tsconfig.json
 ├── verify-desktop-resources.mjs
@@ -1108,9 +2553,20 @@ tests/
 │   ├── responsive-layout.spec.ts
 │   └── shell-accessibility.spec.ts
 └── load/
+    ├── _auth.js
+    ├── _profiles.js
     ├── api-baseline.js
     ├── auth.js
-    └── document-upload.js
+    ├── billing-credit.js
+    ├── cases-write-update.js
+    ├── document-upload.js
+    ├── hearings-events.js
+    ├── import-preview.js
+    ├── library-search.js
+    ├── notifications.js
+    ├── portal-auth-read.js
+    ├── research.js
+    └── search-global.js
 .dockerignore
 .editorconfig
 .env.example
@@ -1118,6 +2574,7 @@ tests/
 .lighthouserc.json
 .prettierignore
 .prettierrc.json
+AGENTS.md
 eslint.config.mjs
 package.json
 playwright.config.ts

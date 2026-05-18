@@ -63,6 +63,17 @@ This document defines which code locations are authoritative for documentation c
 - CI workflows:
   - `.github/workflows/**`
 
+
+## Runtime Status Labels (Required)
+
+Use these exact labels in docs when discussing runtime state:
+
+- `Implemented`: Active, code-backed behavior in the current runtime.
+- `Archived Reference`: Historical or archived assets/flows not currently operational.
+- `Planned`: Explicit future intent, not currently operational.
+
+Cloud-runtime claims must include explicit qualification when they are not currently operational.
+
 ## Documentation Conventions
 
 - Every technical doc should include a **Source of truth** section that points to relevant repository paths.

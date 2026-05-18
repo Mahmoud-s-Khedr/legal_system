@@ -5,7 +5,7 @@ Audit date: 2026-04-12
 ## Snapshot
 
 - Canonical tree snapshot: `docs/_inventory/repository-tree.txt`
-- Total tracked files scanned (excluding generated directories): 975
+- Total tracked files scanned (excluding generated directories): 1816
 - Stale `apps/web` references outside archive scope: 0
 
 ## Duplicate / Legacy Areas
@@ -15,7 +15,7 @@ Audit date: 2026-04-12
 
 ## Misplaced Root Artifacts
 
-- None detected.
+- `AGENTS.md`
 
 ## Stale Path Reference Classification (`apps/web`)
 

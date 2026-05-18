@@ -2,6 +2,12 @@
 
 This index groups all user guides by workflow area.
 
+## Runtime Status
+
+- `Implemented`: Desktop/local user workflows are the active operational path.
+- `Archived Reference`: Cloud-only user workflows are reference-only until cloud runtime is re-enabled.
+- `Planned`: Future cloud guidance updates after runtime re-activation.
+
 ## Getting Started
 
 - [01-what-is-elms.md](./getting-started/01-what-is-elms.md)

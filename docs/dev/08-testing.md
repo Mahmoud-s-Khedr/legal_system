@@ -236,8 +236,8 @@ All specs are in `tests/e2e/`.
 
 | File | What it tests |
 |------|--------------|
-| `cloud-auth.smoke.spec.ts` | Route guard redirects unauthenticated users; login page renders correctly with all three language labels |
-| `cloud-beta.smoke.spec.ts` | Beta-flag gated features are accessible to authorized users |
+| `cloud-auth.smoke.spec.ts` | `Archived Reference` smoke coverage for historical cloud-auth route-guard behavior |
+| `cloud-beta.smoke.spec.ts` | `Archived Reference` smoke coverage for historical cloud-beta flags |
 | `desktop.smoke.spec.ts` | Desktop shell (Tauri) bootstrap and initial setup flow |
 | `billing-workflow.spec.ts` | Invoice creation, line items, payment recording end-to-end |
 | `portal-access.spec.ts` | Client portal authentication and case read access |

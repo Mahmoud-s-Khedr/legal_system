@@ -127,7 +127,6 @@ for (const file of mdFiles) {
   for (const cmd of codeTicks) {
     if (!cmd.trim().startsWith("pnpm ")) continue;
 
-    // pnpm run <script>
     let m = cmd.match(/\bpnpm\s+run\s+([a-zA-Z0-9:_-]+)/);
     if (m) {
       const script = m[1];
@@ -137,7 +136,6 @@ for (const file of mdFiles) {
       continue;
     }
 
-    // pnpm --filter ... <script>
     m = cmd.match(/\bpnpm(?:\s+--filter\s+\S+)+\s+([a-zA-Z0-9:_-]+)/);
     if (m) {
       const script = m[1];
@@ -147,7 +145,6 @@ for (const file of mdFiles) {
       continue;
     }
 
-    // plain pnpm <script>
     m = cmd.match(/\bpnpm\s+([a-zA-Z0-9:_-]+)/);
     if (m) {
       const script = m[1];
@@ -209,6 +206,36 @@ if (existsSync(envDocPath)) {
   for (const name of documentedVars) {
     if (!envSchemaVars.has(name) && !allowedNonSchemaTokens.has(name)) {
       errors.push(`[unknown-env-var] docs/dev/03-environment-variables.md mentions ${name} but it is not in env schema`);
+    }
+  }
+}
+
+// 5) Cloud runtime wording guardrails
+const semanticGuardFiles = [README, ...docsFiles];
+const bannedPhrases = [
+  "AUTH_MODE=CLOUD",
+  "cloud auth mode uses",
+  "cloud auth mode is",
+  "cloud edition is a progressive web app",
+  "cloud mode uses auth_mode=cloud"
+];
+const allowedQualifiers = ["archived", "non-operational", "planned", "reference only", "deprecated"];
+
+for (const file of semanticGuardFiles) {
+  const content = readFileSync(file, "utf8");
+  const lines = content.split("\n");
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const lower = line.toLowerCase();
+
+    for (const phrase of bannedPhrases) {
+      if (!lower.includes(phrase.toLowerCase())) continue;
+      const context = [lines[i - 1] ?? "", line, lines[i + 1] ?? ""].join(" ").toLowerCase();
+      const qualified = allowedQualifiers.some((q) => context.includes(q));
+      if (!qualified) {
+        errors.push(`[cloud-wording] ${rel(file)}:${i + 1} contains '${phrase}' without archived/non-operational/planned qualifier`);
+      }
     }
   }
 }

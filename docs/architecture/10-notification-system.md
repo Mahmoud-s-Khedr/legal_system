@@ -181,6 +181,7 @@ Uses `node-cron` for a lightweight in-process schedule. Runs three scans sequent
 3. `scanOverdueInvoices` — queries `invoice` where `dueDate < now` and status is ISSUED or PARTIALLY_PAID
 
 ### Cloud Mode (BullMQ)
+`Archived Reference`: this execution path describes historical cloud-runtime behavior and is non-operational in current runtime.
 
 ```
 repeat cron: "0 8 * * *"  — same daily schedule

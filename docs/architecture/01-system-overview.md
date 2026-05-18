@@ -7,6 +7,11 @@ ELMS (Electronic Legal Management System) is a multi-tenant legal practice manag
 - **Cloud deployment**: Docker-based, internet-connected, multi-firm SaaS model.
 - **Desktop deployment**: Tauri 2 packaged native application, fully offline-capable, single-firm per installation.
 
+Runtime status in current codebase:
+- `Implemented`: Desktop/local runtime.
+- `Archived Reference`: Cloud runtime topology details in this document.
+- `Planned`: Cloud runtime re-activation.
+
 The system is structured as a pnpm monorepo with three packages:
 
 | Package | Role |
@@ -51,7 +56,7 @@ C4Context
 
 ## 3. C4 Level 2 — Container Diagrams
 
-### 3.1 Cloud Deployment Containers
+### 3.1 Cloud Deployment Containers (`Archived Reference`)
 
 ```mermaid
 C4Container
@@ -101,13 +106,13 @@ C4Container
 
 ### 4.1 Networking and Serving
 
-In the **cloud** topology, Nginx acts as the single external entry point. It terminates TLS (via certbot in production), serves frontend static assets, and reverse-proxies all `/api/*` requests to the Fastify backend. The frontend and backend run as separate Docker containers; they never communicate directly outside of the Nginx proxy.
+`Archived Reference`: In the former **cloud** topology, Nginx acted as the single external entry point. It terminated TLS (via certbot in production), served frontend static assets, and reverse-proxied all `/api/*` requests to the Fastify backend. The frontend and backend ran as separate Docker containers; they never communicated directly outside of the Nginx proxy.
 
 In the **desktop** topology, there is no web server. The Tauri 2 Rust shell spawns a bundled Node.js process (the Fastify sidecar) on `localhost:7854`. The React frontend is loaded directly into the system's WebView engine and calls the sidecar over localhost. No external network access is required for normal operation.
 
 ### 4.2 Authentication
 
-The cloud deployment uses **CLOUD auth mode**: RS256 JWT access tokens (15-minute TTL) stored in an `HttpOnly` cookie, backed by UUID refresh tokens persisted in Redis (30-day TTL).
+`Archived Reference`: The former cloud deployment used **CLOUD auth mode** with RS256 JWT access tokens (15-minute TTL) stored in an `HttpOnly` cookie, backed by UUID refresh tokens persisted in Redis (30-day TTL).
 
 The desktop deployment uses **LOCAL auth mode**: an in-memory session stored in the `elms_local_session` cookie (12-hour TTL). Redis is not required or present.
 
@@ -201,4 +206,3 @@ planned for upcoming phases are listed as _planned_.
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-

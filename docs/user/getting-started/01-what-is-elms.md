@@ -36,11 +36,11 @@ The desktop app is installed directly on your computer (Windows, macOS, or Linux
 > [!NOTE]
 > The desktop app bundles its own database. No separate server or database software is required.
 
-### Cloud / Web App
+### Cloud / Web App (`Archived Reference`)
 
-The cloud edition is hosted for your firm and accessed through any modern web browser. Your data lives on a secure server, and your team can log in from anywhere.
+The previous cloud edition model was browser-hosted for firm-wide remote access. In the current runtime, cloud operation is non-operational and treated as archived reference while re-activation work is planned.
 
-**Choose the Cloud App if:**
+**Choose the Cloud App if (when re-enabled):**
 - Your team works across multiple locations or devices
 - You want automatic updates without manual installation
 - You prefer a managed, always-available service
@@ -80,10 +80,9 @@ You can switch the display language at any time from your profile settings.
 ## Next Steps
 
 - **Installing the desktop app** — see [Desktop Installation](./02-desktop-installation.md)
-- **Logging in to the cloud app** — see [Cloud Access](./04-cloud-access.md)
+- **Cloud access status and future rollout notes** — see [Cloud Access](./04-cloud-access.md)
 - **Setting up your firm for the first time** — see [First-Time Setup](./03-first-time-setup.md)
 
 ## Source of truth
 
 - `docs/_inventory/source-of-truth.md`
-
