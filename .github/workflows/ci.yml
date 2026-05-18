@@ -132,6 +132,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -151,6 +162,14 @@ jobs:
             rpm \
             fakeroot
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter @elms/frontend build
+        env:
+          VITE_DISABLE_AUTH_BOOTSTRAP: "true"
+
       - name: Verify migration directory exists in bundled upgrade chain
         run: |
           prefix="${{ matrix.migration_prefix }}"
@@ -159,6 +178,15 @@ jobs:
             exit 1
           fi
           echo "Found migration directory for prefix ${prefix}"
+
+      - name: Verify frontend dist required by Tauri build exists
+        run: |
+          if [ ! -f "packages/frontend/dist/index.html" ]; then
+            echo "Missing frontend artifact: packages/frontend/dist/index.html"
+            echo "Tauri build resources require packages/frontend/dist to exist."
+            exit 1
+          fi
+          echo "Found frontend artifact: packages/frontend/dist/index.html"
 
       - name: Run desktop restore/forced-migration unit gates
         run: |
