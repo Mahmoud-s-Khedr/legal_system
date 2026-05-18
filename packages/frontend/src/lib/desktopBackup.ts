@@ -52,6 +52,7 @@ function normalizeDesktopBackupErrorMessage(error: unknown) {
 function mapDesktopBackupError(message: string) {
   switch (message) {
     case "Desktop runtime is not ready for backup":
+    case "Desktop runtime is still bootstrapping":
       return "Desktop runtime is still starting. Try again in a moment.";
     case "Another backup/restore operation is already running":
       return "Another backup or restore operation is in progress.";

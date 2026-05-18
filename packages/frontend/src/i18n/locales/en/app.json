@@ -985,7 +985,7 @@
     },
     "recovering": {
       "title": "Recovering local services",
-      "description": "The local backend exited unexpectedly. ELMS is attempting an automatic restart."
+      "description": "A restore operation is restarting local services. ELMS will resume automatically when the backend is healthy."
     },
     "failed": {
       "title": "Startup needs attention",

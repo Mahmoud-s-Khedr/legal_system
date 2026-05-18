@@ -7,7 +7,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -21,6 +21,9 @@ const BACKUP_POLICY_FILE: &str = "desktop-backup-policy.json";
 const BACKUP_EXTENSION: &str = "elmsbk";
 const DEFAULT_BACKUP_RETENTION: u16 = 14;
 const DEFAULT_BACKUP_TIME_LOCAL: &str = "02:00";
+const MIGRATION_VERSION_MARKER_FILE: &str = "migration_version";
+const FORCE_MIGRATION_MARKER_FILE: &str = "force_migration_on_next_boot";
+const FIRM_ADMIN_ROLE_KEY: &str = "firm_admin";
 
 #[derive(Default)]
 pub struct BackupState {
@@ -147,6 +150,16 @@ struct BackupManifest {
     app_version: String,
     database_name: String,
     storage_path: String,
+}
+
+#[derive(Debug, Clone)]
+struct PreservedFirmAdminCredential {
+    id: String,
+    email: String,
+    full_name: String,
+    preferred_language: String,
+    status: String,
+    password_hash: String,
 }
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -526,10 +539,25 @@ fn create_backup_archive(
     Ok(())
 }
 
-fn prune_backups(backup_dir: &Path, retention_count: u16) -> Result<(), String> {
+fn prune_backups(
+    backup_dir: &Path,
+    retention_count: u16,
+    preserve_path: Option<&Path>,
+) -> Result<(), String> {
     let backups = list_backups_in_dir(backup_dir)?;
+    let preserve_canonical = preserve_path.and_then(|path| fs::canonicalize(path).ok());
     for backup in backups.into_iter().skip(retention_count as usize) {
-        fs::remove_file(PathBuf::from(backup.path))
+        let candidate_path = PathBuf::from(&backup.path);
+        if let Some(ref preserved) = preserve_canonical {
+            if fs::canonicalize(&candidate_path)
+                .ok()
+                .as_ref()
+                .is_some_and(|value| value == preserved)
+            {
+                continue;
+            }
+        }
+        fs::remove_file(candidate_path)
             .map_err(|error| format!("Unable to delete old backup: {error}"))?;
     }
 
@@ -572,7 +600,11 @@ fn persist_backup_result(
     Ok(())
 }
 
-fn run_backup_internal(app: &AppHandle, trigger: BackupTrigger) -> Result<PathBuf, String> {
+fn run_backup_internal(
+    app: &AppHandle,
+    trigger: BackupTrigger,
+    preserve_path: Option<&Path>,
+) -> Result<PathBuf, String> {
     let app_data = app_data_dir(app)?;
     let mut stored = load_stored_policy(app)?;
     let backup_dir = effective_backup_directory(app, &stored)?;
@@ -616,7 +648,7 @@ fn run_backup_internal(app: &AppHandle, trigger: BackupTrigger) -> Result<PathBu
         let backup_path = backup_dir.join(backup_name);
         create_backup_archive(&backup_path, &manifest, &dump_path, &uploads_snapshot_path)?;
 
-        prune_backups(&backup_dir, stored.policy.retention_count)?;
+        prune_backups(&backup_dir, stored.policy.retention_count, preserve_path)?;
         Ok(backup_path)
     })();
 
@@ -640,6 +672,84 @@ fn run_backup_internal(app: &AppHandle, trigger: BackupTrigger) -> Result<PathBu
     }
 }
 
+fn validate_archive_relative_path(path: &Path) -> Result<PathBuf, String> {
+    if path.as_os_str().is_empty() {
+        return Err("Backup archive contains an empty entry path".to_string());
+    }
+
+    if path.is_absolute() {
+        return Err(format!(
+            "Backup archive contains an absolute entry path: {}",
+            path.display()
+        ));
+    }
+
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Normal(value) => normalized.push(value),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                return Err(format!(
+                    "Backup archive contains an unsafe parent path segment: {}",
+                    path.display()
+                ))
+            }
+            Component::RootDir | Component::Prefix(_) => {
+                return Err(format!(
+                    "Backup archive contains an unsafe entry path: {}",
+                    path.display()
+                ))
+            }
+        }
+    }
+
+    if normalized.as_os_str().is_empty() {
+        return Err("Backup archive contains an empty normalized entry path".to_string());
+    }
+
+    let mut components = normalized.components();
+    let Some(Component::Normal(first)) = components.next() else {
+        return Err(format!(
+            "Backup archive contains an invalid entry path: {}",
+            path.display()
+        ));
+    };
+
+    let first = first.to_string_lossy();
+    if normalized == Path::new("manifest.json")
+        || normalized == Path::new("database.sql.gz")
+        || first == "uploads"
+    {
+        return Ok(normalized);
+    }
+
+    Err(format!(
+        "Backup archive contains an unexpected entry path: {}",
+        path.display()
+    ))
+}
+
+fn ensure_path_within_directory(root: &Path, target: &Path) -> Result<(), String> {
+    let canonical_root = fs::canonicalize(root)
+        .map_err(|error| format!("Unable to canonicalize restore workspace: {error}"))?;
+    let canonical_target = fs::canonicalize(target)
+        .map_err(|error| format!("Unable to canonicalize restore target path: {error}"))?;
+
+    if canonical_target.starts_with(&canonical_root) {
+        return Ok(());
+    }
+
+    Err(format!(
+        "Backup archive entry resolves outside restore workspace: {}",
+        target.display()
+    ))
+}
+
+fn is_disallowed_archive_entry_type(entry_type: tar::EntryType) -> bool {
+    entry_type.is_symlink() || entry_type.is_hard_link()
+}
+
 fn extract_archive(backup_path: &Path, destination: &Path) -> Result<(), String> {
     let file = File::open(backup_path).map_err(|error| {
         format!(
@@ -649,9 +759,65 @@ fn extract_archive(backup_path: &Path, destination: &Path) -> Result<(), String>
     })?;
     let decoder = GzDecoder::new(file);
     let mut archive = tar::Archive::new(decoder);
-    archive
-        .unpack(destination)
-        .map_err(|error| format!("Unable to extract backup archive: {error}"))
+    let entries = archive
+        .entries()
+        .map_err(|error| format!("Unable to inspect backup archive: {error}"))?;
+
+    for entry in entries {
+        let mut entry =
+            entry.map_err(|error| format!("Unable to read backup archive entry: {error}"))?;
+        let entry_type = entry.header().entry_type();
+        if is_disallowed_archive_entry_type(entry_type) {
+            return Err("Backup archive contains unsupported link entries".to_string());
+        }
+
+        let raw_path = entry
+            .path()
+            .map_err(|error| format!("Unable to parse backup archive entry path: {error}"))?;
+        let relative_path = validate_archive_relative_path(&raw_path)?;
+        let target_path = destination.join(&relative_path);
+
+        if entry_type.is_dir() {
+            fs::create_dir_all(&target_path).map_err(|error| {
+                format!(
+                    "Unable to create restore directory {}: {error}",
+                    target_path.display()
+                )
+            })?;
+            ensure_path_within_directory(destination, &target_path)?;
+            continue;
+        }
+
+        if !entry_type.is_file() {
+            return Err(format!(
+                "Backup archive contains unsupported entry type for {}",
+                relative_path.display()
+            ));
+        }
+
+        let parent = target_path.parent().ok_or_else(|| {
+            format!(
+                "Backup archive contains an invalid entry path: {}",
+                relative_path.display()
+            )
+        })?;
+        fs::create_dir_all(parent).map_err(|error| {
+            format!(
+                "Unable to create restore parent directory {}: {error}",
+                parent.display()
+            )
+        })?;
+        ensure_path_within_directory(destination, parent)?;
+        entry.unpack(&target_path).map_err(|error| {
+            format!(
+                "Unable to extract backup archive entry {}: {error}",
+                relative_path.display()
+            )
+        })?;
+        ensure_path_within_directory(destination, &target_path)?;
+    }
+
+    Ok(())
 }
 
 fn read_manifest(path: &Path) -> Result<BackupManifest, String> {
@@ -677,21 +843,10 @@ fn run_psql_restore(
 
     apply_postgres_runtime_env(app, &mut command);
 
+    let args = build_psql_restore_args(sql_path, port, database);
+
     let output = command
-        .args([
-            "-h",
-            "127.0.0.1",
-            "-p",
-            &port.to_string(),
-            "-U",
-            "elms",
-            "-d",
-            database,
-            "-v",
-            "ON_ERROR_STOP=1",
-            "-f",
-            &sql_path.to_string_lossy(),
-        ])
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -707,6 +862,350 @@ fn run_psql_restore(
     }
 
     Err(format!("psql restore failed: {stderr}"))
+}
+
+fn run_psql_capture_output(
+    app: &AppHandle,
+    port: u16,
+    database: &str,
+    sql: &str,
+) -> Result<String, String> {
+    let psql = sidecar::resolve_postgres_binary(app, "psql");
+    let mut command = Command::new(psql);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    apply_postgres_runtime_env(app, &mut command);
+    command.env("PGPASSWORD", "elms");
+
+    let output = command
+        .args([
+            "-h",
+            "127.0.0.1",
+            "-p",
+            &port.to_string(),
+            "-U",
+            "elms",
+            "-d",
+            database,
+            "-X",
+            "-A",
+            "-t",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-c",
+            sql,
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|error| format!("Unable to run psql query: {error}"))?;
+
+    if output.status.success() {
+        return Ok(String::from_utf8_lossy(&output.stdout).to_string());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    if stderr.is_empty() {
+        return Err(format!("psql query failed with status {}", output.status));
+    }
+
+    Err(format!("psql query failed: {stderr}"))
+}
+
+fn run_psql_execute_sql(
+    app: &AppHandle,
+    port: u16,
+    database: &str,
+    sql: &str,
+) -> Result<(), String> {
+    let psql = sidecar::resolve_postgres_binary(app, "psql");
+    let mut command = Command::new(psql);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    apply_postgres_runtime_env(app, &mut command);
+    command.env("PGPASSWORD", "elms");
+
+    let output = command
+        .args([
+            "-h",
+            "127.0.0.1",
+            "-p",
+            &port.to_string(),
+            "-U",
+            "elms",
+            "-d",
+            database,
+            "-X",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-c",
+            sql,
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|error| format!("Unable to run psql command: {error}"))?;
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    if stderr.is_empty() {
+        return Err(format!("psql command failed with status {}", output.status));
+    }
+
+    Err(format!("psql command failed: {stderr}"))
+}
+
+fn build_psql_restore_args(sql_path: &Path, port: u16, database: &str) -> Vec<String> {
+    vec![
+        "-h".to_string(),
+        "127.0.0.1".to_string(),
+        "-p".to_string(),
+        port.to_string(),
+        "-U".to_string(),
+        "elms".to_string(),
+        "-d".to_string(),
+        database.to_string(),
+        "-v".to_string(),
+        "ON_ERROR_STOP=1".to_string(),
+        "--single-transaction".to_string(),
+        "-f".to_string(),
+        sql_path.to_string_lossy().into_owned(),
+    ]
+}
+
+fn sql_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
+
+fn preserve_firm_admin_credentials(
+    app: &AppHandle,
+    port: u16,
+    database: &str,
+) -> Result<Vec<PreservedFirmAdminCredential>, String> {
+    // Use unlikely separators to avoid collisions with normal profile fields.
+    let query = format!(
+        r#"
+SELECT concat_ws(
+  chr(31),
+  u."id"::text,
+  u."email",
+  u."fullName",
+  u."preferredLanguage"::text,
+  u."status"::text,
+  u."passwordHash"
+)
+FROM public."User" u
+JOIN public."Role" r ON r."id" = u."roleId"
+WHERE u."deletedAt" IS NULL
+  AND u."passwordHash" IS NOT NULL
+  AND r."key" = {};
+"#,
+        sql_literal(FIRM_ADMIN_ROLE_KEY)
+    );
+
+    let raw = run_psql_capture_output(app, port, database, &query)?;
+    let mut preserved = Vec::new();
+    for line in raw.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let parts = trimmed.split('\u{1f}').collect::<Vec<_>>();
+        if parts.len() != 6 {
+            return Err(format!(
+                "Unable to parse firm admin credential snapshot row: {}",
+                trimmed
+            ));
+        }
+        preserved.push(PreservedFirmAdminCredential {
+            id: parts[0].to_string(),
+            email: parts[1].to_string(),
+            full_name: parts[2].to_string(),
+            preferred_language: parts[3].to_string(),
+            status: parts[4].to_string(),
+            password_hash: parts[5].to_string(),
+        });
+    }
+    Ok(preserved)
+}
+
+fn build_reconcile_admin_credentials_sql(
+    credentials: &[PreservedFirmAdminCredential],
+) -> Option<String> {
+    if credentials.is_empty() {
+        return None;
+    }
+
+    let mut sql = String::from("BEGIN;\n");
+    sql.push_str(&format!(
+        r#"INSERT INTO public."Role" ("id", "key", "name", "scope", "createdAt", "updatedAt")
+SELECT gen_random_uuid(), {role_key}, 'Firm Admin', 'SYSTEM', now(), now()
+WHERE NOT EXISTS (
+  SELECT 1 FROM public."Role" WHERE "firmId" IS NULL AND "key" = {role_key}
+);
+"#,
+        role_key = sql_literal(FIRM_ADMIN_ROLE_KEY)
+    ));
+
+    sql.push_str(
+        r#"
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public."Firm") THEN
+    RAISE EXCEPTION 'Admin credential reconciliation failed: restored database has no firm record';
+  END IF;
+END $$;
+"#,
+    );
+
+    for credential in credentials {
+        let role_subquery = format!(
+            "(SELECT \"id\" FROM public.\"Role\" WHERE \"firmId\" IS NULL AND \"key\" = {} LIMIT 1)",
+            sql_literal(FIRM_ADMIN_ROLE_KEY)
+        );
+        let firm_subquery =
+            "(SELECT \"id\" FROM public.\"Firm\" ORDER BY \"createdAt\" ASC LIMIT 1)";
+        sql.push_str(&format!(
+            r#"
+UPDATE public."User"
+SET "passwordHash" = {password_hash}, "updatedAt" = now()
+WHERE "email" = {email}
+  AND "deletedAt" IS NULL;
+
+INSERT INTO public."User" (
+  "id", "firmId", "roleId", "email", "fullName", "passwordHash", "preferredLanguage", "status", "createdAt", "updatedAt"
+)
+SELECT
+  {id},
+  {firm_id},
+  {role_id},
+  {email},
+  {full_name},
+  {password_hash},
+  {preferred_language}::public."Language",
+  {status}::public."UserStatus",
+  now(),
+  now()
+WHERE NOT EXISTS (
+  SELECT 1 FROM public."User"
+  WHERE "email" = {email}
+    AND "deletedAt" IS NULL
+);
+"#,
+            id = sql_literal(&credential.id),
+            firm_id = firm_subquery,
+            role_id = role_subquery,
+            email = sql_literal(&credential.email),
+            full_name = sql_literal(&credential.full_name),
+            password_hash = sql_literal(&credential.password_hash),
+            preferred_language = sql_literal(&credential.preferred_language),
+            status = sql_literal(&credential.status),
+        ));
+    }
+
+    sql.push_str("COMMIT;");
+    Some(sql)
+}
+
+fn reconcile_admin_credentials_after_restore(
+    app: &AppHandle,
+    port: u16,
+    database: &str,
+    credentials: &[PreservedFirmAdminCredential],
+) -> Result<(), String> {
+    let Some(sql) = build_reconcile_admin_credentials_sql(credentials) else {
+        return Ok(());
+    };
+    run_psql_execute_sql(app, port, database, &sql)
+        .map_err(|error| format!("Admin credential reconciliation failed after restore: {error}"))
+}
+
+fn normalize_restore_sql(sql: &str) -> String {
+    sql.replace(
+        "'unaccent'::regdictionary",
+        "'public.unaccent'::pg_catalog.regdictionary",
+    )
+}
+
+fn invalidate_migration_marker(app_data: &Path) -> Result<(), String> {
+    let marker_path = app_data.join(MIGRATION_VERSION_MARKER_FILE);
+    if !marker_path.exists() {
+        return Ok(());
+    }
+
+    fs::remove_file(&marker_path)
+        .map_err(|error| format!("Unable to clear migration marker after restore failure: {error}"))
+}
+
+fn request_forced_migration_on_next_boot(app_data: &Path) -> Result<(), String> {
+    let marker_path = app_data.join(FORCE_MIGRATION_MARKER_FILE);
+    fs::write(&marker_path, "restore").map_err(|error| {
+        format!(
+            "Unable to request forced migration on next bootstrap ({}): {error}",
+            marker_path.display()
+        )
+    })
+}
+
+fn restore_uploads_atomically(uploads_src: &Path, uploads_target: &Path) -> Result<(), String> {
+    let uploads_backup = uploads_target.with_extension("pre-restore");
+    if uploads_backup.exists() {
+        fs::remove_dir_all(&uploads_backup).map_err(|error| {
+            format!(
+                "Unable to clear stale uploads rollback directory {}: {error}",
+                uploads_backup.display()
+            )
+        })?;
+    }
+
+    let had_existing_uploads = uploads_target.exists();
+    if had_existing_uploads {
+        fs::rename(uploads_target, &uploads_backup).map_err(|error| {
+            format!(
+                "Unable to stage existing uploads directory {}: {error}",
+                uploads_target.display()
+            )
+        })?;
+    }
+
+    let apply_result = (|| -> Result<(), String> {
+        fs::create_dir_all(uploads_target).map_err(|error| {
+            format!(
+                "Unable to create uploads directory {}: {error}",
+                uploads_target.display()
+            )
+        })?;
+        copy_dir_recursive(uploads_src, uploads_target)?;
+        Ok(())
+    })();
+
+    if let Err(error) = apply_result {
+        let _ = fs::remove_dir_all(uploads_target);
+        if had_existing_uploads {
+            let _ = fs::rename(&uploads_backup, uploads_target);
+        }
+        return Err(error);
+    }
+
+    if had_existing_uploads && uploads_backup.exists() {
+        fs::remove_dir_all(&uploads_backup).map_err(|error| {
+            format!(
+                "Unable to remove uploads rollback directory {}: {error}",
+                uploads_backup.display()
+            )
+        })?;
+    }
+
+    Ok(())
 }
 
 fn wait_for_postgres_ready(app: &AppHandle, port: u16) -> Result<(), String> {
@@ -847,7 +1346,9 @@ fn apply_restore_from_backup(app: &AppHandle, backup_path: &Path) -> Result<(), 
         let _ = fs::remove_dir_all(&restore_work);
     };
 
+    let preserved_admin_credentials = preserve_firm_admin_credentials(app, port, &database_name)?;
     let mut runtime_stopped = false;
+    let mut restore_postgres_started = false;
     let result = (|| -> Result<(), String> {
         extract_archive(backup_path, &restore_work)?;
 
@@ -870,10 +1371,17 @@ fn apply_restore_from_backup(app: &AppHandle, backup_path: &Path) -> Result<(), 
             let dump_file = File::open(&dump_path)
                 .map_err(|error| format!("Unable to read backup dump: {error}"))?;
             let mut decoder = GzDecoder::new(dump_file);
+            let mut sql_bytes = Vec::new();
+            std::io::copy(&mut decoder, &mut sql_bytes)
+                .map_err(|error| format!("Unable to decompress backup SQL dump: {error}"))?;
+            let sql_raw = String::from_utf8(sql_bytes)
+                .map_err(|error| format!("Backup SQL dump is not valid UTF-8: {error}"))?;
+            let normalized_sql = normalize_restore_sql(&sql_raw);
             let mut sql_file = File::create(&sql_path)
                 .map_err(|error| format!("Unable to create restore SQL file: {error}"))?;
-            std::io::copy(&mut decoder, &mut sql_file)
-                .map_err(|error| format!("Unable to decompress backup SQL dump: {error}"))?;
+            sql_file
+                .write_all(normalized_sql.as_bytes())
+                .map_err(|error| format!("Unable to write normalized restore SQL file: {error}"))?;
             sql_file
                 .flush()
                 .map_err(|error| format!("Unable to flush restore SQL file: {error}"))?;
@@ -883,25 +1391,33 @@ fn apply_restore_from_backup(app: &AppHandle, backup_path: &Path) -> Result<(), 
         runtime_stopped = true;
         std::thread::sleep(Duration::from_millis(500));
 
+        start_postgres_for_restore(app, &app_data, port)?;
+        restore_postgres_started = true;
+        run_psql_restore(app, &sql_path, port, &database_name)?;
+        reconcile_admin_credentials_after_restore(
+            app,
+            port,
+            &database_name,
+            &preserved_admin_credentials,
+        )?;
+
         let uploads_src = restore_work.join("uploads");
         let uploads_target = app_data.join("uploads");
-        if uploads_target.exists() {
-            fs::remove_dir_all(&uploads_target).map_err(|error| {
-                format!("Unable to clear uploads directory before restore: {error}")
-            })?;
-        }
-        copy_dir_recursive(&uploads_src, &uploads_target)?;
+        restore_uploads_atomically(&uploads_src, &uploads_target)?;
 
-        start_postgres_for_restore(app, &app_data, port)?;
-        run_psql_restore(app, &sql_path, port, &database_name)?;
-        stop_postgres_for_restore(app, &app_data)?;
-
-        sidecar::start_runtime_bootstrap(app);
+        invalidate_migration_marker(&app_data)?;
+        request_forced_migration_on_next_boot(&app_data)?;
         Ok(())
     })();
 
     cleanup();
-    if result.is_err() && runtime_stopped {
+    if restore_postgres_started {
+        let _ = stop_postgres_for_restore(app, &app_data);
+    }
+    if runtime_stopped {
+        if result.is_err() {
+            let _ = invalidate_migration_marker(&app_data);
+        }
         sidecar::start_runtime_bootstrap(app);
     }
     result
@@ -1076,7 +1592,7 @@ pub fn desktop_run_backup_now(
     }
 
     let _guard = begin_operation(&backup_state)?;
-    let path = run_backup_internal(&app, BackupTrigger::Manual)?;
+    let path = run_backup_internal(&app, BackupTrigger::Manual, None)?;
     Ok(BackupOperationResult {
         ok: true,
         message: "Backup completed".to_string(),
@@ -1099,11 +1615,27 @@ pub fn desktop_restore_backup(
     if !backup_path.exists() {
         return Err(format!("Backup file not found: {}", backup_path.display()));
     }
+    let backup_path = fs::canonicalize(&backup_path).map_err(|error| {
+        format!(
+            "Unable to resolve backup path {}: {error}",
+            backup_path.display()
+        )
+    })?;
 
     let _guard = begin_operation(&backup_state)?;
+    runtime_state.set_phase_with_message(
+        "recovering",
+        Some("Restore applied, restarting desktop services.".to_string()),
+    );
 
     // Safety backup before destructive restore.
-    run_backup_internal(&app, BackupTrigger::PreRestore)?;
+    run_backup_internal(&app, BackupTrigger::PreRestore, Some(&backup_path))?;
+    if !backup_path.exists() {
+        return Err(format!(
+            "Backup file was removed before restore could start: {}",
+            backup_path.display()
+        ));
+    }
     apply_restore_from_backup(&app, &backup_path)?;
 
     Ok(BackupOperationResult {
@@ -1146,15 +1678,58 @@ pub fn start_backup_scheduler(app: AppHandle) {
             Err(_) => continue,
         };
 
-        let _ = run_backup_internal(&app, BackupTrigger::Scheduled);
+        let _ = run_backup_internal(&app, BackupTrigger::Scheduled, None);
         drop(guard);
     });
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{compute_next_run, parse_time_local, BackupFrequency, BackupPolicy};
+    use super::{
+        build_psql_restore_args, build_reconcile_admin_credentials_sql, compute_next_run,
+        extract_archive, invalidate_migration_marker, is_disallowed_archive_entry_type,
+        normalize_restore_sql, parse_time_local, prune_backups,
+        request_forced_migration_on_next_boot, restore_uploads_atomically,
+        validate_archive_relative_path, BackupFrequency, BackupPolicy,
+        PreservedFirmAdminCredential, FORCE_MIGRATION_MARKER_FILE, MIGRATION_VERSION_MARKER_FILE,
+    };
     use chrono::{Datelike, Local, TimeZone, Timelike};
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::fs;
+    use std::fs::File;
+    use std::path::{Path, PathBuf};
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_dir(label: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|value| value.as_nanos())
+            .unwrap_or(0);
+        let path = std::env::temp_dir().join(format!("elms-desktop-backup-{label}-{nanos}"));
+        fs::create_dir_all(&path).expect("create temp dir");
+        path
+    }
+
+    fn write_archive(backup_file: &Path, entries: Vec<(PathBuf, tar::EntryType, Vec<u8>)>) {
+        let file = File::create(backup_file).expect("create archive file");
+        let encoder = GzEncoder::new(file, Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+
+        for (path, entry_type, data) in entries {
+            let mut header = tar::Header::new_gnu();
+            header.set_mode(0o644);
+            header.set_mtime(0);
+            header.set_entry_type(entry_type);
+            header.set_size(data.len() as u64);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, path, data.as_slice())
+                .expect("append entry");
+        }
+
+        builder.finish().expect("finish archive");
+    }
 
     #[test]
     fn validates_time_local_format() {
@@ -1201,5 +1776,212 @@ mod tests {
         // same weekday, but next week because target time already passed
         assert_eq!(next.weekday().num_days_from_sunday(), 0);
         assert!((next.date_naive() - now.date_naive()).num_days() >= 7);
+    }
+
+    #[test]
+    fn validates_archive_paths() {
+        assert_eq!(
+            validate_archive_relative_path(Path::new("manifest.json"))
+                .expect("manifest path should be valid"),
+            PathBuf::from("manifest.json")
+        );
+        assert_eq!(
+            validate_archive_relative_path(Path::new("uploads/cases/doc.pdf"))
+                .expect("uploads path should be valid"),
+            PathBuf::from("uploads/cases/doc.pdf")
+        );
+        assert!(validate_archive_relative_path(Path::new("/etc/passwd")).is_err());
+        assert!(validate_archive_relative_path(Path::new("../outside")).is_err());
+        assert!(validate_archive_relative_path(Path::new("uploads/../../outside")).is_err());
+        assert!(validate_archive_relative_path(Path::new("notes.txt")).is_err());
+    }
+
+    #[test]
+    fn rejects_symlink_and_hardlink_archive_entries() {
+        assert!(is_disallowed_archive_entry_type(tar::EntryType::Symlink));
+        assert!(is_disallowed_archive_entry_type(tar::EntryType::Link));
+    }
+
+    #[test]
+    fn rejects_invalid_archive_without_extracting_files() {
+        let root = unique_temp_dir("invalid-archive");
+        let backup_file = root.join("invalid.elmsbk");
+        let destination = root.join("restore");
+        fs::create_dir_all(&destination).expect("create restore dir");
+
+        write_archive(
+            &backup_file,
+            vec![(
+                PathBuf::from("evil.txt"),
+                tar::EntryType::Regular,
+                b"unsafe".to_vec(),
+            )],
+        );
+
+        let result = extract_archive(&backup_file, &destination);
+        assert!(result.is_err());
+        assert!(!destination.join("evil.txt").exists());
+
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn normalizes_legacy_unaccent_dictionary_cast_in_restore_sql() {
+        let raw = "SELECT public.unaccent('unaccent'::regdictionary, $1);";
+        let normalized = normalize_restore_sql(raw);
+        assert!(normalized.contains("'public.unaccent'::pg_catalog.regdictionary"));
+        assert!(!normalized.contains("'unaccent'::regdictionary"));
+    }
+
+    #[test]
+    fn keeps_non_matching_restore_sql_unchanged() {
+        let raw = "SELECT lower(title) FROM public.\"Document\";";
+        assert_eq!(normalize_restore_sql(raw), raw);
+    }
+
+    #[test]
+    fn psql_restore_args_enable_single_transaction_and_on_error_stop() {
+        let args =
+            build_psql_restore_args(Path::new("/tmp/restore.sql"), 15433, "elms_desktop_dev");
+        assert!(args.contains(&"--single-transaction".to_string()));
+        assert!(args.contains(&"ON_ERROR_STOP=1".to_string()));
+    }
+
+    #[test]
+    fn invalidates_migration_marker_file() {
+        let root = unique_temp_dir("migration-marker");
+        let marker_path = root.join(MIGRATION_VERSION_MARKER_FILE);
+        fs::write(&marker_path, "0034_case_session_follow_up_link").expect("seed marker");
+
+        invalidate_migration_marker(&root).expect("invalidate marker");
+        assert!(!marker_path.exists());
+
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn requests_forced_migration_marker_file() {
+        let root = unique_temp_dir("force-migration-marker");
+        let marker_path = root.join(FORCE_MIGRATION_MARKER_FILE);
+
+        request_forced_migration_on_next_boot(&root).expect("write forced marker");
+        assert!(
+            marker_path.exists(),
+            "forced migration marker should be created"
+        );
+
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn prune_backups_keeps_preserved_restore_source() {
+        let root = unique_temp_dir("prune-preserve");
+        let old_backup = root.join("elms-backup-20260101T000000.elmsbk");
+        let keep_backup = root.join("elms-backup-20260102T000000.elmsbk");
+        fs::write(&old_backup, b"old").expect("write old backup");
+        fs::write(&keep_backup, b"keep").expect("write keep backup");
+
+        std::thread::sleep(Duration::from_millis(10));
+        // Touch preserve target last so normal pruning would keep this newest file anyway,
+        // then assert preserve argument also works when file is beyond retention cut.
+        fs::write(&keep_backup, b"keep-new").expect("refresh keep backup");
+
+        prune_backups(&root, 0, Some(&old_backup)).expect("prune backups");
+
+        assert!(
+            old_backup.exists(),
+            "preserved backup should not be deleted"
+        );
+        assert!(
+            !keep_backup.exists(),
+            "non-preserved backup should be pruned"
+        );
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn restore_uploads_atomically_treats_missing_source_as_empty_snapshot() {
+        let root = unique_temp_dir("uploads-empty-snapshot");
+        let uploads_target = root.join("uploads");
+        fs::create_dir_all(&uploads_target).expect("create uploads target");
+        let original_file = uploads_target.join("original.txt");
+        fs::write(&original_file, b"original").expect("seed original upload");
+
+        let missing_source = root.join("missing-uploads-source");
+        restore_uploads_atomically(&missing_source, &uploads_target)
+            .expect("missing uploads source should produce empty uploads");
+        assert!(
+            !uploads_target.join("original.txt").exists(),
+            "original uploads should be removed when archive has no uploads directory"
+        );
+        assert!(
+            !uploads_target.with_extension("pre-restore").exists(),
+            "rollback temp directory should not remain after restore success"
+        );
+
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn reconcile_admin_credentials_sql_is_none_when_no_credentials() {
+        assert!(build_reconcile_admin_credentials_sql(&[]).is_none());
+    }
+
+    #[test]
+    fn reconcile_admin_credentials_sql_updates_and_inserts_with_transaction() {
+        let sql = build_reconcile_admin_credentials_sql(&[PreservedFirmAdminCredential {
+            id: "admin-id".to_string(),
+            email: "admin@firm.local".to_string(),
+            full_name: "Admin User".to_string(),
+            preferred_language: "AR".to_string(),
+            status: "ACTIVE".to_string(),
+            password_hash: "hash-1".to_string(),
+        }])
+        .expect("sql should be generated");
+
+        assert!(sql.contains("BEGIN;"));
+        assert!(sql.contains("COMMIT;"));
+        assert!(sql.contains("INSERT INTO public.\"Role\""));
+        assert!(sql.contains("UPDATE public.\"User\""));
+        assert!(sql.contains("INSERT INTO public.\"User\""));
+        assert!(sql.contains("'firm_admin'"));
+        assert!(sql.contains("'admin@firm.local'"));
+        assert!(sql.contains("WHERE \"email\" = 'admin@firm.local'"));
+        assert!(
+            !sql.contains("AND \"firmId\" = 'firm-id'"),
+            "reconciliation should not match by firmId"
+        );
+        assert!(
+            sql.contains("(SELECT \"id\" FROM public.\"Firm\" ORDER BY \"createdAt\" ASC LIMIT 1)")
+        );
+        assert!(sql.contains(
+            "Admin credential reconciliation failed: restored database has no firm record"
+        ));
+    }
+
+    #[test]
+    fn reconcile_admin_credentials_sql_avoids_firm_id_based_duplicate_insert_path() {
+        let sql = build_reconcile_admin_credentials_sql(&[PreservedFirmAdminCredential {
+            id: "old-admin-id".to_string(),
+            email: "admin@elms.local".to_string(),
+            full_name: "Legacy Admin".to_string(),
+            preferred_language: "AR".to_string(),
+            status: "ACTIVE".to_string(),
+            password_hash: "preserved-hash".to_string(),
+        }])
+        .expect("sql should be generated");
+
+        assert!(
+            sql.contains("WHERE \"email\" = 'admin@elms.local'\n  AND \"deletedAt\" IS NULL;"),
+            "update path must target active user by email only"
+        );
+        assert!(
+            sql.contains("WHERE \"email\" = 'admin@elms.local'\n    AND \"deletedAt\" IS NULL"),
+            "insert guard must use email-only active check"
+        );
+        assert!(
+            !sql.contains("\"firmId\" = 'legacy-firm-id'"),
+            "legacy firmId should not participate in match/guard predicates"
+        );
     }
 }

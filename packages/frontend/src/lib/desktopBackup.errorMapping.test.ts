@@ -27,4 +27,35 @@ describe("desktopBackup error mapping", () => {
       "Desktop runtime is still starting. Try again in a moment."
     );
   });
+
+  it("maps concurrent operation errors for restore calls", async () => {
+    const { restoreDesktopBackup } = await importDesktopBackup(true);
+    invokeMock.mockRejectedValue(
+      new Error("Another backup/restore operation is already running")
+    );
+
+    await expect(restoreDesktopBackup("/tmp/sample.elmsbk")).rejects.toThrow(
+      "Another backup or restore operation is in progress."
+    );
+  });
+
+  it("maps bootstrapping errors for restore calls", async () => {
+    const { restoreDesktopBackup } = await importDesktopBackup(true);
+    invokeMock.mockRejectedValue(new Error("Desktop runtime is still bootstrapping"));
+
+    await expect(restoreDesktopBackup("/tmp/sample.elmsbk")).rejects.toThrow(
+      "Desktop runtime is still starting. Try again in a moment."
+    );
+  });
+
+  it("passes through archive validation errors for restore calls", async () => {
+    const { restoreDesktopBackup } = await importDesktopBackup(true);
+    invokeMock.mockRejectedValue(
+      new Error("Backup archive contains an unsafe parent path segment: ../escape.txt")
+    );
+
+    await expect(restoreDesktopBackup("/tmp/sample.elmsbk")).rejects.toThrow(
+      "Backup archive contains an unsafe parent path segment: ../escape.txt"
+    );
+  });
 });

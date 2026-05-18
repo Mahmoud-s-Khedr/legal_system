@@ -42,7 +42,9 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
   });
   const pollRef = useRef<number | null>(null);
   const phaseRef = useRef<BootstrapStatus["phase"]>(status.phase);
-  const timeoutRef = useRef<number | null>(null);
+  const nonReadySinceRef = useRef<number | null>(
+    status.phase === "ready" ? null : Date.now()
+  );
 
   useEffect(() => {
     phaseRef.current = status.phase;
@@ -76,8 +78,23 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
         }
       } finally {
         if (!cancelled) {
-          const isTerminal = nextPhase === "ready";
-          if (!isTerminal) {
+          if (nextPhase === "ready") {
+            nonReadySinceRef.current = null;
+          } else if (nonReadySinceRef.current === null) {
+            nonReadySinceRef.current = Date.now();
+          }
+
+          if (
+            nextPhase !== "ready" &&
+            nonReadySinceRef.current !== null &&
+            Date.now() - nonReadySinceRef.current >= BOOTSTRAP_STUCK_TIMEOUT_MS
+          ) {
+            setStatus({
+              phase: "failed",
+              message: t("desktopBootstrap.unreachable"),
+              failureCode: "BOOTSTRAP_TIMEOUT"
+            });
+          } else {
             pollRef.current = window.setTimeout(poll, 750);
           }
         }
@@ -85,25 +102,11 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
     };
 
     void poll();
-    timeoutRef.current = window.setTimeout(() => {
-      if (cancelled || phaseRef.current === "ready") {
-        return;
-      }
-
-      setStatus({
-        phase: "failed",
-        message: t("desktopBootstrap.unreachable"),
-        failureCode: "BOOTSTRAP_TIMEOUT"
-      });
-    }, BOOTSTRAP_STUCK_TIMEOUT_MS);
 
     return () => {
       cancelled = true;
       if (pollRef.current !== null) {
         window.clearTimeout(pollRef.current);
-      }
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
       }
     };
   }, [t]);

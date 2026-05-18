@@ -1035,7 +1035,7 @@
     },
     "recovering": {
       "title": "Récupération des services locaux",
-      "description": "Le backend local s'est arrêté de manière inattendue. ELMS tente un redémarrage automatique."
+      "description": "Une restauration redémarre les services locaux. ELMS reprendra automatiquement quand le backend redeviendra sain."
     },
     "failed": {
       "title": "Le démarrage demande une intervention",

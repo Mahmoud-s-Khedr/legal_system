@@ -7,7 +7,7 @@ const LOCAL_SESSION_STORAGE_KEY = "elms.localSessionToken";
 const DESKTOP_BACKEND_BASE_URL_CACHE_KEY = "elms.desktopBackendBaseUrl";
 const DESKTOP_CONNECTIVITY_SNAPSHOT_KEY = "elms.desktopBackendConnectivity";
 const DESKTOP_HEALTH_PROBE_TIMEOUT_MS = 1200;
-const DESKTOP_BOOTSTRAP_READY_TIMEOUT_MS = 15000;
+const DESKTOP_BOOTSTRAP_READY_TIMEOUT_MS = 30000;
 const DESKTOP_BOOTSTRAP_POLL_INTERVAL_MS = 350;
 
 interface DesktopBackendConnection {
@@ -549,6 +549,9 @@ async function waitForDesktopBootstrapReady() {
   while (Date.now() - startedAt < DESKTOP_BOOTSTRAP_READY_TIMEOUT_MS) {
     try {
       const status = await invokeDesktop<DesktopBootstrapStatus>("desktop_bootstrap_status");
+      if (!status || typeof status.phase !== "string") {
+        return;
+      }
       if (status.phase === "ready") {
         return;
       }
@@ -581,6 +584,63 @@ async function waitForDesktopBootstrapReady() {
       reason: "BOOTSTRAP_TIMEOUT"
     }
   );
+}
+
+async function getDesktopBootstrapStatusSafe() {
+  if (!isEmbeddedDesktopRuntime()) {
+    return null;
+  }
+
+  try {
+    return await invokeDesktop<DesktopBootstrapStatus>("desktop_bootstrap_status");
+  } catch {
+    return null;
+  }
+}
+
+async function fetchWithDesktopRecovery(
+  input: string,
+  requestInit: RequestInit,
+  options?: {
+    retryRelativeUrl?: string;
+    retryRelativeInit?: RequestInit;
+  }
+) {
+  const resolvedUrl = resolveRequestUrl(input);
+  const attempt = async (url: string, init: RequestInit) =>
+    fetch(url, init);
+
+  try {
+    return await attempt(resolvedUrl, requestInit);
+  } catch (error) {
+    if (!isNetworkFailure(error)) {
+      throw error;
+    }
+
+    const bootstrapStatus = await getDesktopBootstrapStatusSafe();
+    if (
+      bootstrapStatus &&
+      (bootstrapStatus.phase === "starting" || bootstrapStatus.phase === "recovering")
+    ) {
+      await waitForDesktopBootstrapReady();
+      try {
+        return await attempt(resolvedUrl, requestInit);
+      } catch (retryError) {
+        if (
+          options?.retryRelativeUrl &&
+          isNetworkFailure(retryError)
+        ) {
+          return await attempt(options.retryRelativeUrl, options.retryRelativeInit ?? requestInit);
+        }
+        throw retryError;
+      }
+    }
+
+    if (options?.retryRelativeUrl) {
+      return await attempt(options.retryRelativeUrl, options.retryRelativeInit ?? requestInit);
+    }
+    throw error;
+  }
 }
 
 function resolveRequestUrl(input: string) {
@@ -812,9 +872,9 @@ export async function apiFetch<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
+  await waitForDesktopBootstrapReady();
   const authApiPath = isAuthApiPath(input);
   if (authApiPath) {
-    await waitForDesktopBootstrapReady();
     await ensureDesktopBackendConnectionLoaded({ validateConnection: false });
   } else {
     await ensureDesktopBackendConnectionLoaded();
@@ -830,7 +890,7 @@ export async function apiFetch<T>(
 
   let response: Response;
   try {
-    response = await fetch(resolveRequestUrl(input), {
+    response = await fetchWithDesktopRecovery(input, {
       credentials: "include",
       headers,
       signal,
@@ -852,13 +912,14 @@ export async function apiFormFetch<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
+  await waitForDesktopBootstrapReady();
   await ensureDesktopBackendConnectionLoaded();
   const { signal, headers: initHeaders, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
 
   let response: Response;
   try {
-    response = await fetch(resolveRequestUrl(input), {
+    response = await fetchWithDesktopRecovery(input, {
       credentials: "include",
       headers,
       signal,
@@ -879,6 +940,7 @@ export async function apiDownload(
   input: string,
   init?: RequestInit
 ): Promise<ApiDownloadResult> {
+  await waitForDesktopBootstrapReady();
   await ensureDesktopBackendConnectionLoaded();
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
@@ -891,25 +953,15 @@ export async function apiDownload(
 
   let response: Response;
   try {
-    response = await fetch(resolveRequestUrl(input), requestInit);
-  } catch (error) {
     const canRetryViaRelativeApi =
       isDesktopShell &&
-      isNetworkFailure(error) &&
       typeof input === "string" &&
       input.startsWith("/api/");
-
-    if (canRetryViaRelativeApi) {
-      try {
-        // Dev/desktop fallback: if explicit runtime base URL is temporarily
-        // unreachable, retry against current origin (e.g. Vite proxy).
-        response = await fetch(input, requestInit);
-      } catch {
-        throw mapTransportError(error, input);
-      }
-    } else {
-      throw mapTransportError(error, input);
-    }
+    response = await fetchWithDesktopRecovery(input, requestInit, canRetryViaRelativeApi
+      ? { retryRelativeUrl: input, retryRelativeInit: requestInit }
+      : undefined);
+  } catch (error) {
+    throw mapTransportError(error, input);
   }
 
   if (!response.ok) {

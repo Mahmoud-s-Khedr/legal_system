@@ -10,6 +10,7 @@ describe("apiDownload", () => {
   it("includes desktop session header and credentials", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_DESKTOP_SHELL", "true");
+    vi.stubEnv("VITE_DESKTOP_RUNTIME_VARIANT", "dummy");
 
     const blob = new Blob(["test"], { type: "application/pdf" });
     const fetchMock = vi.fn().mockResolvedValue({
@@ -353,4 +354,5 @@ describe("apiDownload", () => {
     const { resolveApiUrl } = await import("./api");
     expect(resolveApiUrl("/api/health")).toBe("http://127.0.0.1:7854/api/health");
   });
+
 });

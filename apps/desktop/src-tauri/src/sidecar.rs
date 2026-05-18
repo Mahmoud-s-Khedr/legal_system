@@ -25,7 +25,8 @@ const DESKTOP_JWT_PRIVATE_KEY_FILE: &str = "jwt-private.pem";
 const DESKTOP_JWT_PUBLIC_KEY_FILE: &str = "jwt-public.pem";
 const DESKTOP_DB_MARKER_FILE: &str = "desktop-database-name";
 const MIGRATION_VERSION_MARKER_FILE: &str = "migration_version";
-const LATEST_MIGRATION_NAME: &str = "0034_case_session_follow_up_link";
+const FORCE_MIGRATION_MARKER_FILE: &str = "force_migration_on_next_boot";
+const LATEST_MIGRATION_NAME: &str = "0035_unaccent_regdictionary_schema_qualify";
 const FAILURE_CODE_POSTGRES_CLUSTER_VERSION_MISMATCH: &str = "postgres_cluster_version_mismatch";
 const FAILURE_CODE_POSTGRES_STARTUP_FAILED: &str = "postgres_startup_failed";
 const FAILURE_CODE_PREFIX: &str = "__ELMS_FAILURE_CODE__=";
@@ -272,6 +273,10 @@ fn clear_reset_markers(app_data_dir: &Path, log_file: &Path) {
         (
             "migration version marker",
             app_data_dir.join(MIGRATION_VERSION_MARKER_FILE),
+        ),
+        (
+            "forced migration marker",
+            app_data_dir.join(FORCE_MIGRATION_MARKER_FILE),
         ),
     ];
 
@@ -679,6 +684,10 @@ impl RuntimeState {
     pub fn current_phase(&self) -> String {
         self.inner.snapshot().phase
     }
+
+    pub fn set_phase_with_message(&self, phase: &str, message: Option<String>) {
+        self.inner.set_status(phase, message);
+    }
 }
 
 #[tauri::command]
@@ -1045,6 +1054,8 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     inner.set_status("starting", Some("Applying database migrations".to_string()));
     let migration_phase_started_at = Instant::now();
     let migration_version_file = app_data_dir.join(MIGRATION_VERSION_MARKER_FILE);
+    let force_migration_marker_file = app_data_dir.join(FORCE_MIGRATION_MARKER_FILE);
+    let force_migration_requested = force_migration_marker_file.exists();
     let migration_version_marker = fs::read_to_string(&migration_version_file)
         .ok()
         .map(|value| value.trim().to_string())
@@ -1061,20 +1072,29 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     let schema_already_current = !allow_migration_repair
         && !should_reset_database
         && !should_repair_postgres_runtime
+        && !force_migration_requested
         && marker_matches_latest_migration(
             migration_version_marker.as_deref(),
             detected_latest_migration.as_deref(),
         );
     let env_skip_requested = env_requests_skip_migrations(&desktop_env);
     let skip_migrations = should_skip_migrations(
-        should_reset_database || should_repair_postgres_runtime,
+        should_reset_database || should_repair_postgres_runtime || force_migration_requested,
         schema_already_current,
         env_skip_requested,
     );
-    if (should_reset_database || should_repair_postgres_runtime) && env_skip_requested {
+    if (should_reset_database || should_repair_postgres_runtime || force_migration_requested)
+        && env_skip_requested
+    {
         log_startup_diagnostic(
             &bootstrap_log_file,
-            "Ignoring ELMS_SKIP_MIGRATIONS because local PostgreSQL reset was requested",
+            "Ignoring ELMS_SKIP_MIGRATIONS because reset/repair/forced-migration was requested",
+        );
+    }
+    if force_migration_requested {
+        log_startup_diagnostic(
+            &bootstrap_log_file,
+            "Forced migration marker detected (restore path); migrations will run",
         );
     }
 
@@ -1103,6 +1123,12 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
             &bootstrap_log_file,
         )
         .map_err(|error| {
+            if force_migration_requested {
+                append_bootstrap_log_line(
+                    &bootstrap_log_file,
+                    "Forced migration marker retained because migration failed; next startup will retry migration",
+                );
+            }
             append_bootstrap_log_line(
                 &bootstrap_log_file,
                 &format!("Database migration failed: {error}"),
@@ -1130,6 +1156,22 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
                 &bootstrap_log_file,
                 "Warning: latest migration is unknown; migration version marker was not written",
             );
+        }
+        if force_migration_requested {
+            if let Err(error) = fs::remove_file(&force_migration_marker_file) {
+                append_bootstrap_log_line(
+                    &bootstrap_log_file,
+                    &format!(
+                        "Warning: could not clear forced migration marker {}: {error}",
+                        force_migration_marker_file.display()
+                    ),
+                );
+            } else {
+                log_startup_diagnostic(
+                    &bootstrap_log_file,
+                    "Forced migration marker cleared after successful migration deploy",
+                );
+            }
         }
     }
 
@@ -3863,6 +3905,7 @@ mod tests {
     use super::should_skip_migrations;
     use super::workspace_backend_launch;
     use super::DESKTOP_DB_MARKER_FILE;
+    use super::FORCE_MIGRATION_MARKER_FILE;
     use super::MIGRATION_VERSION_MARKER_FILE;
     use std::collections::HashMap;
     use std::fs;
@@ -3993,9 +4036,12 @@ mod tests {
         let log_file = app_data_dir.join("bootstrap.log");
         let db_marker = app_data_dir.join(DESKTOP_DB_MARKER_FILE);
         let migration_marker = app_data_dir.join(MIGRATION_VERSION_MARKER_FILE);
+        let force_migration_marker = app_data_dir.join(FORCE_MIGRATION_MARKER_FILE);
         fs::write(&db_marker, "elms_desktop").expect("db marker should be created");
         fs::write(&migration_marker, "0013_pending_edition_key")
             .expect("migration marker should be created");
+        fs::write(&force_migration_marker, "restore")
+            .expect("force migration marker should be created");
 
         clear_reset_markers(&app_data_dir, &log_file);
 
@@ -4003,6 +4049,10 @@ mod tests {
         assert!(
             !migration_marker.exists(),
             "migration marker should be removed"
+        );
+        assert!(
+            !force_migration_marker.exists(),
+            "force migration marker should be removed"
         );
         let _ = fs::remove_dir_all(&app_data_dir);
     }
@@ -4013,6 +4063,7 @@ mod tests {
         let log_file = app_data_dir.join("bootstrap.log");
         let db_marker = app_data_dir.join(DESKTOP_DB_MARKER_FILE);
         let migration_marker = app_data_dir.join(MIGRATION_VERSION_MARKER_FILE);
+        let force_migration_marker = app_data_dir.join(FORCE_MIGRATION_MARKER_FILE);
 
         clear_reset_markers(&app_data_dir, &log_file);
 
@@ -4020,6 +4071,10 @@ mod tests {
         assert!(
             !migration_marker.exists(),
             "migration marker should remain absent"
+        );
+        assert!(
+            !force_migration_marker.exists(),
+            "force migration marker should remain absent"
         );
         let _ = fs::remove_dir_all(&app_data_dir);
     }
@@ -4033,6 +4088,14 @@ mod tests {
         assert!(
             !should_skip_migrations(true, true, true),
             "reset should force migration run even if env requested skip"
+        );
+    }
+
+    #[test]
+    fn should_skip_migrations_is_false_for_forced_restore_migration() {
+        assert!(
+            !should_skip_migrations(true, false, true),
+            "forced restore migration should override ELMS_SKIP_MIGRATIONS"
         );
     }
 
