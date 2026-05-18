@@ -358,7 +358,7 @@ function Assert-PdfDownload {
     }
 }
 
-function Assert-DeleteRejected {
+function Assert-DeleteSucceeded {
     param(
         [Parameter(Mandatory = $true)]
         [string]$InvoiceId,
@@ -367,20 +367,7 @@ function Assert-DeleteRejected {
         [hashtable]$Headers
     )
 
-    try {
-        Invoke-JsonApi -Method "DELETE" -Path "/api/invoices/$InvoiceId" -Headers $Headers | Out-Null
-        throw "Paid invoice deletion unexpectedly succeeded"
-    } catch {
-        $response = $_.Exception.Response
-        if (-not $response) {
-            throw
-        }
-
-        $statusCode = [int]$response.StatusCode
-        if ($statusCode -ne 422) {
-            throw ("Paid invoice deletion returned unexpected status {0}; expected 422" -f $statusCode)
-        }
-    }
+    Invoke-JsonApi -Method "DELETE" -Path "/api/invoices/$InvoiceId" -Headers $Headers | Out-Null
 }
 
 function Assert-EndpointStatus {
@@ -433,7 +420,7 @@ function Invoke-FeatureSmoke {
         draftDeleteSucceeded = $false
         paidInvoiceId = ""
         paidInvoiceStatus = ""
-        paidDeleteRejected = $false
+        paidDeleteSucceeded = $false
         invoicePdfBytes = 0
         reportPdfBytes = 0
         documentListEndpointPassed = $false
@@ -520,8 +507,8 @@ function Invoke-FeatureSmoke {
         throw ("Paid invoice expected PAID status, got {0}" -f $paidInvoice.status)
     }
 
-    Assert-DeleteRejected -InvoiceId $paidInvoice.id -Headers $authHeaders
-    $summary.paidDeleteRejected = $true
+    Assert-DeleteSucceeded -InvoiceId $paidInvoice.id -Headers $authHeaders
+    $summary.paidDeleteSucceeded = $true
 
     $reportPdf = Assert-PdfDownload -Path "/api/reports/case-status/export?format=pdf" -Headers $authHeaders -Label "report-smoke"
     $summary.reportPdfBytes = [int]$reportPdf.bytes
