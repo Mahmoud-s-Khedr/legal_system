@@ -2,7 +2,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::net::{Ipv4Addr, SocketAddr, TcpStream, UdpSocket};
 use std::path::{Component, Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -90,6 +90,16 @@ fn parse_truthy(value: &str) -> bool {
         value.trim().to_ascii_lowercase().as_str(),
         "1" | "true" | "yes" | "on"
     )
+}
+
+fn host_for_backend_exposure_mode(
+    exposure_mode: crate::backend_connection::BackendExposureMode,
+) -> &'static str {
+    if exposure_mode == crate::backend_connection::BackendExposureMode::Lan {
+        "0.0.0.0"
+    } else {
+        "127.0.0.1"
+    }
 }
 
 fn encode_bootstrap_failure(code: &str, message: &str, detail: Option<&str>) -> String {
@@ -951,6 +961,21 @@ fn bootstrap_runtime(app: &AppHandle, inner: &Arc<RuntimeStateInner>) -> Result<
     if !use_workspace_runtime {
         desktop_env.insert("NODE_ENV".to_string(), "production".to_string());
     }
+    let exposure_mode = crate::backend_connection::read_backend_exposure_mode(app)
+        .unwrap_or(crate::backend_connection::BackendExposureMode::Localhost);
+    let resolved_host = host_for_backend_exposure_mode(exposure_mode);
+    desktop_env.insert("HOST".to_string(), resolved_host.to_string());
+    let resolved_port = desktop_env
+        .get("BACKEND_PORT")
+        .cloned()
+        .unwrap_or_else(|| "7854".to_string());
+    log_startup_diagnostic(
+        &bootstrap_log_file,
+        &format!(
+            "Desktop backend exposure mode resolved to {:?} (HOST={resolved_host}, BACKEND_PORT={resolved_port}, workspace_runtime={use_workspace_runtime})",
+            exposure_mode
+        ),
+    );
     let bootstrap_token = generate_bootstrap_token();
     desktop_env.insert(
         "ELMS_DESKTOP_BOOTSTRAP_TOKEN".to_string(),
@@ -1875,11 +1900,11 @@ fn normalize_http_base_url(value: &str) -> Option<String> {
     Some(format!("{scheme}{host_with_optional_port}"))
 }
 
-fn resolve_runtime_backend_base_url() -> String {
+fn resolve_runtime_backend_port() -> u16 {
     let use_workspace_runtime = should_use_workspace_runtime();
     let isolate_workspace_runtime = use_workspace_runtime && workspace_dev_isolation_enabled();
     if isolate_workspace_runtime {
-        return "http://127.0.0.1:17854".to_string();
+        return 17854;
     }
 
     if use_workspace_runtime {
@@ -1887,39 +1912,111 @@ fn resolve_runtime_backend_base_url() -> String {
             let env_file = resolve_workspace_desktop_env_file(&root);
             if env_file.exists() {
                 let values = parse_env_file(&env_file);
-                if let Some(raw_url) = values.get("DESKTOP_BACKEND_URL") {
-                    if let Some(url) = normalize_http_base_url(raw_url) {
-                        return url;
-                    }
-                }
                 if let Some(raw_port) = values.get("BACKEND_PORT") {
                     if let Ok(port) = raw_port.parse::<u16>() {
-                        return format!("http://127.0.0.1:{port}");
+                        return port;
+                    }
+                }
+                if let Some(raw_url) = values.get("DESKTOP_BACKEND_URL") {
+                    if let Some(url) = normalize_http_base_url(raw_url) {
+                        if let Some(port) = parse_port_from_http_url(&url) {
+                            return port;
+                        }
                     }
                 }
             }
         }
     }
 
+    if let Ok(raw_port) = std::env::var("BACKEND_PORT") {
+        if let Ok(port) = raw_port.parse::<u16>() {
+            return port;
+        }
+    }
     if let Ok(raw_url) = std::env::var("DESKTOP_BACKEND_URL") {
         if let Some(url) = normalize_http_base_url(&raw_url) {
-            return url;
+            if let Some(port) = parse_port_from_http_url(&url) {
+                return port;
+            }
         }
     }
 
-    "http://127.0.0.1:7854".to_string()
+    7854
+}
+
+fn parse_port_from_http_url(url: &str) -> Option<u16> {
+    let without_scheme = url
+        .strip_prefix("http://")
+        .or_else(|| url.strip_prefix("https://"))?;
+    let host_with_optional_port = without_scheme
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or_default()
+        .trim();
+    if host_with_optional_port.is_empty() {
+        return None;
+    }
+
+    if let Some(rest) = host_with_optional_port.strip_prefix('[') {
+        let closing = rest.find(']')?;
+        let after_bracket = &rest[closing + 1..];
+        if let Some(raw_port) = after_bracket.strip_prefix(':') {
+            return raw_port.parse::<u16>().ok();
+        }
+        return Some(if url.starts_with("https://") { 443 } else { 80 });
+    }
+
+    if let Some((_, raw_port)) = host_with_optional_port.rsplit_once(':') {
+        if raw_port.chars().all(|char| char.is_ascii_digit()) {
+            return raw_port.parse::<u16>().ok();
+        }
+    }
+
+    Some(if url.starts_with("https://") { 443 } else { 80 })
+}
+
+fn detect_primary_lan_ipv4() -> Option<Ipv4Addr> {
+    let probes = ["8.8.8.8:80", "1.1.1.1:80", "9.9.9.9:80"];
+    for target in probes {
+        let Ok(socket) = UdpSocket::bind("0.0.0.0:0") else {
+            continue;
+        };
+        if socket.connect(target).is_err() {
+            continue;
+        }
+        let Ok(local) = socket.local_addr() else {
+            continue;
+        };
+        if let std::net::IpAddr::V4(ipv4) = local.ip() {
+            if !ipv4.is_loopback() && !ipv4.is_unspecified() {
+                return Some(ipv4);
+            }
+        }
+    }
+    None
 }
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeBackendUrl {
     pub base_url: String,
+    pub loopback_url: String,
+    pub lan_url: Option<String>,
+    pub exposure_mode: crate::backend_connection::BackendExposureMode,
 }
 
 #[tauri::command]
-pub fn desktop_get_runtime_backend_url() -> RuntimeBackendUrl {
+pub fn desktop_get_runtime_backend_url(app: AppHandle) -> RuntimeBackendUrl {
+    let port = resolve_runtime_backend_port();
+    let loopback_url = format!("http://127.0.0.1:{port}");
+    let lan_url = detect_primary_lan_ipv4().map(|ip| format!("http://{ip}:{port}"));
+    let exposure_mode = crate::backend_connection::read_backend_exposure_mode(&app)
+        .unwrap_or(crate::backend_connection::BackendExposureMode::Localhost);
     RuntimeBackendUrl {
-        base_url: resolve_runtime_backend_base_url(),
+        base_url: loopback_url.clone(),
+        loopback_url,
+        lan_url,
+        exposure_mode,
     }
 }
 
@@ -3899,6 +3996,7 @@ mod tests {
     use super::decode_bootstrap_failure;
     use super::detect_latest_migration_name_in_dir;
     use super::encode_bootstrap_failure;
+    use super::host_for_backend_exposure_mode;
     use super::marker_matches_latest_migration;
     use super::parse_postgres_major_version;
     use super::remove_file_if_present;
@@ -3907,6 +4005,7 @@ mod tests {
     use super::DESKTOP_DB_MARKER_FILE;
     use super::FORCE_MIGRATION_MARKER_FILE;
     use super::MIGRATION_VERSION_MARKER_FILE;
+    use crate::backend_connection::BackendExposureMode;
     use std::collections::HashMap;
     use std::fs;
     use std::path::Path;
@@ -3967,6 +4066,22 @@ mod tests {
                 .iter()
                 .any(|arg| arg == "pnpm" || arg == "@elms/backend" || arg == "dev:local"),
             "workspace launch should not go through pnpm"
+        );
+    }
+
+    #[test]
+    fn backend_exposure_mode_localhost_maps_to_loopback_host() {
+        assert_eq!(
+            host_for_backend_exposure_mode(BackendExposureMode::Localhost),
+            "127.0.0.1"
+        );
+    }
+
+    #[test]
+    fn backend_exposure_mode_lan_maps_to_wildcard_host() {
+        assert_eq!(
+            host_for_backend_exposure_mode(BackendExposureMode::Lan),
+            "0.0.0.0"
         );
     }
 

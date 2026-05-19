@@ -5,6 +5,7 @@ import { AuthShell } from "./AuthShell";
 import {
   ApiError,
   captureDesktopConnectivitySnapshot,
+  getDesktopBackendNetworkStatus,
   getConfiguredApiBaseUrl,
   setApiBaseUrlOverride
 } from "../../lib/api";
@@ -21,11 +22,23 @@ export function BackendConnectionPage() {
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<TestStatus>("idle");
   const [testMessage, setTestMessage] = useState<string | null>(null);
+  const [loopbackUrl, setLoopbackUrl] = useState<string>("");
+  const [lanUrl, setLanUrl] = useState<string | null>(null);
+  const [exposureMode, setExposureMode] = useState<"localhost" | "lan">(
+    "localhost"
+  );
+  const [copiedLan, setCopiedLan] = useState(false);
 
   useEffect(() => {
     void (async () => {
       const current = await getConfiguredApiBaseUrl();
+      const networkStatus = await getDesktopBackendNetworkStatus();
       setBaseUrl(current);
+      if (networkStatus) {
+        setLoopbackUrl(networkStatus.loopbackUrl);
+        setLanUrl(networkStatus.lanUrl);
+        setExposureMode(networkStatus.exposureMode);
+      }
     })();
   }, []);
 
@@ -114,6 +127,43 @@ export function BackendConnectionPage() {
           required
           value={baseUrl}
         />
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {t("backendConnection.localNetworkUrlLabel")}
+          </p>
+          <p className="mt-1 text-sm font-medium text-slate-800" dir="ltr">
+            {lanUrl ?? t("backendConnection.localNetworkUnavailable")}
+          </p>
+          <p className="mt-1 text-xs text-slate-600">
+            {exposureMode === "lan"
+              ? t("backendConnection.localNetworkEnabledWarning")
+              : t("backendConnection.localNetworkDisabledHint")}
+          </p>
+          <p className="mt-1 text-xs text-slate-500" dir="ltr">
+            {t("backendConnection.loopbackUrlLabel")}: {loopbackUrl || "http://127.0.0.1:7854"}
+          </p>
+          <button
+            className="mt-2 rounded-xl border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 disabled:opacity-50"
+            type="button"
+            disabled={!lanUrl}
+            onClick={async () => {
+              if (!lanUrl) {
+                return;
+              }
+              try {
+                await navigator.clipboard.writeText(lanUrl);
+                setCopiedLan(true);
+                window.setTimeout(() => setCopiedLan(false), 1500);
+              } catch {
+                setCopiedLan(false);
+              }
+            }}
+          >
+            {copiedLan
+              ? t("backendConnection.localNetworkCopied")
+              : t("backendConnection.copyLocalNetworkUrl")}
+          </button>
+        </div>
         {saveError ? <FormAlert message={saveError} /> : null}
         {saveSuccess ? (
           <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">

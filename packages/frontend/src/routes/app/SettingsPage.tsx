@@ -13,7 +13,12 @@ import {
   type UserDto
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
-import { apiFetch } from "../../lib/api";
+import {
+  apiFetch,
+  getDesktopBackendNetworkStatus,
+  setDesktopBackendExposureMode,
+  type DesktopBackendExposureMode
+} from "../../lib/api";
 import {
   chooseDesktopBackupDirectory,
   getDesktopBackupPolicy,
@@ -132,6 +137,11 @@ export function SettingsPage() {
     queryKey: ["desktop-backup-policy"],
     queryFn: () => getDesktopBackupPolicy(),
     enabled: isDesktopBackupShell
+  });
+  const desktopBackendNetworkQuery = useQuery({
+    queryKey: ["desktop-backend-network"],
+    queryFn: () => getDesktopBackendNetworkStatus(),
+    enabled: isDesktopShell
   });
 
   const [profileForm, setProfileForm] = useState({
@@ -315,6 +325,21 @@ export function SettingsPage() {
       addToast(t("settings.backupPolicySaved"), "success");
       await queryClient.invalidateQueries({
         queryKey: ["desktop-backup-policy"]
+      });
+    }
+  });
+  const setBackendExposureModeMutation = useMutation({
+    mutationFn: (mode: DesktopBackendExposureMode) =>
+      setDesktopBackendExposureMode(mode),
+    onSuccess: async (mode) => {
+      addToast(
+        mode === "lan"
+          ? t("settings.backendExposureLanEnabled")
+          : t("settings.backendExposureLocalhostEnabled"),
+        "success"
+      );
+      await queryClient.invalidateQueries({
+        queryKey: ["desktop-backend-network"]
       });
     }
   });
@@ -567,6 +592,80 @@ export function SettingsPage() {
           {t("notifications.channelSettings")}
         </Link>
       </SectionCard>
+      {isDesktopShell ? (
+        <SectionCard
+          title={t("settings.backendNetworkTitle")}
+          description={t("settings.backendNetworkHelp")}
+        >
+          <div className="space-y-3">
+            <Detail
+              label={t("settings.backendLoopbackUrl")}
+              value={
+                desktopBackendNetworkQuery.data?.loopbackUrl ??
+                "http://127.0.0.1:7854"
+              }
+            />
+            <Detail
+              label={t("settings.backendLocalNetworkUrl")}
+              value={
+                desktopBackendNetworkQuery.data?.lanUrl ??
+                t("settings.backendLocalNetworkUnavailable")
+              }
+            />
+            <label className="space-y-2 text-sm">
+              <span className="text-slate-600">
+                {t("settings.backendExposureMode")}
+              </span>
+              <select
+                className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2"
+                disabled={setBackendExposureModeMutation.isPending}
+                value={
+                  desktopBackendNetworkQuery.data?.exposureMode ?? "localhost"
+                }
+                onChange={(event) => {
+                  void setBackendExposureModeMutation.mutateAsync(
+                    event.target.value as DesktopBackendExposureMode
+                  );
+                }}
+              >
+                <option value="localhost">
+                  {t("settings.backendExposureLocalhost")}
+                </option>
+                <option value="lan">{t("settings.backendExposureLan")}</option>
+              </select>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-accent hover:text-accent transition disabled:opacity-50"
+                type="button"
+                disabled={!desktopBackendNetworkQuery.data?.lanUrl}
+                onClick={async () => {
+                  const url = desktopBackendNetworkQuery.data?.lanUrl;
+                  if (!url) {
+                    return;
+                  }
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    addToast(t("settings.backendLocalNetworkCopied"), "success");
+                  } catch {
+                    addToast(t("settings.backendLocalNetworkCopyFailed"), "error");
+                  }
+                }}
+              >
+                {t("settings.backendCopyLanUrl")}
+              </button>
+            </div>
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              {t("settings.backendExposureSecurityWarning")}
+            </p>
+            {setBackendExposureModeMutation.error ? (
+              <p className="text-sm text-red-600">
+                {(setBackendExposureModeMutation.error as Error).message}
+              </p>
+            ) : null}
+          </div>
+        </SectionCard>
+      ) : null}
       {isDesktopShell ? (
         <SectionCard
           title={t("settings.downloadsTitle")}

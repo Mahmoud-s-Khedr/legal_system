@@ -10,12 +10,23 @@ const BACKEND_CONNECTION_FILE: &str = "backend-connection.json";
 struct StoredBackendConnection {
     #[serde(default)]
     base_url: Option<String>,
+    #[serde(default)]
+    backend_exposure_mode: BackendExposureMode,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum BackendExposureMode {
+    #[default]
+    Localhost,
+    Lan,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BackendConnectionResponse {
     pub base_url: Option<String>,
+    pub backend_exposure_mode: BackendExposureMode,
 }
 
 #[derive(Debug, Serialize)]
@@ -23,6 +34,12 @@ pub struct BackendConnectionResponse {
 pub struct BackendConnectionSetResult {
     pub ok: bool,
     pub code: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackendExposureModeResponse {
+    pub backend_exposure_mode: BackendExposureMode,
 }
 
 fn normalize_base_url(input: &str) -> Result<String, String> {
@@ -70,7 +87,10 @@ fn connection_file_path(app: &AppHandle) -> Result<PathBuf, String> {
 fn load_connection(app: &AppHandle) -> Result<StoredBackendConnection, String> {
     let file_path = connection_file_path(app)?;
     if !file_path.exists() {
-        return Ok(StoredBackendConnection { base_url: None });
+        return Ok(StoredBackendConnection {
+            base_url: None,
+            backend_exposure_mode: BackendExposureMode::Localhost,
+        });
     }
 
     let raw = fs::read_to_string(&file_path)
@@ -97,6 +117,7 @@ pub fn desktop_get_backend_connection(app: AppHandle) -> Result<BackendConnectio
             .base_url
             .as_deref()
             .and_then(|value| normalize_base_url(value).ok()),
+        backend_exposure_mode: stored.backend_exposure_mode,
     })
 }
 
@@ -104,6 +125,7 @@ pub fn desktop_get_backend_connection(app: AppHandle) -> Result<BackendConnectio
 pub fn desktop_set_backend_connection(
     app: AppHandle,
     base_url: Option<String>,
+    backend_exposure_mode: Option<BackendExposureMode>,
 ) -> Result<BackendConnectionSetResult, String> {
     let normalized = match base_url {
         Some(value) if value.trim().is_empty() => None,
@@ -123,11 +145,41 @@ pub fn desktop_set_backend_connection(
         &app,
         &StoredBackendConnection {
             base_url: normalized,
+            backend_exposure_mode: backend_exposure_mode.unwrap_or_else(|| {
+                read_backend_exposure_mode(&app).unwrap_or(BackendExposureMode::Localhost)
+            }),
         },
     )?;
 
     Ok(BackendConnectionSetResult {
         ok: true,
         code: None,
+    })
+}
+
+pub fn read_backend_exposure_mode(app: &AppHandle) -> Result<BackendExposureMode, String> {
+    let stored = load_connection(app)?;
+    Ok(stored.backend_exposure_mode)
+}
+
+#[tauri::command]
+pub fn desktop_get_backend_exposure_mode(
+    app: AppHandle,
+) -> Result<BackendExposureModeResponse, String> {
+    Ok(BackendExposureModeResponse {
+        backend_exposure_mode: read_backend_exposure_mode(&app)?,
+    })
+}
+
+#[tauri::command]
+pub fn desktop_set_backend_exposure_mode(
+    app: AppHandle,
+    backend_exposure_mode: BackendExposureMode,
+) -> Result<BackendExposureModeResponse, String> {
+    let mut stored = load_connection(&app)?;
+    stored.backend_exposure_mode = backend_exposure_mode;
+    save_connection(&app, &stored)?;
+    Ok(BackendExposureModeResponse {
+        backend_exposure_mode,
     })
 }

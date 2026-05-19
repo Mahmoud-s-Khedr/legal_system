@@ -12,6 +12,7 @@ const DESKTOP_BOOTSTRAP_POLL_INTERVAL_MS = 350;
 
 interface DesktopBackendConnection {
   baseUrl: string | null;
+  backendExposureMode?: DesktopBackendExposureMode;
 }
 
 interface DesktopSetBackendConnectionResult {
@@ -27,6 +28,21 @@ interface DesktopBootstrapStatus {
 
 interface DesktopRuntimeBackendUrl {
   baseUrl: string;
+  loopbackUrl?: string;
+  lanUrl?: string | null;
+  exposureMode?: DesktopBackendExposureMode;
+}
+
+interface DesktopBackendExposureModeResponse {
+  backendExposureMode: DesktopBackendExposureMode;
+}
+
+export type DesktopBackendExposureMode = "localhost" | "lan";
+
+export interface DesktopBackendNetworkStatus {
+  loopbackUrl: string;
+  lanUrl: string | null;
+  exposureMode: DesktopBackendExposureMode;
 }
 
 export interface DesktopConnectivityDiagnosticSnapshot {
@@ -51,6 +67,8 @@ let desktopRuntimeBaseUrlPromise: Promise<void> | null = null;
 let desktopBackendConnectionPromise: Promise<void> | null = null;
 let desktopBackendConnectionValidatedPromise: Promise<void> | null = null;
 let desktopBackendFallbackToastShown = false;
+let desktopBackendExposureMode: DesktopBackendExposureMode = "localhost";
+let desktopBackendNetworkStatus: DesktopBackendNetworkStatus | null = null;
 
 export class ApiError extends Error {
   status: number;
@@ -684,6 +702,7 @@ async function loadDesktopBackendConnection() {
   try {
     const result = await invokeDesktop<DesktopBackendConnection>("desktop_get_backend_connection");
     desktopApiBaseUrlOverride = normalizeBaseUrl(result.baseUrl);
+    desktopBackendExposureMode = result.backendExposureMode ?? "localhost";
     writeDesktopBackendBaseUrlCache(desktopApiBaseUrlOverride);
   } catch {
     // Keep cached or fallback value on command failure.
@@ -697,7 +716,15 @@ async function loadDesktopRuntimeBackendUrl() {
 
   try {
     const result = await invokeDesktop<DesktopRuntimeBackendUrl>("desktop_get_runtime_backend_url");
+    const loopbackUrl = normalizeBaseUrl(result.loopbackUrl ?? result.baseUrl);
     const normalized = normalizeBaseUrl(result.baseUrl);
+    const lanUrl = normalizeBaseUrl(result.lanUrl ?? null);
+    desktopBackendExposureMode = result.exposureMode ?? desktopBackendExposureMode;
+    desktopBackendNetworkStatus = {
+      loopbackUrl: loopbackUrl ?? DESKTOP_EMBEDDED_FALLBACK_BASE_URL,
+      lanUrl,
+      exposureMode: result.exposureMode ?? desktopBackendExposureMode
+    };
     if (normalized) {
       desktopRuntimeBaseUrl = normalized;
       return;
@@ -772,6 +799,46 @@ export async function setApiBaseUrlOverride(baseUrl: string | null) {
   desktopApiBaseUrlOverride = normalized;
   writeDesktopBackendBaseUrlCache(normalized);
   return normalized;
+}
+
+export async function getDesktopBackendNetworkStatus(): Promise<DesktopBackendNetworkStatus | null> {
+  if (!isDesktopShell) {
+    return null;
+  }
+
+  await ensureDesktopBackendConnectionLoaded({ validateConnection: false });
+  if (desktopBackendNetworkStatus) {
+    return desktopBackendNetworkStatus;
+  }
+
+  const fallback = getDesktopDefaultApiBaseUrl() ?? DESKTOP_EMBEDDED_FALLBACK_BASE_URL;
+  return {
+    loopbackUrl: fallback,
+    lanUrl: null,
+    exposureMode: desktopBackendExposureMode
+  };
+}
+
+export async function setDesktopBackendExposureMode(
+  exposureMode: DesktopBackendExposureMode
+): Promise<DesktopBackendExposureMode> {
+  if (!isDesktopShell) {
+    desktopBackendExposureMode = exposureMode;
+    return exposureMode;
+  }
+
+  const result = await invokeDesktop<DesktopBackendExposureModeResponse>(
+    "desktop_set_backend_exposure_mode",
+    { backendExposureMode: exposureMode }
+  );
+  desktopBackendExposureMode = result.backendExposureMode;
+  if (desktopBackendNetworkStatus) {
+    desktopBackendNetworkStatus = {
+      ...desktopBackendNetworkStatus,
+      exposureMode: result.backendExposureMode
+    };
+  }
+  return result.backendExposureMode;
 }
 
 export function isDummyDesktopRuntime() {

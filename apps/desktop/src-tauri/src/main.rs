@@ -61,6 +61,8 @@ fn main() {
             desktop_backup::desktop_restore_backup,
             backend_connection::desktop_get_backend_connection,
             backend_connection::desktop_set_backend_connection,
+            backend_connection::desktop_get_backend_exposure_mode,
+            backend_connection::desktop_set_backend_exposure_mode,
             desktop_downloads::desktop_get_download_settings,
             desktop_downloads::desktop_choose_download_directory,
             desktop_downloads::desktop_reset_download_directory,

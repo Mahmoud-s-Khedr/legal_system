@@ -106,7 +106,13 @@ vi.mock("../../lib/enumLabel", () => ({
 }));
 
 vi.mock("../../lib/api", () => ({
-  apiFetch: vi.fn()
+  apiFetch: vi.fn(),
+  getDesktopBackendNetworkStatus: vi.fn(async () => ({
+    loopbackUrl: "http://127.0.0.1:7854",
+    lanUrl: "http://192.168.1.25:7854",
+    exposureMode: "localhost"
+  })),
+  setDesktopBackendExposureMode: vi.fn(async () => "localhost")
 }));
 
 vi.mock("../../lib/desktopDownloads", () => ({
@@ -323,6 +329,15 @@ beforeEach(() => {
     if (key === "user") return { data: selfData };
     if (key === "desktop-download-settings") return { data: desktopDownloadData };
     if (key === "desktop-backup-policy") return { data: desktopBackupData };
+    if (key === "desktop-backend-network") {
+      return {
+        data: {
+          loopbackUrl: "http://127.0.0.1:7854",
+          lanUrl: "http://192.168.1.25:7854",
+          exposureMode: "localhost"
+        }
+      };
+    }
     return { data: null };
   });
 });
