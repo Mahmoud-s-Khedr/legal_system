@@ -112,7 +112,11 @@ vi.mock("../../lib/api", () => ({
     lanUrl: "http://192.168.1.25:7854",
     exposureMode: "localhost"
   })),
-  setDesktopBackendExposureMode: vi.fn(async () => "localhost")
+  setDesktopBackendExposureMode: vi.fn(async () => ({
+    appliedMode: "localhost",
+    runtimeRestarted: true,
+    errorCode: null
+  }))
 }));
 
 vi.mock("../../lib/desktopDownloads", () => ({

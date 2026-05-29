@@ -46,6 +46,8 @@ const PRISMA_RUNTIME_PACKAGES: &[&str] = &[
     "empathic",
     "defu",
 ];
+const EXPOSURE_APPLY_READY_TIMEOUT: Duration = Duration::from_secs(45);
+const EXPOSURE_APPLY_POLL_INTERVAL: Duration = Duration::from_millis(200);
 
 fn bootstrap_log(message: &str) {
     eprintln!("[desktop-bootstrap] {message}");
@@ -698,6 +700,93 @@ impl RuntimeState {
     pub fn set_phase_with_message(&self, phase: &str, message: Option<String>) {
         self.inner.set_status(phase, message);
     }
+
+    pub fn snapshot_status(&self) -> BootstrapStatus {
+        self.inner.snapshot()
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplyBackendExposureModeResult {
+    pub applied_mode: crate::backend_connection::BackendExposureMode,
+    pub runtime_restarted: bool,
+    pub error_code: Option<String>,
+}
+
+fn is_embedded_runtime(app: &AppHandle) -> bool {
+    if std::env::var("DESKTOP_RUNTIME_VARIANT")
+        .ok()
+        .map(|value| value.trim().eq_ignore_ascii_case("dummy"))
+        .unwrap_or(false)
+    {
+        return false;
+    }
+    !app.config().identifier.ends_with(".dummy")
+}
+
+#[tauri::command]
+pub fn desktop_apply_backend_exposure_mode(
+    app: AppHandle,
+    state: State<'_, RuntimeState>,
+    backend_exposure_mode: crate::backend_connection::BackendExposureMode,
+) -> Result<ApplyBackendExposureModeResult, String> {
+    let previous_mode = crate::backend_connection::read_backend_exposure_mode(&app)
+        .unwrap_or(crate::backend_connection::BackendExposureMode::Localhost);
+
+    crate::backend_connection::write_backend_exposure_mode(&app, backend_exposure_mode)?;
+    bootstrap_log(&format!(
+        "Applying backend exposure mode change: {:?} -> {:?}",
+        previous_mode, backend_exposure_mode
+    ));
+
+    if !is_embedded_runtime(&app) {
+        return Ok(ApplyBackendExposureModeResult {
+            applied_mode: backend_exposure_mode,
+            runtime_restarted: false,
+            error_code: None,
+        });
+    }
+
+    if state.inner.is_bootstrapping.load(Ordering::SeqCst) {
+        crate::backend_connection::write_backend_exposure_mode(&app, previous_mode)?;
+        return Ok(ApplyBackendExposureModeResult {
+            applied_mode: previous_mode,
+            runtime_restarted: false,
+            error_code: Some("BOOTSTRAP_IN_PROGRESS".to_string()),
+        });
+    }
+
+    shutdown_runtime(&app);
+    start_runtime_bootstrap(&app);
+
+    let started_at = Instant::now();
+    while started_at.elapsed() < EXPOSURE_APPLY_READY_TIMEOUT {
+        let status = state.snapshot_status();
+        if status.phase == "ready" {
+            return Ok(ApplyBackendExposureModeResult {
+                applied_mode: backend_exposure_mode,
+                runtime_restarted: true,
+                error_code: None,
+            });
+        }
+        if status.phase == "failed" {
+            crate::backend_connection::write_backend_exposure_mode(&app, previous_mode)?;
+            return Ok(ApplyBackendExposureModeResult {
+                applied_mode: previous_mode,
+                runtime_restarted: false,
+                error_code: Some("RUNTIME_RESTART_FAILED".to_string()),
+            });
+        }
+        thread::sleep(EXPOSURE_APPLY_POLL_INTERVAL);
+    }
+
+    crate::backend_connection::write_backend_exposure_mode(&app, previous_mode)?;
+    Ok(ApplyBackendExposureModeResult {
+        applied_mode: previous_mode,
+        runtime_restarted: false,
+        error_code: Some("RUNTIME_RESTART_TIMEOUT".to_string()),
+    })
 }
 
 #[tauri::command]

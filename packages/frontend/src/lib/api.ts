@@ -33,8 +33,10 @@ interface DesktopRuntimeBackendUrl {
   exposureMode?: DesktopBackendExposureMode;
 }
 
-interface DesktopBackendExposureModeResponse {
-  backendExposureMode: DesktopBackendExposureMode;
+interface DesktopApplyBackendExposureModeResult {
+  appliedMode: DesktopBackendExposureMode;
+  runtimeRestarted: boolean;
+  errorCode?: string | null;
 }
 
 export type DesktopBackendExposureMode = "localhost" | "lan";
@@ -43,6 +45,12 @@ export interface DesktopBackendNetworkStatus {
   loopbackUrl: string;
   lanUrl: string | null;
   exposureMode: DesktopBackendExposureMode;
+}
+
+export interface DesktopApplyExposureModeResult {
+  appliedMode: DesktopBackendExposureMode;
+  runtimeRestarted: boolean;
+  errorCode: string | null;
 }
 
 export interface DesktopConnectivityDiagnosticSnapshot {
@@ -821,24 +829,37 @@ export async function getDesktopBackendNetworkStatus(): Promise<DesktopBackendNe
 
 export async function setDesktopBackendExposureMode(
   exposureMode: DesktopBackendExposureMode
-): Promise<DesktopBackendExposureMode> {
+): Promise<DesktopApplyExposureModeResult> {
   if (!isDesktopShell) {
     desktopBackendExposureMode = exposureMode;
-    return exposureMode;
+    return {
+      appliedMode: exposureMode,
+      runtimeRestarted: false,
+      errorCode: null
+    };
   }
 
-  const result = await invokeDesktop<DesktopBackendExposureModeResponse>(
-    "desktop_set_backend_exposure_mode",
+  const result = await invokeDesktop<DesktopApplyBackendExposureModeResult>(
+    "desktop_apply_backend_exposure_mode",
     { backendExposureMode: exposureMode }
   );
-  desktopBackendExposureMode = result.backendExposureMode;
+  desktopBackendExposureMode = result.appliedMode;
   if (desktopBackendNetworkStatus) {
     desktopBackendNetworkStatus = {
       ...desktopBackendNetworkStatus,
-      exposureMode: result.backendExposureMode
+      exposureMode: result.appliedMode
     };
   }
-  return result.backendExposureMode;
+
+  if (result.runtimeRestarted) {
+    await loadDesktopRuntimeBackendUrl();
+  }
+
+  return {
+    appliedMode: result.appliedMode,
+    runtimeRestarted: result.runtimeRestarted,
+    errorCode: result.errorCode ?? null
+  };
 }
 
 export function isDummyDesktopRuntime() {

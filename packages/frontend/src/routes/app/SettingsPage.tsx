@@ -331,9 +331,24 @@ export function SettingsPage() {
   const setBackendExposureModeMutation = useMutation({
     mutationFn: (mode: DesktopBackendExposureMode) =>
       setDesktopBackendExposureMode(mode),
-    onSuccess: async (mode) => {
+    onSuccess: async (result) => {
+      if (result.errorCode) {
+        const code = result.errorCode;
+        if (code === "BOOTSTRAP_IN_PROGRESS") {
+          addToast(t("settings.backendExposureRestartBusy"), "error");
+        } else if (code === "RUNTIME_RESTART_TIMEOUT") {
+          addToast(t("settings.backendExposureRestartTimeout"), "error");
+        } else {
+          addToast(t("settings.backendExposureRestartFailed"), "error");
+        }
+        await queryClient.invalidateQueries({
+          queryKey: ["desktop-backend-network"]
+        });
+        return;
+      }
+
       addToast(
-        mode === "lan"
+        result.appliedMode === "lan"
           ? t("settings.backendExposureLanEnabled")
           : t("settings.backendExposureLocalhostEnabled"),
         "success"
@@ -341,6 +356,9 @@ export function SettingsPage() {
       await queryClient.invalidateQueries({
         queryKey: ["desktop-backend-network"]
       });
+      if (result.runtimeRestarted) {
+        addToast(t("settings.backendExposureRuntimeRestarted"), "success");
+      }
     }
   });
   const runBackupNowMutation = useMutation({

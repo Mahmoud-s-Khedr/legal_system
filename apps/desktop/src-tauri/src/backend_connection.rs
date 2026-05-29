@@ -162,6 +162,15 @@ pub fn read_backend_exposure_mode(app: &AppHandle) -> Result<BackendExposureMode
     Ok(stored.backend_exposure_mode)
 }
 
+pub fn write_backend_exposure_mode(
+    app: &AppHandle,
+    backend_exposure_mode: BackendExposureMode,
+) -> Result<(), String> {
+    let mut stored = load_connection(app)?;
+    stored.backend_exposure_mode = backend_exposure_mode;
+    save_connection(app, &stored)
+}
+
 #[tauri::command]
 pub fn desktop_get_backend_exposure_mode(
     app: AppHandle,
@@ -176,9 +185,7 @@ pub fn desktop_set_backend_exposure_mode(
     app: AppHandle,
     backend_exposure_mode: BackendExposureMode,
 ) -> Result<BackendExposureModeResponse, String> {
-    let mut stored = load_connection(&app)?;
-    stored.backend_exposure_mode = backend_exposure_mode;
-    save_connection(&app, &stored)?;
+    write_backend_exposure_mode(&app, backend_exposure_mode)?;
     Ok(BackendExposureModeResponse {
         backend_exposure_mode,
     })

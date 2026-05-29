@@ -14,13 +14,16 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
     ? env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
   const isDesktopBootstrapRuntime = Boolean(process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN?.trim());
+  const trustedDesktopOrigins: (string | RegExp)[] = [
+    "tauri://localhost",
+    "https://tauri.localhost",
+    "http://tauri.localhost"
+  ];
 
   const devOrigins: (string | RegExp)[] = [
     /^https?:\/\/localhost(?::\d+)?$/,
     /^https?:\/\/127\.0\.0\.1(?::\d+)?$/,
-    "tauri://localhost",
-    "https://tauri.localhost",
-    "http://tauri.localhost"
+    ...trustedDesktopOrigins
   ];
   const desktopFrontendOrigin = env.DESKTOP_FRONTEND_URL?.trim();
   if (desktopFrontendOrigin) {
@@ -29,7 +32,7 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
 
   const allowedOrigins: (string | RegExp)[] =
     env.NODE_ENV === "production" && !isDesktopBootstrapRuntime
-      ? extraOrigins
+      ? [...trustedDesktopOrigins, ...extraOrigins]
       : [...devOrigins, ...extraOrigins];
 
   await app.register(cors, {

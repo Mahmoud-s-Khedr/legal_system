@@ -52,6 +52,7 @@ fn main() {
             sidecar::reset_local_database,
             sidecar::repair_postgres_runtime,
             sidecar::desktop_get_runtime_backend_url,
+            sidecar::desktop_apply_backend_exposure_mode,
             desktop_backup::desktop_get_backup_policy,
             desktop_backup::desktop_set_backup_policy,
             desktop_backup::desktop_choose_backup_directory,

@@ -76,6 +76,19 @@ Validation steps:
 
 If step 4 fails, this indicates a desktop-origin compatibility issue rather than backend startup failure.
 
+### Local Network Exposure Mode (Windows/Desktop)
+
+When you switch **Settings -> Desktop backend network -> Exposure mode** to `Enable local network access`, ELMS now applies the mode immediately by restarting the local runtime.
+
+Expected behavior:
+
+1. Save mode to `LAN`.
+2. Runtime restarts automatically.
+3. Backend rebinds from `127.0.0.1` to `0.0.0.0`.
+4. `http://<LAN-IP>:7854/api/health` becomes reachable from other LAN devices.
+
+If local devices still cannot reach the LAN URL after restart, verify Windows Firewall inbound rules allow TCP `7854` for the ELMS desktop runtime/backend process.
+
 ### Linux Startup Repair (Version Mismatch / Upgrade Failures)
 
 If startup fails after upgrading ELMS, the app may detect that the old local PostgreSQL data directory was created by a different PostgreSQL major version.

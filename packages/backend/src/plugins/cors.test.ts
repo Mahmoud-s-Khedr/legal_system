@@ -66,6 +66,21 @@ describe("registerCorsPlugin desktop origins", () => {
     await app.close();
   });
 
+  it("accepts tauri://localhost in production without desktop bootstrap token", async () => {
+    const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/ping",
+      headers: { origin: "tauri://localhost" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("tauri://localhost");
+
+    await app.close();
+  });
+
   it("accepts Origin:null only for desktop bootstrap runtime", async () => {
     process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN = "desktop-token";
     const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
@@ -89,6 +104,21 @@ describe("registerCorsPlugin desktop origins", () => {
       method: "GET",
       url: "/ping",
       headers: { origin: "null" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+
+    await app.close();
+  });
+
+  it("rejects unknown origins in production when not explicitly allowed", async () => {
+    const app = await buildCorsApp(createEnv({ NODE_ENV: "production", ALLOWED_ORIGINS: "" }));
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/ping",
+      headers: { origin: "https://malicious.example" }
     });
 
     expect(response.statusCode).toBe(200);
