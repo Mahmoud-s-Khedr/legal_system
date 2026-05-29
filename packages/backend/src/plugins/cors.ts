@@ -14,6 +14,7 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
     ? env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
   const isDesktopBootstrapRuntime = Boolean(process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN?.trim());
+  const isLocalDesktopAuthMode = env.AUTH_MODE === "local";
   const trustedDesktopOrigins: (string | RegExp)[] = [
     "tauri://localhost",
     "https://tauri.localhost",
@@ -49,7 +50,7 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
 
       // Some Windows WebView contexts send Origin: null. Only allow this while
       // running the packaged desktop bootstrap runtime.
-      if (origin === "null" && isDesktopBootstrapRuntime) {
+      if (origin === "null" && (isDesktopBootstrapRuntime || isLocalDesktopAuthMode)) {
         callback(null, true);
         return;
       }

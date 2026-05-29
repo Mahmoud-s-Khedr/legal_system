@@ -81,8 +81,7 @@ describe("registerCorsPlugin desktop origins", () => {
     await app.close();
   });
 
-  it("accepts Origin:null only for desktop bootstrap runtime", async () => {
-    process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN = "desktop-token";
+  it("accepts Origin:null for local desktop auth mode in production", async () => {
     const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
 
     const response = await app.inject({
@@ -97,8 +96,8 @@ describe("registerCorsPlugin desktop origins", () => {
     await app.close();
   });
 
-  it("rejects Origin:null for non-desktop production runtime", async () => {
-    const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
+  it("rejects Origin:null for non-local production auth mode", async () => {
+    const app = await buildCorsApp(createEnv({ NODE_ENV: "production", AUTH_MODE: "cloud" as never }));
 
     const response = await app.inject({
       method: "GET",

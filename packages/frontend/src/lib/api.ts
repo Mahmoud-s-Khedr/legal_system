@@ -791,6 +791,7 @@ export async function getConfiguredApiBaseUrl() {
 
 export async function setApiBaseUrlOverride(baseUrl: string | null) {
   const normalized = normalizeBaseUrl(baseUrl);
+  const previous = desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? null;
 
   if (isDesktopShell) {
     const result = await invokeDesktop<DesktopSetBackendConnectionResult>(
@@ -806,6 +807,10 @@ export async function setApiBaseUrlOverride(baseUrl: string | null) {
 
   desktopApiBaseUrlOverride = normalized;
   writeDesktopBackendBaseUrlCache(normalized);
+  // Switching backend target invalidates previously cached local session tokens.
+  if ((previous ?? null) !== (normalized ?? null)) {
+    clearDesktopLocalSessionToken();
+  }
   return normalized;
 }
 
@@ -989,6 +994,9 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearDesktopLocalSessionToken();
+    }
     await parseErrorPayload(response);
   }
 
@@ -1018,6 +1026,9 @@ export async function apiFormFetch<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearDesktopLocalSessionToken();
+    }
     await parseErrorPayload(response);
   }
 
@@ -1053,6 +1064,9 @@ export async function apiDownload(
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearDesktopLocalSessionToken();
+    }
     await parseErrorPayload(response);
   }
 
