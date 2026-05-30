@@ -48,6 +48,7 @@ export function LoginPage() {
             : {};
         const summary = [
           `origin=${String(details.windowOrigin ?? window.location.origin ?? "unknown")}`,
+          `kind=${String(details.failureKind ?? "unknown")}`,
           `url=${String(details.requestUrl ?? "unknown")}`,
           `base=${String(details.apiBaseUrl ?? "unknown")}`,
           `runtime=${String(details.desktopRuntimeVariant ?? "unknown")}`

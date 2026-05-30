@@ -56,6 +56,7 @@ export interface DesktopApplyExposureModeResult {
 export interface DesktopConnectivityDiagnosticSnapshot {
   reason: string;
   requestUrl?: string | null;
+  requestOrigin?: string | null;
   selectedBaseUrl?: string | null;
   apiBaseUrl?: string | null;
   runtimeBaseUrl?: string | null;
@@ -64,6 +65,7 @@ export interface DesktopConnectivityDiagnosticSnapshot {
   isDesktopShell?: boolean;
   desktopRuntimeVariant?: string;
   isEmbeddedDesktopRuntime?: boolean;
+  failureKind?: string | null;
   [key: string]: unknown;
 }
 
@@ -396,8 +398,10 @@ function currentActiveBaseUrl() {
 }
 
 export function captureDesktopConnectivitySnapshot(snapshot: DesktopConnectivityDiagnosticSnapshot) {
+  const windowOrigin = resolveWindowOrigin();
   const normalized = {
-    windowOrigin: resolveWindowOrigin(),
+    windowOrigin,
+    requestOrigin: snapshot.requestOrigin ?? windowOrigin,
     selectedBaseUrl: currentActiveBaseUrl(),
     apiBaseUrl: apiBaseUrl || null,
     runtimeBaseUrl: desktopRuntimeBaseUrl,
@@ -684,10 +688,13 @@ function mapTransportError(error: unknown, input: string) {
 
   const resolvedUrl = resolveRequestUrl(input);
   const activeBaseUrl = currentActiveBaseUrl();
+  const windowOrigin = resolveWindowOrigin();
   captureDesktopConnectivitySnapshot({
     reason: "NETWORK_FETCH_FAILED",
     requestUrl: resolvedUrl,
-    selectedBaseUrl: activeBaseUrl
+    selectedBaseUrl: activeBaseUrl,
+    requestOrigin: windowOrigin,
+    failureKind: "network-or-cors"
   });
 
   return buildBackendUnreachableError(undefined, {
@@ -695,10 +702,12 @@ function mapTransportError(error: unknown, input: string) {
     apiBaseUrl: activeBaseUrl,
     runtimeBaseUrl: desktopRuntimeBaseUrl,
     savedOverrideBaseUrl: desktopApiBaseUrlOverride,
-    windowOrigin: resolveWindowOrigin(),
+    windowOrigin,
+    requestOrigin: windowOrigin,
     isDesktopShell,
     desktopRuntimeVariant,
-    isEmbeddedDesktopRuntime: isEmbeddedDesktopRuntime()
+    isEmbeddedDesktopRuntime: isEmbeddedDesktopRuntime(),
+    failureKind: "network-or-cors"
   });
 }
 

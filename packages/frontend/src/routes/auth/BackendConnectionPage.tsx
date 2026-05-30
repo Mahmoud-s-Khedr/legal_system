@@ -91,7 +91,9 @@ export function BackendConnectionPage() {
       if (!response.ok) {
         captureDesktopConnectivitySnapshot({
           reason: "BACKEND_CONNECTION_TEST_NON_OK",
-          requestUrl
+          requestUrl,
+          failureKind: "http-error",
+          requestOrigin: window.location.origin
         });
         setTestStatus("error");
         setTestMessage(t("backendConnection.unreachable"));
@@ -102,7 +104,9 @@ export function BackendConnectionPage() {
     } catch {
       captureDesktopConnectivitySnapshot({
         reason: "BACKEND_CONNECTION_TEST_FETCH_FAILED",
-        requestUrl: null
+        requestUrl: null,
+        requestOrigin: window.location.origin,
+        failureKind: "network-or-cors"
       });
       setTestStatus("error");
       setTestMessage(t("backendConnection.unreachable"));

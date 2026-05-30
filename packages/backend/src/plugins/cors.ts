@@ -18,7 +18,9 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
   const trustedDesktopOrigins: (string | RegExp)[] = [
     "tauri://localhost",
     "https://tauri.localhost",
-    "http://tauri.localhost"
+    "http://tauri.localhost",
+    /^https?:\/\/localhost(?::\d+)?$/,
+    /^https?:\/\/127\.0\.0\.1(?::\d+)?$/
   ];
 
   const devOrigins: (string | RegExp)[] = [
@@ -55,6 +57,16 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
         return;
       }
 
+      app.log.warn(
+        {
+          origin,
+          nodeEnv: env.NODE_ENV,
+          authMode: env.AUTH_MODE,
+          desktopBootstrapRuntime: isDesktopBootstrapRuntime,
+          localDesktopAuthMode: isLocalDesktopAuthMode
+        },
+        "Rejected CORS origin"
+      );
       callback(null, false);
     },
     credentials: true,

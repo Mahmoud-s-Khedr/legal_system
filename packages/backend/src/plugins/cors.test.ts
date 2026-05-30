@@ -66,6 +66,21 @@ describe("registerCorsPlugin desktop origins", () => {
     await app.close();
   });
 
+  it("accepts localhost origins for local desktop auth mode in production", async () => {
+    const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/ping",
+      headers: { origin: "http://localhost:5173" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+
+    await app.close();
+  });
+
   it("accepts tauri://localhost in production without desktop bootstrap token", async () => {
     const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
 
