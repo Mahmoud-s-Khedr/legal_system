@@ -33,3 +33,4 @@ windows-core = "0.61"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+devtools = ["tauri/devtools"]

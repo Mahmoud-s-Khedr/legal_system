@@ -92,7 +92,7 @@ jobs:
       - name: Build dummy desktop binary
         env:
           DESKTOP_RUNTIME_VARIANT: dummy
-        run: pnpm --filter @elms/desktop package:binary:dummy
+        run: pnpm --filter @elms/desktop package:binary:dummy -- --features devtools
 
       - name: Upload dummy desktop binary artifact
         uses: actions/upload-artifact@v4

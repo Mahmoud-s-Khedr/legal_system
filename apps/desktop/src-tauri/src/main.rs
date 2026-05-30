@@ -38,6 +38,14 @@ fn runtime_variant() -> DesktopRuntimeVariant {
     runtime_variant_from_identifier("com.elms.desktop")
 }
 
+#[cfg(feature = "devtools")]
+fn maybe_open_devtools(window: &tauri::WebviewWindow) {
+    window.open_devtools();
+}
+
+#[cfg(not(feature = "devtools"))]
+fn maybe_open_devtools(_: &tauri::WebviewWindow) {}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -90,7 +98,7 @@ fn main() {
             if let Some(window) = app.get_webview_window("main") {
                 if variant == DesktopRuntimeVariant::Dummy {
                     window.set_title("ELMS Dummy Client")?;
-                    window.open_devtools();
+                    maybe_open_devtools(&window);
                 } else {
                     window.set_title("ELMS")?;
                 }

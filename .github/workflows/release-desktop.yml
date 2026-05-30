@@ -278,7 +278,7 @@ jobs:
           VITE_API_BASE_URL: "http://127.0.0.1:7854"
         with:
           projectPath: apps/desktop
-          args: --target x86_64-pc-windows-msvc --bundles nsis
+          args: --target x86_64-pc-windows-msvc --bundles nsis --features devtools
 
       - name: Smoke test desktop runtime startup
         shell: pwsh
@@ -443,7 +443,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
-          args: --target ${{ matrix.target }} --bundles dmg
+          args: --target ${{ matrix.target }} --bundles dmg --features devtools
 
       - name: Verify macOS dmg payload
         run: |

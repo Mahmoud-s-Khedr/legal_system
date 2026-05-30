@@ -137,7 +137,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
-          args: --target ${{ matrix.target }} --bundles dmg
+          args: --target ${{ matrix.target }} --bundles dmg --features devtools
 
       - name: Build Tauri macOS installer (unsigned)
         if: env.SIGNING_ENABLED != 'true'
@@ -148,7 +148,7 @@ jobs:
           VITE_API_BASE_URL: "http://127.0.0.1:7854"
         with:
           projectPath: apps/desktop
-          args: --target ${{ matrix.target }} --bundles dmg
+          args: --target ${{ matrix.target }} --bundles dmg --features devtools
 
       - name: Summarize macOS signing mode
         if: always()
