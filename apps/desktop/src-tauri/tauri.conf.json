@@ -11,7 +11,7 @@
   },
   "app": {
     "security": {
-      "csp": "default-src 'self' tauri: asset: http://127.0.0.1:7854 http://127.0.0.1:17854; script-src 'self' 'unsafe-inline' blob: asset:; style-src 'self' 'unsafe-inline'; font-src 'self' asset: data:; img-src 'self' asset: data: blob:; connect-src 'self' http://127.0.0.1:7854 ws://127.0.0.1:7854 http://127.0.0.1:17854 ws://127.0.0.1:17854; worker-src 'self' blob: asset:; child-src 'self' blob: data: asset: http://127.0.0.1:7854 http://127.0.0.1:17854; frame-src 'self' blob: data: asset: http://127.0.0.1:7854 http://127.0.0.1:17854; object-src 'self' blob: data: asset: http://127.0.0.1:7854 http://127.0.0.1:17854"
+      "csp": "default-src 'self' tauri: asset: http://127.0.0.1:7854 http://127.0.0.1:17854; script-src 'self' 'unsafe-inline' blob: asset:; style-src 'self' 'unsafe-inline'; font-src 'self' asset: data:; img-src 'self' asset: data: blob:; connect-src 'self' http://127.0.0.1:7854 ws://127.0.0.1:7854 http://127.0.0.1:17854 ws://127.0.0.1:17854 http://*:7854 http://*:17854 ws://*:7854 ws://*:17854; worker-src 'self' blob: asset:; child-src 'self' blob: data: asset: http://127.0.0.1:7854 http://127.0.0.1:17854 http://*:7854 http://*:17854; frame-src 'self' blob: data: asset: http://127.0.0.1:7854 http://127.0.0.1:17854 http://*:7854 http://*:17854; object-src 'self' blob: data: asset: http://127.0.0.1:7854 http://127.0.0.1:17854 http://*:7854 http://*:17854"
     },
     "windows": [
       {

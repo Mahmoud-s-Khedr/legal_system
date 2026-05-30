@@ -1,7 +1,12 @@
 import cors from "@fastify/cors";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { AppEnv } from "../config/env.js";
 import { LOCAL_SESSION_HEADER } from "../config/constants.js";
+
+/** Header sent by Chromium/WebKit PNA preflights (formerly CORS-RFC1918). */
+const PNA_REQUEST_HEADER = "access-control-request-private-network";
+/** Response header that must be present to satisfy the PNA preflight. */
+const PNA_ALLOW_HEADER = "Access-Control-Allow-Private-Network";
 
 function originMatches(origin: string, allowedOrigins: Array<string | RegExp>) {
   return allowedOrigins.some((candidate) =>
@@ -71,8 +76,45 @@ export async function registerCorsPlugin(app: FastifyInstance, env: AppEnv) {
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", LOCAL_SESSION_HEADER],
+    // Include the PNA request header so @fastify/cors does not strip it before
+    // our onSend hook can inspect it.
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      LOCAL_SESSION_HEADER,
+      PNA_REQUEST_HEADER
+    ],
     exposedHeaders: ["set-cookie"],
     maxAge: env.NODE_ENV === "production" ? 3600 : 0
   });
+
+  /**
+   * Private Network Access (PNA) preflight hook — Chromium spec.
+   *
+   * When a secure origin (tauri://localhost) fetches a private-network address
+   * (e.g. 192.168.x.x) the browser inserts a synthetic preflight that carries
+   *   Access-Control-Request-Private-Network: true
+   * and will only let the real request through if the response contains
+   *   Access-Control-Allow-Private-Network: true
+   *
+   * Standard CORS headers alone are not sufficient — this extra echo is
+   * required by the spec and enforced silently by the webview (no 4xx is
+   * surfaced, the request is just blocked).
+   */
+  app.addHook(
+    "onSend",
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      if (req.headers[PNA_REQUEST_HEADER] === "true") {
+        app.log.info(
+          {
+            origin: req.headers.origin,
+            method: req.method,
+            url: req.url
+          },
+          "Private Network Access preflight detected — echoing Allow header"
+        );
+        reply.header(PNA_ALLOW_HEADER, "true");
+      }
+    }
+  );
 }
