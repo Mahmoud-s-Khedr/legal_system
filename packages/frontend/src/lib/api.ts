@@ -890,37 +890,21 @@ export function resolveApiUrl(input: string) {
     return input;
   }
 
+  // Always use only the origin (scheme + host + port). Any path suffix stored in
+  // the base URL (e.g. from a stale localStorage entry) is intentionally discarded
+  // because the backend is always mounted at root, never under a sub-path.
   const inputPath = input.startsWith("/") ? input : `/${input}`;
-  const normalizeBasePath = (pathValue: string) => {
-    const cleaned = pathValue.trim().replace(/\/+$/, "");
-    if (!cleaned || cleaned === "/") {
-      return "";
-    }
-
-    return cleaned.startsWith("/") ? cleaned : `/${cleaned}`;
-  };
-  const mergeBasePath = (basePath: string, requestPath: string) => {
-    if (!basePath) {
-      return requestPath;
-    }
-    if (requestPath === basePath || requestPath.startsWith(`${basePath}/`)) {
-      return requestPath;
-    }
-    return `${basePath}${requestPath}`;
-  };
 
   if (/^https?:\/\//i.test(baseUrl)) {
     try {
       const parsedBase = new URL(baseUrl);
-      const mergedPath = mergeBasePath(normalizeBasePath(parsedBase.pathname), inputPath);
-      return `${parsedBase.origin}${mergedPath}`;
+      return `${parsedBase.origin}${inputPath}`;
     } catch {
       return inputPath;
     }
   }
 
-  const mergedPath = mergeBasePath(normalizeBasePath(baseUrl), inputPath);
-  return mergedPath || inputPath;
+  return inputPath;
 }
 
 function buildAuthHeaders(initHeaders?: HeadersInit) {

@@ -62,6 +62,7 @@ describe("registerCorsPlugin desktop origins", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBe("http://tauri.localhost");
+    expect(response.headers["vary"]).toContain("Origin");
 
     await app.close();
   });
@@ -77,6 +78,7 @@ describe("registerCorsPlugin desktop origins", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+    expect(response.headers["vary"]).toContain("Origin");
 
     await app.close();
   });
@@ -92,6 +94,7 @@ describe("registerCorsPlugin desktop origins", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBe("tauri://localhost");
+    expect(response.headers["vary"]).toContain("Origin");
 
     await app.close();
   });
@@ -107,6 +110,7 @@ describe("registerCorsPlugin desktop origins", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBe("null");
+    expect(response.headers["vary"]).toContain("Origin");
 
     await app.close();
   });
@@ -122,6 +126,7 @@ describe("registerCorsPlugin desktop origins", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+    expect(response.headers["vary"]).toContain("Origin");
 
     await app.close();
   });
@@ -137,6 +142,54 @@ describe("registerCorsPlugin desktop origins", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+    expect(response.headers["vary"]).toContain("Origin");
+
+    await app.close();
+  });
+
+  it("echoes desktop PNA headers for trusted desktop origins on preflight", async () => {
+    const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
+
+    const response = await app.inject({
+      method: "OPTIONS",
+      url: "/ping",
+      headers: {
+        origin: "https://tauri.localhost",
+        "access-control-request-method": "GET",
+        "access-control-request-private-network": "true"
+      }
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(response.headers["access-control-allow-origin"]).toBe("https://tauri.localhost");
+    expect(response.headers["access-control-allow-private-network"]).toBe("true");
+    expect(response.headers["access-control-allow-credentials"]).toBe("true");
+    expect(response.headers["vary"]).toContain("Origin");
+    expect(response.headers["vary"]).toContain("Access-Control-Request-Method");
+    expect(response.headers["vary"]).toContain("Access-Control-Request-Private-Network");
+
+    await app.close();
+  });
+
+  it("does not echo PNA allow header for untrusted origins", async () => {
+    const app = await buildCorsApp(createEnv({ NODE_ENV: "production", ALLOWED_ORIGINS: "" }));
+
+    const response = await app.inject({
+      method: "OPTIONS",
+      url: "/ping",
+      headers: {
+        origin: "https://malicious.example",
+        "access-control-request-method": "GET",
+        "access-control-request-private-network": "true"
+      }
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+    expect(response.headers["access-control-allow-private-network"]).toBeUndefined();
+    expect(response.headers["vary"]).toContain("Origin");
+    expect(response.headers["vary"]).toContain("Access-Control-Request-Method");
+    expect(response.headers["vary"]).toContain("Access-Control-Request-Private-Network");
 
     await app.close();
   });

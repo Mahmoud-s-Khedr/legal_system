@@ -90,6 +90,7 @@ fn main() {
             if let Some(window) = app.get_webview_window("main") {
                 if variant == DesktopRuntimeVariant::Dummy {
                     window.set_title("ELMS Dummy Client")?;
+                    window.open_devtools();
                 } else {
                     window.set_title("ELMS")?;
                 }

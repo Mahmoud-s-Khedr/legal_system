@@ -13,6 +13,43 @@ import { Field, FormAlert } from "../app/ui";
 
 type TestStatus = "idle" | "success" | "error";
 
+function isLikelyPrivateNetworkHost(hostname: string) {
+  return (
+    /^10\./.test(hostname) ||
+    /^127\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname) ||
+    hostname === "localhost"
+  );
+}
+
+export function buildConnectionDiagnostics(requestUrl: string) {
+  let requestOrigin: string | null = null;
+  let hostname: string | null = null;
+
+  try {
+    const parsed = new URL(requestUrl);
+    requestOrigin = parsed.origin;
+    hostname = parsed.hostname;
+  } catch {
+    // Keep nulls; snapshot will still help.
+  }
+
+  const isPrivateNetworkTarget = hostname ? isLikelyPrivateNetworkHost(hostname) : null;
+
+  return {
+    requestUrl,
+    requestOrigin: window.location.origin,
+    targetOrigin: requestOrigin,
+    isSecureContext:
+      typeof window !== "undefined"
+        ? Boolean(window.isSecureContext)
+        : Boolean(globalThis.isSecureContext),
+    targetIsPrivateNetwork: isPrivateNetworkTarget,
+    webviewOrigin: window.location.origin
+  };
+}
+
 export function BackendConnectionPage() {
   const { t } = useTranslation("auth");
   const [baseUrl, setBaseUrl] = useState("");
@@ -49,8 +86,18 @@ export function BackendConnectionPage() {
     setSaveSuccess(null);
 
     try {
-      await setApiBaseUrlOverride(baseUrl);
-      setSaveSuccess(t("backendConnection.saved"));
+      const saved = await setApiBaseUrlOverride(baseUrl);
+      const typedNormalized = (() => {
+        try { return new URL(baseUrl.trim()).origin; } catch { return null; }
+      })();
+      if (saved && typedNormalized && baseUrl.trim() !== saved) {
+        // The user typed a URL with a path — it was silently stripped. Show a notice.
+        setSaveSuccess(
+          t("backendConnection.savedNormalized", { url: saved, defaultValue: `Saved (normalized to: ${saved})` })
+        );
+      } else {
+        setSaveSuccess(t("backendConnection.saved"));
+      }
       setTestStatus("idle");
       setTestMessage(null);
     } catch (error) {
@@ -62,7 +109,8 @@ export function BackendConnectionPage() {
           : undefined;
       if (
         code === "BACKEND_URL_INVALID_SCHEME" ||
-        code === "BACKEND_URL_INVALID_HOST"
+        code === "BACKEND_URL_INVALID_HOST" ||
+        code === "BACKEND_URL_EMPTY"
       ) {
         setSaveError(t("backendConnection.invalidUrl"));
       } else {
@@ -86,14 +134,21 @@ export function BackendConnectionPage() {
         setTestMessage(t("backendConnection.invalidUrl"));
         return;
       }
-      const requestUrl = `${nextBaseUrl.replace(/\/+$/, "")}/api/health`;
+      // Always test against the origin only — discard any path the user may have typed.
+      const testOrigin = (() => {
+        try { return new URL(nextBaseUrl).origin; } catch { return nextBaseUrl.replace(/\/+$/, ""); }
+      })();
+      const requestUrl = `${testOrigin}/api/health`;
+      const diagnostics = buildConnectionDiagnostics(requestUrl);
       const response = await fetch(requestUrl, { credentials: "include" });
       if (!response.ok) {
         captureDesktopConnectivitySnapshot({
           reason: "BACKEND_CONNECTION_TEST_NON_OK",
-          requestUrl,
           failureKind: "http-error",
-          requestOrigin: window.location.origin
+          hadHttpResponse: true,
+          responseStatus: response.status,
+          responseOk: response.ok,
+          ...diagnostics
         });
         setTestStatus("error");
         setTestMessage(t("backendConnection.unreachable"));
@@ -102,11 +157,19 @@ export function BackendConnectionPage() {
       setTestStatus("success");
       setTestMessage(t("backendConnection.reachable"));
     } catch {
+      const nextBaseUrl = baseUrl.trim();
+      const testOrigin = (() => {
+        try { return new URL(nextBaseUrl).origin; } catch { return nextBaseUrl.replace(/\/+$/, ""); }
+      })();
+      const requestUrl =
+        testOrigin && testOrigin.length > 0 ? `${testOrigin}/api/health` : null;
       captureDesktopConnectivitySnapshot({
         reason: "BACKEND_CONNECTION_TEST_FETCH_FAILED",
-        requestUrl: null,
-        requestOrigin: window.location.origin,
-        failureKind: "network-or-cors"
+        requestUrl,
+        failureKind: "network-or-cors",
+        hadHttpResponse: false,
+        likelyBlockedStage: "preflight-or-fetch",
+        ...(requestUrl ? buildConnectionDiagnostics(requestUrl) : {})
       });
       setTestStatus("error");
       setTestMessage(t("backendConnection.unreachable"));
