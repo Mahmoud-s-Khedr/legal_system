@@ -58,7 +58,7 @@ jobs:
       - name: Validate
         run: pnpm validate
         env:
-          COVERAGE_DIFF_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          COVERAGE_DIFF_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           COVERAGE_DIFF_HEAD_SHA: ${{ github.sha }}
 
       - name: Upload Coverage Artifacts

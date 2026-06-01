@@ -74,6 +74,39 @@ function getHeadRef() {
   return explicitHead || "HEAD";
 }
 
+function refExists(ref) {
+  try {
+    execSync(`git cat-file -e ${ref}^{commit}`, { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveBaseRef(baseRef, headRef) {
+  if (baseRef && refExists(baseRef)) {
+    return baseRef;
+  }
+
+  try {
+    const mergeBase = execSync(`git merge-base ${headRef} origin/main`, {
+      encoding: "utf8"
+    }).trim();
+    if (mergeBase && refExists(mergeBase)) {
+      return mergeBase;
+    }
+  } catch {
+    // Fall through to local commit fallback.
+  }
+
+  const previousHead = `${headRef}~1`;
+  if (refExists(previousHead)) {
+    return previousHead;
+  }
+
+  return headRef;
+}
+
 function getChangedAddedLines(baseRef, headRef) {
   const diffOutput = execSync(
     `git diff --unified=0 --no-color ${baseRef}...${headRef} -- packages/backend/src packages/frontend/src packages/shared/src`,
@@ -134,8 +167,8 @@ for (const file of lcovFiles) {
   }
 }
 
-const baseRef = getBaseRef();
 const headRef = getHeadRef();
+const baseRef = resolveBaseRef(getBaseRef(), headRef);
 let changed;
 
 try {

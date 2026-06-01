@@ -11,7 +11,7 @@
   },
   "app": {
     "security": {
-      "csp": "default-src 'self' tauri: asset:; script-src 'self' 'unsafe-inline' blob: asset:; style-src 'self' 'unsafe-inline'; font-src 'self' asset: data:; img-src 'self' asset: data: blob:; connect-src 'self' ipc: tauri: http://* https://* ws://* wss://*; worker-src 'self' blob: asset:; child-src 'self' blob: data: asset: http://* https://*; frame-src 'self' blob: data: asset: http://* https://*; object-src 'self' blob: data: asset: http://* https://*"
+      "csp": "default-src 'self' tauri: asset:; script-src 'self' 'unsafe-inline' blob: asset:; style-src 'self' 'unsafe-inline'; font-src 'self' asset: data:; img-src 'self' asset: data: blob:; connect-src 'self' ipc: tauri: http://*:* https://*:* ws://*:* wss://*:*; worker-src 'self' blob: asset:; child-src 'self' blob: data: asset:; frame-src 'self' blob: data: asset:; object-src 'none'"
     },
     "windows": [
       {
