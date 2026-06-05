@@ -914,13 +914,7 @@ pub fn shutdown_runtime(app: &AppHandle) {
             .runtime
             .lock()
             .expect("managed runtime mutex poisoned");
-        if let Some(mut child) = runtime.backend.take() {
-            terminate_backend_child(&mut child);
-        }
-
-        runtime.backend_launch = None;
-        runtime.restart_attempts = 0;
-        runtime.postgres_data_dir.clone()
+        drain_runtime_for_shutdown(&mut runtime)
     };
 
     if let Some(data_dir) = postgres_data_dir {
@@ -1502,13 +1496,7 @@ fn shutdown_existing_runtime(
             .runtime
             .lock()
             .expect("managed runtime mutex poisoned");
-        if let Some(mut child) = runtime.backend.take() {
-            terminate_backend_child(&mut child);
-        }
-
-        runtime.backend_launch = None;
-        runtime.restart_attempts = 0;
-        runtime.postgres_data_dir.take()
+        drain_runtime_for_shutdown(&mut runtime)
     };
 
     if let Some(data_dir) = postgres_data_dir {
@@ -1516,6 +1504,16 @@ fn shutdown_existing_runtime(
     }
 
     Ok(())
+}
+
+fn drain_runtime_for_shutdown(runtime: &mut ManagedRuntime) -> Option<PathBuf> {
+    if let Some(mut child) = runtime.backend.take() {
+        terminate_backend_child(&mut child);
+    }
+
+    runtime.backend_launch = None;
+    runtime.restart_attempts = 0;
+    runtime.postgres_data_dir.take()
 }
 
 fn terminate_backend_child(child: &mut Child) {
@@ -2724,6 +2722,10 @@ fn create_desktop_database(
 }
 
 fn stop_postgres(app: &AppHandle, data_dir: &Path) -> Result<(), String> {
+    if !data_dir.join("postmaster.pid").exists() {
+        return Ok(());
+    }
+
     run_postgres_command(app, "pg_ctl", None, |command| {
         command
             .arg("-D")
@@ -4084,6 +4086,7 @@ mod tests {
     use super::compute_desktop_env_candidates;
     use super::decode_bootstrap_failure;
     use super::detect_latest_migration_name_in_dir;
+    use super::drain_runtime_for_shutdown;
     use super::encode_bootstrap_failure;
     use super::host_for_backend_exposure_mode;
     use super::marker_matches_latest_migration;
@@ -4091,6 +4094,8 @@ mod tests {
     use super::remove_file_if_present;
     use super::should_skip_migrations;
     use super::workspace_backend_launch;
+    use super::BackendLaunch;
+    use super::ManagedRuntime;
     use super::DESKTOP_DB_MARKER_FILE;
     use super::FORCE_MIGRATION_MARKER_FILE;
     use super::MIGRATION_VERSION_MARKER_FILE;
@@ -4172,6 +4177,32 @@ mod tests {
             host_for_backend_exposure_mode(BackendExposureMode::Lan),
             "0.0.0.0"
         );
+    }
+
+    #[test]
+    fn drain_runtime_for_shutdown_clears_runtime_state_and_consumes_postgres_dir() {
+        let postgres_dir = PathBuf::from("/tmp/elms-postgres");
+        let launch = BackendLaunch {
+            program: PathBuf::from("node"),
+            args: vec!["server.js".to_string()],
+            current_dir: PathBuf::from("/tmp"),
+            env: HashMap::new(),
+            log_file: PathBuf::from("/tmp/backend.log"),
+        };
+        let mut runtime = ManagedRuntime {
+            backend: None,
+            backend_launch: Some(launch),
+            postgres_data_dir: Some(postgres_dir.clone()),
+            restart_attempts: 2,
+        };
+
+        let drained_dir = drain_runtime_for_shutdown(&mut runtime);
+
+        assert_eq!(drained_dir, Some(postgres_dir));
+        assert!(runtime.backend.is_none());
+        assert!(runtime.backend_launch.is_none());
+        assert!(runtime.postgres_data_dir.is_none());
+        assert_eq!(runtime.restart_attempts, 0);
     }
 
     #[test]
