@@ -152,6 +152,31 @@ describe("useTableQueryState", () => {
     expect(latestTable?.toApiQueryString()).not.toContain("q=");
   });
 
+  it("preserves internal spaces in the UI state while trimming API queries", () => {
+    mockedSearch = {
+      q: "",
+      sortBy: "createdAt",
+      sortDir: "desc",
+      page: 1,
+      limit: 20
+    };
+    renderProbe();
+
+    act(() => {
+      latestTable?.setQ("alpha beta ");
+    });
+
+    setMockedSearchFromUrlWithNumericPageAndLimit();
+    act(() => {
+      root?.render(<Probe />);
+    });
+
+    expect(latestTable?.state.q).toBe("alpha beta ");
+    expect(window.location.search).toContain("q=alpha+beta+");
+    expect(latestTable?.toApiQueryString()).toContain("q=alpha+beta");
+    expect(latestTable?.toApiQueryString()).not.toContain("q=alpha+beta+");
+  });
+
   it("normalizes Arabic-Indic digits in the query state and API string", () => {
     mockedSearch = {
       q: "",

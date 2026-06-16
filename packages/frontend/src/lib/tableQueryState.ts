@@ -88,7 +88,7 @@ export function useTableQueryState(options: {
     const page = next.page ?? state.page;
     const limit = next.limit ?? state.limit;
 
-    if (q.trim().length > 0) params.set("q", q.trim());
+    if (q.trim().length > 0) params.set("q", q);
     else params.delete("q");
 
     if (sortBy.trim().length > 0) {
