@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { getEnumLabel } from "../../lib/enumLabel";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 import { Field, SelectField } from "./ui";
 
 interface Props {
@@ -19,6 +20,7 @@ interface Props {
 
 export function InlineTaskForm({ caseId, onSuccess }: Props) {
   const { t } = useTranslation("app");
+  const canReadUsers = usePermission(PERMISSIONS.usersRead);
   const [form, setForm] = useState<CreateTaskDto>({
     caseId,
     title: "",
@@ -31,7 +33,8 @@ export function InlineTaskForm({ caseId, onSuccess }: Props) {
 
   const usersQuery = useQuery({
     queryKey: ["users"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
+    enabled: canReadUsers
   });
 
   const assigneeOptions = [

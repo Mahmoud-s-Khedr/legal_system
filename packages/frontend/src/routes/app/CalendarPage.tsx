@@ -40,6 +40,11 @@ import { apiFetch } from "../../lib/api";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { useInvoices } from "../../lib/billing";
 import {
+  PERMISSIONS,
+  usePermission,
+  usePermissionQueryEnabled
+} from "../../lib/permissions";
+import {
   DATE_PICKER_DATETIME_FORMAT,
   fromDatePickerValue,
   toDatePickerValue
@@ -375,6 +380,7 @@ export function CalendarPage() {
   const { t, i18n } = useTranslation("app");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const canReadInvoices = usePermission(PERMISSIONS.invoicesRead);
   const [msgApi, msgContext] = message.useMessage();
   const [view, setView] = useState<CalendarView>("month");
   const [focusDate, setFocusDate] = useState(() => new Date());
@@ -454,17 +460,22 @@ export function CalendarPage() {
   const invoicesQuery = useInvoices({
     from: visibleRange.from.toISOString(),
     to: visibleRange.to.toISOString(),
-    limit: 300
+    limit: 300,
+    enabled: canReadInvoices
   });
 
+  const canLoadCalendarCases = usePermissionQueryEnabled(PERMISSIONS.casesRead);
   const casesQuery = useQuery({
     queryKey: ["calendar-cases"],
-    queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=300")
+    queryFn: () => apiFetch<CaseListResponseDto>("/api/cases?limit=300"),
+    enabled: canLoadCalendarCases
   });
 
+  const canLoadCalendarUsers = usePermissionQueryEnabled(PERMISSIONS.usersRead);
   const usersQuery = useQuery({
     queryKey: ["calendar-users"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users?limit=300")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users?limit=300"),
+    enabled: canLoadCalendarUsers
   });
 
   const events = useMemo(() => {
@@ -537,7 +548,9 @@ export function CalendarPage() {
   );
 
   const hasError =
-    hearingsQuery.isError || tasksQuery.isError || invoicesQuery.isError;
+    hearingsQuery.isError ||
+    tasksQuery.isError ||
+    (canReadInvoices && invoicesQuery.isError);
 
   const headerTitle = useMemo(() => {
     if (view === "day") {

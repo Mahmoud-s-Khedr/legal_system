@@ -24,6 +24,7 @@ import {
 } from "./ui";
 import { DocumentList } from "../../components/documents/DocumentList";
 import { useClientCreditBalance, useInvoices } from "../../lib/billing";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 
 const PHONE_ERROR = "Enter a valid phone number";
 
@@ -33,12 +34,18 @@ export function ClientDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const canReadInvoices = usePermission(PERMISSIONS.invoicesRead);
   const clientQuery = useQuery({
     queryKey: ["client", clientId],
     queryFn: () => apiFetch<ClientDto>(`/api/clients/${clientId}`)
   });
-  const clientCreditBalanceQuery = useClientCreditBalance(clientId);
-  const invoicesQuery = useInvoices({ clientId });
+  const clientCreditBalanceQuery = useClientCreditBalance(
+    canReadInvoices ? clientId : null
+  );
+  const invoicesQuery = useInvoices({
+    clientId,
+    enabled: canReadInvoices
+  });
   const linkedCasesQuery = useQuery({
     queryKey: ["client-cases", clientId],
     queryFn: () =>
@@ -143,13 +150,15 @@ export function ClientDetailPage() {
             >
               {t("actions.newCase")}
             </Link>
-            <Link
-              className="rounded-2xl border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/5 sm:px-4 sm:py-2.5"
-              search={{ clientId }}
-              to="/app/invoices/new"
-            >
-              {t("actions.newInvoice")}
-            </Link>
+            {canReadInvoices ? (
+              <Link
+                className="rounded-2xl border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/5 sm:px-4 sm:py-2.5"
+                search={{ clientId }}
+                to="/app/invoices/new"
+              >
+                {t("actions.newInvoice")}
+              </Link>
+            ) : null}
             <Link
               className="rounded-2xl bg-accent px-3 py-2 text-sm font-semibold text-white sm:px-4 sm:py-3"
               params={{ clientId }}
@@ -254,17 +263,21 @@ export function ClientDetailPage() {
         >
           <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Metric label={t("labels.cases")} value={client.linkedCaseCount} />
-            <Metric label={t("labels.invoices")} value={client.invoiceCount} />
+            {canReadInvoices ? (
+              <Metric label={t("labels.invoices")} value={client.invoiceCount} />
+            ) : null}
             <Metric
               label={t("labels.documents")}
               value={client.documentCount}
             />
-            <Metric
-              label={t("billing.availableClientCredit")}
-              value={availableCreditText}
-              className="sm:col-span-2 lg:col-span-4 xl:col-span-2"
-              valueClassName="text-2xl sm:text-3xl"
-            />
+            {canReadInvoices ? (
+              <Metric
+                label={t("billing.availableClientCredit")}
+                value={availableCreditText}
+                className="sm:col-span-2 lg:col-span-4 xl:col-span-2"
+                valueClassName="text-2xl sm:text-3xl"
+              />
+            ) : null}
           </dl>
         </SectionCard>
         <SectionCard
@@ -297,10 +310,11 @@ export function ClientDetailPage() {
           )}
         </SectionCard>
       </div>
-      <SectionCard
-        title={t("labels.invoices")}
-        description={t("billing.invoicesDescription")}
-      >
+      {canReadInvoices ? (
+        <SectionCard
+          title={t("labels.invoices")}
+          description={t("billing.invoicesDescription")}
+        >
         {invoicesQuery.isLoading && (
           <p className="text-sm text-slate-500">{t("labels.loading")}</p>
         )}
@@ -371,7 +385,8 @@ export function ClientDetailPage() {
               </DataTable>
             </TableWrapper>
           )}
-      </SectionCard>
+        </SectionCard>
+      ) : null}
       <SectionCard
         title={t("cases.linkedCases")}
         description={t("cases.linkedCasesHelp")}

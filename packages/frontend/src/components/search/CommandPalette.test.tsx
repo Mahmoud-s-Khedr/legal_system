@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mockUseNavigate = vi.fn();
 const mockNavigate = vi.fn();
 const mockUseQuery = vi.fn();
+const mockUseAuthBootstrap = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: (...args: unknown[]) => mockUseNavigate(...args)
@@ -27,6 +28,10 @@ vi.mock("react-i18next", async () => {
 
 vi.mock("../shared/useAccessibleOverlay", () => ({
   useAccessibleOverlay: vi.fn()
+}));
+
+vi.mock("../../store/authStore", () => ({
+  useAuthBootstrap: () => mockUseAuthBootstrap()
 }));
 
 const { CommandPalette } = await import("./CommandPalette");
@@ -72,8 +77,26 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
   mockUseNavigate.mockReturnValue(mockNavigate);
+  mockUseAuthBootstrap.mockReturnValue({
+    user: {
+      permissions: [
+        "cases:read",
+        "clients:read",
+        "documents:read",
+        "settings:read",
+        "cases:create",
+        "hearings:create",
+        "tasks:create",
+        "invoices:create"
+      ]
+    }
+  });
 
-  mockUseQuery.mockImplementation((config: { queryKey: string[] }) => {
+  mockUseQuery.mockImplementation((config: { queryKey: string[]; enabled?: boolean }) => {
+    if (config.enabled === false) {
+      return { data: { items: [] }, isFetching: false };
+    }
+
     if (config.queryKey[0] === "palette-documents") {
       return {
         data: {
@@ -218,5 +241,35 @@ describe("CommandPalette", () => {
     });
     expect(onClose).toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalledWith({ to: "/app/dashboard" });
+  });
+
+  it("skips protected queries and quick actions when permissions are missing", () => {
+    mockUseAuthBootstrap.mockReturnValue({
+      user: {
+        permissions: []
+      }
+    });
+
+    const view = render(true);
+
+    expect(view.textContent).not.toContain("actions.quickIntake");
+    expect(view.textContent).not.toContain("actions.newInvoice");
+
+    const queryConfigs = mockUseQuery.mock.calls.map((call) => call[0] as { queryKey?: string[]; enabled?: boolean });
+    expect(
+      queryConfigs
+        .filter((call) => call.queryKey?.[0] === "palette-cases")
+        .every((call) => call.enabled === false)
+    ).toBe(true);
+    expect(
+      queryConfigs
+        .filter((call) => call.queryKey?.[0] === "palette-clients")
+        .every((call) => call.enabled === false)
+    ).toBe(true);
+    expect(
+      queryConfigs
+        .filter((call) => call.queryKey?.[0] === "palette-documents")
+        .every((call) => call.enabled === false)
+    ).toBe(true);
   });
 });

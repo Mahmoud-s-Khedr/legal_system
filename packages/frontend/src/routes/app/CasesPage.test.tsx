@@ -182,29 +182,35 @@ beforeEach(() => {
     options: [],
     getLabel: (key: string) => key
   });
-  mockUseAuthBootstrap.mockReturnValue({ user: { id: "user-1" } });
-  mockUseQuery.mockImplementation(({ queryFn }: { queryFn: () => unknown }) => {
-    void queryFn();
-    return {
-      isLoading: false,
-      isError: false,
-      data: {
-        items: [
-          {
-            id: "case-1",
-            title: "Lease dispute",
-            caseNumber: "12/2026",
-            internalRef: "S-100",
-            judicialYear: 2026,
-            status: "OPEN"
-          }
-        ],
-        total: 1
-      },
-      error: null,
-      refetch: vi.fn()
-    };
+  mockUseAuthBootstrap.mockReturnValue({
+    user: { id: "user-1", permissions: ["cases:read", "users:read"] }
   });
+  mockUseQuery.mockImplementation(
+    ({ queryFn, enabled = true }: { queryFn: () => unknown; enabled?: boolean }) => {
+      if (enabled) {
+        void queryFn();
+      }
+      return {
+        isLoading: false,
+        isError: false,
+        data: {
+          items: [
+            {
+              id: "case-1",
+              title: "Lease dispute",
+              caseNumber: "12/2026",
+              internalRef: "S-100",
+              judicialYear: 2026,
+              status: "OPEN"
+            }
+          ],
+          total: 1
+        },
+        error: null,
+        refetch: vi.fn()
+      };
+    }
+  );
 });
 
 describe("CasesPage", () => {
@@ -249,5 +255,17 @@ describe("CasesPage", () => {
     expect(typeof caseRequest).toBe("string");
     expect(String(caseRequest)).toContain("createdFrom=2026-05-03");
     expect(String(caseRequest)).not.toContain("createdTo=");
+  });
+
+  it("does not request users when the viewer lacks users:read", () => {
+    mockUseAuthBootstrap.mockReturnValue({
+      user: { id: "user-1", permissions: ["cases:read"] }
+    });
+
+    render();
+
+    expect(
+      mockApiFetch.mock.calls.some((call) => call[0] === "/api/users")
+    ).toBe(false);
   });
 });

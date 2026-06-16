@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { confirmAction } from "../../lib/dialog";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -35,6 +36,7 @@ export function TaskDetailPage() {
   const { taskId } = useParams({ from: "/app/tasks/$taskId" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const canReadUsers = usePermission(PERMISSIONS.usersRead);
 
   const taskQuery = useQuery({
     queryKey: ["task", taskId],
@@ -46,7 +48,8 @@ export function TaskDetailPage() {
   });
   const usersQuery = useQuery({
     queryKey: ["users"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
+    enabled: canReadUsers
   });
 
   const [form, setForm] = useState<CreateTaskDto>({

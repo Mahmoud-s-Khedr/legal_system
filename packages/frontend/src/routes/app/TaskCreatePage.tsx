@@ -15,6 +15,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch, apiFormFetch } from "../../lib/api";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { toIsoOrEmpty } from "../../lib/dateInput";
 import { getEnumLabel } from "../../lib/enumLabel";
@@ -60,6 +61,7 @@ export function TaskCreatePage() {
   const queryClient = useQueryClient();
   const feedback = useMutationFeedback();
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
+  const canReadUsers = usePermission(PERMISSIONS.usersRead);
 
   const [form, setForm] = useState<CreateTaskDto>({
     caseId: search.caseId ?? "",
@@ -104,7 +106,8 @@ export function TaskCreatePage() {
   });
   const usersQuery = useQuery({
     queryKey: ["users"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
+    enabled: canReadUsers
   });
 
   const caseOptions = useMemo(

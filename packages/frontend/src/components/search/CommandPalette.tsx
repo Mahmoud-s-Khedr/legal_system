@@ -10,6 +10,12 @@ import type {
 } from "@elms/shared";
 import { normalizeDigits } from "@elms/shared";
 import { apiFetch } from "../../lib/api";
+import {
+  PERMISSIONS,
+  useAnyPermission,
+  usePermission,
+  usePermissionQueryEnabled
+} from "../../lib/permissions";
 import { useAccessibleOverlay } from "../shared/useAccessibleOverlay";
 
 interface Props {
@@ -31,6 +37,20 @@ interface PaletteItem {
 export function CommandPalette({ open, onClose }: Props) {
   const { t } = useTranslation("app");
   const navigate = useNavigate();
+  const canReadCases = usePermission(PERMISSIONS.casesRead);
+  const canReadClients = usePermission(PERMISSIONS.clientsRead);
+  const canReadSettings = usePermission(PERMISSIONS.settingsRead);
+  const canCreateCases = usePermission(PERMISSIONS.casesCreate);
+  const canCreateHearings = usePermission("hearings:create");
+  const canCreateTasks = usePermission("tasks:create");
+  const canCreateInvoices = usePermission("invoices:create");
+  const canUseSearch = useAnyPermission([
+    PERMISSIONS.casesRead,
+    PERMISSIONS.clientsRead,
+    "tasks:read",
+    PERMISSIONS.documentsRead,
+    "library:read"
+  ]);
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -73,36 +93,49 @@ export function CommandPalette({ open, onClose }: Props) {
     }
   }, [open]);
 
+  const canSearchCases = usePermissionQueryEnabled(
+    PERMISSIONS.casesRead,
+    open && debouncedQ.trim().length > 0
+  );
   const casesQuery = useQuery({
     queryKey: ["palette-cases", debouncedQ],
     queryFn: () =>
       apiFetch<CaseListResponseDto>(
         `/api/cases?q=${encodeURIComponent(debouncedQ)}&limit=5`
       ),
-    enabled: open && debouncedQ.trim().length > 0
+    enabled: canSearchCases
   });
 
+  const canSearchClients = usePermissionQueryEnabled(
+    PERMISSIONS.clientsRead,
+    open && debouncedQ.trim().length > 0
+  );
   const clientsQuery = useQuery({
     queryKey: ["palette-clients", debouncedQ],
     queryFn: () =>
       apiFetch<ClientListResponseDto>(
         `/api/clients?q=${encodeURIComponent(debouncedQ)}&limit=5`
       ),
-    enabled: open && debouncedQ.trim().length > 0
+    enabled: canSearchClients
   });
 
+  const canSearchDocuments = usePermissionQueryEnabled(
+    PERMISSIONS.documentsRead,
+    open && debouncedQ.trim().length > 0
+  );
   const documentsQuery = useQuery({
     queryKey: ["palette-documents", debouncedQ],
     queryFn: () =>
       apiFetch<DocumentSearchResponseDto>(
         `/api/search/documents?q=${encodeURIComponent(debouncedQ)}&pageSize=5`
       ),
-    enabled: open && debouncedQ.trim().length > 0
+    enabled: canSearchDocuments
   });
 
-  const quickActions: PaletteItem[] = useMemo(
-    () => [
-      {
+  const quickActions = useMemo<PaletteItem[]>(
+    () => {
+      const items: Array<PaletteItem | null> = [
+        {
         id: "go-dashboard",
         label: t("search.escape.dashboard"),
         score: 0,
@@ -112,7 +145,8 @@ export function CommandPalette({ open, onClose }: Props) {
           onClose();
         }
       },
-      {
+        canReadCases
+          ? {
         id: "go-cases",
         label: t("search.escape.cases"),
         score: 0,
@@ -121,8 +155,10 @@ export function CommandPalette({ open, onClose }: Props) {
           void navigate({ to: "/app/cases" });
           onClose();
         }
-      },
-      {
+            }
+          : null,
+        canReadClients
+          ? {
         id: "go-clients",
         label: t("search.escape.clients"),
         score: 0,
@@ -131,8 +167,10 @@ export function CommandPalette({ open, onClose }: Props) {
           void navigate({ to: "/app/clients" });
           onClose();
         }
-      },
-      {
+            }
+          : null,
+        canUseSearch
+          ? {
         id: "go-search",
         label: t("search.escape.search"),
         score: 0,
@@ -144,8 +182,10 @@ export function CommandPalette({ open, onClose }: Props) {
           });
           onClose();
         }
-      },
-      {
+            }
+          : null,
+        canReadSettings
+          ? {
         id: "go-settings",
         label: t("search.escape.settings"),
         score: 0,
@@ -154,8 +194,10 @@ export function CommandPalette({ open, onClose }: Props) {
           void navigate({ to: "/app/settings" });
           onClose();
         }
-      },
-      {
+            }
+          : null,
+        canCreateCases
+          ? {
         id: "quick-intake",
         label: t("actions.quickIntake"),
         score: 0,
@@ -164,8 +206,10 @@ export function CommandPalette({ open, onClose }: Props) {
           void navigate({ to: "/app/cases/quick-new" });
           onClose();
         }
-      },
-      {
+            }
+          : null,
+        canCreateCases
+          ? {
         id: "new-case",
         label: t("actions.newCase"),
         score: 0,
@@ -174,8 +218,10 @@ export function CommandPalette({ open, onClose }: Props) {
           void navigate({ to: "/app/cases/new" });
           onClose();
         }
-      },
-      {
+            }
+          : null,
+        canCreateHearings
+          ? {
         id: "new-hearing",
         label: t("actions.newHearing"),
         score: 0,
@@ -184,8 +230,10 @@ export function CommandPalette({ open, onClose }: Props) {
           void navigate({ to: "/app/hearings/new" });
           onClose();
         }
-      },
-      {
+            }
+          : null,
+        canCreateTasks
+          ? {
         id: "new-task",
         label: t("actions.newTask"),
         score: 0,
@@ -194,8 +242,10 @@ export function CommandPalette({ open, onClose }: Props) {
           void navigate({ to: "/app/tasks/new" });
           onClose();
         }
-      },
-      {
+            }
+          : null,
+        canCreateInvoices
+          ? {
         id: "new-invoice",
         label: t("actions.newInvoice"),
         score: 0,
@@ -204,9 +254,25 @@ export function CommandPalette({ open, onClose }: Props) {
           void navigate({ to: "/app/invoices/new" });
           onClose();
         }
-      }
-    ],
-    [t, navigate, onClose]
+            }
+          : null
+      ];
+
+      return items.filter((item): item is PaletteItem => item !== null);
+    },
+    [
+      canCreateCases,
+      canCreateHearings,
+      canCreateInvoices,
+      canCreateTasks,
+      canReadCases,
+      canReadClients,
+      canReadSettings,
+      canUseSearch,
+      navigate,
+      onClose,
+      t
+    ]
   );
 
   const searchResults: PaletteItem[] = useMemo(() => {

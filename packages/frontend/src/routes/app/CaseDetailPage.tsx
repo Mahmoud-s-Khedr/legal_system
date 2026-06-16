@@ -28,6 +28,7 @@ import { toClientSelectOption } from "../../lib/caseOptions";
 import { useMutationFeedback } from "../../lib/feedback";
 import { resolveFormValidationError } from "../../lib/formValidation";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 import {
   toLocalizedLocationOptions,
   useCityLookups,
@@ -124,6 +125,8 @@ export function CaseDetailPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { caseId } = useParams({ from: "/app/cases/$caseId" });
+  const canReadUsers = usePermission(PERMISSIONS.usersRead);
+  const canReadInvoices = usePermission(PERMISSIONS.invoicesRead);
   const [activeTab, setActiveTab] = useState<CaseTab>("overview");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [partyForm, setPartyForm] = useState<CreateCasePartyDto>({
@@ -167,7 +170,8 @@ export function CaseDetailPage() {
   });
   const usersQuery = useQuery({
     queryKey: ["users"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
+    enabled: canReadUsers
   });
   const clientsQuery = useQuery({
     queryKey: ["clients", "case-parties"],
@@ -190,6 +194,9 @@ export function CaseDetailPage() {
   const caseTypesQuery = useLocalizedLookupOptions("CaseType");
   const [editingCourt, setEditingCourt] = useState<CaseCourtDto | null>(null);
   const defaultPartyRole = partyRolesQuery.data?.items?.[0]?.key ?? "";
+  const visibleTabs = caseTabs.filter((tab) =>
+    tab === "billing" ? canReadInvoices : true
+  );
 
   useEffect(() => {
     setHearingsPage(1);
@@ -440,7 +447,7 @@ export function CaseDetailPage() {
         </div>
       )}
       <div className="sticky top-[calc(var(--header-height)+8px)] z-10 flex gap-2 overflow-x-auto rounded-xl bg-white/90 pb-1 pt-1 backdrop-blur">
-        {caseTabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium ${
               activeTab === tab
@@ -1197,7 +1204,9 @@ export function CaseDetailPage() {
           </SectionCard>
         </div>
       ) : null}
-      {activeTab === "billing" ? <CaseBillingTab caseId={caseId} /> : null}
+      {activeTab === "billing" && canReadInvoices ? (
+        <CaseBillingTab caseId={caseId} />
+      ) : null}
       {activeTab === "references" ? (
         <CaseLegalReferencesTab caseId={caseId} />
       ) : null}

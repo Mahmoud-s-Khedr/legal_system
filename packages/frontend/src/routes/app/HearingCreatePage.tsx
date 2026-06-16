@@ -12,6 +12,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 import { toCaseSelectOption } from "../../lib/caseOptions";
 import { isValidDateTimeInput, toIsoOrEmpty } from "../../lib/dateInput";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
@@ -51,6 +52,7 @@ export function HearingCreatePage() {
   const queryClient = useQueryClient();
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
   const initialSessionDatetime = slotDateTime(new Date());
+  const canReadUsers = usePermission(PERMISSIONS.usersRead);
 
   const [form, setForm] = useState<CreateHearingDto>({
     caseId: search.caseId ?? "",
@@ -106,7 +108,8 @@ export function HearingCreatePage() {
   });
   const usersQuery = useQuery({
     queryKey: ["users"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
+    enabled: canReadUsers
   });
   const outcomesQuery = useLocalizedLookupOptions("HearingOutcome");
 

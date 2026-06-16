@@ -8,6 +8,7 @@ import {
 } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { PERMISSIONS, usePermissionQueryEnabled } from "../../lib/permissions";
 import { getEnumLabel } from "../../lib/enumLabel";
 import { useTableQueryState } from "../../lib/tableQueryState";
 import { useLocalizedLookupOptions } from "../../lib/lookups";
@@ -66,9 +67,11 @@ export function CasesPage() {
   const [assignedToMe, setAssignedToMe] = useState(false);
 
   const caseTypesQuery = useLocalizedLookupOptions("CaseType");
+  const canLoadLawyers = usePermissionQueryEnabled(PERMISSIONS.usersRead);
   const lawyersQuery = useQuery({
     queryKey: ["users-list"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
+    enabled: canLoadLawyers
   });
 
   const effectiveLawyerId = assignedToMe
@@ -147,23 +150,25 @@ export function CasesPage() {
             ]}
             value={table.state.filters.type ?? ""}
           />
-          <SelectField
-            label={t("labels.lawyer")}
-            onChange={(value) => {
-              setAssignedToMe(false);
-              table.setFilter("assignedLawyerId", value);
-            }}
-            options={[
-              { value: "", label: t("labels.all") },
-              ...(lawyersQuery.data?.items ?? []).map((u) => ({
-                value: u.id,
-                label: u.fullName
-              }))
-            ]}
-            value={
-              assignedToMe ? "" : (table.state.filters.assignedLawyerId ?? "")
-            }
-          />
+          {canLoadLawyers ? (
+            <SelectField
+              label={t("labels.lawyer")}
+              onChange={(value) => {
+                setAssignedToMe(false);
+                table.setFilter("assignedLawyerId", value);
+              }}
+              options={[
+                { value: "", label: t("labels.all") },
+                ...(lawyersQuery.data?.items ?? []).map((u) => ({
+                  value: u.id,
+                  label: u.fullName
+                }))
+              ]}
+              value={
+                assignedToMe ? "" : (table.state.filters.assignedLawyerId ?? "")
+              }
+            />
+          ) : null}
         </TableToolbar>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <button

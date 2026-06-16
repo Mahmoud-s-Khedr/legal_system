@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import type { CreateHearingDto, UserListResponseDto } from "@elms/shared";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 import { slotDateTime } from "./hearingCalendar";
 import { Field, SelectField } from "./ui";
 
@@ -14,6 +15,7 @@ interface Props {
 
 export function InlineHearingForm({ caseId, onSuccess }: Props) {
   const { t } = useTranslation("app");
+  const canReadUsers = usePermission(PERMISSIONS.usersRead);
   const [form, setForm] = useState<CreateHearingDto>({
     caseId,
     assignedLawyerId: "",
@@ -25,7 +27,8 @@ export function InlineHearingForm({ caseId, onSuccess }: Props) {
 
   const usersQuery = useQuery({
     queryKey: ["users"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
+    enabled: canReadUsers
   });
 
   const lawyerOptions = [

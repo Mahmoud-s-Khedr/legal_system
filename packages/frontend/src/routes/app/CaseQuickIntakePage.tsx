@@ -309,6 +309,7 @@ export function CaseQuickIntakePage() {
   const canCreateHearings = useHasPermission("hearings:create");
   const canCreateTasks = useHasPermission("tasks:create");
   const canCreateDocuments = useHasPermission("documents:create");
+  const canReadUsers = useHasPermission("users:read");
 
   const [clientMode, setClientMode] = useState<ClientMode>(
     canReadClients ? "existing" : "new"
@@ -405,7 +406,8 @@ export function CaseQuickIntakePage() {
   const usersQuery = useQuery({
     queryKey: ["users", "quick-intake"],
     queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
-    enabled: canAssignCases || canCreateHearings || canCreateTasks
+    enabled:
+      canReadUsers && (canAssignCases || canCreateHearings || canCreateTasks)
   });
 
   const caseTypesQuery = useLocalizedLookupOptions("CaseType");
@@ -530,7 +532,7 @@ export function CaseQuickIntakePage() {
 
   const checkDuplicate = useCallback(
     async (q: string, seq: number) => {
-      if (!q.trim()) return;
+      if (!q.trim() || !canReadClients) return;
       const result = await apiFetch<ClientListResponseDto>(
         `/api/clients?q=${encodeURIComponent(q.trim())}&limit=1`
       );
@@ -544,7 +546,7 @@ export function CaseQuickIntakePage() {
         setDuplicateWarning(null);
       }
     },
-    [t]
+    [canReadClients, t]
   );
 
   function scheduleDuplicateCheck(q: string) {

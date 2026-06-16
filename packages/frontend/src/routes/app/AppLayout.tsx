@@ -15,6 +15,7 @@ import { BackToTopButton } from "../../components/navigation/BackToTopButton";
 import { ShellFooter } from "../../components/navigation/ShellFooter";
 import { buildAppShellFooterLinks } from "../../components/navigation/shellFooterLinks";
 import { isArabicLanguage } from "../../lib/language";
+import { hasPermission, PERMISSIONS } from "../../lib/permissions";
 
 const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
 
@@ -80,6 +81,9 @@ export function AppLayout() {
 
   const SeparatorIcon = isRtl ? ChevronLeft : ChevronRight;
   const footerLinks = buildAppShellFooterLinks(t);
+  const permissions = user?.permissions ?? [];
+  const canQuickIntake = hasPermission(permissions, PERMISSIONS.casesCreate);
+  const canCreateTask = hasPermission(permissions, "tasks:create");
 
   const navContent = (
     <SidebarNav
@@ -183,21 +187,27 @@ export function AppLayout() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden xl:flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
-              <Link
-                to="/app/cases/quick-new"
-                className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent"
-              >
-                {t("actions.quickIntake")}
-              </Link>
-              <span className="text-slate-300" aria-hidden="true">
-                |
-              </span>
-              <Link
-                to="/app/tasks/new"
-                className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent"
-              >
-                {t("actions.newTask")}
-              </Link>
+              {canQuickIntake ? (
+                <Link
+                  to="/app/cases/quick-new"
+                  className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent"
+                >
+                  {t("actions.quickIntake")}
+                </Link>
+              ) : null}
+              {canQuickIntake && canCreateTask ? (
+                <span className="text-slate-300" aria-hidden="true">
+                  |
+                </span>
+              ) : null}
+              {canCreateTask ? (
+                <Link
+                  to="/app/tasks/new"
+                  className="rounded-lg px-2 py-1 hover:bg-white hover:text-accent"
+                >
+                  {t("actions.newTask")}
+                </Link>
+              ) : null}
             </div>
             <div className="hidden lg:block">
               <GlobalSearchBar onOpenPalette={() => setPaletteOpen(true)} />

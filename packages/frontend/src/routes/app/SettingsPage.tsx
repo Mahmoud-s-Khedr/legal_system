@@ -54,6 +54,7 @@ import {
   SelectField,
   formatDate
 } from "./ui";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 
 export function getSelectableEditionKeys() {
   return [
@@ -114,6 +115,7 @@ export function SettingsPage() {
   const isDesktopShell = isDesktopDownloadsEnabled();
   const isDesktopBackupShell = isDesktopBackupEnabled();
   const { user, refreshSession } = useAuthBootstrap();
+  const canReadFirm = usePermission(PERMISSIONS.firmsRead);
   const canUpdateSettings =
     user?.permissions.includes("settings:update") ?? false;
   const addToast = useToastStore((state) => state.addToast);
@@ -121,7 +123,8 @@ export function SettingsPage() {
   const queryClient = useQueryClient();
   const firmQuery = useQuery({
     queryKey: ["firm-me"],
-    queryFn: () => apiFetch<FirmMeResponseDto>("/api/firms/me")
+    queryFn: () => apiFetch<FirmMeResponseDto>("/api/firms/me"),
+    enabled: canReadFirm
   });
   const selfQuery = useQuery({
     queryKey: ["user", user?.id],
@@ -406,7 +409,7 @@ export function SettingsPage() {
     }
   });
 
-  if (!firmQuery.data || !user) {
+  if (!user) {
     return (
       <EmptyState
         title={t("empty.noSettings")}
@@ -415,15 +418,16 @@ export function SettingsPage() {
     );
   }
 
-  const firm = firmQuery.data.firm;
-  const canSelfServeLicense = firm.editionKey !== EditionKey.ENTERPRISE;
+  const firm = firmQuery.data?.firm ?? null;
+  const canSelfServeLicense =
+    firm !== null && firm.editionKey !== EditionKey.ENTERPRISE;
   const selectableEditions = getSelectableEditionKeys();
   const trialDaysRemaining = getTrialDaysRemaining(
-    firm.trialEnabled,
-    firm.trialEndsAt
+    firm?.trialEnabled ?? false,
+    firm?.trialEndsAt
   );
   const trialCountdownText = (() => {
-    if (trialDaysRemaining === null || !firm.trialEndsAt) {
+    if (trialDaysRemaining === null || !firm?.trialEndsAt) {
       return null;
     }
     return t("settings.trialActiveWithCountdown", {
@@ -445,34 +449,36 @@ export function SettingsPage() {
         description={t("settings.description")}
       />
       <div className="grid gap-4 xl:grid-cols-3">
-        <SectionCard
-          title={t("settings.firm")}
-          description={t("settings.firmHelp")}
-        >
-          <dl className="space-y-3 text-sm">
-            <Detail label={t("labels.name")} value={firm.name} />
-            <Detail label={t("labels.slug")} value={firm.slug} />
-            <Detail
-              label={t("labels.type")}
-              value={getEnumLabel(t, "FirmType", firm.type)}
-            />
-            <Detail
-              label={t("labels.language")}
-              value={getEnumLabel(t, "Language", firm.defaultLanguage)}
-            />
-            <Detail label={t("settings.firmId")} value={firm.id} />
-            <Detail
-              label={t("settings.edition")}
-              value={firm.pendingEditionKey ?? firm.editionKey}
-            />
-            {firm.pendingEditionKey ? (
+        {firm ? (
+          <SectionCard
+            title={t("settings.firm")}
+            description={t("settings.firmHelp")}
+          >
+            <dl className="space-y-3 text-sm">
+              <Detail label={t("labels.name")} value={firm.name} />
+              <Detail label={t("labels.slug")} value={firm.slug} />
               <Detail
-                label={t("settings.pendingEdition")}
-                value={firm.pendingEditionKey}
+                label={t("labels.type")}
+                value={getEnumLabel(t, "FirmType", firm.type)}
               />
-            ) : null}
-          </dl>
-        </SectionCard>
+              <Detail
+                label={t("labels.language")}
+                value={getEnumLabel(t, "Language", firm.defaultLanguage)}
+              />
+              <Detail label={t("settings.firmId")} value={firm.id} />
+              <Detail
+                label={t("settings.edition")}
+                value={firm.pendingEditionKey ?? firm.editionKey}
+              />
+              {firm.pendingEditionKey ? (
+                <Detail
+                  label={t("settings.pendingEdition")}
+                  value={firm.pendingEditionKey}
+                />
+              ) : null}
+            </dl>
+          </SectionCard>
+        ) : null}
         <SectionCard
           title={t("settings.session")}
           description={t("settings.sessionHelp")}
@@ -512,10 +518,11 @@ export function SettingsPage() {
           </div>
         </SectionCard>
       </div>
-      <SectionCard
-        title={t("settings.licensingTitle")}
-        description={t("settings.licensingHelp")}
-      >
+      {firm ? (
+        <SectionCard
+          title={t("settings.licensingTitle")}
+          description={t("settings.licensingHelp")}
+        >
         <div className="space-y-4">
           {firm.licenseRequired ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -598,7 +605,8 @@ export function SettingsPage() {
             </p>
           )}
         </div>
-      </SectionCard>
+        </SectionCard>
+      ) : null}
       <SectionCard
         title={t("notifications.preferences")}
         description={t("notifications.preferencesDescription")}

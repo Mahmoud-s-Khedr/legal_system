@@ -21,6 +21,7 @@ import {
   resolveFormValidationError,
   validateRequiredDateTimeField
 } from "../../lib/formValidation";
+import { PERMISSIONS, usePermission } from "../../lib/permissions";
 import { pickFieldError } from "../../lib/validationErrors";
 import { useToastStore } from "../../store/toastStore";
 import {
@@ -53,6 +54,7 @@ export function HearingEditPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { bypassRef, allowNextNavigation } = useUnsavedChangesBypass();
+  const canReadUsers = usePermission(PERMISSIONS.usersRead);
 
   const hearingQuery = useQuery({
     queryKey: ["hearing", hearingId],
@@ -64,7 +66,8 @@ export function HearingEditPage() {
   });
   const usersQuery = useQuery({
     queryKey: ["users"],
-    queryFn: () => apiFetch<UserListResponseDto>("/api/users")
+    queryFn: () => apiFetch<UserListResponseDto>("/api/users"),
+    enabled: canReadUsers
   });
   const outcomesQuery = useLocalizedLookupOptions("HearingOutcome");
 

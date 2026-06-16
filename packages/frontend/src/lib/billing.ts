@@ -27,6 +27,7 @@ export function useInvoices(filters?: {
   sortDir?: "asc" | "desc";
   page?: number;
   limit?: number;
+  enabled?: boolean;
 }) {
   const params = new URLSearchParams();
   if (filters?.q) params.set("q", filters.q);
@@ -43,7 +44,8 @@ export function useInvoices(filters?: {
 
   return useQuery({
     queryKey: ["invoices", filters],
-    queryFn: () => apiFetch<InvoiceListResponseDto>(`/api/invoices${qs ? `?${qs}` : ""}`)
+    queryFn: () => apiFetch<InvoiceListResponseDto>(`/api/invoices${qs ? `?${qs}` : ""}`),
+    enabled: filters?.enabled ?? true
   });
 }
 
@@ -162,6 +164,7 @@ export function useExpenses(filters?: {
   sortDir?: "asc" | "desc";
   page?: number;
   limit?: number;
+  enabled?: boolean;
 }) {
   const params = new URLSearchParams();
   if (filters?.q) params.set("q", filters.q);
@@ -175,7 +178,8 @@ export function useExpenses(filters?: {
 
   return useQuery({
     queryKey: ["expenses", filters],
-    queryFn: () => apiFetch<ExpenseListResponseDto>(`/api/expenses${qs ? `?${qs}` : ""}`)
+    queryFn: () => apiFetch<ExpenseListResponseDto>(`/api/expenses${qs ? `?${qs}` : ""}`),
+    enabled: filters?.enabled ?? true
   });
 }
 

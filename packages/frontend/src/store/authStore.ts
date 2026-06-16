@@ -138,3 +138,7 @@ export const useAuthBootstrap = useAuthStore;
 /** Returns true if the current user has the given permission string. */
 export const useHasPermission = (permission: string) =>
   useAuthStore((s) => s.user?.permissions.includes(permission) ?? false);
+
+/** Returns true if the current user has at least one required permission. */
+export const useHasAnyPermission = (permissions: string[]) =>
+  useAuthStore((s) => permissions.some((permission) => s.user?.permissions.includes(permission)));
