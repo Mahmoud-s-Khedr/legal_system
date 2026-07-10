@@ -1,40 +1,39 @@
 # ELMS Architecture — 04: Authentication and Security
 
-## Status (as of May 18, 2026)
+## Status (as of July 10, 2026)
 
-- `Implemented`: Local auth service and session model.
-- `Archived Reference`: Legacy cloud JWT+Redis auth narrative.
-- `Planned`: Cloud auth/runtime re-activation.
+- `Implemented`: Local auth service and session model (desktop runtime).
+- `Implemented`: Cloud auth service — JWT (RS256) access tokens + Redis-backed refresh tokens (hosted runtime).
 
-## Current runtime truth
+See [docs/business/SAAS_CONVERSION_PLAN.md](../business/SAAS_CONVERSION_PLAN.md) for the current SaaS conversion plan and gap list, including tenant-isolation hardening work still needed.
 
-Backend startup normalizes auth behavior to local runtime:
+## Runtime selection
 
-- `packages/backend/src/config/env.ts` warns that `AUTH_MODE=cloud` is deprecated/non-operational and forces `AUTH_MODE=local`.
-- `packages/backend/src/modules/auth/createAuthService.ts` always returns local auth service and logs warning when non-local mode is configured.
+`packages/backend/src/modules/auth/createAuthService.ts` selects between the local and cloud auth service based on `AUTH_MODE` (`local` | `cloud`) from `packages/backend/src/config/env.ts`.
 
-## Implemented auth flow
+## Local (desktop) auth flow
 
 - Session cookie: `elms_local_session`
 - Session backing store: local session store in backend process/runtime support files
 - Local setup flow exists for first-run workspace initialization (`/api/auth/setup` endpoints)
-- Auth/session context and permission checks remain active through middleware/plugins
+
+## Cloud (hosted) auth flow
+
+Implemented in `packages/backend/src/modules/auth/cloudAuthService.ts`:
+
+- Access tokens: JWT signed via `@fastify/jwt`, `ACCESS_TOKEN_TTL_MINUTES` (default 15m), includes `firmId`, `editionKey`, `lifecycleStatus`, `roleKey`, `permissions` claims.
+- Refresh tokens: random UUID stored in Redis (`refresh:<token>` → userId), `REFRESH_TOKEN_TTL_DAYS` (default 30d).
+- Registration creates a `Firm` + `FirmSettings` + admin `User` in one flow, with a 30-day trial (`trialStartedAt`/`trialEndsAt`).
+- Invite acceptance, login, refresh, and logout are all implemented and validated (see `cloudAuthService.test.ts` and `auth.routes.test.ts`).
 
 ## Security controls in active runtime
 
 - Password hashing via bcrypt.
 - Cookie attributes (`HttpOnly`, `SameSite`, secure in production).
 - Permission-based authorization (`requirePermission`).
-- Firm lifecycle write guard for mutating operations.
+- Firm lifecycle write guard for mutating operations (`firmLifecycleWriteGuard`, HTTP 423 on SUSPENDED/PENDING_DELETION).
 - CORS and desktop-origin handling in backend plugins.
-
-## Archived Reference
-
-Cloud JWT access/refresh token narratives, Redis-backed refresh semantics, and cloud-only production claims in older docs should be treated as archived reference until cloud runtime is re-enabled in code.
-
-## Planned
-
-When cloud runtime is restored, this page should be updated with verified JWT/refresh/Redis operational details tied to active implementation.
+- Tenant isolation is currently app-layer only (`injectTenant` middleware + service-layer `where: { firmId }` filters) — PostgreSQL Row-Level Security is not yet implemented; see the SaaS conversion plan's W1 workstream.
 
 ## Source of truth
 

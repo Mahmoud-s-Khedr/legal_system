@@ -20,7 +20,6 @@ type PdfDocumentHandle = {
 
 export function PdfViewer({ blob }: PdfViewerProps) {
   const { t } = useTranslation("app");
-  const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
   const canUseNativeViewerFallback =
     typeof URL !== "undefined" && typeof URL.createObjectURL === "function";
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,17 +75,7 @@ export function PdfViewer({ blob }: PdfViewerProps) {
       try {
         const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
         const data = new Uint8Array(await blob.arrayBuffer());
-        const baseLoadingOptions = {
-          data,
-          // Packaged desktop webviews can block eval/wasm/worker fetch paths.
-          ...(isDesktopShell
-            ? {
-                isEvalSupported: false,
-                useWasm: false,
-                useWorkerFetch: false
-              }
-            : {})
-        };
+        const baseLoadingOptions = { data };
 
         // Webviews may require explicit workerSrc even for in-memory documents.
         // Keep worker enabled first for better performance; fall back to no-worker.
@@ -112,7 +101,6 @@ export function PdfViewer({ blob }: PdfViewerProps) {
           loadedPdf = await loadingTask.promise;
         } catch {
           console.warn("[pdf-preview] worker load failed; retrying without worker");
-          // Fallback path for desktop runtimes where workers are blocked/unstable.
           pdfjsLib.GlobalWorkerOptions.workerSrc = "";
           loadingTask = pdfjsLib.getDocument(baseLoadingOptions as unknown as object) as unknown as {
             promise: Promise<PdfDocumentHandle>;
@@ -137,8 +125,7 @@ export function PdfViewer({ blob }: PdfViewerProps) {
         if (!cancelled) {
           console.warn("[pdf-preview] load failed", {
             reason: "load",
-            message: err instanceof Error ? err.message : String(err),
-            isDesktopShell
+            message: err instanceof Error ? err.message : String(err)
           });
           setError(err instanceof Error ? err.message : t("documents.pdfRenderFailed"));
           if (canUseNativeViewerFallback) {
@@ -160,7 +147,7 @@ export function PdfViewer({ blob }: PdfViewerProps) {
       renderTasksRef.current.forEach((task) => task.cancel());
       renderTasksRef.current.clear();
     };
-  }, [blob, canUseNativeViewerFallback, isDesktopShell, t]);
+  }, [blob, canUseNativeViewerFallback, t]);
 
   const pageNumbers = useMemo(
     () => Array.from({ length: pageCount }, (_, idx) => idx + 1),

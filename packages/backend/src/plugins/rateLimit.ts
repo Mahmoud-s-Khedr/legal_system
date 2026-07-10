@@ -1,11 +1,17 @@
 import rateLimit from "@fastify/rate-limit";
 import type { FastifyInstance } from "fastify";
 import type { AppEnv } from "../config/env.js";
+import { Redis } from "ioredis";
 
 export async function registerRateLimitPlugin(app: FastifyInstance, env: AppEnv) {
   const isLocalMode = env.AUTH_MODE === "local";
+  
+  const redis = isLocalMode ? null : new Redis(env.REDIS_URL, {
+    maxRetriesPerRequest: 1
+  });
 
   await app.register(rateLimit, {
+    ...(redis ? { redis } : {}),
     // Local desktop mode is single-user and chatty (calendar/notifications polling);
     // avoid user-facing throttling in that mode.
     max: isLocalMode ? 10_000 : 500,

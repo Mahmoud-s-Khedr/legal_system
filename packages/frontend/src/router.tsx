@@ -1,6 +1,5 @@
 import {
   Outlet,
-  createHashHistory,
   createRootRoute,
   createRoute,
   createRouter,
@@ -9,7 +8,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoginPage } from "./routes/auth/LoginPage";
-import { BackendConnectionPage } from "./routes/auth/BackendConnectionPage";
 import { SetupPage } from "./routes/auth/SetupPage";
 import { AboutPage } from "./routes/public/AboutPage";
 import { DashboardPage } from "./routes/app/DashboardPage";
@@ -35,6 +33,7 @@ import { UserDetailPage } from "./routes/app/UserDetailPage";
 import { InvitationsPage } from "./routes/app/InvitationsPage";
 import { InvitationCreatePage } from "./routes/app/InvitationCreatePage";
 import { SettingsPage } from "./routes/app/SettingsPage";
+import { BillingSettingsPage } from "./routes/app/BillingSettingsPage";
 import { LookupSettingsPage } from "./routes/app/LookupSettingsPage";
 import { LookupSettingsDetailPage } from "./routes/app/LookupSettingsDetailPage";
 import { RoleSettingsPage } from "./routes/app/RoleSettingsPage";
@@ -62,6 +61,10 @@ import { LibraryPage } from "./routes/app/library/LibraryPage";
 import { LibraryDocumentPage } from "./routes/app/library/LibraryDocumentPage";
 import { LibrarySearchPage } from "./routes/app/library/LibrarySearchPage";
 import { LibraryAdminPage } from "./routes/app/library/LibraryAdminPage";
+import { OperatorLayout } from "./routes/operator/OperatorLayout";
+import { OperatorLoginPage } from "./routes/operator/OperatorLoginPage";
+import { OperatorDashboardPage } from "./routes/operator/OperatorDashboardPage";
+import { OperatorFirmsPage } from "./routes/operator/OperatorFirmsPage";
 import { LibraryUploadPage } from "./routes/app/library/LibraryUploadPage";
 import { ImportPage } from "./routes/app/ImportPage";
 import { PortalLayout } from "./routes/portal/PortalLayout";
@@ -236,12 +239,6 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: LoginPage
-});
-
-const backendConnectionRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/connection",
-  component: BackendConnectionPage
 });
 
 const setupRoute = createRoute({
@@ -485,6 +482,16 @@ const settingsRoute = createRoute({
   component: () => (
     <PermissionGate permission="settings:read">
       <SettingsPage />
+    </PermissionGate>
+  )
+});
+
+const billingSettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/settings/billing",
+  component: () => (
+    <PermissionGate permission="settings:read">
+      <BillingSettingsPage />
     </PermissionGate>
   )
 });
@@ -825,14 +832,42 @@ const portalCaseRoute = createRoute({
   component: PortalCasePage
 });
 
+const operatorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/operator",
+  component: OperatorLayout
+});
+
+const operatorLoginRoute = createRoute({
+  getParentRoute: () => operatorRoute,
+  path: "/login",
+  component: OperatorLoginPage
+});
+
+const operatorDashboardRoute = createRoute({
+  getParentRoute: () => operatorRoute,
+  path: "/dashboard",
+  component: OperatorDashboardPage
+});
+
+const operatorFirmsRoute = createRoute({
+  getParentRoute: () => operatorRoute,
+  path: "/firms",
+  component: OperatorFirmsPage
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
-  backendConnectionRoute,
   setupRoute,
   aboutRoute,
   portalLoginRoute,
   portalRoute.addChildren([portalDashboardRoute, portalCaseRoute]),
+  operatorRoute.addChildren([
+    operatorLoginRoute,
+    operatorDashboardRoute,
+    operatorFirmsRoute
+  ]),
   appRoute.addChildren([
     dashboardRoute,
     clientsRoute,
@@ -856,6 +891,7 @@ const routeTree = rootRoute.addChildren([
     invitationsRoute,
     invitationCreateRoute,
     settingsRoute,
+    billingSettingsRoute,
     lookupSettingsRoute,
     lookupSettingsDetailRoute,
     roleSettingsRoute,
@@ -889,11 +925,7 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export const router = createRouter({
-  routeTree,
-  history:
-    import.meta.env.VITE_DESKTOP_SHELL === "true"
-      ? createHashHistory()
-      : undefined
+  routeTree
 });
 
 declare module "@tanstack/react-router" {

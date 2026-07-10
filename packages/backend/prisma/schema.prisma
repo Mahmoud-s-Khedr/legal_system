@@ -31,6 +31,11 @@ enum FirmLifecycleStatus {
   LICENSED
 }
 
+enum OperatorUserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 enum PoaStatus {
   ACTIVE
   EXPIRED
@@ -194,15 +199,15 @@ model LookupOption {
 }
 
 model GovernorateLookup {
-  id        String   @id @default(uuid()) @db.Uuid
-  key       String   @unique
+  id        String       @id @default(uuid()) @db.Uuid
+  key       String       @unique
   labelAr   String
   labelEn   String
   labelFr   String
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean      @default(true)
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
   cities    CityLookup[]
 
   @@index([isActive, sortOrder])
@@ -226,63 +231,67 @@ model CityLookup {
 }
 
 model Firm {
-  id              String              @id @default(uuid()) @db.Uuid
-  name            String
-  slug            String              @unique
-  type            FirmType            @default(SOLO)
-  editionKey      EditionKey          @default(solo_online)
-  pendingEditionKey EditionKey?
-  lifecycleStatus FirmLifecycleStatus @default(ACTIVE)
-  trialStartedAt  DateTime?
-  trialEndsAt     DateTime?
-  graceEndsAt     DateTime?
-  suspendedAt     DateTime?
-  deletionDueAt   DateTime?
-  deletedAt       DateTime?
-  defaultLanguage Language            @default(AR)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  settings        FirmSettings?
-  roles           Role[]
-  users           User[]
-  invitations     Invitation[]
-  clients         Client[]
-  cases           Case[]
-  powers          PowerOfAttorney[]
-  tasks           Task[]
-  documents       Document[]
-  templates       DocumentTemplate[]
-  invoices        Invoice[]
-  expenses        Expense[]
-  clientCreditBalances     ClientCreditBalance[]
-  clientCreditEntries      ClientCreditEntry[]
+  id                        String                     @id @default(uuid()) @db.Uuid
+  name                      String
+  slug                      String                     @unique
+  type                      FirmType                   @default(SOLO)
+  editionKey                EditionKey                 @default(solo_online)
+  pendingEditionKey         EditionKey?
+  lifecycleStatus           FirmLifecycleStatus        @default(ACTIVE)
+  trialStartedAt            DateTime?
+  trialEndsAt               DateTime?
+  graceEndsAt               DateTime?
+  suspendedAt               DateTime?
+  deletionDueAt             DateTime?
+  deletedAt                 DateTime?
+  manualMrr                 Decimal                    @default(0) @db.Decimal(12, 2)
+  defaultLanguage           Language                   @default(AR)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  settings                  FirmSettings?
+  roles                     Role[]
+  users                     User[]
+  invitations               Invitation[]
+  clients                   Client[]
+  cases                     Case[]
+  powers                    PowerOfAttorney[]
+  tasks                     Task[]
+  documents                 Document[]
+  templates                 DocumentTemplate[]
+  invoices                  Invoice[]
+  expenses                  Expense[]
+  clientCreditBalances      ClientCreditBalance[]
+  clientCreditEntries       ClientCreditEntry[]
   invoiceCreditApplications InvoiceCreditApplication[]
-  events          Event[]
-  notifications   Notification[]
-  auditLogs       AuditLog[]
-  libraryDocs     LibraryDocument[]
-  libraryDocTypes LibraryDocType[]
-  categories      LegalCategory[]
-  annotations     LibraryAnnotation[]
-  research        ResearchSession[]
-  lookupOptions        LookupOption[]
-  customReports        CustomReport[]
-  googleCalendarTokens GoogleCalendarToken[]
+  events                    Event[]
+  notifications             Notification[]
+  auditLogs                 AuditLog[]
+  libraryDocs               LibraryDocument[]
+  libraryDocTypes           LibraryDocType[]
+  categories                LegalCategory[]
+  annotations               LibraryAnnotation[]
+  research                  ResearchSession[]
+  lookupOptions             LookupOption[]
+  customReports             CustomReport[]
+  googleCalendarTokens      GoogleCalendarToken[]
 }
 
 model FirmSettings {
-  id                    String    @id @default(uuid()) @db.Uuid
-  firmId                String    @unique @db.Uuid
-  preferredLanguage     Language  @default(AR)
-  timezone              String
-  currency              String    @default("EGP")
-  licenseKeyHash        String?
-  licenseActivatedAt    DateTime?
-  trialSignatureB64     String?
-  dataEncryptionKeyRef  String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  firm                  Firm      @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  id                   String    @id @default(uuid()) @db.Uuid
+  firmId               String    @unique @db.Uuid
+  preferredLanguage    Language  @default(AR)
+  timezone             String
+  currency             String    @default("EGP")
+  licenseKeyHash       String?
+  licenseActivatedAt   DateTime?
+  trialSignatureB64    String?
+  dataEncryptionKeyRef String?
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  billingCycle         String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  firm                 Firm      @relation(fields: [firmId], references: [id], onDelete: Cascade)
 }
 
 model Role {
@@ -320,26 +329,26 @@ model RolePermission {
 }
 
 model User {
-  id                 String               @id @default(uuid()) @db.Uuid
-  firmId             String               @db.Uuid
-  roleId             String               @db.Uuid
+  id                 String                   @id @default(uuid()) @db.Uuid
+  firmId             String                   @db.Uuid
+  roleId             String                   @db.Uuid
   email              String
   fullName           String
   passwordHash       String?
-  preferredLanguage  Language             @default(AR)
-  status             UserStatus           @default(ACTIVE)
+  preferredLanguage  Language                 @default(AR)
+  status             UserStatus               @default(ACTIVE)
   phone              String?
   lastLoginAt        DateTime?
   deletedAt          DateTime?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  firm               Firm                 @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  role               Role                 @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  invitedInvitations Invitation[]         @relation("InvitedBy")
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  firm               Firm                     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  role               Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  invitedInvitations Invitation[]             @relation("InvitedBy")
   caseAssignments    CaseAssignment[]
-  tasksAssigned      Task[]               @relation("TaskAssignedTo")
-  tasksCreated       Task[]               @relation("TaskCreatedBy")
-  uploadedDocuments  Document[]           @relation("DocumentUploadedBy")
+  tasksAssigned      Task[]                   @relation("TaskAssignedTo")
+  tasksCreated       Task[]                   @relation("TaskCreatedBy")
+  uploadedDocuments  Document[]               @relation("DocumentUploadedBy")
   notifications      Notification[]
   preferences        NotificationPreference[]
   auditLogs          AuditLog[]
@@ -369,38 +378,38 @@ model Invitation {
 }
 
 model Client {
-  id                    String                @id @default(uuid()) @db.Uuid
-  firmId                String                @db.Uuid
-  name                  String
-  type                  ClientType            @default(INDIVIDUAL)
-  nationalId            String?
-  nationalIdEncrypted   String?   @db.Text
-  commercialRegister    String?
-  taxNumber             String?
-  poaNumber             String?
-  internalRef           String?
-  phone                 String?
-  email                 String?
-  governorate           String?
-  city                  String?
-  preferredLanguage     Language              @default(AR)
-  portalEmail           String?
-  portalPasswordHash    String?
-  portalLastLoginAt     DateTime?
-  deletedAt             DateTime?
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
-  firm                  Firm                  @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  contacts              ClientContact[]
-  cases                 Case[]
-  parties               CaseParty[]
-  powers                PowerOfAttorney[]
-  documents             Document[]
-  invoices              Invoice[]
-  creditBalance         ClientCreditBalance?
-  creditEntries         ClientCreditEntry[]
+  id                        String                     @id @default(uuid()) @db.Uuid
+  firmId                    String                     @db.Uuid
+  name                      String
+  type                      ClientType                 @default(INDIVIDUAL)
+  nationalId                String?
+  nationalIdEncrypted       String?                    @db.Text
+  commercialRegister        String?
+  taxNumber                 String?
+  poaNumber                 String?
+  internalRef               String?
+  phone                     String?
+  email                     String?
+  governorate               String?
+  city                      String?
+  preferredLanguage         Language                   @default(AR)
+  portalEmail               String?
+  portalPasswordHash        String?
+  portalLastLoginAt         DateTime?
+  deletedAt                 DateTime?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  firm                      Firm                       @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  contacts                  ClientContact[]
+  cases                     Case[]
+  parties                   CaseParty[]
+  powers                    PowerOfAttorney[]
+  documents                 Document[]
+  invoices                  Invoice[]
+  creditBalance             ClientCreditBalance?
+  creditEntries             ClientCreditEntry[]
   invoiceCreditApplications InvoiceCreditApplication[]
-  portalInvites         ClientPortalInvite[]
+  portalInvites             ClientPortalInvite[]
 
   @@index([firmId, deletedAt, createdAt])
 }
@@ -418,56 +427,56 @@ model ClientContact {
 }
 
 model Case {
-  id                String              @id @default(uuid()) @db.Uuid
-  firmId            String              @db.Uuid
-  clientId          String              @db.Uuid
-  title             String
-  caseNumber        String
-  judicialYear      Int?
-  type              String              @default("CIVIL")
-  status            CaseStatus          @default(ACTIVE)
-  internalRef       String?
-  deletedAt         DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  firm              Firm                @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  client            Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  assignments       CaseAssignment[]
-  parties           CaseParty[]
-  statusHistory     CaseStatusHistory[]
-  courts            CaseCourt[]
-  sessions          CaseSession[]
-  tasks             Task[]
-  documents         Document[]
-  powers            PowerOfAttorney[]
-  expenses          Expense[]
-  invoices          Invoice[]
-  events            Event[]
-  legalReferences   CaseLegalReference[]
-  researchSessions  ResearchSession[]
+  id               String               @id @default(uuid()) @db.Uuid
+  firmId           String               @db.Uuid
+  clientId         String               @db.Uuid
+  title            String
+  caseNumber       String
+  judicialYear     Int?
+  type             String               @default("CIVIL")
+  status           CaseStatus           @default(ACTIVE)
+  internalRef      String?
+  deletedAt        DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  firm             Firm                 @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  client           Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  assignments      CaseAssignment[]
+  parties          CaseParty[]
+  statusHistory    CaseStatusHistory[]
+  courts           CaseCourt[]
+  sessions         CaseSession[]
+  tasks            Task[]
+  documents        Document[]
+  powers           PowerOfAttorney[]
+  expenses         Expense[]
+  invoices         Invoice[]
+  events           Event[]
+  legalReferences  CaseLegalReference[]
+  researchSessions ResearchSession[]
 
   @@index([firmId, deletedAt])
   @@index([firmId, updatedAt])
 }
 
 model CaseCourt {
-  id         String      @id @default(uuid()) @db.Uuid
-  caseId     String      @db.Uuid
-  courtName  String
-  courtLevel String
-  courtType  String?
+  id               String        @id @default(uuid()) @db.Uuid
+  caseId           String        @db.Uuid
+  courtName        String
+  courtLevel       String
+  courtType        String?
   governorateValue String?
-  cityValue  String?
-  circuit    String?
-  stageOrder Int         @default(0)
-  startedAt  DateTime?
-  endedAt    DateTime?
-  isActive   Boolean     @default(true)
-  notes      String?     @db.Text
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  case       Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  sessions   CaseSession[]
+  cityValue        String?
+  circuit          String?
+  stageOrder       Int           @default(0)
+  startedAt        DateTime?
+  endedAt          DateTime?
+  isActive         Boolean       @default(true)
+  notes            String?       @db.Text
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  case             Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sessions         CaseSession[]
 
   @@index([caseId, stageOrder])
   @@index([governorateValue])
@@ -476,13 +485,13 @@ model CaseCourt {
 
 model CaseAssignment {
   id           String         @id @default(uuid()) @db.Uuid
-  caseId        String         @db.Uuid
-  userId        String         @db.Uuid
-  roleOnCase    CaseRoleOnCase @default(LEAD)
-  assignedAt    DateTime       @default(now())
-  unassignedAt  DateTime?
-  assignedCase  Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseId       String         @db.Uuid
+  userId       String         @db.Uuid
+  roleOnCase   CaseRoleOnCase @default(LEAD)
+  assignedAt   DateTime       @default(now())
+  unassignedAt DateTime?
+  assignedCase Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CaseParty {
@@ -501,66 +510,66 @@ model CaseParty {
 }
 
 model CaseStatusHistory {
-  id           String      @id @default(uuid()) @db.Uuid
-  caseId        String      @db.Uuid
-  fromStatus    CaseStatus?
-  toStatus      CaseStatus
-  changedById   String?     @db.Uuid
-  changedAt     DateTime    @default(now())
-  note          String?     @db.Text
-  case          Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  id          String      @id @default(uuid()) @db.Uuid
+  caseId      String      @db.Uuid
+  fromStatus  CaseStatus?
+  toStatus    CaseStatus
+  changedById String?     @db.Uuid
+  changedAt   DateTime    @default(now())
+  note        String?     @db.Text
+  case        Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
 
 model CaseSession {
-  id                   String         @id @default(uuid()) @db.Uuid
-  caseId               String         @db.Uuid
-  caseCourtId          String?        @db.Uuid
-  parentSessionId      String?        @db.Uuid
-  assignedLawyerId     String?        @db.Uuid
-  sessionDatetime      DateTime
-  nextSessionAt        DateTime?
-  outcome              String?
-  notes                String?        @db.Text
+  id                    String       @id @default(uuid()) @db.Uuid
+  caseId                String       @db.Uuid
+  caseCourtId           String?      @db.Uuid
+  parentSessionId       String?      @db.Uuid
+  assignedLawyerId      String?      @db.Uuid
+  sessionDatetime       DateTime
+  nextSessionAt         DateTime?
+  outcome               String?
+  notes                 String?      @db.Text
   googleCalendarEventId String?
-  deletedAt            DateTime?
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  case                 Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  caseCourt            CaseCourt?     @relation(fields: [caseCourtId], references: [id], onDelete: SetNull)
-  parentSession        CaseSession?   @relation("CaseSessionFollowUp", fields: [parentSessionId], references: [id], onDelete: SetNull)
-  followUpSession      CaseSession?   @relation("CaseSessionFollowUp")
-  event                Event?
+  deletedAt             DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  case                  Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseCourt             CaseCourt?   @relation(fields: [caseCourtId], references: [id], onDelete: SetNull)
+  parentSession         CaseSession? @relation("CaseSessionFollowUp", fields: [parentSessionId], references: [id], onDelete: SetNull)
+  followUpSession       CaseSession? @relation("CaseSessionFollowUp")
+  event                 Event?
 
+  @@unique([parentSessionId])
   @@index([caseId, sessionDatetime])
   @@index([assignedLawyerId, sessionDatetime])
   @@index([caseId, createdAt])
   @@index([sessionDatetime])
   @@index([parentSessionId])
-  @@unique([parentSessionId])
 }
 
 model PowerOfAttorney {
-  id                     String    @id @default(uuid()) @db.Uuid
-  firmId                 String    @db.Uuid
-  clientId               String    @db.Uuid
-  caseId                 String?   @db.Uuid
-  number                 String?
-  type                   PoaType   @default(GENERAL)
-  status                 PoaStatus @default(ACTIVE)
-  issuedAt               DateTime?
-  expiresAt              DateTime?
-  revokedAt              DateTime?
-  revocationReason       String?   @db.Text
-  scopeTextAr            String?   @db.Text
-  hasSelfContractClause  Boolean   @default(false)
-  commercialRegisterId   String?
-  agentCertExpiry        DateTime?
-  agentResidencyStatus   String?
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-  firm                   Firm      @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  client                 Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  case                   Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  id                    String    @id @default(uuid()) @db.Uuid
+  firmId                String    @db.Uuid
+  clientId              String    @db.Uuid
+  caseId                String?   @db.Uuid
+  number                String?
+  type                  PoaType   @default(GENERAL)
+  status                PoaStatus @default(ACTIVE)
+  issuedAt              DateTime?
+  expiresAt             DateTime?
+  revokedAt             DateTime?
+  revocationReason      String?   @db.Text
+  scopeTextAr           String?   @db.Text
+  hasSelfContractClause Boolean   @default(false)
+  commercialRegisterId  String?
+  agentCertExpiry       DateTime?
+  agentResidencyStatus  String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  firm                  Firm      @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  client                Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  case                  Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
   @@index([firmId, status])
   @@index([clientId])
@@ -593,30 +602,30 @@ model Task {
 }
 
 model Document {
-  id               String           @id @default(uuid()) @db.Uuid
-  firmId           String           @db.Uuid
-  caseId           String?          @db.Uuid
-  clientId         String?          @db.Uuid
-  taskId           String?          @db.Uuid
-  uploadedById     String?          @db.Uuid
+  id               String            @id @default(uuid()) @db.Uuid
+  firmId           String            @db.Uuid
+  caseId           String?           @db.Uuid
+  clientId         String?           @db.Uuid
+  taskId           String?           @db.Uuid
+  uploadedById     String?           @db.Uuid
   title            String
   fileName         String
   mimeType         String
   storageKey       String
   previewPdfKey    String?
-  previewStatus    PreviewStatus    @default(NONE)
-  type             String           @default("GENERAL")
-  extractionStatus ExtractionStatus @default(PENDING)
-  ocrBackend       OcrBackend       @default(TESSERACT)
-  contentText      String?          @db.Text
+  previewStatus    PreviewStatus     @default(NONE)
+  type             String            @default("GENERAL")
+  extractionStatus ExtractionStatus  @default(PENDING)
+  ocrBackend       OcrBackend        @default(TESSERACT)
+  contentText      String?           @db.Text
   deletedAt        DateTime?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  firm             Firm             @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  case             Case?            @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  client           Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  task             Task?            @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  uploadedBy       User?            @relation("DocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  firm             Firm              @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  case             Case?             @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client           Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  task             Task?             @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  uploadedBy       User?             @relation("DocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
   versions         DocumentVersion[]
   expenses         Expense[]
 
@@ -629,50 +638,50 @@ model Document {
 }
 
 model DocumentVersion {
-  id           String   @id @default(uuid()) @db.Uuid
-  documentId   String   @db.Uuid
+  id            String   @id @default(uuid()) @db.Uuid
+  documentId    String   @db.Uuid
   versionNumber Int
-  fileName     String
-  storageKey   String
-  contentText  String?  @db.Text
-  createdAt    DateTime @default(now())
-  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fileName      String
+  storageKey    String
+  contentText   String?  @db.Text
+  createdAt     DateTime @default(now())
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }
 
 model DocumentTemplate {
-  id         String   @id @default(uuid()) @db.Uuid
-  firmId     String?  @db.Uuid
-  name       String
-  language   Language @default(AR)
-  body       String   @db.Text
-  isSystem   Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  firm       Firm?    @relation(fields: [firmId], references: [id], onDelete: SetNull)
+  id        String   @id @default(uuid()) @db.Uuid
+  firmId    String?  @db.Uuid
+  name      String
+  language  Language @default(AR)
+  body      String   @db.Text
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  firm      Firm?    @relation(fields: [firmId], references: [id], onDelete: SetNull)
 }
 
 model Invoice {
-  id             String        @id @default(uuid()) @db.Uuid
-  firmId         String        @db.Uuid
-  caseId         String?       @db.Uuid
-  clientId       String?       @db.Uuid
-  invoiceNumber  String
-  status         InvoiceStatus @default(DRAFT)
-  feeType        String        @default("FIXED")
-  subtotalAmount Decimal       @default(0) @db.Decimal(12, 2)
-  taxAmount      Decimal       @default(0) @db.Decimal(12, 2)
-  discountAmount Decimal       @default(0) @db.Decimal(12, 2)
-  totalAmount    Decimal       @default(0) @db.Decimal(12, 2)
-  issuedAt       DateTime?
-  dueDate        DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  firm           Firm          @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  case           Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  client         Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  items          InvoiceItem[]
-  payments       Payment[]
-  creditEntries  ClientCreditEntry[]
+  id                 String                     @id @default(uuid()) @db.Uuid
+  firmId             String                     @db.Uuid
+  caseId             String?                    @db.Uuid
+  clientId           String?                    @db.Uuid
+  invoiceNumber      String
+  status             InvoiceStatus              @default(DRAFT)
+  feeType            String                     @default("FIXED")
+  subtotalAmount     Decimal                    @default(0) @db.Decimal(12, 2)
+  taxAmount          Decimal                    @default(0) @db.Decimal(12, 2)
+  discountAmount     Decimal                    @default(0) @db.Decimal(12, 2)
+  totalAmount        Decimal                    @default(0) @db.Decimal(12, 2)
+  issuedAt           DateTime?
+  dueDate            DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  firm               Firm                       @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  case               Case?                      @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client             Client?                    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  items              InvoiceItem[]
+  payments           Payment[]
+  creditEntries      ClientCreditEntry[]
   creditApplications InvoiceCreditApplication[]
 
   @@unique([firmId, invoiceNumber])
@@ -683,25 +692,25 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id         String   @id @default(uuid()) @db.Uuid
-  invoiceId  String   @db.Uuid
+  id          String   @id @default(uuid()) @db.Uuid
+  invoiceId   String   @db.Uuid
   description String
-  quantity   Int      @default(1)
-  unitPrice  Decimal  @default(0) @db.Decimal(12, 2)
-  total      Decimal  @default(0) @db.Decimal(12, 2)
-  createdAt  DateTime @default(now())
-  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @default(0) @db.Decimal(12, 2)
+  total       Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
-  id              String        @id @default(uuid()) @db.Uuid
-  invoiceId        String        @db.Uuid
-  amount           Decimal       @default(0) @db.Decimal(12, 2)
-  method           String
-  referenceNumber  String?
-  paidAt           DateTime      @default(now())
-  createdAt        DateTime      @default(now())
-  invoice          Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id                 String                     @id @default(uuid()) @db.Uuid
+  invoiceId          String                     @db.Uuid
+  amount             Decimal                    @default(0) @db.Decimal(12, 2)
+  method             String
+  referenceNumber    String?
+  paidAt             DateTime                   @default(now())
+  createdAt          DateTime                   @default(now())
+  invoice            Invoice                    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   creditApplications InvoiceCreditApplication[]
 }
 
@@ -754,49 +763,49 @@ model InvoiceCreditApplication {
 }
 
 model Expense {
-  id                String          @id @default(uuid()) @db.Uuid
-  firmId            String          @db.Uuid
-  caseId            String?         @db.Uuid
+  id                String    @id @default(uuid()) @db.Uuid
+  firmId            String    @db.Uuid
+  caseId            String?   @db.Uuid
   category          String
-  amount            Decimal         @default(0) @db.Decimal(12, 2)
-  description       String?         @db.Text
-  receiptDocumentId String?         @db.Uuid
+  amount            Decimal   @default(0) @db.Decimal(12, 2)
+  description       String?   @db.Text
+  receiptDocumentId String?   @db.Uuid
   deletedAt         DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  firm              Firm            @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  case              Case?           @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  receiptDocument   Document?       @relation(fields: [receiptDocumentId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  firm              Firm      @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  case              Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  receiptDocument   Document? @relation(fields: [receiptDocumentId], references: [id], onDelete: SetNull)
 }
 
 model Event {
-  id         String   @id @default(uuid()) @db.Uuid
-  firmId     String   @db.Uuid
-  caseId     String?  @db.Uuid
-  sessionId  String?  @unique @db.Uuid
-  title      String
-  startsAt   DateTime
-  endsAt     DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  firm       Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  case       Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  session    CaseSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  id        String       @id @default(uuid()) @db.Uuid
+  firmId    String       @db.Uuid
+  caseId    String?      @db.Uuid
+  sessionId String?      @unique @db.Uuid
+  title     String
+  startsAt  DateTime
+  endsAt    DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  firm      Firm         @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  case      Case?        @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  session   CaseSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 }
 
 model Notification {
-  id        String           @id @default(uuid()) @db.Uuid
-  firmId    String           @db.Uuid
-  userId    String           @db.Uuid
-  type      NotificationType
-  title     String
-  body      String
-  isRead    Boolean          @default(false)
+  id         String           @id @default(uuid()) @db.Uuid
+  firmId     String           @db.Uuid
+  userId     String           @db.Uuid
+  type       NotificationType
+  title      String
+  body       String
+  isRead     Boolean          @default(false)
   entityType String?
-  entityId   String?         @db.Uuid
-  createdAt DateTime         @default(now())
-  firm      Firm             @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityId   String?          @db.Uuid
+  createdAt  DateTime         @default(now())
+  firm       Firm             @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([firmId, userId, isRead, createdAt])
   @@index([firmId, userId, type, createdAt])
@@ -833,40 +842,40 @@ model AuditLog {
 }
 
 model LegalCategory {
-  id         String          @id @default(uuid()) @db.Uuid
-  firmId     String?         @db.Uuid
-  parentId   String?         @db.Uuid
-  typeId     String?         @db.Uuid
+  id           String            @id @default(uuid()) @db.Uuid
+  firmId       String?           @db.Uuid
+  parentId     String?           @db.Uuid
+  typeId       String?           @db.Uuid
   documentType String
-  nameAr     String
-  nameEn     String
-  nameFr     String
-  slug       String
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  firm       Firm?           @relation(fields: [firmId], references: [id], onDelete: SetNull)
-  type       LibraryDocType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
-  parent     LegalCategory?  @relation("LegalCategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children   LegalCategory[] @relation("LegalCategoryTree")
-  documents  LibraryDocument[]
+  nameAr       String
+  nameEn       String
+  nameFr       String
+  slug         String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  firm         Firm?             @relation(fields: [firmId], references: [id], onDelete: SetNull)
+  type         LibraryDocType?   @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  parent       LegalCategory?    @relation("LegalCategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     LegalCategory[]   @relation("LegalCategoryTree")
+  documents    LibraryDocument[]
 
   @@unique([firmId, slug, documentType])
   @@index([firmId, typeId])
 }
 
 model LibraryDocType {
-  id         String          @id @default(uuid()) @db.Uuid
-  firmId     String          @db.Uuid
+  id         String            @id @default(uuid()) @db.Uuid
+  firmId     String            @db.Uuid
   code       String
   slug       String
   nameAr     String
   nameEn     String
   nameFr     String
-  isActive   Boolean         @default(true)
-  isDefault  Boolean         @default(false)
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  firm       Firm            @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  isActive   Boolean           @default(true)
+  isDefault  Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  firm       Firm              @relation(fields: [firmId], references: [id], onDelete: Cascade)
   categories LegalCategory[]
   documents  LibraryDocument[]
 
@@ -875,17 +884,17 @@ model LibraryDocType {
 }
 
 model LibraryDocument {
-  id                String               @id @default(uuid()) @db.Uuid
-  firmId            String?              @db.Uuid
-  typeId            String?              @db.Uuid
-  categoryId        String?              @db.Uuid
+  id                String                  @id @default(uuid()) @db.Uuid
+  firmId            String?                 @db.Uuid
+  typeId            String?                 @db.Uuid
+  categoryId        String?                 @db.Uuid
   type              String
-  scope             LibraryScope         @default(SYSTEM)
+  scope             LibraryScope            @default(SYSTEM)
   legislationStatus LegislationStatus?
   title             String
-  summary           String?              @db.Text
-  contentText       String?              @db.Text
-  legalPrinciple    String?              @db.Text
+  summary           String?                 @db.Text
+  contentText       String?                 @db.Text
+  legalPrinciple    String?                 @db.Text
   lawNumber         String?
   lawYear           Int?
   judgmentNumber    String?
@@ -894,13 +903,13 @@ model LibraryDocument {
   publishedAt       DateTime?
   storageKey        String?
   extractionStatus  ExtractionStatus?
-  ocrBackend        OcrBackend           @default(TESSERACT)
+  ocrBackend        OcrBackend              @default(TESSERACT)
   deletedAt         DateTime?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  firm              Firm?                @relation(fields: [firmId], references: [id], onDelete: SetNull)
-  docType           LibraryDocType?      @relation(fields: [typeId], references: [id], onDelete: SetNull)
-  category          LegalCategory?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  firm              Firm?                   @relation(fields: [firmId], references: [id], onDelete: SetNull)
+  docType           LibraryDocType?         @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  category          LegalCategory?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   articles          LegislationArticle[]
   tags              LibraryDocumentTag[]
   annotations       LibraryAnnotation[]
@@ -909,14 +918,14 @@ model LibraryDocument {
 }
 
 model LegislationArticle {
-  id             String               @id @default(uuid()) @db.Uuid
-  documentId      String               @db.Uuid
+  id              String                  @id @default(uuid()) @db.Uuid
+  documentId      String                  @db.Uuid
   articleNumber   String
   title           String?
-  body            String               @db.Text
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  document        LibraryDocument      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  body            String                  @db.Text
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  document        LibraryDocument         @relation(fields: [documentId], references: [id], onDelete: Cascade)
   caseReferences  CaseLegalReference[]
   researchSources ResearchSessionSource[]
 }
@@ -965,42 +974,42 @@ model CaseLegalReference {
 }
 
 model ResearchSession {
-  id          String                  @id @default(uuid()) @db.Uuid
-  firmId      String                  @db.Uuid
-  caseId      String?                 @db.Uuid
-  userId      String                  @db.Uuid
-  title       String?
-  createdAt   DateTime                @default(now())
-  updatedAt   DateTime                @updatedAt
-  firm        Firm                    @relation(fields: [firmId], references: [id], onDelete: Cascade)
-  case        Case?                   @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages    ResearchMessage[]
-  sources     ResearchSessionSource[]
+  id        String                  @id @default(uuid()) @db.Uuid
+  firmId    String                  @db.Uuid
+  caseId    String?                 @db.Uuid
+  userId    String                  @db.Uuid
+  title     String?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  firm      Firm                    @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  case      Case?                   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ResearchMessage[]
+  sources   ResearchSessionSource[]
 }
 
 model ResearchMessage {
-  id         String                  @id @default(uuid()) @db.Uuid
-  sessionId   String                  @db.Uuid
-  role        ResearchRole
-  content     String                  @db.Text
-  createdAt   DateTime                @default(now())
-  session     ResearchSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  sources     ResearchSessionSource[]
+  id        String                  @id @default(uuid()) @db.Uuid
+  sessionId String                  @db.Uuid
+  role      ResearchRole
+  content   String                  @db.Text
+  createdAt DateTime                @default(now())
+  session   ResearchSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sources   ResearchSessionSource[]
 }
 
 model ResearchSessionSource {
   id         String              @id @default(uuid()) @db.Uuid
-  sessionId   String              @db.Uuid
-  messageId   String?             @db.Uuid
-  documentId  String              @db.Uuid
-  articleId   String?             @db.Uuid
-  excerpt     String?             @db.Text
-  createdAt   DateTime            @default(now())
-  session     ResearchSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  message     ResearchMessage?    @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  document    LibraryDocument     @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  article     LegislationArticle? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  sessionId  String              @db.Uuid
+  messageId  String?             @db.Uuid
+  documentId String              @db.Uuid
+  articleId  String?             @db.Uuid
+  excerpt    String?             @db.Text
+  createdAt  DateTime            @default(now())
+  session    ResearchSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  message    ResearchMessage?    @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  document   LibraryDocument     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  article    LegislationArticle? @relation(fields: [articleId], references: [id], onDelete: SetNull)
 }
 
 // ─── Custom Reports ────────────────────────────────────────────────────────────
@@ -1040,16 +1049,31 @@ model ClientPortalInvite {
 // ─── Google Calendar Integration ──────────────────────────────────────────────
 
 model GoogleCalendarToken {
-  id                   String   @id @default(uuid()) @db.Uuid
-  userId               String   @unique @db.Uuid
-  firmId               String   @db.Uuid
-  encryptedAccessToken String   @db.Text
-  encryptedRefreshToken String  @db.Text
-  expiresAt            DateTime
-  scope                String
-  calendarId           String   @default("primary")
-  syncToken            String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  firm                 Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @unique @db.Uuid
+  firmId                String   @db.Uuid
+  encryptedAccessToken  String   @db.Text
+  encryptedRefreshToken String   @db.Text
+  expiresAt             DateTime
+  scope                 String
+  calendarId            String   @default("primary")
+  syncToken             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  firm                  Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+}
+
+// ─── Platform Operator (SaaS owner) ────────────────────────────────────────────
+// Deliberately independent of Firm/User/Role — operators are platform staff,
+// not tenant members, and must never be reachable via a tenant session token.
+
+model OperatorUser {
+  id           String             @id @default(uuid()) @db.Uuid
+  email        String             @unique
+  passwordHash String
+  displayName  String
+  status       OperatorUserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 }

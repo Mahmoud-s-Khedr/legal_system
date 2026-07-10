@@ -21,7 +21,6 @@ const EXCLUDED_DIRS = new Set([
 ]);
 
 const ROOT_OWNERSHIP = [
-  { path: "apps/", owner: "Desktop shell and platform wrappers" },
   { path: "packages/", owner: "Shippable application code (backend, frontend, shared)" },
   { path: "docs/", owner: "User/dev/architecture/business documentation" },
   { path: "scripts/", owner: "Operational, release, and quality tooling scripts" },
@@ -136,8 +135,7 @@ const looseRootArtifacts = findLooseRootArtifacts();
 const appsWebRefs = collectAppsWebRefs(allFiles);
 
 const duplicateOrLegacyAreas = [
-  "Archived cloud deployment assets are preserved under `archive/cloud/` and should not be used as active runtime paths.",
-  "Desktop runtime resources under `apps/desktop/resources/` are generated/bundled outputs and should remain out of source-truth docs except packaging guides."
+  "Archived cloud deployment assets are preserved under `archive/cloud/` and should not be used as active runtime paths."
 ];
 
 const report = [

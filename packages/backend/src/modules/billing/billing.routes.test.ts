@@ -79,7 +79,7 @@ describe("registerBillingRoutes", () => {
 
     listInvoices.mockResolvedValueOnce({ items: [], total: 0, page: 2, pageSize: 15 });
 
-    await registerBillingRoutes(app as never);
+    await registerBillingRoutes(app as never, {} as never);
 
     const listHandler = findRouteHandler(app.get.mock.calls, "/api/invoices");
     expect(listHandler).toBeDefined();
@@ -92,7 +92,7 @@ describe("registerBillingRoutes", () => {
         limit: "15"
       },
       sessionUser: actor
-    });
+    }, {} as never);
 
     expect(requirePermission).toHaveBeenCalledWith("invoices:read");
     expect(listInvoices).toHaveBeenCalledWith(
@@ -105,7 +105,7 @@ describe("registerBillingRoutes", () => {
 
   it("deletes invoice and returns success object", async () => {
     const app = createApp();
-    await registerBillingRoutes(app as never);
+    await registerBillingRoutes(app as never, {} as never);
 
     const handler = findRouteHandler(app.delete.mock.calls, "/api/invoices/:id");
     expect(handler).toBeDefined();
@@ -116,7 +116,7 @@ describe("registerBillingRoutes", () => {
     const result = await handler!({
       params: { id: "invoice-1" },
       sessionUser: actor
-    });
+    }, {} as never);
 
     expect(deleteInvoice).toHaveBeenCalledWith(
       actor,
@@ -128,7 +128,7 @@ describe("registerBillingRoutes", () => {
 
   it("generates invoice PDF with expected response headers", async () => {
     const app = createApp();
-    await registerBillingRoutes(app as never);
+    await registerBillingRoutes(app as never, {} as never);
 
     getInvoice.mockResolvedValueOnce({ invoiceNumber: "INV-2026-01" });
     generateInvoicePdf.mockResolvedValueOnce(Buffer.from("pdf-content"));
@@ -158,7 +158,7 @@ describe("registerBillingRoutes", () => {
 
   it("fails with a controlled error when invoice PDF generation throws", async () => {
     const app = createApp();
-    await registerBillingRoutes(app as never);
+    await registerBillingRoutes(app as never, {} as never);
 
     getInvoice.mockResolvedValueOnce({ invoiceNumber: "INV-2026-02" });
     generateInvoicePdf.mockRejectedValueOnce(new Error("pdfmake exploded"));
@@ -179,7 +179,7 @@ describe("registerBillingRoutes", () => {
 
   it("configures payment endpoint rate limit and forwards id param", async () => {
     const app = createApp();
-    await registerBillingRoutes(app as never);
+    await registerBillingRoutes(app as never, {} as never);
 
     const routeCall = app.post.mock.calls.find((entry) => entry[0] === "/api/invoices/:id/payments");
     expect(routeCall).toBeDefined();
@@ -187,7 +187,7 @@ describe("registerBillingRoutes", () => {
     const options = routeCall?.[1] as { config?: { rateLimit?: { max?: number; timeWindow?: string } } };
     expect(options.config?.rateLimit).toEqual({ max: 20, timeWindow: "1 minute" });
 
-    const handler = routeCall?.[2] as ((request: unknown) => Promise<unknown>) | undefined;
+    const handler = routeCall?.[2] as ((request: unknown, reply: unknown) => Promise<unknown>) | undefined;
     expect(handler).toBeDefined();
 
     const actor = makeSessionUser({ permissions: ["invoices:update"] });
@@ -197,7 +197,7 @@ describe("registerBillingRoutes", () => {
       params: { id: "invoice-1" },
       body: { amount: "100", method: "cash" },
       sessionUser: actor
-    });
+    }, {} as never);
 
     expect(addPayment).toHaveBeenCalledWith(
       actor,

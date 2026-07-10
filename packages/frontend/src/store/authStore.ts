@@ -3,11 +3,12 @@ import type {
   AppAuthMode,
   AuthResponseDto,
   LoginDto,
+  RegisterDto,
   SessionUser,
   SetupDto
 } from "@elms/shared";
 import { AuthMode } from "@elms/shared";
-import { apiFetch, clearDesktopLocalSessionToken, persistDesktopLocalSessionToken } from "../lib/api";
+import { apiFetch } from "../lib/api";
 import { applyUserPreferredLanguage } from "../i18n";
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthState {
   isBootstrapped: boolean;
   bootstrap: () => Promise<void>;
   login: (payload: LoginDto) => Promise<void>;
+  register: (payload: RegisterDto) => Promise<void>;
   setup: (payload: SetupDto) => Promise<void>;
   refreshSession: () => Promise<void>;
   logout: () => Promise<void>;
@@ -45,10 +47,18 @@ const useAuthStore = create<AuthState>((set, get) => ({
     }
     bootstrapPromise = (async () => {
       try {
-        const response = await apiFetch<AuthResponseDto>("/api/auth/me");
-        if (!response.session.user) {
-          clearDesktopLocalSessionToken();
+        let response = await apiFetch<AuthResponseDto>("/api/auth/me");
+
+        if (!response.session.user && response.session.mode === AuthMode.CLOUD) {
+          try {
+            response = await apiFetch<AuthResponseDto>("/api/auth/refresh", {
+              method: "POST"
+            });
+          } catch {
+            // Refresh is best-effort during bootstrap; fall back to logged-out state.
+          }
         }
+
         let needsSetup = false;
         if (!response.session.user && response.session.mode === AuthMode.LOCAL) {
           try {
@@ -84,11 +94,23 @@ const useAuthStore = create<AuthState>((set, get) => ({
       body: JSON.stringify(payload)
     });
 
-    persistDesktopLocalSessionToken(response.localSessionToken);
+    set({
+      mode: response.session.mode,
+      user: response.session.user,
+      isBootstrapped: true
+    });
+    await applyUserPreferredLanguage(response.session.user?.preferredLanguage);
+  },
+  async register(payload) {
+    const response = await apiFetch<AuthResponseDto>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
 
     set({
       mode: response.session.mode,
       user: response.session.user,
+      needsSetup: false,
       isBootstrapped: true
     });
     await applyUserPreferredLanguage(response.session.user?.preferredLanguage);
@@ -99,8 +121,6 @@ const useAuthStore = create<AuthState>((set, get) => ({
       body: JSON.stringify(payload)
     });
 
-    persistDesktopLocalSessionToken(response.localSessionToken);
-
     set({
       mode: response.session.mode,
       user: response.session.user,
@@ -110,7 +130,12 @@ const useAuthStore = create<AuthState>((set, get) => ({
     await applyUserPreferredLanguage(response.session.user?.preferredLanguage);
   },
   async refreshSession() {
-    const response = await apiFetch<AuthResponseDto>("/api/auth/me");
+    let response = await apiFetch<AuthResponseDto>("/api/auth/me");
+    if (!response.session.user && response.session.mode === AuthMode.CLOUD) {
+      response = await apiFetch<AuthResponseDto>("/api/auth/refresh", {
+        method: "POST"
+      });
+    }
     set({
       mode: response.session.mode,
       user: response.session.user,
@@ -122,8 +147,6 @@ const useAuthStore = create<AuthState>((set, get) => ({
     await apiFetch<{ success: true }>("/api/auth/logout", {
       method: "POST"
     });
-
-    clearDesktopLocalSessionToken();
 
     set({
       mode: null,

@@ -2,13 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   launchPpoPortal,
-  navigatePpoPortal,
-  type PpoPortalNavErrorCode,
   type PpoPortalLaunchErrorCode,
   type PpoPortalLaunchResult
 } from "../../lib/ppoPortal";
 import { PageHeader, SectionCard } from "./ui";
-import { useToastStore } from "../../store/toastStore";
 
 type LaunchState =
   | { status: "idle" }
@@ -25,10 +22,6 @@ function resolveStatusMessage(
   }
 
   if (state.status === "error") {
-    if (state.code === "PPO_TLS_BYPASS_UNSUPPORTED_MACOS") {
-      return t("ppo.status.macosTlsUnsupported");
-    }
-
     if (state.message) {
       return `${t("ppo.status.failed")} ${state.message}`;
     }
@@ -36,34 +29,15 @@ function resolveStatusMessage(
     return t("ppo.status.failed");
   }
 
-  if (state.result.destination === "desktop-window") {
-    return state.result.reused
-      ? t("ppo.status.focusedWindow")
-      : t("ppo.status.openedWindow");
-  }
-
   return t("ppo.status.openedTab");
 }
 
 export function PpoPortalPage() {
   const { t } = useTranslation("app");
-  const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
   const [launchState, setLaunchState] = useState<LaunchState>({
     status: "idle"
   });
   const [hasOpenedAtLeastOnce, setHasOpenedAtLeastOnce] = useState(false);
-  const [isTakingScreenshot, setIsTakingScreenshot] = useState(false);
-  const addToast = useToastStore((state) => state.addToast);
-
-  function resolveNavError(code: PpoPortalNavErrorCode): string {
-    if (code === "PPO_WINDOW_NOT_OPEN") {
-      return t("ppo.status.windowNotOpen");
-    }
-    if (code === "PPO_NAVIGATION_FAILED") {
-      return t("ppo.status.screenshotCaptureFailed");
-    }
-    return t("ppo.status.screenshotSaveFailed");
-  }
 
   const openPortal = useCallback(async () => {
     setLaunchState({ status: "launching" });
@@ -90,20 +64,6 @@ export function PpoPortalPage() {
     () => resolveStatusMessage(t, launchState),
     [launchState, t]
   );
-
-  const handleScreenshot = useCallback(async () => {
-    setIsTakingScreenshot(true);
-    try {
-      const result = await navigatePpoPortal("screenshot");
-      if (!result.ok) {
-        addToast(resolveNavError(result.code), "error");
-        return;
-      }
-      addToast(t("ppo.status.screenshotSaved"), "success");
-    } finally {
-      setIsTakingScreenshot(false);
-    }
-  }, [addToast, t]);
 
   return (
     <div className="space-y-6">
@@ -141,22 +101,6 @@ export function PpoPortalPage() {
           >
             {hasOpenedAtLeastOnce ? t("ppo.reopenAction") : t("ppo.openAction")}
           </button>
-
-          {isDesktopShell ? (
-            <button
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={isTakingScreenshot}
-              onClick={() => {
-                void handleScreenshot();
-              }}
-              type="button"
-              data-action="screenshot"
-            >
-              {isTakingScreenshot
-                ? t("ppo.status.navigating")
-                : t("ppo.nav.screenshot")}
-            </button>
-          ) : null}
         </div>
       </SectionCard>
     </div>

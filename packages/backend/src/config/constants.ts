@@ -2,6 +2,7 @@ export const ACCESS_COOKIE = "elms_access_token";
 export const REFRESH_COOKIE = "elms_refresh_token";
 export const LOCAL_SESSION_COOKIE = "elms_local_session";
 export const LOCAL_SESSION_HEADER = "x-elms-session";
+export const OPERATOR_ACCESS_COOKIE = "elms_operator_access_token";
 
 export const SYSTEM_ROLE_KEYS = {
   FIRM_ADMIN: "firm_admin",

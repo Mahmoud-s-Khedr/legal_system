@@ -3,13 +3,19 @@ import { AuthMode, EditionKey } from "@elms/shared";
 
 const authService: {
   login: ReturnType<typeof vi.fn>;
+  register: ReturnType<typeof vi.fn> | undefined;
   setup: ReturnType<typeof vi.fn> | undefined;
+  acceptInvite: ReturnType<typeof vi.fn> | undefined;
+  refresh: ReturnType<typeof vi.fn> | undefined;
   logout: ReturnType<typeof vi.fn>;
   getResponseCookies: ReturnType<typeof vi.fn>;
   clearResponseCookies: ReturnType<typeof vi.fn>;
 } = {
   login: vi.fn(),
+  register: vi.fn(),
   setup: vi.fn(),
+  acceptInvite: vi.fn(),
+  refresh: vi.fn(),
   logout: vi.fn(),
   getResponseCookies: vi.fn(),
   clearResponseCookies: vi.fn()
@@ -38,7 +44,10 @@ function findHandler(calls: unknown[][], path: string) {
 describe("registerAuthRoutes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authService.register = vi.fn();
     authService.setup = vi.fn();
+    authService.acceptInvite = vi.fn();
+    authService.refresh = vi.fn();
     authService.getResponseCookies.mockReturnValue({ elms_local_session: "session-1", elms_access_token: "token-1" });
     authService.clearResponseCookies.mockReturnValue(["localSession", "accessToken"]);
     authService.login.mockResolvedValue({
@@ -51,6 +60,24 @@ describe("registerAuthRoutes", () => {
       session: {
         mode: AuthMode.LOCAL,
         user: { id: "u2", firmId: "f2" }
+      }
+    });
+    authService.register.mockResolvedValue({
+      session: {
+        mode: AuthMode.CLOUD,
+        user: { id: "u3", firmId: "f3" }
+      }
+    });
+    authService.acceptInvite.mockResolvedValue({
+      session: {
+        mode: AuthMode.CLOUD,
+        user: { id: "u4", firmId: "f4" }
+      }
+    });
+    authService.refresh.mockResolvedValue({
+      session: {
+        mode: AuthMode.CLOUD,
+        user: { id: "u5", firmId: "f5" }
       }
     });
   });
@@ -92,8 +119,47 @@ describe("registerAuthRoutes", () => {
     expect(await handler!({} as never)).toEqual({ needsSetup: false });
   });
 
-  it("returns 410 for cloud-compatible endpoints", async () => {
+  it("runs register flow when supported", async () => {
     const app = createApp();
+    await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.CLOUD } as never);
+
+    const handler = findHandler(app.post.mock.calls, "/api/auth/register");
+    const reply = { setCookie: vi.fn() };
+    const request = {
+      body: {
+        email: "owner@firm.com",
+        password: "StrongPass123!",
+        firmName: "Firm",
+        fullName: "Owner"
+      },
+      sessionUser: null
+    };
+
+    const result = await handler!(request as never, reply as never);
+    expect(authService.register).toHaveBeenCalledWith(request.body);
+    expect(reply.setCookie).toHaveBeenCalled();
+    expect(request.sessionUser).toEqual({ id: "u3", firmId: "f3" });
+    expect(result).toEqual(expect.objectContaining({ localSessionToken: "session-1" }));
+  });
+
+  it("returns 410 for register when service does not support it", async () => {
+    const app = createApp();
+    authService.register = undefined as never;
+    await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.LOCAL } as never);
+
+    const handler = findHandler(app.post.mock.calls, "/api/auth/register");
+    const reply = {
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis()
+    };
+
+    await handler!({ body: { email: "x@y.com", password: "StrongPass123!", firmName: "Firm", fullName: "Owner" } } as never, reply as never);
+    expect(reply.status).toHaveBeenCalledWith(410);
+  });
+
+  it("returns 410 for refresh when service does not support it", async () => {
+    const app = createApp();
+    authService.refresh = undefined as never;
     await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.LOCAL } as never);
 
     const handler = findHandler(app.post.mock.calls, "/api/auth/refresh");
@@ -108,6 +174,20 @@ describe("registerAuthRoutes", () => {
       expect.objectContaining({ code: "LOCAL_ONLY_DEPLOYMENT" })
     );
     expect(result).toBe(reply);
+  });
+
+  it("runs refresh flow when supported", async () => {
+    const app = createApp();
+    await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.CLOUD } as never);
+
+    const handler = findHandler(app.post.mock.calls, "/api/auth/refresh");
+    const reply = { setCookie: vi.fn() };
+    const request = { cookies: { refresh: "x" }, sessionUser: null };
+
+    const result = await handler!(request as never, reply as never);
+    expect(authService.refresh).toHaveBeenCalledWith({ refresh: "x" });
+    expect(request.sessionUser).toEqual({ id: "u5", firmId: "f5" });
+    expect(result).toEqual(expect.objectContaining({ localSessionToken: "session-1" }));
   });
 
   it("runs setup flow and returns token", async () => {
@@ -159,6 +239,36 @@ describe("registerAuthRoutes", () => {
     expect(reply.status).toHaveBeenCalledWith(410);
   });
 
+  it("returns no desktop setup requirement in cloud mode", async () => {
+    const app = createApp();
+    await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.CLOUD } as never);
+
+    const handler = findHandler(app.get.mock.calls, "/api/auth/setup");
+    expect(await handler!({} as never)).toEqual({ needsSetup: false });
+    expect(firmFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("runs accept-invite flow when supported", async () => {
+    const app = createApp();
+    await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.CLOUD } as never);
+
+    const handler = findHandler(app.post.mock.calls, "/api/auth/accept-invite");
+    const reply = { setCookie: vi.fn() };
+    const request = {
+      body: {
+        token: "invite-token",
+        fullName: "Invitee",
+        password: "StrongPass123!"
+      },
+      sessionUser: null
+    };
+
+    const result = await handler!(request as never, reply as never);
+    expect(authService.acceptInvite).toHaveBeenCalledWith(request.body);
+    expect(request.sessionUser).toEqual({ id: "u4", firmId: "f4" });
+    expect(result).toEqual(expect.objectContaining({ localSessionToken: "session-1" }));
+  });
+
   it("logs out and clears response cookies", async () => {
     const app = createApp();
     await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.LOCAL } as never);
@@ -178,13 +288,13 @@ describe("registerAuthRoutes", () => {
 
   it("returns auth/me payload", async () => {
     const app = createApp();
-    await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.LOCAL } as never);
+    await registerAuthRoutes(app as never, { NODE_ENV: "test", AUTH_MODE: AuthMode.CLOUD } as never);
 
     const handler = findHandler(app.get.mock.calls, "/api/auth/me");
     const response = await handler!({ sessionUser: { id: "u1" } } as never);
     expect(response).toEqual({
       session: {
-        mode: AuthMode.LOCAL,
+        mode: AuthMode.CLOUD,
         user: { id: "u1" }
       }
     });

@@ -8,8 +8,7 @@ export default tseslint.config(
       "**/dist/**",
       "**/coverage/**",
       "**/.turbo/**",
-      "**/node_modules/**",
-      "**/src-tauri/target/**"
+      "**/node_modules/**"
     ]
   },
   js.configs.recommended,

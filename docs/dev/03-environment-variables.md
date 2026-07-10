@@ -109,18 +109,6 @@ All SMTP variables are optional. When omitted, email notifications are silently 
 
 ---
 
-## Desktop
-
-These variables configure the communication between the Tauri shell, the embedded backend, and the embedded PostgreSQL instance. Local development typically uses `apps/desktop/.env.desktop`; when that file is absent, desktop tooling falls back to the checked-in `apps/desktop/.env.desktop.example`.
-
-| Variable | Type | Default | Required | Description |
-|---|---|---|---|---|
-| `DESKTOP_FRONTEND_URL` | string | `http://127.0.0.1:5173` | No | URL the Tauri webview loads for the frontend |
-| `DESKTOP_BACKEND_URL` | string | `http://127.0.0.1:7854` | No | URL the Vite dev proxy and Tauri shell use to reach the backend |
-| `DESKTOP_POSTGRES_PORT` | number | `5433` | No | Port for the embedded PostgreSQL instance shipped with the desktop app |
-
----
-
 ## Google OAuth
 
 | Variable | Type | Default | Required | Description |

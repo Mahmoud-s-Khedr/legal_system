@@ -1,14 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const apiFetchMock = vi.hoisted(() => vi.fn());
-const persistDesktopLocalSessionTokenMock = vi.hoisted(() => vi.fn());
-const clearDesktopLocalSessionTokenMock = vi.hoisted(() => vi.fn());
 const applyUserPreferredLanguageMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 vi.mock("../lib/api", () => ({
-  apiFetch: apiFetchMock,
-  persistDesktopLocalSessionToken: persistDesktopLocalSessionTokenMock,
-  clearDesktopLocalSessionToken: clearDesktopLocalSessionTokenMock
+  apiFetch: apiFetchMock
 }));
 
 vi.mock("../i18n", () => ({
@@ -20,8 +16,6 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
   apiFetchMock.mockReset();
-  persistDesktopLocalSessionTokenMock.mockReset();
-  clearDesktopLocalSessionTokenMock.mockReset();
   applyUserPreferredLanguageMock.mockReset();
   applyUserPreferredLanguageMock.mockResolvedValue(undefined);
 });

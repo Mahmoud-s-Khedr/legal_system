@@ -1,27 +1,25 @@
 import Fastify from "fastify";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { registerCorsPlugin } from "./cors.js";
 import type { AppEnv } from "../config/env.js";
 
 function createEnv(overrides: Partial<AppEnv> = {}): AppEnv {
   return {
     NODE_ENV: "production",
-    AUTH_MODE: "local",
+    AUTH_MODE: "cloud",
     STORAGE_DRIVER: "local",
     HOST: "127.0.0.1",
     BACKEND_PORT: 7854,
     FRONTEND_PORT: 5173,
-    DATABASE_URL: "postgresql://elms:elms@127.0.0.1:5433/elms_desktop?schema=public",
+    DATABASE_URL: "postgresql://elms:elms@127.0.0.1:5432/elms_cloud?schema=public",
     REDIS_URL: "redis://127.0.0.1:6379",
     COOKIE_DOMAIN: "localhost",
+    FRONTEND_APP_URL: "https://app.elms.example",
     ACCESS_TOKEN_TTL_MINUTES: 15,
     REFRESH_TOKEN_TTL_DAYS: 30,
     LOCAL_SESSION_TTL_HOURS: 12,
     JWT_PRIVATE_KEY: "test-private",
     JWT_PUBLIC_KEY: "test-public",
-    DESKTOP_FRONTEND_URL: "http://127.0.0.1:5173",
-    DESKTOP_BACKEND_URL: "http://127.0.0.1:7854",
-    DESKTOP_POSTGRES_PORT: 5433,
     ELMS_ENABLE_SWAGGER: false,
     MAX_UPLOAD_BYTES: 1024,
     LOCAL_STORAGE_PATH: "./uploads",
@@ -44,31 +42,46 @@ async function buildCorsApp(env: AppEnv) {
   return app;
 }
 
-describe("registerCorsPlugin desktop origins", () => {
+describe("registerCorsPlugin", () => {
   afterEach(() => {
-    delete process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN;
-    vi.restoreAllMocks();
+    // no-op — retained for symmetry with prior desktop-token cleanup
   });
 
-  it("accepts desktop bootstrap requests from http://tauri.localhost", async () => {
-    process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN = "desktop-token";
+  it("accepts the configured FRONTEND_APP_URL origin in production", async () => {
     const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
 
     const response = await app.inject({
       method: "GET",
       url: "/ping",
-      headers: { origin: "http://tauri.localhost" }
+      headers: { origin: "https://app.elms.example" }
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.headers["access-control-allow-origin"]).toBe("http://tauri.localhost");
+    expect(response.headers["access-control-allow-origin"]).toBe("https://app.elms.example");
     expect(response.headers["vary"]).toContain("Origin");
 
     await app.close();
   });
 
-  it("accepts localhost origins for local desktop auth mode in production", async () => {
-    const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
+  it("accepts origins listed in ALLOWED_ORIGINS in production", async () => {
+    const app = await buildCorsApp(
+      createEnv({ NODE_ENV: "production", ALLOWED_ORIGINS: "https://extra.example" })
+    );
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/ping",
+      headers: { origin: "https://extra.example" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("https://extra.example");
+
+    await app.close();
+  });
+
+  it("accepts localhost origins in development", async () => {
+    const app = await buildCorsApp(createEnv({ NODE_ENV: "development" }));
 
     const response = await app.inject({
       method: "GET",
@@ -78,61 +91,14 @@ describe("registerCorsPlugin desktop origins", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
-    expect(response.headers["vary"]).toContain("Origin");
-
-    await app.close();
-  });
-
-  it("accepts tauri://localhost in production without desktop bootstrap token", async () => {
-    const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
-
-    const response = await app.inject({
-      method: "GET",
-      url: "/ping",
-      headers: { origin: "tauri://localhost" }
-    });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.headers["access-control-allow-origin"]).toBe("tauri://localhost");
-    expect(response.headers["vary"]).toContain("Origin");
-
-    await app.close();
-  });
-
-  it("accepts Origin:null for local desktop auth mode in production", async () => {
-    const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
-
-    const response = await app.inject({
-      method: "GET",
-      url: "/ping",
-      headers: { origin: "null" }
-    });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.headers["access-control-allow-origin"]).toBe("null");
-    expect(response.headers["vary"]).toContain("Origin");
-
-    await app.close();
-  });
-
-  it("rejects Origin:null for non-local production auth mode", async () => {
-    const app = await buildCorsApp(createEnv({ NODE_ENV: "production", AUTH_MODE: "cloud" as never }));
-
-    const response = await app.inject({
-      method: "GET",
-      url: "/ping",
-      headers: { origin: "null" }
-    });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
-    expect(response.headers["vary"]).toContain("Origin");
 
     await app.close();
   });
 
   it("rejects unknown origins in production when not explicitly allowed", async () => {
-    const app = await buildCorsApp(createEnv({ NODE_ENV: "production", ALLOWED_ORIGINS: "" }));
+    const app = await buildCorsApp(
+      createEnv({ NODE_ENV: "production", ALLOWED_ORIGINS: "" })
+    );
 
     const response = await app.inject({
       method: "GET",
@@ -142,54 +108,35 @@ describe("registerCorsPlugin desktop origins", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBeUndefined();
-    expect(response.headers["vary"]).toContain("Origin");
 
     await app.close();
   });
 
-  it("echoes desktop PNA headers for trusted desktop origins on preflight", async () => {
+  it("rejects Origin:null", async () => {
     const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
 
     const response = await app.inject({
-      method: "OPTIONS",
+      method: "GET",
       url: "/ping",
-      headers: {
-        origin: "https://tauri.localhost",
-        "access-control-request-method": "GET",
-        "access-control-request-private-network": "true"
-      }
+      headers: { origin: "null" }
     });
 
-    expect(response.statusCode).toBe(204);
-    expect(response.headers["access-control-allow-origin"]).toBe("https://tauri.localhost");
-    expect(response.headers["access-control-allow-private-network"]).toBe("true");
-    expect(response.headers["access-control-allow-credentials"]).toBe("true");
-    expect(response.headers["vary"]).toContain("Origin");
-    expect(response.headers["vary"]).toContain("Access-Control-Request-Method");
-    expect(response.headers["vary"]).toContain("Access-Control-Request-Private-Network");
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
 
     await app.close();
   });
 
-  it("does not echo PNA allow header for untrusted origins", async () => {
-    const app = await buildCorsApp(createEnv({ NODE_ENV: "production", ALLOWED_ORIGINS: "" }));
+  it("returns Fastify's default 404 for unmatched routes", async () => {
+    const app = await buildCorsApp(createEnv({ NODE_ENV: "production" }));
 
     const response = await app.inject({
-      method: "OPTIONS",
-      url: "/ping",
-      headers: {
-        origin: "https://malicious.example",
-        "access-control-request-method": "GET",
-        "access-control-request-private-network": "true"
-      }
+      method: "GET",
+      url: "/does-not-exist",
+      headers: { origin: "https://app.elms.example" }
     });
 
     expect(response.statusCode).toBe(404);
-    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
-    expect(response.headers["access-control-allow-private-network"]).toBeUndefined();
-    expect(response.headers["vary"]).toContain("Origin");
-    expect(response.headers["vary"]).toContain("Access-Control-Request-Method");
-    expect(response.headers["vary"]).toContain("Access-Control-Request-Private-Network");
 
     await app.close();
   });

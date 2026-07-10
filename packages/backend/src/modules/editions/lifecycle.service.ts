@@ -1,7 +1,82 @@
 import { FirmLifecycleStatus, type EditionKey } from "@elms/shared";
 import { listLifecycleSweepFirms, updateFirmLifecycleById } from "../../repositories/editions/editions.repository.js";
+import { prisma } from "../../db/prisma.js";
+import { appError } from "../../errors/appError.js";
 import { isTrialEnabled } from "./editionPolicy.js";
 import { resolveTrialDates } from "./trialDates.js";
+
+const NON_REINSTATABLE_STATUSES = new Set<FirmLifecycleStatus>([
+  FirmLifecycleStatus.DATA_DELETION_PENDING,
+  FirmLifecycleStatus.PENDING_DELETION
+]);
+
+// Manual, operator-driven counterparts to the automated sweep above. Both
+// funnel through updateFirmLifecycleById so cron- and operator-driven
+// transitions stay consistent with the same state-machine invariants.
+
+export async function manuallySuspendFirm(firmId: string, now = new Date()): Promise<void> {
+  const firm = await prisma.firm.findUniqueOrThrow({
+    where: { id: firmId },
+    select: { lifecycleStatus: true }
+  });
+
+  if (NON_REINSTATABLE_STATUSES.has(firm.lifecycleStatus as FirmLifecycleStatus)) {
+    throw appError("Cannot suspend a firm that is already pending deletion", 409);
+  }
+
+  await updateFirmLifecycleById(firmId, {
+    lifecycleStatus: FirmLifecycleStatus.SUSPENDED,
+    suspendedAt: now
+  });
+}
+
+export async function manuallyReinstateFirm(firmId: string): Promise<void> {
+  const firm = await prisma.firm.findUniqueOrThrow({
+    where: { id: firmId },
+    select: { lifecycleStatus: true }
+  });
+
+  if (NON_REINSTATABLE_STATUSES.has(firm.lifecycleStatus as FirmLifecycleStatus)) {
+    throw appError(
+      "Cannot reinstate a firm that is pending data deletion",
+      409
+    );
+  }
+
+  await updateFirmLifecycleById(firmId, {
+    lifecycleStatus: FirmLifecycleStatus.ACTIVE,
+    suspendedAt: null
+  });
+}
+
+export async function manuallyExtendFirmTrial(firmId: string, days: number): Promise<void> {
+  if (!Number.isFinite(days) || days <= 0) {
+    throw appError("Extension days must be a positive number", 400);
+  }
+
+  const firm = await prisma.firm.findUniqueOrThrow({
+    where: { id: firmId },
+    select: { lifecycleStatus: true, trialEndsAt: true, graceEndsAt: true, deletionDueAt: true }
+  });
+
+  if (NON_REINSTATABLE_STATUSES.has(firm.lifecycleStatus as FirmLifecycleStatus)) {
+    throw appError("Cannot extend the trial of a firm pending data deletion", 409);
+  }
+
+  const millisPerDay = 24 * 60 * 60 * 1000;
+  const extendBy = days * millisPerDay;
+  const baseTrialEndsAt = firm.trialEndsAt ?? new Date();
+  const trialEndsAt = new Date(baseTrialEndsAt.getTime() + extendBy);
+  const graceEndsAt = firm.graceEndsAt ? new Date(firm.graceEndsAt.getTime() + extendBy) : undefined;
+  const deletionDueAt = firm.deletionDueAt ? new Date(firm.deletionDueAt.getTime() + extendBy) : undefined;
+
+  await updateFirmLifecycleById(firmId, {
+    lifecycleStatus: FirmLifecycleStatus.ACTIVE,
+    trialEndsAt,
+    ...(graceEndsAt ? { graceEndsAt } : {}),
+    ...(deletionDueAt ? { deletionDueAt } : {})
+  });
+}
 
 export interface LifecycleSweepResult {
   scanned: number;

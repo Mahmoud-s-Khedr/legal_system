@@ -28,17 +28,17 @@ const baseSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().default("redis://127.0.0.1:6379"),
   COOKIE_DOMAIN: z.string().default("localhost"),
+  FRONTEND_APP_URL: z.string().default("http://localhost:5173"),
+  SAAS_BILLING_MODE: z.enum(["manual", "stripe", "disabled"]).default("manual"),
   ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().default(15),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().default(30),
   LOCAL_SESSION_TTL_HOURS: z.coerce.number().default(12),
   LOCAL_SESSION_STORE_PATH: z.string().optional(),
   JWT_PRIVATE_KEY: z.string().optional(),
   JWT_PUBLIC_KEY: z.string().optional(),
+  OPERATOR_JWT_PRIVATE_KEY: z.string().optional(),
+  OPERATOR_JWT_PUBLIC_KEY: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
-  DESKTOP_FRONTEND_URL: z.string().default("http://127.0.0.1:5173"),
-  DESKTOP_BACKEND_URL: z.string().default("http://127.0.0.1:7854"),
-  DESKTOP_POSTGRES_PORT: z.coerce.number().default(5433),
-  DESKTOP_LICENSE_PUBLIC_KEY: z.string().optional(),
   ELMS_ENABLE_SWAGGER: booleanish.default(false),
   // Documents / Storage
   MAX_UPLOAD_BYTES: z.coerce.number().default(50 * 1024 * 1024),
@@ -70,6 +70,8 @@ const baseSchema = z.object({
   SMS_ACCOUNT_SID: z.string().optional(),
   SMS_AUTH_TOKEN: z.string().optional(),
   SMS_FROM_NUMBER: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
   // AI Research
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-6"),
@@ -91,10 +93,11 @@ const baseSchema = z.object({
 export type AppEnv = z.infer<typeof baseSchema> & {
   JWT_PRIVATE_KEY: string;
   JWT_PUBLIC_KEY: string;
+  OPERATOR_JWT_PRIVATE_KEY: string;
+  OPERATOR_JWT_PUBLIC_KEY: string;
 };
 
 let cachedEnv: AppEnv | null = null;
-let warnedAboutCloudAuthMode = false;
 
 function getDevelopmentKeys() {
   const pair = generateKeyPairSync("rsa", {
@@ -109,30 +112,20 @@ function getDevelopmentKeys() {
   };
 }
 
-function isDesktopBootstrapRuntime(source: NodeJS.ProcessEnv): boolean {
-  return Boolean(source.ELMS_DESKTOP_BOOTSTRAP_TOKEN?.trim());
-}
-
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   if (cachedEnv) {
     return cachedEnv;
   }
 
   const parsed = baseSchema.parse(source);
-  const normalizedAuthMode = parsed.AUTH_MODE === AuthMode.CLOUD ? AuthMode.LOCAL : parsed.AUTH_MODE;
-
-  if (parsed.AUTH_MODE === AuthMode.CLOUD && !warnedAboutCloudAuthMode) {
-    console.warn("[backend-startup] AUTH_MODE=cloud is deprecated and non-operational; forcing LOCAL mode");
-    warnedAboutCloudAuthMode = true;
-  }
+  const normalizedAuthMode = parsed.AUTH_MODE;
 
   if (parsed.NODE_ENV === "production") {
     if (!parsed.JWT_PRIVATE_KEY || !parsed.JWT_PUBLIC_KEY) {
       throw new Error("JWT_PRIVATE_KEY and JWT_PUBLIC_KEY must be set in production");
     }
-
-    if (isDesktopBootstrapRuntime(source) && !parsed.DESKTOP_LICENSE_PUBLIC_KEY?.trim()) {
-      throw new Error("DESKTOP_LICENSE_PUBLIC_KEY must be set for production desktop runtime");
+    if (!parsed.OPERATOR_JWT_PRIVATE_KEY || !parsed.OPERATOR_JWT_PUBLIC_KEY) {
+      throw new Error("OPERATOR_JWT_PRIVATE_KEY and OPERATOR_JWT_PUBLIC_KEY must be set in production");
     }
 
     cachedEnv = {
@@ -141,11 +134,16 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     } as AppEnv;
   } else {
     const generatedKeys = getDevelopmentKeys();
+    const generatedOperatorKeys = getDevelopmentKeys();
     cachedEnv = {
       ...parsed,
       AUTH_MODE: normalizedAuthMode,
       JWT_PRIVATE_KEY: parsed.JWT_PRIVATE_KEY || generatedKeys.JWT_PRIVATE_KEY,
-      JWT_PUBLIC_KEY: parsed.JWT_PUBLIC_KEY || generatedKeys.JWT_PUBLIC_KEY
+      JWT_PUBLIC_KEY: parsed.JWT_PUBLIC_KEY || generatedKeys.JWT_PUBLIC_KEY,
+      OPERATOR_JWT_PRIVATE_KEY:
+        parsed.OPERATOR_JWT_PRIVATE_KEY || generatedOperatorKeys.JWT_PRIVATE_KEY,
+      OPERATOR_JWT_PUBLIC_KEY:
+        parsed.OPERATOR_JWT_PUBLIC_KEY || generatedOperatorKeys.JWT_PUBLIC_KEY
     };
   }
 

@@ -1,8 +1,19 @@
 #!/usr/bin/env node
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { execFileSync } from "node:child_process";
 
 const repoRoot = process.cwd();
+
+function isGitIgnored(absPath) {
+  try {
+    execFileSync("git", ["check-ignore", "-q", absPath], { cwd: repoRoot });
+    return true;
+  } catch (error) {
+    if (error.status === 1) return false;
+    throw error;
+  }
+}
 
 const ALLOWED_ROOT_FILES = new Set([
   "AGENTS.md",
@@ -80,6 +91,7 @@ const errors = [];
 for (const entry of readdirSync(repoRoot, { withFileTypes: true })) {
   if (!entry.isFile()) continue;
   if (ALLOWED_ROOT_FILES.has(entry.name)) continue;
+  if (isGitIgnored(join(repoRoot, entry.name))) continue;
   errors.push(`[forbidden-root-file] ${entry.name} should be moved under docs/, scripts/, archive/, or a package.`);
 }
 

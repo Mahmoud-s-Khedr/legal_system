@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getSelectableEditionKeys,
   getTrialDaysRemaining,
-  groupPermissionsByResource,
-  isDesktopBackupPolicyValid
+  groupPermissionsByResource
 } from "./SettingsPage";
 
 describe("SettingsPage helpers", () => {
@@ -31,38 +30,6 @@ describe("SettingsPage helpers", () => {
     expect(getTrialDaysRemaining(false, "2026-04-22T01:00:00.000Z")).toBeNull();
     expect(getTrialDaysRemaining(true, null)).toBeNull();
     expect(getTrialDaysRemaining(true, "not-a-date")).toBeNull();
-  });
-
-  it("validates desktop backup policy constraints", () => {
-    expect(
-      isDesktopBackupPolicyValid({
-        enabled: true,
-        frequency: "daily",
-        timeLocal: "02:30",
-        weeklyDay: null,
-        retentionCount: 14
-      })
-    ).toBe(true);
-
-    expect(
-      isDesktopBackupPolicyValid({
-        enabled: true,
-        frequency: "weekly",
-        timeLocal: "09:00",
-        weeklyDay: null,
-        retentionCount: 14
-      })
-    ).toBe(false);
-
-    expect(
-      isDesktopBackupPolicyValid({
-        enabled: true,
-        frequency: "daily",
-        timeLocal: "invalid",
-        weeklyDay: null,
-        retentionCount: 14
-      })
-    ).toBe(false);
   });
 
   it("groups permission keys by resource", () => {

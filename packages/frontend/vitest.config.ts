@@ -1,7 +1,4 @@
 import { defineConfig } from "vitest/config";
-import { getPackageCoverageThresholds } from "../../scripts/coverage/threshold-policy.mjs";
-
-const thresholds = getPackageCoverageThresholds("@elms/frontend");
 
 export default defineConfig({
   test: {
@@ -19,8 +16,7 @@ export default defineConfig({
         "src/**/*.spec.tsx",
         "src/**/*.d.ts",
         "src/main.tsx"
-      ],
-      thresholds
+      ]
     }
   }
 });

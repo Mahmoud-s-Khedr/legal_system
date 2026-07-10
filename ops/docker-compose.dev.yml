@@ -1,0 +1,67 @@
+# ELMS Web Dev — Infrastructure Only
+# Starts Redis and MinIO on localhost ports.
+# PostgreSQL is expected to already be running on 127.0.0.1:5432
+# (either a local install or a separate Docker container).
+#
+# Usage:
+#   docker compose -f ops/docker-compose.dev.yml up -d
+
+services:
+  # ─────────────────────────────────────────────
+  # Redis 7
+  # ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ─────────────────────────────────────────────
+  # MinIO — S3-compatible object storage
+  # Console: http://localhost:9001
+  # API:     http://localhost:9000
+  # ─────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: elms-dev
+      MINIO_ROOT_PASSWORD: elms-dev-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-dev-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Creates the bucket on first start, then exits
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        mc alias set local http://minio:9000 elms-dev elms-dev-secret &&
+        mc mb --ignore-existing local/elms-documents &&
+        mc anonymous set download local/elms-documents
+      "
+
+volumes:
+  redis-dev-data:
+  minio-dev-data:
+

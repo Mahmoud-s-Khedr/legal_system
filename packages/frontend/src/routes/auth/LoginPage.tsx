@@ -3,29 +3,25 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff } from "lucide-react";
 import { AuthShell } from "./AuthShell";
-import { ApiError, captureDesktopConnectivitySnapshot } from "../../lib/api";
+import { ApiError } from "../../lib/api";
 import { useAuthBootstrap } from "../../store/authStore";
 import { Field, FormAlert } from "../app/ui";
 
 export function LoginPage() {
   const { t } = useTranslation("auth");
-  const { login } = useAuthBootstrap();
+  const { needsSetup, login } = useAuthBootstrap();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBackendUnreachable, setIsBackendUnreachable] = useState(false);
-  const [diagnosticSummary, setDiagnosticSummary] = useState<string | null>(
-    null
-  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsBackendUnreachable(false);
-    setDiagnosticSummary(null);
     setLoading(true);
 
     try {
@@ -40,25 +36,6 @@ export function LoginPage() {
           : undefined;
 
       if (code === "BACKEND_UNREACHABLE") {
-        const details =
-          submitError instanceof ApiError &&
-          typeof submitError.details === "object" &&
-          submitError.details !== null
-            ? (submitError.details as Record<string, unknown>)
-            : {};
-        const summary = [
-          `origin=${String(details.windowOrigin ?? window.location.origin ?? "unknown")}`,
-          `kind=${String(details.failureKind ?? "unknown")}`,
-          `url=${String(details.requestUrl ?? "unknown")}`,
-          `base=${String(details.apiBaseUrl ?? "unknown")}`,
-          `runtime=${String(details.desktopRuntimeVariant ?? "unknown")}`
-        ].join(" | ");
-        setDiagnosticSummary(summary);
-        captureDesktopConnectivitySnapshot({
-          reason: "LOGIN_BACKEND_UNREACHABLE",
-          requestUrl:
-            typeof details.requestUrl === "string" ? details.requestUrl : null
-        });
         setError(t("backendConnection.loginUnreachable"));
         setIsBackendUnreachable(true);
       } else if (code === "ACCOUNT_SUSPENDED") {
@@ -123,14 +100,6 @@ export function LoginPage() {
             {t("backendConnection.loginHint")}
           </p>
         ) : null}
-        {isBackendUnreachable && diagnosticSummary ? (
-          <p
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700"
-            dir="ltr"
-          >
-            {diagnosticSummary}
-          </p>
-        ) : null}
         <button
           className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           type="submit"
@@ -144,12 +113,9 @@ export function LoginPage() {
             {error}
           </p>
         ) : null}
-        <div className="flex justify-between text-sm text-slate-600">
-          <Link className="transition hover:text-accent" to="/connection">
-            {t("backendConnection.link")}
-          </Link>
+        <div className="flex justify-end text-sm text-slate-600">
           <Link className="transition hover:text-accent" to="/setup">
-            {t("desktopSetupLink")}
+            {needsSetup ? t("desktopSetupLink") : t("registerLink")}
           </Link>
         </div>
       </form>

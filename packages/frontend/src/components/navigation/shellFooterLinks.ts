@@ -25,7 +25,6 @@ export function buildAuthShellFooterLinks(t: Translate): ShellFooterLink[] {
   return [
     { id: "login", label: t("footer.login"), to: "/login" },
     { id: "setup", label: t("footer.setup"), to: "/setup" },
-    { id: "connection", label: t("footer.connection"), to: "/connection" },
     { id: "about", label: t("footer.about"), to: "/about" }
   ];
 }

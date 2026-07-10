@@ -1,7 +1,5 @@
 import type { MouseEvent } from "react";
 
-const isDesktopShell = "__TAURI_INTERNALS__" in window;
-
 export async function copyTextToClipboard(value: string): Promise<void> {
   const text = value.trim();
   if (!text) {
@@ -19,16 +17,6 @@ export async function openExternalUrl(url: string): Promise<void> {
   const nextUrl = url.trim();
   if (!nextUrl) {
     return;
-  }
-
-  if (isDesktopShell) {
-    try {
-      const { invoke } = await import("@tauri-apps/api/core");
-      await invoke("desktop_open_external_url", { url: nextUrl });
-      return;
-    } catch (error) {
-      console.error("[external-links] desktop external open failed", error);
-    }
   }
 
   window.open(nextUrl, "_blank", "noopener,noreferrer");

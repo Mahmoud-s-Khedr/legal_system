@@ -9,6 +9,10 @@ import { registerPerformanceHooks } from "./plugins/performance.js";
 import { registerErrorHandler } from "./plugins/errorHandler.js";
 import { registerJwtPlugin } from "./plugins/auth.js";
 import { registerSessionContext } from "./plugins/sessionContext.js";
+import { registerOperatorJwtPlugin } from "./plugins/operatorAuth.js";
+import { registerOperatorSessionContext } from "./plugins/operatorSessionContext.js";
+import { registerOperatorAuthRoutes } from "./modules/operator/operator.routes.js";
+import { operatorAdminRoutes } from "./modules/operator/operatorAdmin.routes.js";
 import { registerInjectTenantHook } from "./middleware/injectTenant.js";
 import { registerFirmLifecycleWriteGuard } from "./middleware/firmLifecycleWriteGuard.js";
 import { registerLicenseAccessGuard } from "./middleware/licenseAccessGuard.js";
@@ -27,7 +31,7 @@ import { registerSearchRoutes } from "./modules/documents/search.routes.js";
 import { registerGlobalSearchRoutes } from "./modules/search/globalSearch.routes.js";
 import { registerLookupRoutes } from "./modules/lookups/lookups.routes.js";
 import { registerLocationLookupRoutes } from "./modules/locations/locations.routes.js";
-import { registerBillingRoutes } from "./modules/billing/billing.routes.js";
+import { billingRoutes } from "./modules/billing/billing.routes.js";
 import { registerNotificationRoutes } from "./modules/notifications/notifications.routes.js";
 import { registerTemplateRoutes } from "./modules/templates/templates.routes.js";
 import { registerReportRoutes } from "./modules/reports/reports.routes.js";
@@ -43,6 +47,8 @@ import { createStorageAdapter } from "./storage/index.js";
 import { initializeBackendMonitoring } from "./monitoring/sentry.js";
 import { getPerformanceSnapshot } from "./monitoring/performance.js";
 import { prisma } from "./db/prisma.js";
+import { stripeWebhookRoutes } from "./modules/billing/stripeWebhook.js";
+import fastifyRawBody from "fastify-raw-body";
 
 export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   const app = Fastify({
@@ -90,15 +96,26 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   await registerPerformanceHooks(app, env.PERFORMANCE_LOGGING_ENABLED);
   await registerJwtPlugin(app, env);
   registerSessionContext(app, env);
+  // Must register after the tenant (non-namespaced) JWT plugin above —
+  // @fastify/jwt attaches namespaced verifiers onto the same `app.jwt` object.
+  await registerOperatorJwtPlugin(app, env);
+  registerOperatorSessionContext(app);
   registerLicenseAccessGuard(app);
   registerFirmLifecycleWriteGuard(app);
   registerErrorHandler(app);
   registerInjectTenantHook(app);
+  await app.register(fastifyRawBody, {
+    field: "rawBody",
+    global: false,
+    encoding: "utf8",
+    runFirst: true
+  });
   app.log.info("core plugins and middleware registered");
 
+  await app.register(stripeWebhookRoutes);
+  await app.register(billingRoutes);
+
   app.get("/api/health", async (_req, reply) => {
-    const desktopBootstrapToken = process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN?.trim();
-    const includeDesktopBootstrapToken = env.AUTH_MODE === "local" && Boolean(desktopBootstrapToken);
     const checks: Record<string, unknown> = {};
     let overallStatus: "ok" | "degraded" | "error" = "ok";
 
@@ -111,7 +128,7 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
       overallStatus = "error";
     }
 
-    checks.deployment = "local-only";
+    checks.deployment = env.AUTH_MODE === "local" ? "local" : "cloud";
     if (env.PERFORMANCE_LOGGING_ENABLED) {
       checks.performance = "enabled";
     }
@@ -121,11 +138,10 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
     return reply.status(statusCode).send({
       ok: overallStatus !== "error",
       status: overallStatus,
-      mode: "local",
+      mode: env.AUTH_MODE,
       timestamp: new Date().toISOString(),
       checks,
-      ...(env.PERFORMANCE_LOGGING_ENABLED ? { perf: getPerformanceSnapshot() } : {}),
-      ...(includeDesktopBootstrapToken ? { desktopBootstrapToken } : {})
+      ...(env.PERFORMANCE_LOGGING_ENABLED ? { perf: getPerformanceSnapshot() } : {})
     });
   });
 
@@ -145,7 +161,6 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   await registerGlobalSearchRoutes(app);
   await registerLookupRoutes(app);
   await registerLocationLookupRoutes(app);
-  await registerBillingRoutes(app);
   await registerNotificationRoutes(app);
   await registerTemplateRoutes(app);
   await registerReportRoutes(app);
@@ -156,6 +171,9 @@ export async function createApp(env: AppEnv): Promise<FastifyInstance> {
   await registerPortalRoutes(app);
   await registerGoogleCalendarRoutes(app, env);
   await registerPowersRoutes(app);
+
+  await registerOperatorAuthRoutes(app, env);
+  await app.register(operatorAdminRoutes);
 
   app.log.info("backend routes registered");
 

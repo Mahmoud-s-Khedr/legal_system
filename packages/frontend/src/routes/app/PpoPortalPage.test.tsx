@@ -1,19 +1,14 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  PpoPortalLaunchResult,
-  PpoPortalNavResult
-} from "../../lib/ppoPortal";
+import type { PpoPortalLaunchResult } from "../../lib/ppoPortal";
 
-const { launchPpoPortalMock, navigatePpoPortalMock } = vi.hoisted(() => ({
-  launchPpoPortalMock: vi.fn<() => Promise<PpoPortalLaunchResult>>(),
-  navigatePpoPortalMock: vi.fn<() => Promise<PpoPortalNavResult>>()
+const { launchPpoPortalMock } = vi.hoisted(() => ({
+  launchPpoPortalMock: vi.fn<() => Promise<PpoPortalLaunchResult>>()
 }));
 
 vi.mock("../../lib/ppoPortal", () => ({
-  launchPpoPortal: launchPpoPortalMock,
-  navigatePpoPortal: navigatePpoPortalMock
+  launchPpoPortal: launchPpoPortalMock
 }));
 
 import { PpoPortalPage } from "./PpoPortalPage";
@@ -32,8 +27,6 @@ beforeEach(() => {
     destination: "browser-tab",
     reused: false
   });
-  navigatePpoPortalMock.mockReset();
-  navigatePpoPortalMock.mockResolvedValue({ ok: true, action: "back" });
 });
 
 afterEach(() => {
@@ -86,10 +79,11 @@ describe("PpoPortalPage", () => {
     expect(launchPpoPortalMock).toHaveBeenCalledTimes(2);
   });
 
-  it("renders the macOS unsupported status message when desktop bypass is unavailable", async () => {
+  it("renders a popup-blocked status message when the browser blocks the tab", async () => {
     launchPpoPortalMock.mockResolvedValue({
       ok: false,
-      code: "PPO_TLS_BYPASS_UNSUPPORTED_MACOS"
+      code: "PPO_WEB_POPUP_BLOCKED",
+      message: "Could not open the PPO tab. Please allow pop-ups for this site and try again."
     });
 
     const view = render(<PpoPortalPage />);
@@ -98,7 +92,7 @@ describe("PpoPortalPage", () => {
       await Promise.resolve();
     });
 
-    expect(view.textContent).toContain("macOS");
+    expect(view.textContent).toContain("Could not open the PPO tab");
   });
 
   it("does not render in-page nav buttons", async () => {
@@ -114,36 +108,5 @@ describe("PpoPortalPage", () => {
     expect(view.querySelector("[data-action='home']")).toBeNull();
     expect(view.querySelector("[data-action='open_external']")).toBeNull();
     expect(view.querySelector("[data-action='screenshot']")).toBeNull();
-    expect(navigatePpoPortalMock).not.toHaveBeenCalled();
-  });
-
-  it("renders screenshot action in desktop mode and triggers screenshot navigation", async () => {
-    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
-    navigatePpoPortalMock.mockResolvedValue({
-      ok: true,
-      action: "screenshot",
-      url: "/tmp/screenshot.png"
-    });
-
-    const view = render(<PpoPortalPage />);
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    const screenshotButton = view.querySelector("[data-action='screenshot']");
-    expect(screenshotButton).not.toBeNull();
-
-    act(() => {
-      screenshotButton?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true })
-      );
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(navigatePpoPortalMock).toHaveBeenCalledWith("screenshot");
   });
 });

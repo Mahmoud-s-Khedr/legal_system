@@ -51,7 +51,7 @@ export default defineConfig(() => {
     format: "esm",
     target: "node22",
     outDir,
-    dts: !isDesktop,
+    dts: false,
     splitting: !isDesktop,
     bundle: true,
     noExternal: isDesktop ? [DESKTOP_NO_EXTERNAL_PATTERN] : undefined,

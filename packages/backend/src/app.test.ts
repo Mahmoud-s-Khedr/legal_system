@@ -12,6 +12,10 @@ const registerMultipartPlugin = vi.fn();
 const registerErrorHandler = vi.fn();
 const registerJwtPlugin = vi.fn();
 const registerSessionContext = vi.fn();
+const registerOperatorJwtPlugin = vi.fn();
+const registerOperatorSessionContext = vi.fn();
+const registerOperatorAuthRoutes = vi.fn();
+const operatorAdminRoutes = vi.fn();
 const registerInjectTenantHook = vi.fn();
 const registerFirmLifecycleWriteGuard = vi.fn();
 const registerLicenseAccessGuard = vi.fn();
@@ -31,7 +35,7 @@ const registerDocumentRoutes = vi.fn();
 const registerSearchRoutes = vi.fn();
 const registerLookupRoutes = vi.fn();
 const registerLocationLookupRoutes = vi.fn();
-const registerBillingRoutes = vi.fn();
+const billingRoutes = vi.fn();
 const registerNotificationRoutes = vi.fn();
 const registerTemplateRoutes = vi.fn();
 const registerReportRoutes = vi.fn();
@@ -61,6 +65,10 @@ vi.mock("./plugins/multipart.js", () => ({ registerMultipartPlugin }));
 vi.mock("./plugins/errorHandler.js", () => ({ registerErrorHandler }));
 vi.mock("./plugins/auth.js", () => ({ registerJwtPlugin }));
 vi.mock("./plugins/sessionContext.js", () => ({ registerSessionContext }));
+vi.mock("./plugins/operatorAuth.js", () => ({ registerOperatorJwtPlugin }));
+vi.mock("./plugins/operatorSessionContext.js", () => ({ registerOperatorSessionContext }));
+vi.mock("./modules/operator/operator.routes.js", () => ({ registerOperatorAuthRoutes }));
+vi.mock("./modules/operator/operatorAdmin.routes.js", () => ({ operatorAdminRoutes }));
 
 vi.mock("./middleware/injectTenant.js", () => ({ registerInjectTenantHook }));
 vi.mock("./middleware/firmLifecycleWriteGuard.js", () => ({ registerFirmLifecycleWriteGuard }));
@@ -81,7 +89,7 @@ vi.mock("./modules/documents/documents.routes.js", () => ({ registerDocumentRout
 vi.mock("./modules/documents/search.routes.js", () => ({ registerSearchRoutes }));
 vi.mock("./modules/lookups/lookups.routes.js", () => ({ registerLookupRoutes }));
 vi.mock("./modules/locations/locations.routes.js", () => ({ registerLocationLookupRoutes }));
-vi.mock("./modules/billing/billing.routes.js", () => ({ registerBillingRoutes }));
+vi.mock("./modules/billing/billing.routes.js", () => ({ billingRoutes }));
 vi.mock("./modules/notifications/notifications.routes.js", () => ({ registerNotificationRoutes }));
 vi.mock("./modules/templates/templates.routes.js", () => ({ registerTemplateRoutes }));
 vi.mock("./modules/reports/reports.routes.js", () => ({ registerReportRoutes }));
@@ -108,7 +116,6 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
 describe("createApp", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN;
   });
 
   it("registers plugins/routes and returns app", async () => {
@@ -117,6 +124,8 @@ describe("createApp", () => {
     const app = {
       log: { info: vi.fn() },
       decorate: vi.fn(),
+      decorateRequest: vi.fn(),
+      addHook: vi.fn(),
       register,
       get
     };
@@ -135,6 +144,10 @@ describe("createApp", () => {
     expect(registerRateLimitPlugin).toHaveBeenCalledWith(app, expect.anything());
     expect(registerMultipartPlugin).toHaveBeenCalledWith(app, expect.anything());
     expect(registerJwtPlugin).toHaveBeenCalledWith(app, expect.anything());
+    expect(registerOperatorJwtPlugin).toHaveBeenCalledWith(app, expect.anything());
+    expect(registerOperatorSessionContext).toHaveBeenCalledWith(app);
+    expect(registerOperatorAuthRoutes).toHaveBeenCalledWith(app, expect.anything());
+    expect(register).toHaveBeenCalledWith(operatorAdminRoutes);
 
     expect(registerAuthRoutes).toHaveBeenCalledWith(app, expect.anything());
     expect(registerRoleRoutes).toHaveBeenCalledWith(app);
@@ -147,17 +160,18 @@ describe("createApp", () => {
     expect(get).toHaveBeenCalledWith("/api/health", expect.any(Function));
   });
 
-  it("health endpoint returns ok and includes bootstrap token in local mode when db check succeeds", async () => {
+  it("health endpoint returns ok when db check succeeds", async () => {
     const get = vi.fn();
     const app = {
       log: { info: vi.fn() },
       decorate: vi.fn(),
+      decorateRequest: vi.fn(),
+      addHook: vi.fn(),
       register: vi.fn().mockResolvedValue(undefined),
       get
     };
     fastifyFactory.mockReturnValue(app);
     prismaQueryRaw.mockResolvedValue(undefined);
-    process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN = "boot-123";
 
     await createApp(makeEnv({ AUTH_MODE: "local" }));
 
@@ -177,45 +191,9 @@ describe("createApp", () => {
     expect(payload).toEqual(
       expect.objectContaining({
         ok: true,
-        status: "ok",
-        desktopBootstrapToken: "boot-123"
-      })
-    );
-  });
-
-  it("health endpoint omits bootstrap token in non-local mode", async () => {
-    const get = vi.fn();
-    const app = {
-      log: { info: vi.fn() },
-      decorate: vi.fn(),
-      register: vi.fn().mockResolvedValue(undefined),
-      get
-    };
-    fastifyFactory.mockReturnValue(app);
-    prismaQueryRaw.mockResolvedValue(undefined);
-    process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN = "boot-123";
-
-    await createApp(makeEnv({ AUTH_MODE: "cloud" }));
-
-    const healthHandler = get.mock.calls.find((entry) => entry[0] === "/api/health")?.[1] as
-      | ((req: unknown, reply: unknown) => Promise<unknown>)
-      | undefined;
-
-    const reply = {
-      status: vi.fn().mockReturnThis(),
-      send: vi.fn().mockImplementation((payload: unknown) => payload)
-    };
-
-    const payload = await healthHandler!({} as never, reply as never);
-
-    expect(reply.status).toHaveBeenCalledWith(200);
-    expect(payload).toEqual(
-      expect.objectContaining({
-        ok: true,
         status: "ok"
       })
     );
-    expect(payload).not.toEqual(expect.objectContaining({ desktopBootstrapToken: "boot-123" }));
   });
 
   it("health endpoint returns degraded error when db check fails", async () => {
@@ -223,12 +201,13 @@ describe("createApp", () => {
     const app = {
       log: { info: vi.fn() },
       decorate: vi.fn(),
+      decorateRequest: vi.fn(),
+      addHook: vi.fn(),
       register: vi.fn().mockResolvedValue(undefined),
       get
     };
     fastifyFactory.mockReturnValue(app);
     prismaQueryRaw.mockRejectedValue(new Error("db down"));
-    delete process.env.ELMS_DESKTOP_BOOTSTRAP_TOKEN;
 
     await createApp(makeEnv());
 
@@ -253,6 +232,8 @@ describe("createApp", () => {
     const app = {
       log: { info: vi.fn() },
       decorate: vi.fn(),
+      decorateRequest: vi.fn(),
+      addHook: vi.fn(),
       register: vi.fn().mockResolvedValue(undefined),
       get: vi.fn()
     };

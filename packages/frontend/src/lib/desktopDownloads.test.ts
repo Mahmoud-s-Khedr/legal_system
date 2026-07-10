@@ -1,14 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const invokeMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: invokeMock
-}));
-
-async function importDesktopDownloads(desktopShell: boolean) {
+async function importDesktopDownloads() {
   vi.resetModules();
-  vi.stubEnv("VITE_DESKTOP_SHELL", desktopShell ? "true" : "false");
   return import("./desktopDownloads");
 }
 
@@ -18,7 +11,6 @@ describe("desktopDownloads", () => {
   let clickSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    invokeMock.mockReset();
     clickSpy = vi.fn();
     createObjectUrl = vi.fn(() => "blob:test-download-url");
     revokeObjectUrl = vi.fn();
@@ -32,32 +24,16 @@ describe("desktopDownloads", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    vi.unstubAllEnvs();
   });
 
-  it("uses desktop invoke command path when desktop shell is enabled", async () => {
-    const { saveBlobToDownloads } = await importDesktopDownloads(true);
-    const blob = new Blob(["ab"], { type: "text/plain" });
-    invokeMock.mockResolvedValue({ ok: true, path: "/tmp/report.txt" });
-
-    const savedPath = await saveBlobToDownloads(blob, "report.txt");
-
-    expect(savedPath).toBe("/tmp/report.txt");
-    expect(invokeMock).toHaveBeenCalledWith("desktop_save_download_file", {
-      filename: "report.txt",
-      bytes: [97, 98]
-    });
-  });
-
-  it("falls back to browser download flow when desktop shell is disabled", async () => {
+  it("triggers a browser download flow", async () => {
     const appendSpy = vi.spyOn(document.body, "appendChild");
-    const { saveBlobToDownloads } = await importDesktopDownloads(false);
+    const { saveBlobToDownloads } = await importDesktopDownloads();
     const blob = new Blob(["hello"], { type: "text/plain" });
 
     const result = await saveBlobToDownloads(blob, "browser-file.txt");
 
     expect(result).toBeNull();
-    expect(invokeMock).not.toHaveBeenCalled();
     expect(createObjectUrl).toHaveBeenCalledTimes(1);
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(revokeObjectUrl).toHaveBeenCalledWith("blob:test-download-url");
@@ -67,34 +43,25 @@ describe("desktopDownloads", () => {
   });
 
   it("normalizes empty filenames to download.bin", async () => {
-    const { saveBlobToDownloads } = await importDesktopDownloads(true);
+    const appendSpy = vi.spyOn(document.body, "appendChild");
+    const { saveBlobToDownloads } = await importDesktopDownloads();
     const blob = new Blob(["x"], { type: "text/plain" });
-    invokeMock.mockResolvedValue({ ok: true, path: "/tmp/download.bin" });
 
     await saveBlobToDownloads(blob, "   ");
 
-    expect(invokeMock).toHaveBeenCalledWith("desktop_save_download_file", {
-      filename: "download.bin",
-      bytes: [120]
-    });
+    const anchor = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
+    expect(anchor.download).toBe("download.bin");
   });
 
-  it("throws a readable error when desktop save fails", async () => {
-    const { saveBlobToDownloads } = await importDesktopDownloads(true);
-    const blob = new Blob(["x"], { type: "text/plain" });
-    invokeMock.mockResolvedValue({ ok: false, code: "DESKTOP_DOWNLOAD_SAVE_FAILED" });
+  it("saveTextToDownloads wraps text in a blob and downloads it", async () => {
+    const appendSpy = vi.spyOn(document.body, "appendChild");
+    const { saveTextToDownloads } = await importDesktopDownloads();
 
-    await expect(saveBlobToDownloads(blob, "x.txt")).rejects.toThrow(
-      "Saving the downloaded file failed."
-    );
-  });
+    const result = await saveTextToDownloads("hello world", "notes.txt");
 
-  it("normalizes rejected desktop invoke errors", async () => {
-    const { getDesktopDownloadSettings } = await importDesktopDownloads(true);
-    invokeMock.mockRejectedValue(new Error("DESKTOP_DOWNLOAD_SETTINGS_UNAVAILABLE"));
-
-    await expect(getDesktopDownloadSettings()).rejects.toThrow(
-      "Desktop download settings are unavailable."
-    );
+    expect(result).toBeNull();
+    expect(createObjectUrl).toHaveBeenCalledTimes(1);
+    const anchor = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
+    expect(anchor.download).toBe("notes.txt");
   });
 });

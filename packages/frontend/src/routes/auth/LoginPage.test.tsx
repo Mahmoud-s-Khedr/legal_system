@@ -95,9 +95,9 @@ describe("LoginPage connectivity messaging", () => {
     });
 
     expect(view.textContent).toContain(
-      "ELMS cannot reach the local backend service."
+      "ELMS cannot reach the backend service."
     );
-    expect(view.textContent).toContain("Retry after startup completes.");
+    expect(view.textContent).toContain("Retry in a moment.");
     expect(navigateMock).not.toHaveBeenCalled();
   });
 

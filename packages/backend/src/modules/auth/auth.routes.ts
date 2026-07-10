@@ -13,6 +13,12 @@ const loginSchema = z.object({
   password: z.string().min(1)
 });
 
+const registerSchema = loginSchema.extend({
+  firmName: z.string().min(2),
+  fullName: z.string().min(2),
+  password: newPasswordSchema
+});
+
 const setupSchema = loginSchema.extend({
   firmName: z.string().min(2),
   fullName: z.string().min(2),
@@ -32,11 +38,21 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     return withLocalSessionToken(authService, response);
   });
 
-  app.post("/api/auth/register", { schema: { response: authOrDisabledResponses }, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (_request, reply) => {
-    return sendLocalOnlyCompatibilityError(reply, "Registration endpoint is unavailable in local-only deployments");
+  app.post("/api/auth/register", { schema: { response: authOrDisabledResponses }, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
+    if (!authService.register) {
+      return sendLocalOnlyCompatibilityError(reply, "Registration endpoint is unavailable in local-only deployments");
+    }
+    const payload = registerSchema.parse(request.body);
+    const response = await authService.register(payload);
+    setCookies(reply, authService, response, env);
+    request.sessionUser = response.session.user;
+    return withLocalSessionToken(authService, response);
   });
 
   app.get("/api/auth/setup", async () => {
+    if (env.AUTH_MODE !== AuthMode.LOCAL) {
+      return { needsSetup: false };
+    }
     const firm = await prisma.firm.findFirst({ select: { id: true } });
     return { needsSetup: !firm };
   });
@@ -52,12 +68,27 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
     return withLocalSessionToken(authService, response);
   });
 
-  app.post("/api/auth/accept-invite", { schema: { response: authOrDisabledResponses } }, async (_request, reply) => {
-    return sendLocalOnlyCompatibilityError(reply, "Invite acceptance endpoint is unavailable in local-only deployments");
+  app.post("/api/auth/accept-invite", { schema: { response: authOrDisabledResponses } }, async (request, reply) => {
+    if (!authService.acceptInvite) {
+      return sendLocalOnlyCompatibilityError(reply, "Invite acceptance endpoint is unavailable in local-only deployments");
+    }
+    const payload = registerSchema.pick({ fullName: true, password: true }).extend({
+      token: z.string().min(1)
+    }).parse(request.body);
+    const response = await authService.acceptInvite(payload);
+    setCookies(reply, authService, response, env);
+    request.sessionUser = response.session.user;
+    return withLocalSessionToken(authService, response);
   });
 
-  app.post("/api/auth/refresh", { schema: { response: authOrDisabledResponses } }, async (_request, reply) => {
-    return sendLocalOnlyCompatibilityError(reply, "Refresh endpoint is unavailable in local-only deployments");
+  app.post("/api/auth/refresh", { schema: { response: authOrDisabledResponses } }, async (request, reply) => {
+    if (!authService.refresh) {
+      return sendLocalOnlyCompatibilityError(reply, "Refresh endpoint is unavailable in local-only deployments");
+    }
+    const response = await authService.refresh(request.cookies);
+    setCookies(reply, authService, response, env);
+    request.sessionUser = response.session.user;
+    return withLocalSessionToken(authService, response);
   });
 
   app.post("/api/auth/logout", { schema: { response: { 200: successSchema } } }, async (request, reply) => {
@@ -70,7 +101,7 @@ export async function registerAuthRoutes(app: FastifyInstance, env: AppEnv) {
   app.get("/api/auth/me", { schema: { response: { 200: authResponseSchema } } }, async (request) => {
     return {
       session: {
-        mode: AuthMode.LOCAL,
+        mode: env.AUTH_MODE,
         user: request.sessionUser
       }
     };

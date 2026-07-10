@@ -26,8 +26,8 @@ describe("shell footer links", () => {
     ).toBe(true);
   });
 
-  it("returns auth links for login/setup/connection", () => {
+  it("returns auth links for login/setup", () => {
     const links = buildAuthShellFooterLinks(t);
-    expect(links.map((link) => link.to)).toEqual(["/login", "/setup", "/connection", "/about"]);
+    expect(links.map((link) => link.to)).toEqual(["/login", "/setup", "/about"]);
   });
 });

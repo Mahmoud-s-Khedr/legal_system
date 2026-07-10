@@ -10,10 +10,10 @@ import { pickFieldError } from "../../lib/validationErrors";
 
 export function SetupPage() {
   const { t } = useTranslation("auth");
-  const { setup } = useAuthBootstrap();
+  const { needsSetup, register, setup } = useAuthBootstrap();
   const navigate = useNavigate();
-  const [firmName, setFirmName] = useState("ELMS Desktop Firm");
-  const [fullName, setFullName] = useState("Desktop Admin");
+  const [firmName, setFirmName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState(
     (import.meta.env.VITE_SETUP_EMAIL as string) ?? ""
   );
@@ -35,7 +35,11 @@ export function SetupPage() {
     setIsSubmitting(true);
 
     try {
-      await setup({ firmName, fullName, email, password, editionKey });
+      if (needsSetup) {
+        await setup({ firmName, fullName, email, password, editionKey });
+      } else {
+        await register({ firmName, fullName, email, password });
+      }
       await navigate({ to: "/app/dashboard" });
     } catch (submitError) {
       const resolved = resolveFormValidationError(
@@ -50,7 +54,10 @@ export function SetupPage() {
   }
 
   return (
-    <AuthShell title={t("setupTitle")} subtitle={t("setupSubtitle")}>
+    <AuthShell
+      title={needsSetup ? t("setupTitle") : t("registerTitle")}
+      subtitle={needsSetup ? t("setupSubtitle") : t("registerSubtitle")}
+    >
       <form
         className="w-full max-w-md space-y-4 rounded-3xl bg-white p-8 shadow-xl"
         onSubmit={handleSubmit}
@@ -101,41 +108,43 @@ export function SetupPage() {
           required
           error={pickFieldError(fieldErrors, ["password"]) ?? undefined}
         />
-        <SelectField
-          id="setup-edition"
-          label={t("editionLabel")}
-          onChange={(value) => {
-            setEditionKey(value as EditionKey);
-            setFieldErrors((current) => ({ ...current, editionKey: "" }));
-          }}
-          options={[
-            {
-              value: EditionKey.SOLO_OFFLINE,
-              label: t("editionOptions.solo_offline")
-            },
-            {
-              value: EditionKey.SOLO_ONLINE,
-              label: t("editionOptions.solo_online")
-            },
-            {
-              value: EditionKey.LOCAL_FIRM_OFFLINE,
-              label: t("editionOptions.local_firm_offline")
-            },
-            {
-              value: EditionKey.LOCAL_FIRM_ONLINE,
-              label: t("editionOptions.local_firm_online")
-            }
-          ]}
-          value={editionKey}
-          error={pickFieldError(fieldErrors, ["editionKey"]) ?? undefined}
-        />
+        {needsSetup ? (
+          <SelectField
+            id="setup-edition"
+            label={t("editionLabel")}
+            onChange={(value) => {
+              setEditionKey(value as EditionKey);
+              setFieldErrors((current) => ({ ...current, editionKey: "" }));
+            }}
+            options={[
+              {
+                value: EditionKey.SOLO_OFFLINE,
+                label: t("editionOptions.solo_offline")
+              },
+              {
+                value: EditionKey.SOLO_ONLINE,
+                label: t("editionOptions.solo_online")
+              },
+              {
+                value: EditionKey.LOCAL_FIRM_OFFLINE,
+                label: t("editionOptions.local_firm_offline")
+              },
+              {
+                value: EditionKey.LOCAL_FIRM_ONLINE,
+                label: t("editionOptions.local_firm_online")
+              }
+            ]}
+            value={editionKey}
+            error={pickFieldError(fieldErrors, ["editionKey"]) ?? undefined}
+          />
+        ) : null}
         {error ? <FormAlert message={error} /> : null}
         <button
           className="w-full rounded-2xl bg-accent px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           type="submit"
           disabled={isSubmitting}
         >
-          {t("completeSetup")}
+          {needsSetup ? t("completeSetup") : t("registerSubmit")}
         </button>
         <Link
           to="/login"

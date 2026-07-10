@@ -1,84 +1,6 @@
 import i18n from "../i18n";
+
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? "";
-const isDesktopShell = import.meta.env.VITE_DESKTOP_SHELL === "true";
-const desktopRuntimeVariant = (import.meta.env.VITE_DESKTOP_RUNTIME_VARIANT as string | undefined) ?? "embedded";
-const DESKTOP_EMBEDDED_FALLBACK_BASE_URL = "http://127.0.0.1:7854";
-const LOCAL_SESSION_STORAGE_KEY = "elms.localSessionToken";
-const DESKTOP_BACKEND_BASE_URL_CACHE_KEY = "elms.desktopBackendBaseUrl";
-const DESKTOP_CONNECTIVITY_SNAPSHOT_KEY = "elms.desktopBackendConnectivity";
-const DESKTOP_HEALTH_PROBE_TIMEOUT_MS = 1200;
-const DESKTOP_BOOTSTRAP_READY_TIMEOUT_MS = 30000;
-const DESKTOP_BOOTSTRAP_POLL_INTERVAL_MS = 350;
-
-interface DesktopBackendConnection {
-  baseUrl: string | null;
-  backendExposureMode?: DesktopBackendExposureMode;
-}
-
-interface DesktopSetBackendConnectionResult {
-  ok: boolean;
-  code?: string | null;
-}
-
-interface DesktopBootstrapStatus {
-  phase: "starting" | "ready" | "recovering" | "failed";
-  message?: string | null;
-  failureCode?: string | null;
-}
-
-interface DesktopRuntimeBackendUrl {
-  baseUrl: string;
-  loopbackUrl?: string;
-  lanUrl?: string | null;
-  exposureMode?: DesktopBackendExposureMode;
-}
-
-interface DesktopApplyBackendExposureModeResult {
-  appliedMode: DesktopBackendExposureMode;
-  runtimeRestarted: boolean;
-  errorCode?: string | null;
-}
-
-export type DesktopBackendExposureMode = "localhost" | "lan";
-
-export interface DesktopBackendNetworkStatus {
-  loopbackUrl: string;
-  lanUrl: string | null;
-  exposureMode: DesktopBackendExposureMode;
-}
-
-export interface DesktopApplyExposureModeResult {
-  appliedMode: DesktopBackendExposureMode;
-  runtimeRestarted: boolean;
-  errorCode: string | null;
-}
-
-export interface DesktopConnectivityDiagnosticSnapshot {
-  reason: string;
-  requestUrl?: string | null;
-  requestOrigin?: string | null;
-  selectedBaseUrl?: string | null;
-  apiBaseUrl?: string | null;
-  runtimeBaseUrl?: string | null;
-  savedOverrideBaseUrl?: string | null;
-  windowOrigin?: string | null;
-  isDesktopShell?: boolean;
-  desktopRuntimeVariant?: string;
-  isEmbeddedDesktopRuntime?: boolean;
-  failureKind?: string | null;
-  [key: string]: unknown;
-}
-
-let desktopApiBaseUrlOverride = readDesktopBackendBaseUrlCache();
-let desktopRuntimeBaseUrl: string | null = isDesktopShell && isEmbeddedDesktopRuntime()
-  ? null
-  : normalizeBaseUrl(apiBaseUrl);
-let desktopRuntimeBaseUrlPromise: Promise<void> | null = null;
-let desktopBackendConnectionPromise: Promise<void> | null = null;
-let desktopBackendConnectionValidatedPromise: Promise<void> | null = null;
-let desktopBackendFallbackToastShown = false;
-let desktopBackendExposureMode: DesktopBackendExposureMode = "localhost";
-let desktopBackendNetworkStatus: DesktopBackendNetworkStatus | null = null;
 
 export class ApiError extends Error {
   status: number;
@@ -277,171 +199,7 @@ async function parseErrorPayload(response: Response) {
   throw new ApiError(message, response.status, normalizedPayload);
 }
 
-function readDesktopLocalSessionToken() {
-  if (!isDesktopShell) {
-    return null;
-  }
-
-  try {
-    return window.localStorage.getItem(LOCAL_SESSION_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function persistDesktopLocalSessionToken(token?: string | null) {
-  if (!isDesktopShell) {
-    return;
-  }
-
-  try {
-    if (token && token.trim().length > 0) {
-      window.localStorage.setItem(LOCAL_SESSION_STORAGE_KEY, token);
-      return;
-    }
-
-    window.localStorage.removeItem(LOCAL_SESSION_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures and rely on in-memory flow.
-  }
-}
-
-export function clearDesktopLocalSessionToken() {
-  persistDesktopLocalSessionToken(null);
-}
-
-function normalizeBaseUrl(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  if (!/^https?:\/\//i.test(trimmed)) {
-    return null;
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    if (!parsed.host) {
-      return null;
-    }
-    return parsed.origin;
-  } catch {
-    return null;
-  }
-}
-
-function readDesktopBackendBaseUrlCache() {
-  if (!isDesktopShell) {
-    return null;
-  }
-
-  try {
-    return normalizeBaseUrl(window.localStorage.getItem(DESKTOP_BACKEND_BASE_URL_CACHE_KEY));
-  } catch {
-    return null;
-  }
-}
-
-function writeDesktopConnectivitySnapshot(snapshot: Record<string, unknown>) {
-  if (!isDesktopShell) {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(
-      DESKTOP_CONNECTIVITY_SNAPSHOT_KEY,
-      JSON.stringify({
-        checkedAt: new Date().toISOString(),
-        ...snapshot
-      })
-    );
-  } catch {
-    // Ignore local storage failures in desktop/webview.
-  }
-}
-
-function writeDesktopBackendBaseUrlCache(value: string | null) {
-  if (!isDesktopShell) {
-    return;
-  }
-
-  try {
-    if (!value) {
-      window.localStorage.removeItem(DESKTOP_BACKEND_BASE_URL_CACHE_KEY);
-      return;
-    }
-
-    window.localStorage.setItem(DESKTOP_BACKEND_BASE_URL_CACHE_KEY, value);
-  } catch {
-    // Ignore storage failures in desktop/webview.
-  }
-}
-
-function resolveWindowOrigin() {
-  try {
-    if (window?.location?.origin) {
-      return window.location.origin;
-    }
-  } catch {
-    // Ignore window inspection failures.
-  }
-  return null;
-}
-
-function currentActiveBaseUrl() {
-  return desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? (apiBaseUrl || null);
-}
-
-export function captureDesktopConnectivitySnapshot(snapshot: DesktopConnectivityDiagnosticSnapshot) {
-  const windowOrigin = resolveWindowOrigin();
-  const normalized = {
-    windowOrigin,
-    requestOrigin: snapshot.requestOrigin ?? windowOrigin,
-    selectedBaseUrl: currentActiveBaseUrl(),
-    apiBaseUrl: apiBaseUrl || null,
-    runtimeBaseUrl: desktopRuntimeBaseUrl,
-    savedOverrideBaseUrl: desktopApiBaseUrlOverride,
-    isDesktopShell,
-    desktopRuntimeVariant,
-    isEmbeddedDesktopRuntime: isEmbeddedDesktopRuntime(),
-    ...snapshot
-  };
-
-  writeDesktopConnectivitySnapshot(normalized);
-
-  if (isDesktopShell) {
-    // Fast local triage in packaged desktop sessions.
-    console.warn("[desktop-connectivity]", normalized);
-  }
-}
-
-async function invokeDesktop<T>(command: string, args?: Record<string, unknown>) {
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<T>(command, args);
-}
-
-function isEmbeddedDesktopRuntime() {
-  return isDesktopShell && desktopRuntimeVariant !== "dummy";
-}
-
-function getDesktopDefaultApiBaseUrl() {
-  if (desktopRuntimeBaseUrl) {
-    return desktopRuntimeBaseUrl;
-  }
-
-  if (isEmbeddedDesktopRuntime()) {
-    return DESKTOP_EMBEDDED_FALLBACK_BASE_URL;
-  }
-
-  return null;
-}
-
-function buildBackendUnreachableError(message = "Unable to reach the local ELMS backend service.", details: Record<string, unknown> = {}) {
+function buildBackendUnreachableError(message = "Unable to reach the ELMS backend service.", details: Record<string, unknown> = {}) {
   return new ApiError(message, 503, {
     code: "BACKEND_UNREACHABLE",
     ...details
@@ -452,447 +210,19 @@ function isNetworkFailure(error: unknown) {
   return error instanceof TypeError || (error instanceof DOMException && error.name === "AbortError");
 }
 
-async function probeBackendHealth(baseUrl: string, timeoutMs = DESKTOP_HEALTH_PROBE_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(`${baseUrl}/api/health`, {
-      method: "GET",
-      credentials: "include",
-      cache: "no-store",
-      signal: controller.signal
-    });
-    if (!response.ok) {
-      return false;
-    }
-
-    const payload = await response.json().catch(() => null);
-    return Boolean(payload && typeof payload === "object" && (payload as { ok?: boolean }).ok === true);
-  } catch {
-    return false;
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
-
-async function showDesktopBackendFallbackToast() {
-  if (desktopBackendFallbackToastShown) {
-    return;
-  }
-
-  desktopBackendFallbackToastShown = true;
-  try {
-    const { useToastStore } = await import("../store/toastStore");
-    useToastStore
-      .getState()
-      .addToast("Custom backend URL is unreachable. Reverted to local runtime.", "info");
-  } catch {
-    // Swallow toast errors; connectivity behavior should still continue.
-  }
-}
-
-async function persistDesktopBackendConnectionOverride(baseUrl: string | null) {
-  if (!isDesktopShell) {
-    return;
-  }
-
-  try {
-    await invokeDesktop<DesktopSetBackendConnectionResult>("desktop_set_backend_connection", { baseUrl });
-  } catch {
-    // Ignore command errors; local in-memory fallback remains effective.
-  }
-}
-
-async function validateDesktopBackendConnection() {
-  if (!isEmbeddedDesktopRuntime()) {
-    return;
-  }
-
-  const savedOverride = desktopApiBaseUrlOverride;
-  const defaultBaseUrl = getDesktopDefaultApiBaseUrl();
-
-  if (!savedOverride || !defaultBaseUrl || savedOverride === defaultBaseUrl) {
-    writeDesktopConnectivitySnapshot({
-      selectedBaseUrl: savedOverride ?? defaultBaseUrl,
-      overrideUsed: Boolean(savedOverride),
-      fallbackApplied: false
-    });
-    return;
-  }
-
-  const overrideReachable = await probeBackendHealth(savedOverride);
-  if (overrideReachable) {
-    writeDesktopConnectivitySnapshot({
-      selectedBaseUrl: savedOverride,
-      overrideUsed: true,
-      overrideReachable: true,
-      fallbackApplied: false
-    });
-    return;
-  }
-
-  const defaultReachable = await probeBackendHealth(defaultBaseUrl);
-  if (defaultReachable) {
-    desktopApiBaseUrlOverride = null;
-    writeDesktopBackendBaseUrlCache(null);
-    await persistDesktopBackendConnectionOverride(null);
-    await showDesktopBackendFallbackToast();
-    writeDesktopConnectivitySnapshot({
-      selectedBaseUrl: defaultBaseUrl,
-      overrideUsed: false,
-      overrideReachable: false,
-      defaultReachable: true,
-      fallbackApplied: true
-    });
-    return;
-  }
-
-  writeDesktopConnectivitySnapshot({
-    selectedBaseUrl: savedOverride,
-    overrideUsed: true,
-    overrideReachable: false,
-    defaultReachable: false,
-    fallbackApplied: false
-  });
-}
-
-function isAuthApiPath(input: string) {
-  if (/^https?:\/\//.test(input)) {
-    try {
-      const path = new URL(input).pathname;
-      return path.startsWith("/api/auth/");
-    } catch {
-      return false;
-    }
-  }
-
-  return input.startsWith("/api/auth/") || input.startsWith("api/auth/");
-}
-
-async function waitForDesktopBootstrapReady() {
-  if (!isEmbeddedDesktopRuntime()) {
-    return;
-  }
-
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < DESKTOP_BOOTSTRAP_READY_TIMEOUT_MS) {
-    try {
-      const status = await invokeDesktop<DesktopBootstrapStatus>("desktop_bootstrap_status");
-      if (!status || typeof status.phase !== "string") {
-        return;
-      }
-      if (status.phase === "ready") {
-        return;
-      }
-      if (status.phase === "failed") {
-        throw buildBackendUnreachableError(
-          "Desktop runtime startup failed. Repair startup and try again.",
-          {
-            reason: "BOOTSTRAP_FAILED",
-            bootstrapPhase: status.phase,
-            bootstrapMessage: status.message ?? null,
-            bootstrapFailureCode: status.failureCode ?? null
-          }
-        );
-      }
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-      throw buildBackendUnreachableError("Unable to query desktop runtime status.", {
-        reason: "BOOTSTRAP_STATUS_UNAVAILABLE"
-      });
-    }
-
-    await new Promise((resolve) => window.setTimeout(resolve, DESKTOP_BOOTSTRAP_POLL_INTERVAL_MS));
-  }
-
-  throw buildBackendUnreachableError(
-    "Desktop runtime is still starting. Wait a moment and try again.",
-    {
-      reason: "BOOTSTRAP_TIMEOUT"
-    }
-  );
-}
-
-async function getDesktopBootstrapStatusSafe() {
-  if (!isEmbeddedDesktopRuntime()) {
-    return null;
-  }
-
-  try {
-    return await invokeDesktop<DesktopBootstrapStatus>("desktop_bootstrap_status");
-  } catch {
-    return null;
-  }
-}
-
-async function fetchWithDesktopRecovery(
-  input: string,
-  requestInit: RequestInit,
-  options?: {
-    retryRelativeUrl?: string;
-    retryRelativeInit?: RequestInit;
-  }
-) {
-  const resolvedUrl = resolveRequestUrl(input);
-  const attempt = async (url: string, init: RequestInit) =>
-    fetch(url, init);
-
-  try {
-    return await attempt(resolvedUrl, requestInit);
-  } catch (error) {
-    if (!isNetworkFailure(error)) {
-      throw error;
-    }
-
-    const bootstrapStatus = await getDesktopBootstrapStatusSafe();
-    if (
-      bootstrapStatus &&
-      (bootstrapStatus.phase === "starting" || bootstrapStatus.phase === "recovering")
-    ) {
-      await waitForDesktopBootstrapReady();
-      try {
-        return await attempt(resolvedUrl, requestInit);
-      } catch (retryError) {
-        if (
-          options?.retryRelativeUrl &&
-          isNetworkFailure(retryError)
-        ) {
-          return await attempt(options.retryRelativeUrl, options.retryRelativeInit ?? requestInit);
-        }
-        throw retryError;
-      }
-    }
-
-    if (options?.retryRelativeUrl) {
-      return await attempt(options.retryRelativeUrl, options.retryRelativeInit ?? requestInit);
-    }
-    throw error;
-  }
-}
-
-function resolveRequestUrl(input: string) {
-  return resolveApiUrl(input);
-}
-
-function mapTransportError(error: unknown, input: string) {
-  if (error instanceof ApiError) {
-    return error;
-  }
-
-  if (!isNetworkFailure(error)) {
-    return error;
-  }
-
-  const resolvedUrl = resolveRequestUrl(input);
-  const activeBaseUrl = currentActiveBaseUrl();
-  const windowOrigin = resolveWindowOrigin();
-  captureDesktopConnectivitySnapshot({
-    reason: "NETWORK_FETCH_FAILED",
-    requestUrl: resolvedUrl,
-    selectedBaseUrl: activeBaseUrl,
-    requestOrigin: windowOrigin,
-    failureKind: "network-or-cors"
-  });
-
-  return buildBackendUnreachableError(undefined, {
-    requestUrl: resolvedUrl,
-    apiBaseUrl: activeBaseUrl,
-    runtimeBaseUrl: desktopRuntimeBaseUrl,
-    savedOverrideBaseUrl: desktopApiBaseUrlOverride,
-    windowOrigin,
-    requestOrigin: windowOrigin,
-    isDesktopShell,
-    desktopRuntimeVariant,
-    isEmbeddedDesktopRuntime: isEmbeddedDesktopRuntime(),
-    failureKind: "network-or-cors"
-  });
-}
-
-async function loadDesktopBackendConnection() {
-  if (!isDesktopShell) {
-    return;
-  }
-
-  try {
-    const result = await invokeDesktop<DesktopBackendConnection>("desktop_get_backend_connection");
-    desktopApiBaseUrlOverride = normalizeBaseUrl(result.baseUrl);
-    desktopBackendExposureMode = result.backendExposureMode ?? "localhost";
-    writeDesktopBackendBaseUrlCache(desktopApiBaseUrlOverride);
-  } catch {
-    // Keep cached or fallback value on command failure.
-  }
-}
-
-async function loadDesktopRuntimeBackendUrl() {
-  if (!isEmbeddedDesktopRuntime()) {
-    return;
-  }
-
-  try {
-    const result = await invokeDesktop<DesktopRuntimeBackendUrl>("desktop_get_runtime_backend_url");
-    const loopbackUrl = normalizeBaseUrl(result.loopbackUrl ?? result.baseUrl);
-    const normalized = normalizeBaseUrl(result.baseUrl);
-    const lanUrl = normalizeBaseUrl(result.lanUrl ?? null);
-    desktopBackendExposureMode = result.exposureMode ?? desktopBackendExposureMode;
-    desktopBackendNetworkStatus = {
-      loopbackUrl: loopbackUrl ?? DESKTOP_EMBEDDED_FALLBACK_BASE_URL,
-      lanUrl,
-      exposureMode: result.exposureMode ?? desktopBackendExposureMode
-    };
-    if (normalized) {
-      desktopRuntimeBaseUrl = normalized;
-      return;
-    }
-  } catch {
-    // Fall back to configured default below.
-  }
-
-  if (!desktopRuntimeBaseUrl) {
-    desktopRuntimeBaseUrl = DESKTOP_EMBEDDED_FALLBACK_BASE_URL;
-  }
-}
-
-async function ensureDesktopBackendConnectionLoaded(options?: { validateConnection?: boolean }) {
-  if (!isDesktopShell) {
-    return;
-  }
-  const validateConnection = options?.validateConnection ?? true;
-
-  if (!desktopRuntimeBaseUrlPromise) {
-    desktopRuntimeBaseUrlPromise = loadDesktopRuntimeBackendUrl().finally(() => {
-      desktopRuntimeBaseUrlPromise = null;
-    });
-  }
-  await desktopRuntimeBaseUrlPromise;
-
-  if (!desktopBackendConnectionPromise) {
-    desktopBackendConnectionPromise = loadDesktopBackendConnection().finally(() => {
-      desktopBackendConnectionPromise = null;
-    });
-  }
-
-  await desktopBackendConnectionPromise;
-
-  if (!validateConnection) {
-    return;
-  }
-
-  if (!desktopBackendConnectionValidatedPromise) {
-    desktopBackendConnectionValidatedPromise = validateDesktopBackendConnection().finally(() => {
-      desktopBackendConnectionValidatedPromise = null;
-    });
-  }
-  await desktopBackendConnectionValidatedPromise;
-}
-
-export async function getEffectiveApiBaseUrl() {
-  await ensureDesktopBackendConnectionLoaded();
-  return desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl;
-}
-
-export async function getConfiguredApiBaseUrl() {
-  await ensureDesktopBackendConnectionLoaded({ validateConnection: false });
-  return desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl;
-}
-
-export async function setApiBaseUrlOverride(baseUrl: string | null) {
-  const normalized = normalizeBaseUrl(baseUrl);
-  const previous = desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? null;
-
-  if (isDesktopShell) {
-    const result = await invokeDesktop<DesktopSetBackendConnectionResult>(
-      "desktop_set_backend_connection",
-      { baseUrl: normalized }
-    );
-
-    if (!result.ok) {
-      const code = result.code ?? "BACKEND_URL_INVALID";
-      throw new ApiError(code, 400, { code });
-    }
-  }
-
-  desktopApiBaseUrlOverride = normalized;
-  writeDesktopBackendBaseUrlCache(normalized);
-  // Switching backend target invalidates previously cached local session tokens.
-  if ((previous ?? null) !== (normalized ?? null)) {
-    clearDesktopLocalSessionToken();
-  }
-  return normalized;
-}
-
-export async function getDesktopBackendNetworkStatus(): Promise<DesktopBackendNetworkStatus | null> {
-  if (!isDesktopShell) {
-    return null;
-  }
-
-  await ensureDesktopBackendConnectionLoaded({ validateConnection: false });
-  if (desktopBackendNetworkStatus) {
-    return desktopBackendNetworkStatus;
-  }
-
-  const fallback = getDesktopDefaultApiBaseUrl() ?? DESKTOP_EMBEDDED_FALLBACK_BASE_URL;
-  return {
-    loopbackUrl: fallback,
-    lanUrl: null,
-    exposureMode: desktopBackendExposureMode
-  };
-}
-
-export async function setDesktopBackendExposureMode(
-  exposureMode: DesktopBackendExposureMode
-): Promise<DesktopApplyExposureModeResult> {
-  if (!isDesktopShell) {
-    desktopBackendExposureMode = exposureMode;
-    return {
-      appliedMode: exposureMode,
-      runtimeRestarted: false,
-      errorCode: null
-    };
-  }
-
-  const result = await invokeDesktop<DesktopApplyBackendExposureModeResult>(
-    "desktop_apply_backend_exposure_mode",
-    { backendExposureMode: exposureMode }
-  );
-  desktopBackendExposureMode = result.appliedMode;
-  if (desktopBackendNetworkStatus) {
-    desktopBackendNetworkStatus = {
-      ...desktopBackendNetworkStatus,
-      exposureMode: result.appliedMode
-    };
-  }
-
-  if (result.runtimeRestarted) {
-    await loadDesktopRuntimeBackendUrl();
-  }
-
-  return {
-    appliedMode: result.appliedMode,
-    runtimeRestarted: result.runtimeRestarted,
-    errorCode: result.errorCode ?? null
-  };
-}
-
-export function isDummyDesktopRuntime() {
-  return isDesktopShell && desktopRuntimeVariant === "dummy";
-}
-
 export function resolveApiUrl(input: string) {
   if (/^https?:\/\//.test(input)) {
     return input;
   }
 
-  const baseUrl = (desktopApiBaseUrlOverride ?? getDesktopDefaultApiBaseUrl() ?? apiBaseUrl).trim();
+  const baseUrl = apiBaseUrl.trim();
   if (!baseUrl) {
     return input;
   }
 
   // Always use only the origin (scheme + host + port). Any path suffix stored in
-  // the base URL (e.g. from a stale localStorage entry) is intentionally discarded
-  // because the backend is always mounted at root, never under a sub-path.
+  // the base URL is intentionally discarded because the backend is always mounted
+  // at root, never under a sub-path.
   const inputPath = input.startsWith("/") ? input : `/${input}`;
 
   if (/^https?:\/\//i.test(baseUrl)) {
@@ -907,13 +237,24 @@ export function resolveApiUrl(input: string) {
   return inputPath;
 }
 
-function buildAuthHeaders(initHeaders?: HeadersInit) {
-  const headers = new Headers(initHeaders);
-  const desktopLocalSessionToken = readDesktopLocalSessionToken();
-  if (desktopLocalSessionToken) {
-    headers.set("x-elms-session", desktopLocalSessionToken);
+function mapTransportError(error: unknown, input: string) {
+  if (error instanceof ApiError) {
+    return error;
   }
-  return headers;
+
+  if (!isNetworkFailure(error)) {
+    return error;
+  }
+
+  const resolvedUrl = resolveApiUrl(input);
+  return buildBackendUnreachableError(undefined, {
+    requestUrl: resolvedUrl,
+    apiBaseUrl: apiBaseUrl || null
+  });
+}
+
+function buildAuthHeaders(initHeaders?: HeadersInit) {
+  return new Headers(initHeaders);
 }
 
 function parseFilenameFromContentDisposition(value: string | null): string | undefined {
@@ -958,13 +299,6 @@ export async function apiFetch<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
-  await waitForDesktopBootstrapReady();
-  const authApiPath = isAuthApiPath(input);
-  if (authApiPath) {
-    await ensureDesktopBackendConnectionLoaded({ validateConnection: false });
-  } else {
-    await ensureDesktopBackendConnectionLoaded();
-  }
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
   const shouldSetJsonContentType =
@@ -976,7 +310,7 @@ export async function apiFetch<T>(
 
   let response: Response;
   try {
-    response = await fetchWithDesktopRecovery(input, {
+    response = await fetch(resolveApiUrl(input), {
       credentials: "include",
       headers,
       signal,
@@ -987,9 +321,6 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      clearDesktopLocalSessionToken();
-    }
     await parseErrorPayload(response);
   }
 
@@ -1001,14 +332,12 @@ export async function apiFormFetch<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
-  await waitForDesktopBootstrapReady();
-  await ensureDesktopBackendConnectionLoaded();
   const { signal, headers: initHeaders, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
 
   let response: Response;
   try {
-    response = await fetchWithDesktopRecovery(input, {
+    response = await fetch(resolveApiUrl(input), {
       credentials: "include",
       headers,
       signal,
@@ -1019,9 +348,6 @@ export async function apiFormFetch<T>(
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      clearDesktopLocalSessionToken();
-    }
     await parseErrorPayload(response);
   }
 
@@ -1032,8 +358,6 @@ export async function apiDownload(
   input: string,
   init?: RequestInit
 ): Promise<ApiDownloadResult> {
-  await waitForDesktopBootstrapReady();
-  await ensureDesktopBackendConnectionLoaded();
   const { headers: initHeaders, signal, ...restInit } = init ?? {};
   const headers = buildAuthHeaders(initHeaders);
   const requestInit: RequestInit = {
@@ -1045,21 +369,12 @@ export async function apiDownload(
 
   let response: Response;
   try {
-    const canRetryViaRelativeApi =
-      isDesktopShell &&
-      typeof input === "string" &&
-      input.startsWith("/api/");
-    response = await fetchWithDesktopRecovery(input, requestInit, canRetryViaRelativeApi
-      ? { retryRelativeUrl: input, retryRelativeInit: requestInit }
-      : undefined);
+    response = await fetch(resolveApiUrl(input), requestInit);
   } catch (error) {
     throw mapTransportError(error, input);
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      clearDesktopLocalSessionToken();
-    }
     await parseErrorPayload(response);
   }
 

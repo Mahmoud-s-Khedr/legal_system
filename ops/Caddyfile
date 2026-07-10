@@ -1,0 +1,26 @@
+# ELMS Production — Caddy Edge
+# Handles TLS via Let's Encrypt and proxies traffic to backend + frontend.
+# ELMS_DOMAIN and ACME_EMAIL are injected from docker-compose environment.
+
+{$ELMS_DOMAIN} {
+    tls {$ACME_EMAIL}
+    encode zstd gzip
+
+    # API requests → Fastify backend
+    handle /api/* {
+        reverse_proxy backend:7854
+    }
+
+    # All other requests → Nginx SPA container
+    handle {
+        reverse_proxy web:80
+    }
+
+    log {
+        output file /var/log/caddy/access.json {
+            roll_size 10MiB
+            roll_keep 5
+        }
+        format json
+    }
+}

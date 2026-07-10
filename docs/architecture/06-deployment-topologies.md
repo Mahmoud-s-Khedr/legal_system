@@ -1,27 +1,25 @@
 # ELMS Architecture — 06: Deployment Topologies
 
-## Status (as of May 18, 2026)
+## Status (as of July 10, 2026)
 
-- `Implemented`: Desktop/local topology.
-- `Archived Reference`: Cloud Docker topology under `archive/cloud/**`.
-- `Planned`: Operational cloud topology re-activation.
+- `Implemented`: Hosted topology under `ops/**` (VPS Docker Compose + Caddy).
+- `Archived Reference`: Older cloud Docker topology under `archive/cloud/**`, superseded by `ops/**`.
 
-## Implemented topology
+See [docs/business/SAAS_CONVERSION_PLAN.md](../business/SAAS_CONVERSION_PLAN.md) for the current SaaS conversion plan and gap list.
 
-### Desktop/local
+## Implemented topologies
 
-- Tauri shell in `apps/desktop/src-tauri`.
-- Local backend runtime and frontend desktop workflow via root scripts (`dev:desktop`, `dev:tauri`).
-- Embedded/local data paths and desktop packaging scripts remain the active release path.
+### Hosted (`ops/**`)
 
-### Runtime/auth behavior
-
-- Runtime is local-mode operationally, including when cloud mode is configured.
-- Treat cloud auth/runtime as non-operational for current deployment guidance.
+- Single-VPS Docker Compose stack: PostgreSQL, Redis, MinIO (S3-compatible object storage), Fastify backend, Nginx-served React frontend, Caddy edge proxy with automatic Let's Encrypt TLS.
+- `ops/docker-compose.prod.yml` is the production stack definition; `ops/docker-compose.dev.yml` the dev variant.
+- `ops/README.md` documents the deployment steps end to end (build images, run migrations, start stack, backup/restore).
+- Cloud auth (`AUTH_MODE` set to `cloud`) is operational — see `packages/backend/src/modules/auth/cloudAuthService.ts` for the full JWT + Redis-backed session implementation.
+- Default billing posture is manual/beta (`SAAS_BILLING_MODE=manual`); Stripe checkout/webhook code exists but is gated behind explicit config.
 
 ## Archived Reference topology
 
-Cloud deployment files exist for reference only:
+Older cloud deployment files, superseded by `ops/**`:
 
 - `archive/cloud/apps/web/docker-compose.yml`
 - `archive/cloud/apps/web/docker-compose.prod.yml`
@@ -29,15 +27,11 @@ Cloud deployment files exist for reference only:
 - `archive/cloud/apps/web/backend.Dockerfile`
 - `archive/cloud/README.md`
 
-These files are not the active production deployment contract at this time.
-
-## Planned
-
-Cloud topology documentation will be re-promoted from archived reference once runtime code supports operational cloud mode again.
+These files are reference-only and are not the active production deployment contract.
 
 ## Source of truth
 
-- `apps/desktop/**`
+- `ops/**`
 - `archive/cloud/**`
 - `packages/backend/src/config/env.ts`
 - `packages/backend/src/modules/auth/createAuthService.ts`

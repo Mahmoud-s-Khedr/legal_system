@@ -121,28 +121,7 @@ afterEach(() => {
 });
 
 describe("PdfViewer", () => {
-  it("uses native viewer fallback on non-desktop when PDF.js fails", async () => {
-    vi.stubEnv("VITE_DESKTOP_SHELL", "false");
-    getDocument.mockReturnValue({
-      promise: Promise.reject(new Error("pdf load failed"))
-    });
-
-    const view = render(
-      <PdfViewer blob={new Blob(["pdf"], { type: "application/pdf" })} />
-    );
-
-    await flushAsyncWork();
-
-    expect(view.querySelector("object")).not.toBeNull();
-    expect(view.querySelector("iframe")).not.toBeNull();
-  });
-
-  it("uses native fallback in desktop runtime when PDF.js fails", async () => {
-    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
-    Object.defineProperty(window, "navigator", {
-      value: { ...window.navigator, userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-      configurable: true
-    });
+  it("uses native viewer fallback when PDF.js fails", async () => {
     getDocument.mockReturnValue({
       promise: Promise.reject(new Error("pdf load failed"))
     });
@@ -158,11 +137,6 @@ describe("PdfViewer", () => {
   });
 
   it("uses native fallback when loaded PDF reports zero pages", async () => {
-    vi.stubEnv("VITE_DESKTOP_SHELL", "true");
-    Object.defineProperty(window, "navigator", {
-      value: { ...window.navigator, userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-      configurable: true
-    });
     getDocument.mockReturnValue({
       promise: Promise.resolve({
         numPages: 0,

@@ -78,7 +78,7 @@ blob-report/
 .env
 .env.*
 !.env.example
-!apps/desktop/.env.desktop.example
+!packages/backend/.env.local.example
 *.pem
 # Ignore your specific local license key
 elms.license

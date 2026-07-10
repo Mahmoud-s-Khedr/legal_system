@@ -1,16 +1,13 @@
 # ELMS — Electronic Legal Management System
 
-Monorepo for a legal practice management system with a desktop/local runtime as the active production path.
+Monorepo for a legal practice management system, deployed as a hosted browser runtime for controlled SaaS and paid-beta deployments.
 
-## Runtime status (as of May 18, 2026)
+## Runtime status (as of July 10, 2026)
 
-- `Implemented`: Desktop/local runtime (`AUTH_MODE=local`) and Tauri packaging.
-- `Archived Reference`: Cloud deployment assets under `archive/cloud/**`.
-- `Planned`: Re-activating operational cloud auth/runtime.
+- `Implemented`: Hosted browser runtime (`AUTH_MODE=cloud`) with deployment assets under `ops/**`.
+- `Archived Reference`: Older cloud assets under `archive/cloud/**`.
 
-Backend code currently forces local auth service even if `AUTH_MODE=cloud` is configured (deprecated/non-operational):
-- `packages/backend/src/config/env.ts`
-- `packages/backend/src/modules/auth/createAuthService.ts`
+Hosted SaaS billing is currently configured for **manual beta billing by default**. Stripe checkout/webhook flows remain optional and should only be enabled when `SAAS_BILLING_MODE=stripe` is intentionally configured.
 
 ## What is implemented in active runtime
 
@@ -25,13 +22,10 @@ Based on current code (`packages/backend/src/app.ts`, `packages/frontend/src/rou
 - Reports, templates, lookups
 - Law library and AI research modules
 - Client portal routes (`/api/portal*` and `/portal/*`)
-- Desktop app packaging via Tauri (`apps/desktop`)
 
 ## Workspace layout
 
 ```text
-apps/
-  desktop/   Tauri shell and desktop packaging scripts
 archive/
   cloud/     Archived cloud Dockerfiles/compose/scripts (reference only)
 packages/
@@ -41,7 +35,7 @@ packages/
 docs/
   user/ architecture/ dev/ business/ _inventory/
 scripts/
-  backup, restore, desktop packaging, deploy utilities
+  backup, restore, deploy utilities
 ```
 
 ## Prerequisites
@@ -49,10 +43,9 @@ scripts/
 - Node.js 22+
 - pnpm 10.x
 - PostgreSQL (required for backend runtime)
-- Rust/Cargo (desktop build only)
 - Redis (`Archived Reference`: previously used for cloud auth and queue-backed cloud flows)
 
-## Local development (active)
+## Local development
 
 ```bash
 pnpm install
@@ -60,7 +53,7 @@ cp .env.example .env
 pnpm prisma:generate
 pnpm --filter @elms/backend prisma migrate dev
 pnpm seed:dev
-pnpm dev:desktop
+pnpm dev
 ```
 
 Seed options:
@@ -68,9 +61,13 @@ Seed options:
 - `ELMS_SEED_VALUE=<seed-string>` for deterministic generation
 - `ELMS_SEED_INCLUDE_INTEGRATIONS=true|false` (default `true`)
 
-Useful alternatives:
-- `pnpm dev:desktop` (backend local mode + frontend desktop host)
-- `pnpm dev:tauri` (run desktop shell)
+## Hosted deployment
+
+The active hosted deployment contract lives under `ops/**`.
+
+- `ops/README.md` documents the VPS/container topology and rollout steps.
+- `ops/.env.production.example` defines the hosted environment contract.
+- `SAAS_BILLING_MODE=manual` is the default hosted beta posture.
 
 ## Core scripts
 
@@ -79,8 +76,6 @@ Useful alternatives:
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm test:e2e`
-- `pnpm release:desktop:linux`
-- `pnpm release:desktop:local`
 - `pnpm docs:verify`
 - `pnpm structure:audit`
 - `pnpm structure:check`

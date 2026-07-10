@@ -1,0 +1,224 @@
+services:
+  # ─────────────────────────────────────────────
+  # PostgreSQL 16
+  # ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-elms_cloud}
+      POSTGRES_USER: ${POSTGRES_USER:-elms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-elms} -d ${POSTGRES_DB:-elms_cloud}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: &json_logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─────────────────────────────────────────────
+  # Redis 7 (session tokens + BullMQ queues)
+  # ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *json_logging
+
+  # ─────────────────────────────────────────────
+  # MinIO — S3-compatible object storage
+  # ─────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "9001:9001"   # MinIO web console (restrict to trusted IPs in production via firewall)
+    logging: *json_logging
+
+  # Creates the elms-documents bucket on first start (runs once and exits)
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+        mc mb --ignore-existing local/${R2_BUCKET:-elms-documents} &&
+        mc anonymous set download local/${R2_BUCKET:-elms-documents}
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      R2_BUCKET: ${R2_BUCKET:-elms-documents}
+    logging: *json_logging
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Database migrations (run once, then exit)
+  # ─────────────────────────────────────────────────────────────────────────────
+  migrate:
+    image: ${BACKEND_IMAGE:-elms-backend:local}
+    restart: "no"
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command:
+      - node
+      - packages/backend/node_modules/.bin/prisma
+      - migrate
+      - deploy
+      - --schema
+      - packages/backend/prisma/schema.prisma
+    logging: *json_logging
+
+  # ─────────────────────────────────────────────
+  # Backend API (Fastify 5)
+  # ─────────────────────────────────────────────
+  backend:
+    image: ${BACKEND_IMAGE:-elms-backend:local}
+    restart: unless-stopped
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7854/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging: *json_logging
+
+  # ─────────────────────────────────────────────
+  # BullMQ Workers (document extraction pipeline)
+  # Required because STORAGE_DRIVER=r2 routes through BullMQ
+  # ─────────────────────────────────────────────
+  extraction-worker:
+    image: ${BACKEND_IMAGE:-elms-backend:local}
+    restart: unless-stopped
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+    command: ["node", "packages/backend/dist/cloud/jobs/extractionWorker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    logging: *json_logging
+
+  library-worker:
+    image: ${BACKEND_IMAGE:-elms-backend:local}
+    restart: unless-stopped
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+    command: ["node", "packages/backend/dist/cloud/jobs/libraryExtractionWorker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    logging: *json_logging
+
+  docx-worker:
+    image: ${BACKEND_IMAGE:-elms-backend:local}
+    restart: unless-stopped
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+    command: ["node", "packages/backend/dist/cloud/jobs/docxPreviewWorker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    logging: *json_logging
+
+  # ─────────────────────────────────────────────
+  # Frontend (React SPA served by Nginx)
+  # ─────────────────────────────────────────────
+  web:
+    image: ${FRONTEND_IMAGE:-elms-frontend:local}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:80/ > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *json_logging
+
+  # ─────────────────────────────────────────────
+  # Caddy — TLS termination + reverse proxy
+  # ─────────────────────────────────────────────
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 QUIC
+    environment:
+      ELMS_DOMAIN: ${ELMS_DOMAIN:?ELMS_DOMAIN must be set (e.g. elms.yourfirm.com)}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set for Let's Encrypt}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      - caddy-logs:/var/log/caddy
+    logging: *json_logging
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  caddy-data:
+  caddy-config:
+  caddy-logs:

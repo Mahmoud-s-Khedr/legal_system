@@ -8,6 +8,7 @@ import { SetupPage } from "./SetupPage";
 
 const navigateMock = vi.fn();
 const setupMock = vi.fn();
+const registerMock = vi.fn();
 
 vi.mock("@tanstack/react-router", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-router")>(
@@ -26,6 +27,8 @@ vi.mock("@tanstack/react-router", async () => {
 
 vi.mock("../../store/authStore", () => ({
   useAuthBootstrap: () => ({
+    needsSetup: true,
+    register: registerMock,
     setup: setupMock
   })
 }));
@@ -50,6 +53,7 @@ function render(element: JSX.Element) {
 describe("SetupPage validation messaging", () => {
   beforeEach(async () => {
     setupMock.mockReset();
+    registerMock.mockReset();
     navigateMock.mockReset();
     await act(async () => {
       await i18n.changeLanguage("en");
@@ -85,14 +89,22 @@ describe("SetupPage validation messaging", () => {
     );
 
     const view = render(<SetupPage />);
+    const firmNameInput = view.querySelector<HTMLInputElement>("#setup-firm-name");
+    const fullNameInput = view.querySelector<HTMLInputElement>("#setup-full-name");
     const emailInput = view.querySelector<HTMLInputElement>("#setup-email");
     const passwordInput = view.querySelector<HTMLInputElement>("#setup-password");
     const submitButton = view.querySelector<HTMLButtonElement>("button[type='submit']");
+    expect(firmNameInput).toBeTruthy();
+    expect(fullNameInput).toBeTruthy();
     expect(emailInput).toBeTruthy();
     expect(passwordInput).toBeTruthy();
     expect(submitButton).toBeTruthy();
 
     await act(async () => {
+      firmNameInput!.value = "Test Firm";
+      firmNameInput!.dispatchEvent(new Event("input", { bubbles: true }));
+      fullNameInput!.value = "Test Admin";
+      fullNameInput!.dispatchEvent(new Event("input", { bubbles: true }));
       emailInput!.value = "tester@example.com";
       emailInput!.dispatchEvent(new Event("input", { bubbles: true }));
       passwordInput!.value = "password123";

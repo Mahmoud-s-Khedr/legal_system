@@ -106,6 +106,8 @@ export function createCloudAuthService(app: FastifyInstance, env: AppEnv): AuthS
               name: payload.firmName,
               slug: slugify(payload.firmName),
               defaultLanguage: Language.AR,
+              trialStartedAt: new Date(),
+              trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
               settings: {
                 create: {
                   preferredLanguage: Language.AR,

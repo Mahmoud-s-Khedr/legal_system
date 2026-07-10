@@ -15,9 +15,7 @@ import "antd/dist/reset.css";
 import "./styles.css";
 import "./i18n";
 import { DirectionProvider } from "./components/shared/DirectionProvider";
-import { DesktopBootstrapGate } from "./components/shared/DesktopBootstrapGate";
 import { ToastContainer } from "./components/shared/Toast";
-import { PpoScreenshotEventBridge } from "./components/shared/PpoScreenshotEventBridge";
 import { OfflineBanner } from "./pwa/offlineBanner";
 import { startSyncQueueReplay } from "./pwa/syncQueue";
 import { ErrorFallback } from "./components/ErrorFallback";
@@ -52,7 +50,7 @@ function getStartupFailureMessage(code: string) {
   }
 
   if (code === "DATABASE_SCHEMA_MISMATCH") {
-    return "Local database schema is out of date. Run desktop repair/migrations, then retry.";
+    return "Database schema is out of date. Run migrations, then retry.";
   }
 
   return "Local backend startup failed.";
@@ -182,10 +180,8 @@ function scrubHeaders(headers: Record<string, unknown>) {
   return output;
 }
 
-// Start sync queue replay for cloud (non-Tauri) environments
-if (!("__TAURI_INTERNALS__" in window)) {
-  startSyncQueueReplay();
-}
+// Start sync queue replay
+startSyncQueueReplay();
 
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
@@ -248,12 +244,9 @@ ReactDOM.createRoot(rootElement).render(
       <QueryClientProvider client={queryClient}>
         <AntdProvider>
           <DirectionProvider>
-            <DesktopBootstrapGate>
-              <ToastContainer />
-              <PpoScreenshotEventBridge />
-              <OfflineBanner />
-              <RouterProvider router={router} />
-            </DesktopBootstrapGate>
+            <ToastContainer />
+            <OfflineBanner />
+            <RouterProvider router={router} />
           </DirectionProvider>
         </AntdProvider>
       </QueryClientProvider>
